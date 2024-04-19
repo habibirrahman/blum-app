@@ -31,10 +31,10 @@ const openPassword = ref<boolean>(false)
       <span v-if="required" className="ml-1 text-red-700">{{ '*' }}</span>
     </div>
     <input
-      class="border-slate-4 group w-full rounded border px-4 py-2 text-sm ring-offset-2 focus:outline-none"
+      class="group w-full rounded border px-4 py-2 text-sm ring-offset-2 focus:outline-none"
       :class="[
         disabled ? 'bg-slate-5 opacity-50' : 'focus:ring-2',
-        error ? 'border-red-700 ring-red-200' : 'ring-light-purple-2'
+        error ? 'border-red-700 ring-red-200' : 'border-slate-4 ring-light-purple-2'
       ]"
       :id="name"
       :type="type === 'password' ? (openPassword ? 'text' : 'password') : type"
@@ -45,7 +45,7 @@ const openPassword = ref<boolean>(false)
     <Icon
       v-if="type === 'password'"
       :icon="openPassword ? 'ph:eye-closed' : 'ph:eye'"
-      class="text-slate-7 absolute right-2 cursor-pointer text-2xl"
+      class="absolute right-2 cursor-pointer text-2xl text-slate-7"
       :class="[label ? 'top-[30px]' : 'top-2']"
       @click.prevent="openPassword = !openPassword"
     />

@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { ref, onUpdated, onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 import { getAccountStorage } from './plugins/preferences.plugin'
 import router from './router'
 import { useAccountStore } from './stores/account.store'
+import { storeToRefs } from 'pinia'
 
 const route = useRoute()
 const store = useAccountStore()
+const { access } = storeToRefs(store)
+
 async function check() {
   const { success, data } = await getAccountStorage()
   if (success && data) {
@@ -20,6 +23,9 @@ async function check() {
   }
 }
 onMounted(() => {
+  check()
+})
+watch(access, () => {
   check()
 })
 </script>

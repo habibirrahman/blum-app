@@ -23,9 +23,6 @@ export const getAccountStorage = async () => {
     const access = await Preferences.get({ key: 'access' })
     const csrf = await Preferences.get({ key: 'csrf' })
     const user = await Preferences.get({ key: 'user' })
-    console.log('access.value', access.value)
-    console.log('csrf.value', csrf.value)
-    console.log('user.value', user.value)
     if (
       !access.value ||
       access.value === 'undefined' ||

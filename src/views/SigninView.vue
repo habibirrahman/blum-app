@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import router from '@/router'
-import axios from 'axios'
 import { useAccountStore } from '@/stores/account.store'
 
 const store = useAccountStore()
 const email = ref<string>('')
 const password = ref<string>('')
+const error = ref<string>('')
 const loading = ref<boolean>(false)
+
+watch(email, () => {
+  error.value = ''
+})
 
 async function onSignin() {
   loading.value = true
@@ -17,10 +21,13 @@ async function onSignin() {
     email: email.value,
     password: password.value
   }
-  const { success } = await store.signin(input)
-  if (success) {
-    router.push({ name: 'home' })
+  const { success, message } = await store.signin(input)
+  loading.value = false
+  if (!success) {
+    error.value = message
+    return
   }
+  router.push({ name: 'home' })
 }
 </script>
 
@@ -44,6 +51,7 @@ async function onSignin() {
           type="email"
           placeholder="Type your email"
           v-model="email"
+          :error="error"
         />
         <AppTextInput
           label="Password"

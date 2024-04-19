@@ -36,7 +36,7 @@ axios.interceptors.response.use(
         router.push('/')
       } else {
         // Show a generic error message
-        alert('An error occurred. Please try again later.')
+        // alert('An error occurred. Please try again later.')
       }
     }
     return Promise.reject(error)

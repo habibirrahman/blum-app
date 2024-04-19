@@ -38,12 +38,17 @@ export const useAccountStore = defineStore('account', {
     },
     async signin({ email, password }: SigninSchema) {
       console.log(email, password)
-      const { data, status } = await axios.post('/signin', { email, password })
-      if (status !== 200) return { success: false }
-      const { success } = await setAccountStorage(data)
-      if (!success) return { success: false }
-      this.assign(data)
-      return { success: true }
+      return axios
+        .post('/signin', { email, password })
+        .then(async ({ data }) => {
+          const { success } = await setAccountStorage(data)
+          if (!success) return { success: false }
+          this.assign(data)
+          return { success: true, message: 'Successfully signed in' }
+        })
+        .catch(({ response }) => {
+          return { success: false, message: response.data.error }
+        })
     },
     async signout() {
       const { status } = await axios.delete('/signin')
