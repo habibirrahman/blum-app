@@ -43,3 +43,21 @@ bun run test:unit
 ```sh
 bun run lint
 ```
+
+## Project Mobile Setup
+
+```sh
+bunx cap sync
+```
+
+### Run Android Mobile
+
+```sh
+bunx cap run android
+```
+
+### Run iOS Mobile
+
+```sh
+bunx cap run ios
+```
