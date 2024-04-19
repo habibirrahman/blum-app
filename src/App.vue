@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { ref, onUpdated } from 'vue'
-import { getAccount } from './plugins/preferences'
+import { ref, onUpdated, onMounted } from 'vue'
+import { getAccountStorage } from './plugins/preferences.plugin'
 import router from './router'
+import { useAccountStore } from './stores/account.store'
 
 const route = useRoute()
-const access = ref<string>('')
-const email = ref<string>('')
+const store = useAccountStore()
 async function check() {
-  const { success, data } = await getAccount()
-  if (success) {
-    access.value = data?.access || ''
-    email.value = data?.email || ''
+  const { success, data } = await getAccountStorage()
+  if (success && data) {
+    store.assign(data)
     if (route.name === 'signin') {
       router.push({ name: 'home' })
     }
@@ -20,7 +19,7 @@ async function check() {
     router.push({ name: 'signin' })
   }
 }
-onUpdated(() => {
+onMounted(() => {
   check()
 })
 </script>
@@ -29,7 +28,7 @@ onUpdated(() => {
   <header v-if="$route.name !== 'signin'" class="space-y-4 p-4">
     <div class="flex flex-col items-center justify-center gap-4">
       <img alt="logo" src="@/assets/logo.svg" width="125" height="125" />
-      <div v-if="access">Signed in as: {{ email }}</div>
+      <div v-if="store.access">Signed in as: {{ store.user.name }}</div>
     </div>
   </header>
 

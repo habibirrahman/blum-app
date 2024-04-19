@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import AppButton from '@/components/AppButton.vue'
-import { removeAccount } from '@/plugins/preferences'
 import router from '@/router'
+import { useAccountStore } from '@/stores/account.store'
 import { ref } from 'vue'
 
+const store = useAccountStore()
 const loading = ref<boolean>(false)
 
 async function onSignout() {
   loading.value = true
-  const { succces } = await removeAccount()
-  setTimeout(() => {
-    loading.value = false
-    if (succces) {
-      router.push({ name: 'signin' })
-    }
-  }, 2000)
+  const { success } = await store.signout()
+  loading.value = false
+  if (success) {
+    router.push({ name: 'signin' })
+  }
 }
 
 function onClick(text: string) {
