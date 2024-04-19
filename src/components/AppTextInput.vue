@@ -26,7 +26,7 @@ const openPassword = ref<boolean>(false)
 
 <template>
   <label :for="name" class="relative grid">
-    <div v-if="label" className="mb-1 text-sm text-slate-10 font-bold">
+    <div v-if="label" className="mb-1 text-sm text-slate-10 font-medium">
       {{ label }}
       <span v-if="required" className="ml-1 text-red-700">{{ '*' }}</span>
     </div>

@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'blum.app',
-  appName: 'Blűm',
+  appName: 'Blum',
   webDir: 'dist'
 };
 
