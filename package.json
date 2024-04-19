@@ -17,6 +17,7 @@
     "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor/ios": "^6.0.0",
+    "@capacitor/preferences": "^6.0.0",
     "@iconify/vue": "^4.1.1",
     "pinia": "^2.1.7",
     "vue": "^3.4.21",
