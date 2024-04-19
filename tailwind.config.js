@@ -4,48 +4,32 @@ export default {
   theme: {
     fontFamily: {
       logo: ['"Quicksand"', 'sans-serif'],
-      body: ['"Roboto"', 'sans-serif'],
-      sans: [
-        '-apple-system',
-        'BlinkMacSystemFont',
-        '"Segoe UI"',
-        'Roboto',
-        '"Helvetica Neue"',
-        'Arial',
-        '"Noto Sans"',
-        'sans-serif',
-        '"Apple Color Emoji"',
-        '"Segoe UI Emoji"',
-        '"Segoe UI Symbol"',
-        '"Noto Color Emoji"'
-      ],
-      serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
-      mono: ['Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace']
+      sans: ['"Roboto"', 'sans-serif']
     },
     extend: {
       colors: {
         // brand
         'light-purple': {
           DEFAULT: '#6750A4',
-          400: '#806DB3',
-          300: '#9A8AC2',
-          200: '#B3A7D1',
-          100: '#E7E0EC'
+          4: '#806DB3',
+          3: '#9A8AC2',
+          2: '#B3A7D1',
+          1: '#E7E0EC'
         },
         'dark-purple': {
           DEFAULT: '#151021',
-          400: '#221B37',
-          300: '#342852',
-          200: '#45356D',
-          100: '#564389'
+          4: '#221B37',
+          3: '#342852',
+          2: '#45356D',
+          1: '#564389'
         },
         // greyscale
         grey: {
           DEFAULT: '#363636',
-          400: '#707070',
-          300: '#A0A0A0',
-          200: '#E4E4E4',
-          100: '#FBFBFB'
+          4: '#707070',
+          3: '#A0A0A0',
+          2: '#E4E4E4',
+          1: '#FBFBFB'
         },
         white: '#FCFCFD',
         'pure-white': '#FFFFFF',
@@ -53,45 +37,45 @@ export default {
         // greyscale v2
         slate: {
           DEFAULT: '#101828',
-          1000: '#1D2939',
-          900: '#344054',
-          800: '#475467',
-          700: '#667085',
-          600: '#98A2B3',
-          500: '#D0D5DD',
-          400: '#EAECF0',
-          300: '#F2F4F7',
-          200: '#F9FAFB',
-          100: '#FCFCFD'
+          10: '#1D2939',
+          9: '#344054',
+          8: '#475467',
+          7: '#667085',
+          6: '#98A2B3',
+          5: '#D0D5DD',
+          4: '#EAECF0',
+          3: '#F2F4F7',
+          2: '#F9FAFB',
+          1: '#FCFCFD'
         },
         // semantic
         success: {
           DEFAULT: '#4B810E',
-          400: '#71C115',
-          300: '#A0D663',
-          200: '#D0EAB1',
-          100: '#F2FFE3'
+          4: '#71C115',
+          3: '#A0D663',
+          2: '#D0EAB1',
+          1: '#F2FFE3'
         },
         error: {
           DEFAULT: '#932A20',
-          400: '#DD3F30',
-          300: '#E87F75',
-          200: '#F4BFBA',
-          100: '#F8D9D6'
+          4: '#DD3F30',
+          3: '#E87F75',
+          2: '#F4BFBA',
+          1: '#F8D9D6'
         },
         pending: {
-          DEFAULT: '#9B7600',
-          400: '#E8B100',
-          300: '#F0CB55',
-          200: '#F7E5AA',
-          100: '#FAEFCC'
+          DEFAULT: '#9B76',
+          4: '#E8B1',
+          3: '#F0CB55',
+          2: '#F7E5AA',
+          1: '#FAEFCC'
         },
         info: {
           DEFAULT: '#00638B',
-          400: '#0095D1',
-          300: '#55B8E0',
-          200: '#AADCF0',
-          100: '#CCEAF6'
+          4: '#0095D1',
+          3: '#55B8E0',
+          2: '#AADCF0',
+          1: '#CCEAF6'
         },
         // accent color
         'green-lime': '#D1E875',
@@ -115,27 +99,27 @@ export default {
         'orange-apricot': '#FCD4AA',
         orange: {
           DEFAULT: '#9C2A10',
-          900: '#C4320A',
-          800: '#EC4A0A',
-          700: '#FB6514',
-          600: '#FD853A',
-          500: '#FEB273',
-          400: '#FDDCAB',
-          300: '#FFEAD5',
-          200: '#FFF6ED',
-          100: '#FFFAF5'
+          9: '#C4320A',
+          8: '#EC4A0A',
+          7: '#FB6514',
+          6: '#FD853A',
+          5: '#FEB273',
+          4: '#FDDCAB',
+          3: '#FFEAD5',
+          2: '#FFF6ED',
+          1: '#FFFAF5'
         },
         lime: {
           DEFAULT: '#3F4E19',
-          900: '#495C18',
-          800: '#5B7417',
-          700: '#789719',
-          600: '#9BBE24',
-          500: '#B9D843',
-          400: '#D1E875',
-          300: '#E4F2A4',
-          200: '#F2F8CF',
-          100: '#F9FCE9'
+          9: '#495C18',
+          8: '#5B7417',
+          7: '#789719',
+          6: '#9BBE24',
+          5: '#B9D843',
+          4: '#D1E875',
+          3: '#E4F2A4',
+          2: '#F2F8CF',
+          1: '#F9FCE9'
         }
       }
     }

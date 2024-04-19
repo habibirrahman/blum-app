@@ -9,12 +9,13 @@ const route = useRoute()
 const access = ref<string>('')
 const email = ref<string>('')
 async function check() {
-  const status = await getAccount()
-  console.log(status)
-  console.log(route.name)
-  if (status.success) {
-    access.value = status.data?.access || ''
-    email.value = status.data?.email || ''
+  const { success, data } = await getAccount()
+  if (success) {
+    access.value = data?.access || ''
+    email.value = data?.email || ''
+    if (route.name === 'signin') {
+      router.push({ name: 'home' })
+    }
   } else if (route.name !== 'signin') {
     router.push({ name: 'signin' })
   }
@@ -36,17 +37,14 @@ onUpdated(() => {
 
   <footer
     v-if="$route.name !== 'signin'"
-    class="fixed bottom-0 flex h-10 w-full border-t border-light-purple-100 bg-white"
+    class="fixed bottom-0 flex h-10 w-full border-t border-light-purple-1 bg-white"
   >
     <nav class="flex h-full w-full items-center justify-between">
-      <RouterLink to="/">
-        <Icon icon="ph:list" />
-      </RouterLink>
-      <RouterLink to="/home">
+      <RouterLink :to="{ name: 'home' }">
         <Icon icon="ph:house" />
       </RouterLink>
-      <RouterLink to="/about">
-        <Icon icon="ph:info" />
+      <RouterLink :to="{ name: 'about' }">
+        <Icon icon="ph:user" />
       </RouterLink>
     </nav>
   </footer>
@@ -54,10 +52,10 @@ onUpdated(() => {
 
 <style scoped>
 nav a {
-  @apply flex h-full w-full items-center justify-center text-2xl text-light-purple transition-all duration-300 hover:bg-light-purple-200 hover:text-dark-purple-200;
+  @apply flex h-full w-full items-center justify-center text-2xl text-light-purple transition-all duration-300 hover:bg-light-purple-2 hover:text-dark-purple-2;
 }
 
 nav a.router-link-exact-active {
-  @apply bg-light-purple-100 text-dark-purple-200;
+  @apply bg-light-purple-1 text-dark-purple-2;
 }
 </style>

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
 @import './base.css';
 @tailwind base;
 @tailwind components;
@@ -5,8 +6,8 @@
 
 #app {
   margin: 0;
-  font-weight: normal;
-  @apply h-screen w-screen bg-white;
+  font-family: 'Roboto', sans-serif;
+  @apply h-screen w-screen;
 }
 
 .auth-background {
@@ -20,7 +21,7 @@
 }
 
 .auth-background::before {
-  content: "";
+  content: '';
   position: absolute;
   border-radius: 100%;
   background: #a0d663;
@@ -34,7 +35,7 @@
 }
 
 .auth-background::after {
-  content: "";
+  content: '';
   position: absolute;
   border-radius: 100%;
   background: #6750a4;

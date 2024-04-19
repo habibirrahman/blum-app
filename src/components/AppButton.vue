@@ -18,10 +18,10 @@ const emit = defineEmits<Emits>()
 
 <template>
   <button
-    class="relative flex items-center justify-center rounded bg-light-purple px-4 py-2 text-white ring-light-purple-200 ring-offset-2 hover:bg-dark-purple-200 active:ring-2"
+    class="ring-light-purple-2 hover:bg-dark-purple-2 relative flex items-center justify-center rounded bg-light-purple px-4 py-2 text-white ring-offset-2 active:ring-2"
     :class="{
-      'pointer-events-none cursor-wait bg-dark-purple-200 ring-2': loading,
-      'bg-slate-600': disabled
+      'bg-dark-purple-2 pointer-events-none cursor-wait ring-2': loading,
+      'bg-slate-6': disabled
     }"
     :disabled="disabled"
     @click="$emit('click')"
