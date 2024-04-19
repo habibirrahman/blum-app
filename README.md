@@ -50,13 +50,13 @@ bun run lint
 bunx cap sync
 ```
 
-### Run Android Mobile
+### Run [Android Mobile](https://capacitorjs.com/docs/android)
 
 ```sh
 bunx cap run android
 ```
 
-### Run iOS Mobile
+### Run [iOS Mobile](https://capacitorjs.com/docs/ios)
 
 ```sh
 bunx cap run ios
