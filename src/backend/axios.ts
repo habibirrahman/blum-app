@@ -39,6 +39,9 @@ axios.interceptors.response.use(
         // alert('An error occurred. Please try again later.')
       }
     }
+    if (error.message) {
+      alert(error.message)
+    }
     return Promise.reject(error)
   }
 )
