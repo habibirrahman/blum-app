@@ -5,6 +5,7 @@ import axios from 'axios'
 const API_URL = 'https://blum-staging.herokuapp.com'
 
 axios.defaults.baseURL = API_URL
+axios.defaults.withCredentials = true
 // const securedAxiosInstance = axios.create({
 //   baseURL: API_URL,
 //   withCredentials: true
