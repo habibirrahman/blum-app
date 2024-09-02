@@ -57,7 +57,7 @@ watch(access, () => {
 
 <style scoped>
 nav a {
-  @apply flex h-full w-full items-center justify-center text-2xl text-light-purple transition-all duration-300 hover:bg-light-purple-2 hover:text-dark-purple-2;
+  @apply flex h-full w-full items-center justify-center text-2xl text-light-purple-5 transition-all duration-300 hover:bg-light-purple-2 hover:text-dark-purple-2;
 }
 
 nav a.router-link-exact-active {

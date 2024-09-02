@@ -61,3 +61,12 @@ bunx cap run android
 ```sh
 bunx cap run ios
 ```
+
+### Reload
+
+```sh
+bun run build
+bunx cap sync
+bunx cap run android
+bunx cap run ios
+```

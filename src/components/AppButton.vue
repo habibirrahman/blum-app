@@ -18,7 +18,7 @@ const emit = defineEmits<Emits>()
 
 <template>
   <button
-    class="ring-light-purple-2 hover:bg-dark-purple-2 relative flex items-center justify-center rounded bg-light-purple px-4 py-2 text-white ring-offset-2 active:ring-2"
+    class="ring-light-purple-2 hover:bg-dark-purple-2 relative flex items-center justify-center rounded bg-light-purple-5 px-4 py-2 text-white ring-offset-2 active:ring-2"
     :class="{
       'bg-dark-purple-2 pointer-events-none cursor-wait ring-2': loading,
       'bg-slate-6': disabled

@@ -8,35 +8,36 @@ export default {
     },
     extend: {
       colors: {
-        // brand
         'light-purple': {
-          DEFAULT: '#6750A4',
+          5: '#6750A4',
           4: '#806DB3',
           3: '#9A8AC2',
           2: '#B3A7D1',
-          1: '#E7E0EC'
+          1: '#F1F2FC'
         },
         'dark-purple': {
-          DEFAULT: '#151021',
+          5: '#151021',
           4: '#221B37',
           3: '#342852',
           2: '#45356D',
           1: '#564389'
         },
-        // greyscale
-        grey: {
-          DEFAULT: '#363636',
-          4: '#707070',
-          3: '#A0A0A0',
-          2: '#E4E4E4',
-          1: '#FBFBFB'
+        prim: {
+          5: '#BFA6CC',
+          4: '#D6C7E0',
+          3: '#EBE4F0',
+          2: '#F3F0F7',
+          1: '#FAF8FB'
         },
-        white: '#FCFCFD',
+        chestnut: {
+          4: '#E3C9BE',
+          3: '#EFDFD9',
+          2: '#F6EDEA',
+          1: '#F6EDEA'
+        },
         'pure-white': '#FFFFFF',
-        'hover-state': '#F6F6F6',
-        // greyscale v2
         slate: {
-          DEFAULT: '#101828',
+          11: '#101828',
           10: '#1D2939',
           9: '#344054',
           8: '#475467',
@@ -48,57 +49,20 @@ export default {
           2: '#F9FAFB',
           1: '#FCFCFD'
         },
-        // semantic
-        success: {
-          DEFAULT: '#4B810E',
-          4: '#71C115',
-          3: '#A0D663',
-          2: '#D0EAB1',
-          1: '#F2FFE3'
+        lime: {
+          10: '#3F4E19',
+          9: '#495C18',
+          8: '#5B7417',
+          7: '#789719',
+          6: '#9BBE24',
+          5: '#B9D843',
+          4: '#D1E875',
+          3: '#E4F2A4',
+          2: '#F2F8CF',
+          1: '#F9FCE9'
         },
-        error: {
-          DEFAULT: '#932A20',
-          4: '#DD3F30',
-          3: '#E87F75',
-          2: '#F4BFBA',
-          1: '#F8D9D6'
-        },
-        pending: {
-          DEFAULT: '#9B76',
-          4: '#E8B1',
-          3: '#F0CB55',
-          2: '#F7E5AA',
-          1: '#FAEFCC'
-        },
-        info: {
-          DEFAULT: '#00638B',
-          4: '#0095D1',
-          3: '#55B8E0',
-          2: '#AADCF0',
-          1: '#CCEAF6'
-        },
-        // accent color
-        'green-lime': '#D1E875',
-        'green-moss': '#A7C957',
-        'green-pear': '#D3E4AB',
-        'green-lake': '#2AB1A8',
-        'green-mint': '#B8E5E2',
-        'red-salmon': '#F4855D',
-        'red-coral': '#F9B69E',
-        'red-cherry': '#FF4447',
-        'red-blush': '#FFC1C2',
-        'yellow-gold': '#F4D430',
-        'yellow-daffodil': '#FBEEAC',
-        'yellow-highlighter': '#DCFF00',
-        'yellow-butter': '#F3FFAA',
-        'blue-sky': '#487ADF',
-        'blue-hydrangeas': '#D3DFF7',
-        'violet-lavender': '#A533FF',
-        'violet-lilac': '#E1BBFF',
-        'orange-tangerine': '#F57E00',
-        'orange-apricot': '#FCD4AA',
         orange: {
-          DEFAULT: '#9C2A10',
+          10: '#9C2A10',
           9: '#C4320A',
           8: '#EC4A0A',
           7: '#FB6514',
@@ -109,17 +73,70 @@ export default {
           2: '#FFF6ED',
           1: '#FFFAF5'
         },
-        lime: {
-          DEFAULT: '#3F4E19',
-          9: '#495C18',
-          8: '#5B7417',
-          7: '#789719',
-          6: '#9BBE24',
-          5: '#B9D843',
-          4: '#D1E875',
-          3: '#E4F2A4',
-          2: '#F2F8CF',
-          1: '#F9FCE9'
+        rose: {
+          11: '#89123E',
+          10: '#A11043',
+          9: '#C01048',
+          8: '#E31B54',
+          7: '#F63D68',
+          6: '#FD6F8E',
+          5: '#FEA3B4',
+          4: '#FECDD6',
+          3: '#FFE4E8',
+          2: '#FFF1F3',
+          1: '#FFF5F6'
+        },
+        tomato: {
+          11: '#450F0A',
+          10: '#7F251D',
+          9: '#99261B',
+          8: '#B92A1C',
+          7: '#DD3F30',
+          6: '#EE5445',
+          5: '#F87D71',
+          4: '#FCADA5',
+          3: '#FECFCA',
+          2: '#FEE4E2',
+          1: '#FEF3F2'
+        },
+        cornflower: {
+          11: '#07334A',
+          10: '#0B4F6F',
+          9: '#066086',
+          8: '#0172A3',
+          7: '#0095D1',
+          6: '#0CB2EB',
+          5: '#36C8FA',
+          4: '#7CDAFD',
+          3: '#B9EAFE',
+          2: '#E0F4FE',
+          1: '#F0FAFF'
+        },
+        tulip: {
+          11: '#442004',
+          10: '#74400F',
+          9: '#894E0A',
+          8: '#A66402',
+          7: '#D18D00',
+          6: '#E8B100',
+          5: '#FFD30D',
+          4: '#FFE541',
+          3: '#FFF486',
+          2: '#FFFBC1',
+          1: '#FFFDE7'
+        },
+        grass: {
+          11: '#172E05',
+          10: '#325314',
+          9: '#396212',
+          8: '#457C0F',
+          7: '#5BA30D',
+          6: '#71C115',
+          5: '#97E635',
+          4: '#B4F264',
+          3: '#D3F99D',
+          2: '#E9FCCB',
+          1: '#F5FEE7'
         }
       }
     }

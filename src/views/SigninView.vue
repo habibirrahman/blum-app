@@ -39,10 +39,7 @@ async function onSignin() {
       class="z-10 flex max-w-lg flex-col gap-6 rounded-3xl border border-light-purple-1 bg-pure-white p-6"
     >
       <div class="flex flex-col gap-1 text-center">
-        <div class="font-logo text-4xl font-bold text-light-purple">Blüm</div>
-        <div class="text-sm leading-relaxed text-slate-7">
-          Streamline your ABA therapy data collection process and make your sessions more effective.
-        </div>
+        <div class="font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
       </div>
       <div class="flex flex-col gap-4">
         <AppTextInput
