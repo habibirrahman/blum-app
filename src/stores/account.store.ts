@@ -8,7 +8,7 @@ interface StateSchema {
   csrf: string
   user: User
 }
-interface AssignSchema {
+interface AssignAccountSchema {
   access: string
   csrf: string
   user: User
@@ -30,7 +30,7 @@ export const useAccountStore = defineStore('account', {
       this.user = {}
       return { success: true }
     },
-    async assign({ access, csrf, user }: AssignSchema) {
+    async assign({ access, csrf, user }: AssignAccountSchema) {
       this.access = access
       this.csrf = csrf
       this.user = user

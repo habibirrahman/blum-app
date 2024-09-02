@@ -32,21 +32,15 @@ async function onSignin() {
 </script>
 
 <template>
-  <div
-    class="auth-background flex h-screen w-screen flex-col items-center justify-center gap-6 px-4 py-6"
-  >
-    <div
-      class="z-10 flex max-w-lg flex-col gap-6 rounded-3xl border border-light-purple-1 bg-pure-white p-6"
-    >
-      <div class="flex flex-col gap-1 text-center">
-        <div class="font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
-      </div>
-      <div class="flex flex-col gap-4">
+  <div class="flex h-screen w-screen flex-col items-center justify-center gap-6 py-4">
+    <div class="flex w-full flex-col gap-10 p-4">
+      <div class="text-light-purple-5 text-center font-logo text-5xl font-bold">Blüm</div>
+      <div class="flex flex-col gap-5">
         <AppTextInput
           label="Email"
           name="email"
           type="email"
-          placeholder="Type your email"
+          placeholder="Enter your email"
           v-model="email"
           :error="error"
         />
@@ -54,13 +48,16 @@ async function onSignin() {
           label="Password"
           name="password"
           type="password"
-          placeholder="Type your password"
+          placeholder="Enter your password"
           v-model="password"
         />
-        <AppButton @click="onSignin" :loading="loading" :disabled="!email && !password">
-          Sign in
+        <AppButton @click="onSignin" :loading="loading" :disabled="!email && !password" size="sm">
+          Log in
         </AppButton>
       </div>
+    </div>
+    <div class="absolute bottom-0 w-screen py-1">
+      <AppButton kind="plain" class="w-full">Forgot password?</AppButton>
     </div>
   </div>
 </template>
