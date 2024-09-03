@@ -5,10 +5,12 @@ export default konstaConfig({
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx,vue}'],
   theme: {
     fontFamily: {
-      logo: ['"Quicksand"', 'sans-serif'],
-      sans: ['"Roboto"', 'sans-serif']
+      sans: ['"Inter"', 'sans-serif']
     },
     extend: {
+      fontFamily: {
+        logo: ['"Quicksand"', 'sans-serif']
+      },
       colors: {
         'light-purple': {
           5: '#6750A4',
@@ -143,5 +145,5 @@ export default konstaConfig({
       }
     }
   },
-  plugins: []
+  plugins: [require('@tailwindcss/forms')]
 })

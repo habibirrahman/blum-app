@@ -24,26 +24,25 @@ export const useAccountStore = defineStore('account', {
     // doubleCount: (state) => state.count * 2
   },
   actions: {
-    async reset() {
+    async resetAccount() {
       this.access = ''
       this.csrf = ''
       this.user = {}
       return { success: true }
     },
-    async assign({ access, csrf, user }: AssignAccountSchema) {
+    async assignAccount({ access, csrf, user }: AssignAccountSchema) {
       this.access = access
       this.csrf = csrf
       this.user = user
       return { success: true }
     },
     async signin({ email, password }: SigninSchema) {
-      console.log(email, password)
       return axios
         .post('/signin', { email, password })
         .then(async ({ data }) => {
           const { success } = await setAccountStorage(data)
           if (!success) return { success: false }
-          this.assign(data)
+          this.assignAccount(data)
           return { success: true, message: 'Successfully signed in' }
         })
         .catch(({ response }) => {
@@ -55,7 +54,7 @@ export const useAccountStore = defineStore('account', {
       if (status !== 200) return { success: false }
       const { success } = await removeAccountStorage()
       if (!success) return { success: false }
-      this.reset()
+      this.resetAccount()
       return { success: true }
     }
   }

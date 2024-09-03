@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
 import { ref } from 'vue'
+import { Icon } from '@iconify/vue'
 
-export interface Props {
+interface Props {
   label?: string
   name: string
   type?: 'text' | 'email' | 'password' | 'number' | 'date'
@@ -10,6 +10,7 @@ export interface Props {
   disabled?: boolean
   required?: boolean
   error?: string
+  suffix_icon?: string
 }
 
 const model = defineModel({ type: String || Number })
@@ -18,7 +19,8 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '',
   disabled: false,
   required: false,
-  error: ''
+  error: '',
+  suffix_icon: ''
 })
 
 const openPassword = ref<boolean>(false)
@@ -32,7 +34,7 @@ const openPassword = ref<boolean>(false)
       :class="[error ? 'text-tomato-7' : 'text-slate-8']"
     >
       <span>{{ label }}</span>
-      <span v-if="required" class="text-tomato-7 ml-1">{{ '*' }}</span>
+      <span v-if="required" class="ml-1 text-tomato-7">{{ '*' }}</span>
     </div>
     <input
       class="group w-full rounded border px-4 py-2 text-sm ring-offset-2 focus:outline-none"
@@ -53,6 +55,12 @@ const openPassword = ref<boolean>(false)
       :class="[label ? 'top-[30px]' : 'top-2']"
       @click.prevent="openPassword = !openPassword"
     />
-    <div v-if="error" class="text-tomato-7 mt-1 text-sm">{{ error }}</div>
+    <Icon
+      v-if="suffix_icon"
+      :icon="suffix_icon"
+      class="absolute right-2 cursor-pointer text-2xl text-slate-7"
+      :class="[label ? 'top-[30px]' : 'top-2']"
+    />
+    <div v-if="error" class="mt-1 text-sm text-tomato-7">{{ error }}</div>
   </label>
 </template>

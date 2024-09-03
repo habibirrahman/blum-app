@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-export interface Props {
+interface Props {
   type?: 'button' | 'submit'
   kind?: 'primary' | 'outline' | 'plain'
   size?: 'base' | 'sm'
   disabled?: boolean
   loading?: boolean
 }
-export interface Emits {
+interface Emits {
   (e: 'click'): void
 }
 
@@ -21,19 +21,19 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<Emits>()
 
-const isLoading = computed(() => !props.disabled && props.loading)
-const isDisabled = computed(() => props.disabled && !props.loading)
+const isLoading = computed<boolean>(() => !props.disabled && props.loading)
+const isDisabled = computed<boolean>(() => props.disabled && !props.loading)
 
-const isPrimary = computed(() => !props.disabled && !props.loading && props.kind === 'primary')
-const isPrimaryLoading = computed(() => isLoading.value && props.kind === 'primary')
-const isPrimaryDisabled = computed(() => isDisabled.value && props.kind === 'primary')
+const isPrimary = computed<boolean>(() => !props.disabled && !props.loading && props.kind === 'primary')
+const isPrimaryLoading = computed<boolean>(() => isLoading.value && props.kind === 'primary')
+const isPrimaryDisabled = computed<boolean>(() => isDisabled.value && props.kind === 'primary')
 
-const isOutline = computed(() => !props.disabled && !props.loading && props.kind === 'outline')
-const isOutlineLoading = computed(() => isLoading.value && props.kind === 'outline')
-const isOutlineDisabled = computed(() => isDisabled.value && props.kind === 'outline')
+const isOutline = computed<boolean>(() => !props.disabled && !props.loading && props.kind === 'outline')
+const isOutlineLoading = computed<boolean>(() => isLoading.value && props.kind === 'outline')
+const isOutlineDisabled = computed<boolean>(() => isDisabled.value && props.kind === 'outline')
 
-const isPlain = computed(() => !props.disabled && !props.loading && props.kind === 'plain')
-const isPlainLoading = computed(() => isLoading.value && props.kind === 'plain')
+const isPlain = computed<boolean>(() => !props.disabled && !props.loading && props.kind === 'plain')
+const isPlainLoading = computed<boolean>(() => isLoading.value && props.kind === 'plain')
 </script>
 
 <template>

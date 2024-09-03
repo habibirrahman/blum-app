@@ -1,29 +1,329 @@
 <script setup lang="ts">
-import AppButton from '@/components/AppButton.vue'
 import router from '@/router'
-import { useAccountStore } from '@/stores/account.store'
-import { ref } from 'vue'
+import AppButton from '@/components/AppButton.vue'
+import AppTextInput from '@/components/AppTextInput.vue'
+import AppActionSheet from '@/components/AppActionSheet.vue'
+import AppPagination from '@/components/AppPagination.vue'
+import UpcomingSession from '@/partitions/UpcomingSession.vue'
+import SessionItem from '@/partitions/SessionItem.vue'
+import moment from 'moment'
+import { useSessionStore } from '@/stores/session.store'
+import { computed, onMounted, ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 
-const store = useAccountStore()
-const loading = ref<boolean>(false)
+const sessionStore = useSessionStore()
 
-async function onSignout() {
-  loading.value = true
-  const { success } = await store.signout()
-  loading.value = false
-  if (success) {
-    router.push({ name: 'signin' })
+const upcomingLoading = ref<boolean>(false)
+const sessionsLoading = ref<boolean>(false)
+
+const page = ref<number>(1)
+const perPage = ref<number>(25)
+watch(page, (val, old) => {
+  if (val !== old) {
+    fetchSessions()
   }
+})
+
+const query = ref<string>('')
+const queryTimeout = ref<any>(null)
+watch(query, () => {
+  sessionsLoading.value = true
+  clearTimeout(queryTimeout.value)
+  queryTimeout.value = setTimeout(() => {
+    page.value = 1
+    fetchSessions()
+  }, 1500)
+})
+
+type Date = 'isoWeeks' | 'months' | ''
+const date = ref<Date>('')
+const dateOptions: { value: Date; label: string }[] = [
+  { value: 'isoWeeks', label: 'This week' },
+  { value: 'months', label: 'This month' }
+]
+watch(date, (val) => {
+  if (val && status.value !== 'scheduled') {
+    status.value = 'scheduled'
+  }
+  sessionsLoading.value = true
+  page.value = 1
+  fetchSessions()
+})
+
+type Status = 'scheduled' | 'unscheduled' | ''
+const status = ref<Status>('')
+const selectStatus = ref<Status>('')
+const statusOptions: { value: Status; label: string }[] = [
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'unscheduled', label: 'Unscheduled' }
+]
+const showStatus = ref<boolean>(false)
+watch(showStatus, (val) => {
+  if (val) {
+    selectStatus.value = status.value
+  }
+})
+const onResetStatus = () => {
+  status.value = ''
+  selectStatus.value = ''
+  showStatus.value = false
+  page.value = 1
+  fetchSessions()
+}
+const onApplyStatus = () => {
+  status.value = selectStatus.value
+  if (selectStatus.value === 'unscheduled') {
+    date.value = ''
+  }
+  showStatus.value = false
+  page.value = 1
+  fetchSessions()
 }
 
-function onClick(text: string) {
-  alert(text)
+type Sort = 'newest_session_id' | 'oldest_session_id' | 'most_recent_schedule' | 'earliest_schedule'
+const sort = ref<Sort>('newest_session_id')
+const selectSort = ref<Sort>('newest_session_id')
+const sortOptions: { value: Sort; label: string }[] = [
+  { value: 'newest_session_id', label: 'Newest session ID' },
+  { value: 'oldest_session_id', label: 'Oldest session ID' },
+  { value: 'most_recent_schedule', label: 'Most recent schedule' },
+  { value: 'earliest_schedule', label: 'Earliest schedule' }
+]
+const showSort = ref<boolean>(false)
+watch(showSort, (val) => {
+  if (val) {
+    selectSort.value = sort.value
+  }
+})
+const onResetSort = () => {
+  sort.value = 'newest_session_id'
+  selectSort.value = 'newest_session_id'
+  showSort.value = false
+  page.value = 1
+  fetchSessions()
 }
+const onApplySort = () => {
+  sort.value = selectSort.value
+  showSort.value = false
+  page.value = 1
+  fetchSessions()
+}
+
+const params = computed<string>(() => {
+  let p = `?page=${page.value}&per_page=25`
+  if (query.value) p += `&query=${query.value}`
+  if (date.value) {
+    const d = moment()
+    p += `&start_date=${d.startOf(date.value).format('YYYY-MM-DD')}`
+    p += `&end_date=${d.endOf(date.value).format('YYYY-MM-DD')}`
+  }
+  if (status.value) p += `&status=${status.value}`
+  p += `&sort=${sort.value}`
+  return p
+})
+
+async function fetchUpcoming() {
+  upcomingLoading.value = true
+  const { success } = await sessionStore.getUpcomingSessions()
+  upcomingLoading.value = false
+  if (!success) return
+}
+async function fetchSessions() {
+  sessionsLoading.value = true
+  const { success } = await sessionStore.getSessions({ params: params.value })
+  sessionsLoading.value = false
+  if (!success) return
+  document.getElementById('app')?.scroll({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
+
+onMounted(() => {
+  fetchUpcoming()
+  fetchSessions()
+})
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-4 py-4">
-    <AppButton :loading="loading" @click="() => onSignout()">Sign out</AppButton>
-    <AppButton @click="onClick('alert description')">Alert</AppButton>
+  <div
+    class="space-y-3 pt-3 transition-all"
+    :class="{ 'bg-chestnut-1': sessionStore.upcoming_sessions_count }"
+  >
+    <div class="flex items-center gap-3 px-4">
+      <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Draft Sessions</div>
+      <div
+        v-if="!sessionsLoading"
+        class="flex h-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
+      >
+        {{ sessionStore.sessions_count }}
+      </div>
+    </div>
+    <div v-if="upcomingLoading" class="flex h-[110px] w-full items-center justify-center">
+      <Icon icon="uiw:loading" class="animate-spin text-5xl text-light-purple-5" />
+    </div>
+    <div v-else-if="sessionStore.upcoming_sessions_count" class="space-y-1.5">
+      <div class="flex items-center gap-1.5 px-4">
+        <div class="text-xs font-semibold text-dark-purple-1">Your upcoming sessions for today</div>
+        <div
+          class="flex h-6 min-w-6 items-center justify-center rounded bg-white px-1 text-xs font-semibold text-dark-purple-1"
+        >
+          {{ sessionStore.upcoming_sessions_count }}
+        </div>
+      </div>
+      <div class="pl-4">
+        <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+          <UpcomingSession
+            v-for="session in sessionStore.upcoming_sessions"
+            :key="session.id"
+            :session="session"
+          />
+        </div>
+      </div>
+    </div>
   </div>
+  <div class="sticky top-0 space-y-3 bg-white pt-3">
+    <div class="px-4">
+      <AppTextInput
+        name="query"
+        placeholder="Search draft by client name or ID"
+        v-model="query"
+        suffix_icon="ph:magnifying-glass"
+      />
+    </div>
+    <div class="pl-4">
+      <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+        <div
+          v-for="opt in dateOptions"
+          :key="opt.value"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-4 text-xs transition-all"
+          :class="[
+            date === opt.value
+              ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
+              : 'border-slate-4 bg-white'
+          ]"
+          @click="date = date === opt.value ? '' : opt.value"
+        >
+          {{ opt.label }}
+        </div>
+        <div
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs capitalize transition-all"
+          :class="[
+            status
+              ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
+              : 'border-slate-4 bg-white'
+          ]"
+          @click="showStatus = true"
+        >
+          <span>{{ !status ? 'All statuses' : status }}</span>
+          <Icon icon="ph:caret-down" class="text-base text-slate-8" />
+        </div>
+        <div
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs capitalize transition-all"
+          @click="showSort = true"
+        >
+          <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />
+          <span>{{ sortOptions.find((i) => i.value === sort)?.label }}</span>
+          <Icon icon="ph:caret-down" class="text-base text-slate-8" />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div v-if="sessionsLoading" class="flex h-64 w-full items-center justify-center">
+    <Icon icon="uiw:loading" class="animate-spin text-5xl text-light-purple-5" />
+  </div>
+  <div
+    v-else-if="!sessionStore.sessions_count"
+    class="flex h-64 w-full items-center justify-center"
+  >
+    <div v-if="date" class="text-center text-sm text-slate-8">
+      No draft sessions scheduled for this {{ date === 'isoWeeks' ? 'week' : 'month' }}.
+    </div>
+    <div v-else class="text-center text-sm text-slate-8">
+      Oops! No draft sessions fit your filter criteria. Try changing the filter to find more
+      results!
+    </div>
+  </div>
+  <div v-else>
+    <div class="px-4 pt-2 text-xs text-slate-7">
+      <span>Showing </span>
+      <span>
+        {{ (page - 1) * perPage + 1 }}-{{
+          page * perPage > sessionStore.sessions_count
+            ? sessionStore.sessions_count
+            : page * perPage
+        }}
+      </span>
+      <span> of {{ sessionStore.sessions_count }}</span>
+    </div>
+    <div class="px-4">
+      <SessionItem v-for="session in sessionStore.sessions" :key="session.id" :session="session" />
+    </div>
+    <AppPagination
+      :page="page"
+      :total_count="sessionStore.sessions_count"
+      @change="page = $event"
+    />
+  </div>
+
+  <AppActionSheet :show="showStatus" @close="showStatus = false">
+    <div class="w-full space-y-4">
+      <div class="flex w-full items-center justify-between">
+        <div class="text-xl font-semibold">Statuses</div>
+        <div class="cursor-pointer" @click="showStatus = false">
+          <Icon icon="ph:x" class="text-2xl" />
+        </div>
+      </div>
+      <div
+        v-for="opt in statusOptions"
+        :key="opt.value"
+        class="flex h-14 items-center justify-between border-b border-slate-3"
+      >
+        <label :for="`status_filter_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
+        <input
+          type="radio"
+          name="status_filter"
+          :id="`status_filter_${opt.value}`"
+          :checked="selectStatus === opt.value"
+          :value="opt.value"
+          class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+          @click="selectStatus = opt.value"
+        />
+      </div>
+      <div class="grid w-full grid-cols-2 gap-2">
+        <AppButton kind="plain" @click="onResetStatus">Reset</AppButton>
+        <AppButton @click="onApplyStatus">Apply</AppButton>
+      </div>
+    </div>
+  </AppActionSheet>
+  <AppActionSheet :show="showSort" @close="showSort = false">
+    <div class="w-full space-y-4">
+      <div class="flex w-full items-center justify-between">
+        <div class="text-xl font-semibold">Sort by</div>
+        <div class="cursor-pointer" @click="showSort = false">
+          <Icon icon="ph:x" class="text-2xl" />
+        </div>
+      </div>
+      <div
+        v-for="opt in sortOptions"
+        :key="opt.value"
+        class="flex h-14 items-center justify-between border-b border-slate-3"
+      >
+        <label :for="`sort_by_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
+        <input
+          type="radio"
+          name="sort_by"
+          :id="`sort_by_${opt.value}`"
+          :checked="selectSort === opt.value"
+          :value="opt.value"
+          class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+          @click="selectSort = opt.value"
+        />
+      </div>
+      <div class="grid w-full grid-cols-2 gap-2">
+        <AppButton kind="plain" @click="onResetSort">Reset</AppButton>
+        <AppButton @click="onApplySort">Apply</AppButton>
+      </div>
+    </div>
+  </AppActionSheet>
 </template>

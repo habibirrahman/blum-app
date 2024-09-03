@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
+import AppActionSheet from '@/components/AppActionSheet.vue'
 import router from '@/router'
 import { useAccountStore } from '@/stores/account.store'
 
@@ -10,6 +11,8 @@ const email = ref<string>('')
 const password = ref<string>('')
 const error = ref<string>('')
 const loading = ref<boolean>(false)
+
+const showForgotPassword = ref<boolean>(false)
 
 watch(email, () => {
   error.value = ''
@@ -34,7 +37,7 @@ async function onSignin() {
 <template>
   <div class="flex h-screen w-screen flex-col items-center justify-center gap-6 py-4">
     <div class="flex w-full flex-col gap-10 p-4">
-      <div class="text-light-purple-5 text-center font-logo text-5xl font-bold">Blüm</div>
+      <div class="text-center font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
       <div class="flex flex-col gap-5">
         <AppTextInput
           label="Email"
@@ -57,9 +60,23 @@ async function onSignin() {
       </div>
     </div>
     <div class="absolute bottom-0 w-screen py-1">
-      <AppButton kind="plain" class="w-full">Forgot password?</AppButton>
+      <AppButton kind="plain" class="w-full" @click="showForgotPassword = true">
+        Forgot password?
+      </AppButton>
     </div>
   </div>
+  <AppActionSheet :show="showForgotPassword" @close="showForgotPassword = false">
+    <div class="flex flex-col items-center gap-4">
+      <div class="text-center text-xl font-semibold">Reset password</div>
+      <div class="text-center text-sm">
+        Password resets aren't available on mobile yet. Please log in to Blüm on a desktop and
+        update it from your profile, or contact your admin for assistance.
+      </div>
+      <AppButton kind="plain" class="w-full" @click="showForgotPassword = false">
+        Got it!
+      </AppButton>
+    </div>
+  </AppActionSheet>
 </template>
 
 <style></style>
