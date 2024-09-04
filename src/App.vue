@@ -38,21 +38,21 @@ async function setupNetwork() {
   networkStatus.connected = connected
   networkStatus.connectionType = connectionType
 
-  // Network.addListener('networkStatusChange', (status) => {
-  //   console.log('network listener', status)
-  //   const { connected, connectionType } = status
-  //   networkStatus.connected = connected
-  //   networkStatus.connectionType = connectionType
-  // })
+  Network.addListener('networkStatusChange', (status) => {
+    console.log('network listener', status)
+    const { connected, connectionType } = status
+    networkStatus.connected = connected
+    networkStatus.connectionType = connectionType
+  })
 }
 
-watch(
-  routeName,
-  async () => {
-    await setupNetwork()
-  },
-  { immediate: true }
-)
+// watch(
+//   routeName,
+//   async () => {
+//     await setupNetwork()
+//   },
+//   { immediate: true }
+// )
 
 onBeforeMount(async () => {
   await fetchCurrentUser()
