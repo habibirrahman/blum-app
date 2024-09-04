@@ -25,7 +25,6 @@ export const useSessionStore = defineStore('session', {
   getters: {},
   actions: {
     async getSession({ slug }: { slug?: string }) {
-      this.session = null
       return axios
         .get(`/api/v1/sessions/${slug}`)
         .then(async ({ data }) => {
@@ -39,7 +38,6 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async getSessionComments({ id }: { id?: string }) {
-      this.session_comments = []
       return axios
         .get(`/api/v1/sessions/${id}/comments?filter_by=general`)
         .then(async ({ data }) => {
@@ -51,7 +49,6 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async getSessionMeasurements({ id }: { id?: string }) {
-      this.session_measurements = []
       return axios
         .get(`/api/v1/sessions/${id}/measurements`)
         .then(async ({ data }) => {
@@ -63,8 +60,6 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async getSessions({ params }: { params?: string }) {
-      this.sessions = []
-      this.sessions_count = 0
       return axios
         .get(`/api/v1/sessions/draft_sessions${params}`)
         .then(async ({ data }) => {
@@ -77,8 +72,6 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async getUpcomingSessions() {
-      this.upcoming_sessions = []
-      this.upcoming_sessions_count = 0
       return axios
         .get('/api/v1/sessions/draft_sessions?upcoming=true')
         .then(async ({ data }) => {

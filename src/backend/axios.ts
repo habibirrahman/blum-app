@@ -1,4 +1,4 @@
-import { getAccountStorage, removeAccountStorage } from '@/plugins/preferences.plugin'
+import { getAccountStorage } from '@/plugins/preferences.plugin'
 import router from '@/router'
 import axios from 'axios'
 
@@ -33,7 +33,7 @@ axios.interceptors.response.use(
     if (error.response) {
       if (error.response.status === 401) {
         // Redirect to login page
-        await removeAccountStorage()
+        // await removeAccountStorage()
         router.push('/')
       } else {
         // Show a generic error message

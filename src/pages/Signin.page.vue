@@ -72,7 +72,7 @@ async function onSignin() {
         Password resets aren't available on mobile yet. Please log in to Blüm on a desktop and
         update it from your profile, or contact your admin for assistance.
       </div>
-      <AppButton kind="plain" class="w-full" @click="showForgotPassword = false">
+      <AppButton kind="plain" size="sm" class="w-full" @click="showForgotPassword = false">
         Got it!
       </AppButton>
     </div>

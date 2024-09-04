@@ -3,14 +3,10 @@ import { useSessionStore } from '@/stores/session.store'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { displayDate, getTargetType } from '@/lib/func'
+import { displayDate, getMeasurementType, getTargetType } from '@/lib/func'
 import AppButton from '@/components/AppButton.vue'
-import moment from 'moment'
-import { useAccountStore } from '@/stores/account.store'
-import AppActionSheet from '@/components/AppActionSheet.vue'
 
 const route = useRoute()
-const accountStore = useAccountStore()
 const sessionStore = useSessionStore()
 
 const sessionLoading = ref<boolean>(false)
@@ -36,7 +32,7 @@ onMounted(() => {
 
 interface Schedule {
   icon: string
-  title?: string
+  title: string
   label?: string
 }
 const scheduleDetails = computed<Schedule[]>(() => [
@@ -58,49 +54,6 @@ const scheduleDetails = computed<Schedule[]>(() => [
     label: sessionStore.session?.appointment?.room?.branch?.name
   }
 ])
-
-const showActionBeforeLunch = ref<boolean>(false)
-const isLunchBeforeSchedule = ref<boolean>(false)
-const isLunchNotAssigned = ref<boolean>(false)
-const lunchDetails = computed<Schedule[]>(() => [
-  {
-    icon: 'ph:calendar-blank',
-    label: displayDate({ date: sessionStore.session?.appointment?.date, format: 'DD MMM YYYY' })
-  },
-  {
-    icon: 'ph:clock-light',
-    label: `${sessionStore.session?.appointment?.start_time_string} - ${sessionStore.session?.appointment?.end_time_string}`
-  },
-  { icon: 'ph:user', label: sessionStore.session?.appointment?.user?.name }
-])
-const onLaunchSession = () => {
-  showActionBeforeLunch.value = false
-  alert('start session')
-}
-const onStartSession = () => {
-  isLunchBeforeSchedule.value = false
-  isLunchNotAssigned.value = false
-  let showAction = false
-  if (!sessionStore.session?.appointment_id) {
-    return onLaunchSession()
-  }
-
-  const t = sessionStore.session.appointment?.start_time_string || '24:00'
-  const d = `${sessionStore.session.appointment?.date}T${t}:00`
-  const startDate = moment(d)
-  if (moment().isBefore(startDate)) {
-    isLunchBeforeSchedule.value = true
-    showAction = true
-  }
-
-  if (sessionStore.session.appointment?.user_id !== accountStore.user?.id) {
-    isLunchNotAssigned.value = true
-    showAction = true
-  }
-
-  if (showAction) showActionBeforeLunch.value = true
-  else onLaunchSession()
-}
 </script>
 
 <template>
@@ -186,9 +139,9 @@ const onStartSession = () => {
           <div class="whitespace-pre-line text-sm text-slate-8" v-html="comment.body"></div>
         </div>
       </div>
-      <div v-if="sessionStore.session_measurements.length" class="space-y-2 px-4">
+      <div v-if="sessionStore.session?.number_of_measurements" class="space-y-2 px-4">
         <div class="flex h-7.5 items-center justify-center gap-1 text-dark-purple-1">
-          <div class="text-2xl font-bold">{{ sessionStore.session_measurements.length }}</div>
+          <div class="text-2xl font-bold">{{ sessionStore.session?.number_of_measurements }}</div>
           <div class="text-sm">target(s)</div>
         </div>
         <div
@@ -286,73 +239,9 @@ const onStartSession = () => {
       </div>
     </div>
   </div>
-  <div
-    v-if="!sessionLoading"
-    class="fixed bottom-0 z-10 flex h-[68px] w-screen items-center bg-prim-3 px-4"
-  >
-    <AppButton
-      :disabled="!sessionStore.session_measurements.length"
-      size="sm"
-      class="w-full"
-      @click="onStartSession"
+  <div class="fixed bottom-0 z-10 flex h-[68px] w-screen items-center bg-prim-3 px-4">
+    <AppButton :disabled="!sessionStore.session?.number_of_measurements" size="sm" class="w-full"
+      >Start session</AppButton
     >
-      Start session
-    </AppButton>
   </div>
-  <AppActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
-    <div class="flex flex-col items-center gap-4">
-      <div
-        v-if="isLunchBeforeSchedule && !isLunchNotAssigned"
-        class="flex flex-col items-center gap-4"
-      >
-        <div class="text-center text-xl font-semibold">Session launch before schedule</div>
-        <div class="text-center text-sm">This session is scheduled for:</div>
-        <div class="flex w-full flex-wrap justify-center gap-3">
-          <div
-            v-for="item in lunchDetails"
-            :key="item.icon"
-            class="flex h-8 max-w-[calc((100%-0.75rem)/2)] shrink-0 items-center gap-2 rounded bg-light-purple-1 px-3"
-          >
-            <Icon :icon="item.icon" class="text-light-purple-4" />
-            <div class="truncate text-sm font-medium text-dark-purple-1">{{ item.label }}</div>
-          </div>
-        </div>
-        <div class="text-center text-sm">Are you sure you want to start the session now?</div>
-      </div>
-      <div
-        v-if="!isLunchBeforeSchedule && isLunchNotAssigned"
-        class="flex flex-col items-center gap-4"
-      >
-        <div class="text-center text-xl font-semibold">You're not assigned to this session</div>
-        <div class="text-center text-sm">
-          This session is assigned to
-          <span class="font-medium">{{ sessionStore.session?.appointment?.user?.name }}.</span> Do
-          you wish to proceed?
-        </div>
-      </div>
-      <div
-        v-if="isLunchBeforeSchedule && isLunchNotAssigned"
-        class="flex flex-col items-center gap-4"
-      >
-        <div class="text-center text-xl font-semibold">Early start for unassigned session</div>
-        <div class="text-center text-sm">
-          The session scheduled for
-          <span class="font-medium">{{
-            displayDate({ date: sessionStore.session?.appointment?.date, format: 'DD MMM YYYY' })
-          }}</span>
-          at
-          <span class="font-medium">{{
-            sessionStore.session?.appointment?.start_time_string
-          }}</span>
-          with
-          <span class="font-medium">{{ sessionStore.session?.appointment?.user?.name }}</span> is
-          early and not assigned to you. Are you sure you want to start?
-        </div>
-      </div>
-      <div class="grid w-full grid-cols-2 gap-2">
-        <AppButton size="sm" kind="plain" @click="showActionBeforeLunch = false">Cancel</AppButton>
-        <AppButton size="sm" @click="onLaunchSession">Process</AppButton>
-      </div>
-    </div>
-  </AppActionSheet>
 </template>

@@ -4,14 +4,7 @@ import type { User } from '@/lib/types'
 import axios from 'axios'
 
 interface StateSchema {
-  access: string
-  csrf: string
   user: User | null
-}
-interface AssignAccountSchema {
-  access: string
-  csrf: string
-  user: User
 }
 interface SigninSchema {
   email: string
@@ -19,20 +12,19 @@ interface SigninSchema {
 }
 
 export const useAccountStore = defineStore('account', {
-  state: (): StateSchema => ({ access: '', csrf: '', user: null }),
+  state: (): StateSchema => ({ user: null }),
   getters: {},
   actions: {
-    async resetAccount() {
-      this.access = ''
-      this.csrf = ''
-      this.user = {}
-      return { success: true }
-    },
-    async assignAccount({ access, csrf, user }: AssignAccountSchema) {
-      this.access = access
-      this.csrf = csrf
-      this.user = user
-      return { success: true }
+    async getAccount() {
+      return axios
+        .get('/api/v1/current_user')
+        .then(async ({ data }) => {
+          this.user = data
+          return { success: true, data, message: 'You have signed in' }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response.data.error }
+        })
     },
     async signin({ email, password }: SigninSchema) {
       return axios
@@ -40,7 +32,7 @@ export const useAccountStore = defineStore('account', {
         .then(async ({ data }) => {
           const { success } = await setAccountStorage(data)
           if (!success) return { success: false }
-          this.assignAccount(data)
+          this.user = data.user
           return { success: true, message: 'Successfully signed in' }
         })
         .catch(({ response }) => {
@@ -52,7 +44,7 @@ export const useAccountStore = defineStore('account', {
       if (status !== 200) return { success: false }
       const { success } = await removeAccountStorage()
       if (!success) return { success: false }
-      this.resetAccount()
+      this.user = null
       return { success: true }
     }
   }

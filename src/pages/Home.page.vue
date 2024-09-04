@@ -274,7 +274,7 @@ onMounted(() => {
   </div>
 
   <AppActionSheet :show="showStatus" @close="showStatus = false">
-    <div class="w-full space-y-4">
+    <div class="flex flex-col items-center gap-4">
       <div class="flex w-full items-center justify-between">
         <div class="text-xl font-semibold">Statuses</div>
         <div class="cursor-pointer" @click="showStatus = false">
@@ -284,7 +284,7 @@ onMounted(() => {
       <div
         v-for="opt in statusOptions"
         :key="opt.value"
-        class="flex h-14 items-center justify-between border-b border-slate-3"
+        class="flex h-14 w-full items-center justify-between border-b border-slate-3"
       >
         <label :for="`status_filter_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
         <input
@@ -298,13 +298,13 @@ onMounted(() => {
         />
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
-        <AppButton kind="plain" @click="onResetStatus">Reset</AppButton>
-        <AppButton @click="onApplyStatus">Apply</AppButton>
+        <AppButton size="sm" kind="plain" @click="onResetStatus">Reset</AppButton>
+        <AppButton size="sm" @click="onApplyStatus">Apply</AppButton>
       </div>
     </div>
   </AppActionSheet>
   <AppActionSheet :show="showSort" @close="showSort = false">
-    <div class="w-full space-y-4">
+    <div class="flex flex-col items-center gap-4">
       <div class="flex w-full items-center justify-between">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">
@@ -314,7 +314,7 @@ onMounted(() => {
       <div
         v-for="opt in sortOptions"
         :key="opt.value"
-        class="flex h-14 items-center justify-between border-b border-slate-3"
+        class="flex h-14 w-full items-center justify-between border-b border-slate-3"
       >
         <label :for="`sort_by_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
         <input
@@ -328,8 +328,8 @@ onMounted(() => {
         />
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
-        <AppButton kind="plain" @click="onResetSort">Reset</AppButton>
-        <AppButton @click="onApplySort">Apply</AppButton>
+        <AppButton size="sm" kind="plain" @click="onResetSort">Reset</AppButton>
+        <AppButton size="sm" @click="onApplySort">Apply</AppButton>
       </div>
     </div>
   </AppActionSheet>

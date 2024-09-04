@@ -1,38 +1,61 @@
 <script setup lang="ts">
 import { kApp } from 'konsta/vue'
-import { computed, onMounted, watch } from 'vue'
+import { computed, onBeforeMount, reactive, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import router from './router'
-import { getAccountStorage } from './plugins/preferences.plugin'
-
 import { useAccountStore } from './stores/account.store'
-import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
+import { Network } from '@capacitor/network'
 
 const route = useRoute()
-const store = useAccountStore()
-const { access } = storeToRefs(store)
-
-async function fetchCurrentUser() {
-  const { success, data } = await getAccountStorage()
-  if (success && data) {
-    store.assignAccount(data)
-    if (route.name === 'signin') {
-      router.push({ name: 'home' })
-    }
-  } else if (route.name !== 'signin') {
-    router.push({ name: 'signin' })
-  }
-}
+const accountStore = useAccountStore()
+const networkStatus: {
+  connected: boolean
+  connectionType: 'wifi' | 'cellular' | 'none' | 'unknown'
+} = reactive({
+  connected: false,
+  connectionType: 'unknown'
+})
 const routeName = computed<string>(() => route.name?.toString() || '')
 const isUseNav = computed<boolean>(
   () => routeName.value !== 'signin' && !routeName.value.includes('record')
 )
-watch(access, () => {
-  fetchCurrentUser()
-})
-onMounted(() => {
-  fetchCurrentUser()
+
+async function fetchCurrentUser() {
+  const { success, data } = await accountStore.getAccount()
+  if (success) {
+    if (routeName.value === 'signin') {
+      router.push({ name: 'home' })
+    }
+  } else if (routeName.value !== 'signin') {
+    router.push({ name: 'signin' })
+  }
+}
+
+async function setupNetwork() {
+  const status = await Network.getStatus()
+  const { connected, connectionType } = status
+  networkStatus.connected = connected
+  networkStatus.connectionType = connectionType
+
+  // Network.addListener('networkStatusChange', (status) => {
+  //   console.log('network listener', status)
+  //   const { connected, connectionType } = status
+  //   networkStatus.connected = connected
+  //   networkStatus.connectionType = connectionType
+  // })
+}
+
+watch(
+  routeName,
+  async () => {
+    await setupNetwork()
+  },
+  { immediate: true }
+)
+
+onBeforeMount(async () => {
+  await fetchCurrentUser()
 })
 
 interface Nav {
@@ -78,6 +101,15 @@ const navigations = computed<Nav[]>(() => {
 
 <template>
   <k-app safe-areas theme="ios" class="font-sans">
+    <div
+      class="text-center text-xs"
+      :class="{
+        'text-lime-7': networkStatus.connected,
+        'text-tomato-7': !networkStatus.connected
+      }"
+    >
+      {{ networkStatus }}
+    </div>
     <div :class="{ 'pb-14': isUseNav }">
       <RouterView />
     </div>

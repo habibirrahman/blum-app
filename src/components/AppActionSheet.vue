@@ -2,7 +2,7 @@
 import { TransitionRoot, TransitionChild } from '@headlessui/vue'
 
 interface Props {
-  show?: boolean
+  show: boolean
 }
 interface Emits {
   (e: 'close'): void
