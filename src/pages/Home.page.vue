@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import router from '@/router'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
@@ -160,7 +159,7 @@ onMounted(() => {
       </div>
     </div>
     <div v-if="upcomingLoading" class="flex h-[110px] w-full items-center justify-center">
-      <Icon icon="uiw:loading" class="animate-spin text-5xl text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
     </div>
     <div v-else-if="sessionStore.upcoming_sessions_count" class="space-y-1.5">
       <div class="flex items-center gap-1.5 px-4">
@@ -173,11 +172,13 @@ onMounted(() => {
       </div>
       <div class="pl-4">
         <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
-          <UpcomingSession
+          <RouterLink
             v-for="session in sessionStore.upcoming_sessions"
             :key="session.id"
-            :session="session"
-          />
+            :to="`/pre-session-record/${session?.slug}?redirect=/home`"
+          >
+            <UpcomingSession :session="session" />
+          </RouterLink>
         </div>
       </div>
     </div>
@@ -230,11 +231,11 @@ onMounted(() => {
     </div>
   </div>
   <div v-if="sessionsLoading" class="flex h-64 w-full items-center justify-center">
-    <Icon icon="uiw:loading" class="animate-spin text-5xl text-light-purple-5" />
+    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
   </div>
   <div
     v-else-if="!sessionStore.sessions_count"
-    class="flex h-64 w-full items-center justify-center"
+    class="flex h-64 w-full items-center justify-center px-4"
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
       No draft sessions scheduled for this {{ date === 'isoWeeks' ? 'week' : 'month' }}.
@@ -257,7 +258,13 @@ onMounted(() => {
       <span> of {{ sessionStore.sessions_count }}</span>
     </div>
     <div class="px-4">
-      <SessionItem v-for="session in sessionStore.sessions" :key="session.id" :session="session" />
+      <RouterLink
+        v-for="session in sessionStore.sessions"
+        :key="session.id"
+        :to="`/pre-session-record/${session?.slug}?redirect=/home`"
+      >
+        <SessionItem :session="session" />
+      </RouterLink>
     </div>
     <AppPagination
       :page="page"

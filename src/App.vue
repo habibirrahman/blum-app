@@ -25,7 +25,9 @@ async function fetchCurrentUser() {
   }
 }
 const routeName = computed<string>(() => route.name?.toString() || '')
-const isUseNav = computed<boolean>(() => routeName.value !== 'signin')
+const isUseNav = computed<boolean>(
+  () => routeName.value !== 'signin' && !routeName.value.includes('record')
+)
 watch(access, () => {
   fetchCurrentUser()
 })
@@ -76,12 +78,6 @@ const navigations = computed<Nav[]>(() => {
 
 <template>
   <k-app safe-areas theme="ios" class="font-sans">
-    <!-- <header v-if="routeName !== 'signin'" class="space-y-4 p-4">
-      <div class="flex flex-col items-center justify-center gap-4">
-        <img alt="logo" src="@/assets/logo.svg" width="125" height="125" />
-        <div v-if="store.access">Signed in as: {{ store.user.name }}</div>
-      </div>
-    </header> -->
     <div :class="{ 'pb-14': isUseNav }">
       <RouterView />
     </div>

@@ -35,12 +35,12 @@ const accountStore = useAccountStore()
       <Icon icon="ph:door" />
       <div
         class="max-w-20 truncate"
-        v-if="accountStore.user.center_enable_branch && session?.appointment?.room?.branch"
+        v-if="accountStore.user?.center_enable_branch && session?.appointment?.room?.branch"
       >
         {{ session?.appointment?.room?.branch?.name }}
       </div>
       <div
-        v-if="accountStore.user.center_enable_branch && session?.appointment?.room?.branch"
+        v-if="accountStore.user?.center_enable_branch && session?.appointment?.room?.branch"
         class="h-1 w-1 shrink-0 rounded bg-light-purple-4"
       ></div>
       <div class="max-w-20 truncate">

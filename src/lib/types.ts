@@ -33,8 +33,8 @@ export interface Session {
   user?: User
   appointment_id?: number
   appointment?: Appointment
-  comments?: any[]
-  measurements?: any[]
+  comments?: Comment[]
+  measurements?: Measurement[]
 }
 
 export interface Client {
@@ -95,4 +95,83 @@ export interface Branch {
   name?: string
   color?: string
   background_color?: string
+}
+
+export interface Comment {
+  id?: number
+  body?: string
+  is_edited?: boolean
+  user_id?: number
+  user_name?: string
+  commentable_id?: number
+  commentable_type?: string
+  created_at: string
+  updated_at: string
+  created_at_string: string
+  updated_at_string: string
+}
+
+export type MeasurementType =
+  | 'Measurement::Duration'
+  | 'Measurement::Frequency'
+  | 'Measurement::Percentage'
+  | 'Measurement::Pir'
+  | 'Measurement::Probing'
+  | 'Measurement::Prompting'
+export interface Measurement {
+  id?: number
+  type?: MeasurementType
+  marked_as?: string // enum
+  position?: number
+  results?: any
+  comment?: string
+  is_fixed?: boolean
+  is_dropped?: boolean
+  visible?: boolean
+  deleted_at?: string
+  submitted_at?: string
+  session_id?: number
+  target_id?: number
+  target?: Target
+  comment_user_id?: number
+  comment_user?: Comment
+}
+
+export type TargetType =
+  | 'Target::Duration'
+  | 'Target::Frequency'
+  | 'Target::Percentage'
+  | 'Target::Pir'
+  | 'Target::Prompting'
+export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued'
+export interface Target {
+  id?: number
+  type?: TargetType
+  status?: TargetStatus
+  name?: string
+  description?: string
+  goal?: number
+  probing_goal?: number
+  number_of_trial?: number
+  probing_number_of_trial?: number
+  interval?: number
+  duration?: number
+  goal_time?: string
+  success_metric?: string
+  completed?: boolean
+  probing_enable?: boolean
+  deleted_at?: string
+  date_introduce?: string
+  date_mastered?: string
+  client_id?: number
+  curriculum_id?: number
+  curriculum_color?: string
+  curriculum_name?: string
+  targetable_id?: number
+  targetable_type?: string
+  last_phase_line?: {
+    label?: string
+    color?: string
+    description?: string
+  }
 }

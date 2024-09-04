@@ -37,11 +37,13 @@ const openPassword = ref<boolean>(false)
       <span v-if="required" class="ml-1 text-tomato-7">{{ '*' }}</span>
     </div>
     <input
-      class="group w-full rounded border px-4 py-2 text-sm ring-offset-2 focus:outline-none"
-      :class="[
-        disabled ? 'bg-slate-2' : 'focus:ring-2',
-        error ? 'border-tomato-7 ring-tomato-2' : 'border-slate-4 ring-light-purple-2'
-      ]"
+      class="group w-full rounded border px-4 py-2 text-sm outline-none ring-offset-2 transition-all focus:outline-none"
+      :class="{
+        'focus:ring-2': !disabled,
+        'bg-slate-2': disabled,
+        'border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2': !error,
+        'border-tomato-7 focus:ring-tomato-2': error
+      }"
       :id="name"
       :type="type === 'password' ? (openPassword ? 'text' : 'password') : type"
       :placeholder="placeholder"

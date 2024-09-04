@@ -6,7 +6,7 @@ import axios from 'axios'
 interface StateSchema {
   access: string
   csrf: string
-  user: User
+  user: User | null
 }
 interface AssignAccountSchema {
   access: string
@@ -19,10 +19,8 @@ interface SigninSchema {
 }
 
 export const useAccountStore = defineStore('account', {
-  state: (): StateSchema => ({ access: '', csrf: '', user: {} }),
-  getters: {
-    // doubleCount: (state) => state.count * 2
-  },
+  state: (): StateSchema => ({ access: '', csrf: '', user: null }),
+  getters: {},
   actions: {
     async resetAccount() {
       this.access = ''
