@@ -141,7 +141,9 @@ export default konstaConfig({
           3: '#D3F99D',
           2: '#E9FCCB',
           1: '#F5FEE7'
-        }
+        },
+        // curriculum
+        'red-cherry': '#FF4447'
       }
     }
   },

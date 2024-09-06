@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { useCounterStore } from '@/stores/counter'
-import AppButton from './AppButton.vue'
+import Button from './Button.vue'
 
 const counterStore = useCounterStore()
 </script>
 
 <template>
   <div class="flex flex-col gap-1 p-4">
-    <AppButton @click="counterStore.increment">increment</AppButton>
+    <Button @click="counterStore.increment">increment</Button>
     <div>counter: {{ counterStore.count }}</div>
     <div>doubled it: {{ counterStore.doubleCount }}</div>
   </div>

@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { kApp } from 'konsta/vue'
-import { computed, onBeforeMount, reactive, ref, watch } from 'vue'
+import { computed, onBeforeMount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import router from './router'
-import { useAccountStore } from './stores/account.store'
+import { useAppStore } from './stores/app.store'
 import { Icon } from '@iconify/vue'
 import { Network } from '@capacitor/network'
+import type { NetworkStatus } from './lib/types'
 
 const route = useRoute()
-const accountStore = useAccountStore()
-const networkStatus: {
-  connected: boolean
-  connectionType: 'wifi' | 'cellular' | 'none' | 'unknown'
-} = reactive({
+const appStore = useAppStore()
+
+const loadingApp = ref<boolean>(false)
+const networkStatus: NetworkStatus = reactive({
   connected: false,
-  connectionType: 'unknown'
+  connection_type: 'none'
 })
 const routeName = computed<string>(() => route.name?.toString() || '')
 const isUseNav = computed<boolean>(
@@ -22,40 +22,40 @@ const isUseNav = computed<boolean>(
 )
 
 async function fetchCurrentUser() {
-  const { success, data } = await accountStore.getAccount()
-  if (success) {
-    if (routeName.value === 'signin') {
-      router.push({ name: 'home' })
+  loadingApp.value = true
+  const { success } = await appStore.getAccount()
+  loadingApp.value = false
+  if (!success) {
+    if (routeName.value !== 'signin') {
+      router.push({ name: 'signin' })
     }
-  } else if (routeName.value !== 'signin') {
-    router.push({ name: 'signin' })
+    return
   }
+
+  if (routeName.value === 'signin') {
+    router.push({ name: 'home' })
+  }
+}
+
+const networkListener = (status: any) => {
+  const { connected, connectionType } = status
+  networkStatus.connected = connected
+  networkStatus.connection_type = connectionType
 }
 
 async function setupNetwork() {
   const status = await Network.getStatus()
   const { connected, connectionType } = status
   networkStatus.connected = connected
-  networkStatus.connectionType = connectionType
-
-  Network.addListener('networkStatusChange', (status) => {
-    console.log('network listener', status)
-    const { connected, connectionType } = status
-    networkStatus.connected = connected
-    networkStatus.connectionType = connectionType
-  })
+  networkStatus.connection_type = connectionType
 }
 
-// watch(
-//   routeName,
-//   async () => {
-//     await setupNetwork()
-//   },
-//   { immediate: true }
-// )
-
 onBeforeMount(async () => {
+  await setupNetwork()
   await fetchCurrentUser()
+})
+onMounted(() => {
+  Network.addListener('networkStatusChange', networkListener)
 })
 
 interface Nav {
@@ -101,16 +101,12 @@ const navigations = computed<Nav[]>(() => {
 
 <template>
   <k-app safe-areas theme="ios" class="font-sans">
-    <div
-      class="text-center text-xs"
-      :class="{
-        'text-lime-7': networkStatus.connected,
-        'text-tomato-7': !networkStatus.connected
-      }"
-    >
-      {{ networkStatus }}
+    <div v-if="loadingApp" class="grid h-screen w-screen place-items-center">
+      <div class="flex animate-pulse items-center font-logo text-4xl font-bold text-light-purple-5">
+        Blüm
+      </div>
     </div>
-    <div :class="{ 'pb-14': isUseNav }">
+    <div v-else :class="{ 'pb-14': isUseNav }">
       <RouterView />
     </div>
 

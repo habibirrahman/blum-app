@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import AppButton from '@/components/AppButton.vue'
-import AppTextInput from '@/components/AppTextInput.vue'
-import AppActionSheet from '@/components/AppActionSheet.vue'
+import Button from '@/components/Button.vue'
+import TextInput from '@/components/TextInput.vue'
+import ActionSheet from '@/components/ActionSheet.vue'
 import router from '@/router'
-import { useAccountStore } from '@/stores/account.store'
+import { useAppStore } from '@/stores/app.store'
 
-const store = useAccountStore()
+const appStore = useAppStore()
 const email = ref<string>('')
 const password = ref<string>('')
 const error = ref<string>('')
@@ -24,7 +24,7 @@ async function onSignin() {
     email: email.value,
     password: password.value
   }
-  const { success, message } = await store.signin(input)
+  const { success, message } = await appStore.signin(input)
   loading.value = false
   if (!success) {
     error.value = message
@@ -39,7 +39,7 @@ async function onSignin() {
     <div class="flex w-full flex-col gap-10 p-4">
       <div class="text-center font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
       <div class="flex flex-col gap-5">
-        <AppTextInput
+        <TextInput
           label="Email"
           name="email"
           type="email"
@@ -47,36 +47,34 @@ async function onSignin() {
           v-model="email"
           :error="error"
         />
-        <AppTextInput
+        <TextInput
           label="Password"
           name="password"
           type="password"
           placeholder="Enter your password"
           v-model="password"
         />
-        <AppButton @click="onSignin" :loading="loading" :disabled="!email && !password" size="sm">
+        <Button :loading="loading" :disabled="!email && !password" @click="onSignin">
           Log in
-        </AppButton>
+        </Button>
       </div>
     </div>
     <div class="absolute bottom-0 w-screen py-1">
-      <AppButton kind="plain" class="w-full" @click="showForgotPassword = true">
+      <Button kind="plain" class="w-full" @click="showForgotPassword = true">
         Forgot password?
-      </AppButton>
+      </Button>
     </div>
   </div>
-  <AppActionSheet :show="showForgotPassword" @close="showForgotPassword = false">
+  <ActionSheet :show="showForgotPassword" @close="showForgotPassword = false">
     <div class="flex flex-col items-center gap-4">
       <div class="text-center text-xl font-semibold">Reset password</div>
       <div class="text-center text-sm">
         Password resets aren't available on mobile yet. Please log in to Blüm on a desktop and
         update it from your profile, or contact your admin for assistance.
       </div>
-      <AppButton kind="plain" size="sm" class="w-full" @click="showForgotPassword = false">
-        Got it!
-      </AppButton>
+      <Button kind="plain" class="w-full" @click="showForgotPassword = false"> Got it! </Button>
     </div>
-  </AppActionSheet>
+  </ActionSheet>
 </template>
 
 <style></style>

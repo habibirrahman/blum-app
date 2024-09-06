@@ -1,29 +1,27 @@
 <script setup lang="ts">
-import AppButton from '@/components/AppButton.vue'
+import Button from '@/components/Button.vue'
 import router from '@/router'
-import { useAccountStore } from '@/stores/account.store'
+import { useAppStore } from '@/stores/app.store'
 import { ref } from 'vue'
 
-const store = useAccountStore()
-const loading = ref<boolean>(false)
+const appStore = useAppStore()
+const signoutLoading = ref<boolean>(false)
 
 async function onSignout() {
-  loading.value = true
-  const { success } = await store.signout()
-  loading.value = false
+  signoutLoading.value = true
+  const { success } = await appStore.signout()
+  signoutLoading.value = false
   if (success) {
     router.push({ name: 'signin' })
   }
-}
-
-function onClick(text: string) {
-  alert(text)
 }
 </script>
 
 <template>
   <div class="flex flex-col items-center gap-4 py-4">
-    <AppButton :loading="loading" @click="() => onSignout()">Sign out</AppButton>
-    <AppButton @click="onClick('alert description')">Alert</AppButton>
+    <div class="text-xs">
+      <pre>{{ appStore.user }}</pre>
+    </div>
+    <Button :loading="signoutLoading" @click="() => onSignout()">Sign out</Button>
   </div>
 </template>

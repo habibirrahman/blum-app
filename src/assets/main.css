@@ -4,11 +4,13 @@
 @tailwind components;
 @tailwind utilities;
 
-#app {
-  font-style: normal;
-  @apply m-0 h-screen w-screen overflow-y-auto overflow-x-hidden bg-white text-slate-10;
-}
+@layer base {
+  #app {
+    font-style: normal;
+    @apply m-0 h-screen w-screen overflow-y-auto overflow-x-hidden bg-white text-slate-10;
+  }
 
-svg {
-  @apply shrink-0;
+  svg {
+    @apply shrink-0;
+  }
 }

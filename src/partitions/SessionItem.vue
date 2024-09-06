@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useAccountStore } from '@/stores/account.store'
 import type { Session } from '@/lib/types'
 import { displayDate } from '@/lib/func'
 
@@ -11,7 +10,6 @@ const props = withDefaults(defineProps<Props>(), {
   session: undefined
 })
 
-const accountStore = useAccountStore()
 </script>
 
 <template>

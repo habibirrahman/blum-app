@@ -36,3 +36,12 @@ export const getTargetType = (type?: TargetType) => {
   }
   return arr[type] || ''
 }
+
+export const getRandomString = (prefix = '', length = 16) => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let combination = ''
+  for (let i = 0; i < length; i++) {
+    combination += chars[Math.round(Math.random() * chars.length)]
+  }
+  return `${prefix}${combination}`
+}

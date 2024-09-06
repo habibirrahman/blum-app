@@ -12,6 +12,20 @@ interface StateSchema {
   upcoming_sessions_count: number
 }
 
+interface MeasurementParams {
+  id: Measurement['id']
+  measurement: Measurement
+}
+export interface MeasurementResultsParams {
+  id: Measurement['id']
+  results: Measurement['results']
+}
+export interface MeasurementMarkProbingParams {
+  id: Measurement['id']
+  visible: Measurement['visible']
+  marked_as: Measurement['marked_as']
+}
+
 export const useSessionStore = defineStore('session', {
   state: (): StateSchema => ({
     session: null,
@@ -34,7 +48,7 @@ export const useSessionStore = defineStore('session', {
           return { success: true, data }
         })
         .catch(({ response }) => {
-          return { success: false, message: response.data.error }
+          return { success: false, data: null, message: response?.data?.error }
         })
     },
     async getSessionComments({ id }: { id?: string }) {
@@ -45,7 +59,7 @@ export const useSessionStore = defineStore('session', {
           return { success: true, data }
         })
         .catch(({ response }) => {
-          return { success: false, message: response.data.error }
+          return { success: false, data: null, message: response?.data?.error }
         })
     },
     async getSessionMeasurements({ id }: { id?: string }) {
@@ -56,7 +70,7 @@ export const useSessionStore = defineStore('session', {
           return { success: true, data }
         })
         .catch(({ response }) => {
-          return { success: false, message: response.data.error }
+          return { success: false, data: null, message: response?.data?.error }
         })
     },
     async getSessions({ params }: { params?: string }) {
@@ -68,7 +82,7 @@ export const useSessionStore = defineStore('session', {
           return { success: true, data }
         })
         .catch(({ response }) => {
-          return { success: false, message: response.data.error }
+          return { success: false, data: null, message: response?.data?.error }
         })
     },
     async getUpcomingSessions() {
@@ -80,7 +94,54 @@ export const useSessionStore = defineStore('session', {
           return { success: true, data }
         })
         .catch(({ response }) => {
-          return { success: false, message: response.data.error }
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async startSession() {
+      return axios
+        .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'ongoing' } })
+        .then(async ({ data }) => {
+          this.session = data
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async updateMeasurement({ id, measurement }: MeasurementParams) {
+      return axios
+        .patch(`/api/v1/measurements/${id}`, { measurement })
+        .then(async ({ data }) => {
+          const idx = this.session_measurements.findIndex((i) => i.id === id)
+          this.session_measurements[idx] = data
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async updateMeasurementResults({ id, results }: MeasurementResultsParams) {
+      return axios
+        .patch(`/api/v1/measurements/${id}/update_results`, { results })
+        .then(async ({ data }) => {
+          const idx = this.session_measurements.findIndex((i) => i.id === id)
+          this.session_measurements[idx] = data
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async updateMeasurementMarkProbing({ id, visible, marked_as }: MeasurementMarkProbingParams) {
+      return axios
+        .patch(`/api/v1/measurements/${id}/mark_probing`, { visible, marked_as })
+        .then(async ({ data }) => {
+          const idx = this.session_measurements.findIndex((i) => i.id === id)
+          this.session_measurements[idx] = data
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
         })
     }
   }

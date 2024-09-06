@@ -4,13 +4,14 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { displayDate, getTargetType } from '@/lib/func'
-import AppButton from '@/components/AppButton.vue'
+import Button from '@/components/Button.vue'
 import moment from 'moment'
-import { useAccountStore } from '@/stores/account.store'
-import AppActionSheet from '@/components/AppActionSheet.vue'
+import { useAppStore } from '@/stores/app.store'
+import ActionSheet from '@/components/ActionSheet.vue'
+import router from '@/router'
 
 const route = useRoute()
-const accountStore = useAccountStore()
+const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
 const sessionLoading = ref<boolean>(false)
@@ -62,6 +63,7 @@ const scheduleDetails = computed<Schedule[]>(() => [
 const showActionBeforeLunch = ref<boolean>(false)
 const isLunchBeforeSchedule = ref<boolean>(false)
 const isLunchNotAssigned = ref<boolean>(false)
+const lunchLoading = ref<boolean>(false)
 const lunchDetails = computed<Schedule[]>(() => [
   {
     icon: 'ph:calendar-blank',
@@ -73,16 +75,25 @@ const lunchDetails = computed<Schedule[]>(() => [
   },
   { icon: 'ph:user', label: sessionStore.session?.appointment?.user?.name }
 ])
-const onLaunchSession = () => {
+const onLaunchSession = async () => {
+  lunchLoading.value = true
+  const { success } = await sessionStore.startSession()
+  lunchLoading.value = false
+  if (!success) return
   showActionBeforeLunch.value = false
-  alert('start session')
+  router.push({
+    name: 'session-record',
+    params: { slug: sessionStore.session?.slug },
+    query: { redirect: '/home' }
+  })
 }
 const onStartSession = () => {
   isLunchBeforeSchedule.value = false
   isLunchNotAssigned.value = false
   let showAction = false
   if (!sessionStore.session?.appointment_id) {
-    return onLaunchSession()
+    onLaunchSession()
+    return
   }
 
   const t = sessionStore.session.appointment?.start_time_string || '24:00'
@@ -93,7 +104,7 @@ const onStartSession = () => {
     showAction = true
   }
 
-  if (sessionStore.session.appointment?.user_id !== accountStore.user?.id) {
+  if (sessionStore.session.appointment?.user_id !== appStore.user?.id) {
     isLunchNotAssigned.value = true
     showAction = true
   }
@@ -104,6 +115,13 @@ const onStartSession = () => {
 </script>
 
 <template>
+  <div
+    v-if="sessionLoading"
+    class="fixed z-[1000] grid h-screen w-screen place-content-center"
+    :style="{ background: 'linear-gradient(180deg, #FFFFFF 0%, #EBE4F0 15.77%)' }"
+  >
+    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
+  </div>
   <div v-if="!sessionLoading" class="sticky top-0 z-10 bg-white">
     <div class="flex items-center justify-between gap-4 px-4 py-3">
       <div class="flex items-center gap-3 truncate">
@@ -122,13 +140,7 @@ const onStartSession = () => {
     :class="{ 'top-36': isScheduled, 'top-14': !isScheduled }"
     :style="{ background: 'linear-gradient(180deg, #FFFFFF 0%, #EBE4F0 15.77%)' }"
   ></div>
-  <div
-    v-if="sessionLoading"
-    class="relative z-[2] flex h-[calc(100vh/2)] w-full items-center justify-center"
-  >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
-  </div>
-  <div v-else class="relative z-[2] pb-12">
+  <div class="relative z-[2] pb-12">
     <div v-if="isScheduled" class="flex flex-col">
       <div class="py-3 text-center text-xs text-slate-7">This session is scheduled:</div>
       <div class="pl-4">
@@ -165,9 +177,9 @@ const onStartSession = () => {
       <div v-else class="px-4 text-center text-sm text-dark-purple-1">
         Before you begin this session, take a moment to review the targets and the comments.
       </div>
-      <div v-if="sessionStore.session_comments?.length" class="space-y-2 px-4">
+      <div v-if="sessionStore.session_comments.length" class="space-y-2 px-4">
         <div class="flex h-7.5 items-center justify-center gap-1 text-dark-purple-1">
-          <div class="text-2xl font-bold">{{ sessionStore.session_comments?.length }}</div>
+          <div class="text-2xl font-bold">{{ sessionStore.session_comments.length }}</div>
           <div class="text-sm">comment(s)</div>
         </div>
         <div
@@ -290,16 +302,16 @@ const onStartSession = () => {
     v-if="!sessionLoading"
     class="fixed bottom-0 z-10 flex h-[68px] w-screen items-center bg-prim-3 px-4"
   >
-    <AppButton
+    <Button
       :disabled="!sessionStore.session_measurements.length"
-      size="sm"
       class="w-full"
+      :loading="lunchLoading"
       @click="onStartSession"
     >
       Start session
-    </AppButton>
+    </Button>
   </div>
-  <AppActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
+  <ActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
     <div class="flex flex-col items-center gap-4">
       <div
         v-if="isLunchBeforeSchedule && !isLunchNotAssigned"
@@ -350,9 +362,9 @@ const onStartSession = () => {
         </div>
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
-        <AppButton size="sm" kind="plain" @click="showActionBeforeLunch = false">Cancel</AppButton>
-        <AppButton size="sm" @click="onLaunchSession">Process</AppButton>
+        <Button kind="plain" @click="showActionBeforeLunch = false">Cancel</Button>
+        <Button :loading="lunchLoading" @click="onLaunchSession">Process</Button>
       </div>
     </div>
-  </AppActionSheet>
+  </ActionSheet>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAccountStore } from '@/stores/account.store'
+import { useAppStore } from '@/stores/app.store'
 import type { Session } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 
@@ -11,8 +11,7 @@ const props = withDefaults(defineProps<Props>(), {
   session: undefined
 })
 
-const accountStore = useAccountStore()
-
+const appStore = useAppStore()
 </script>
 
 <template>
@@ -35,12 +34,12 @@ const accountStore = useAccountStore()
       <Icon icon="ph:door" />
       <div
         class="max-w-20 truncate"
-        v-if="accountStore.user?.center_enable_branch && session?.appointment?.room?.branch"
+        v-if="appStore.user?.center_enable_branch && session?.appointment?.room?.branch"
       >
         {{ session?.appointment?.room?.branch?.name }}
       </div>
       <div
-        v-if="accountStore.user?.center_enable_branch && session?.appointment?.room?.branch"
+        v-if="appStore.user?.center_enable_branch && session?.appointment?.room?.branch"
         class="h-1 w-1 shrink-0 rounded bg-light-purple-4"
       ></div>
       <div class="max-w-20 truncate">

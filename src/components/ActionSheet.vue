@@ -16,7 +16,7 @@ const emit = defineEmits<Emits>()
 
 <template>
   <!-- The `show` prop controls all nested `TransitionChild` components. -->
-  <TransitionRoot :show="show" class="fixed z-[99999]">
+  <TransitionRoot :show="show" class="fixed z-[999]">
     <!-- Background overlay -->
     <TransitionChild
       enter="transition-opacity ease-linear duration-300"
@@ -25,7 +25,7 @@ const emit = defineEmits<Emits>()
       leave="transition-opacity ease-linear duration-300"
       leave-from="opacity-100"
       leave-to="opacity-0"
-      @click="$emit('close')"
+      @click="emit('close')"
     >
       <div class="fixed inset-0 bg-[#151021]/50" aria-hidden="true" />
     </TransitionChild>

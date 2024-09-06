@@ -1,0 +1,25 @@
+<svg width="328" height="90" viewBox="0 0 328 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g opacity="0.4">
+<path d="M53.566 26.937C45.4317 28.9069 25.2585 29.0645 9.64057 13.9356" stroke="#E4F2A4" stroke-width="7"/>
+<path d="M9.64099 90L34.6677 75.4839" stroke="#9BBE24" stroke-width="8"/>
+<rect width="13.9034" height="13.9034" transform="matrix(0.70547 -0.70874 0.70547 0.70874 13.1082 50.5)" fill="#FDE047"/>
+<path d="M158.756 36.9341C166.89 34.9642 187.063 34.8066 202.681 49.9355" stroke="#FCD4AA" stroke-width="7"/>
+<path d="M259.322 26.937C251.188 28.9069 231.014 29.0645 215.396 13.9356" stroke="#E4F2A4" stroke-width="7"/>
+<ellipse cx="196.902" cy="6.96774" rx="6.9356" ry="6.96774" fill="#FDBA74"/>
+<ellipse cx="180.719" cy="68.5146" rx="6.9356" ry="6.96774" fill="#FDBA74"/>
+<path d="M215.397 90L240.424 75.4839" stroke="#9BBE24" stroke-width="8"/>
+<rect width="13.9034" height="13.9034" transform="matrix(0.70547 -0.70874 0.70547 0.70874 218.864 50.5)" fill="#FDE047"/>
+<path d="M47.7858 62.5413C50.1548 54.4791 60.1056 36.8489 80.9561 30.8251" stroke="#FCD4AA" stroke-width="7"/>
+<path d="M150.015 67.1051C142.877 62.7196 128.501 48.5003 128.106 26.7078" stroke="#E4F2A4" stroke-width="7"/>
+<ellipse cx="90.5554" cy="17.417" rx="6.9356" ry="6.96774" fill="#FDBA74"/>
+<path d="M88.243 53.418L113.27 67.9341" stroke="#9BBE24" stroke-width="8"/>
+<rect width="13.9194" height="13.8873" transform="matrix(0.498267 -0.867024 0.865021 0.501735 109.049 17.875)" fill="#FDE047"/>
+<rect x="69.9752" y="83.8398" width="13.9355" height="13.8712" transform="rotate(-90 69.9752 83.8398)" fill="#FDE047"/>
+<path d="M253.544 62.5413C255.913 54.4791 265.864 36.8489 286.714 30.8251" stroke="#FCD4AA" stroke-width="7"/>
+<path d="M355.773 67.1051C348.635 62.7196 334.259 48.5003 333.864 26.7078" stroke="#E4F2A4" stroke-width="7"/>
+<ellipse cx="296.314" cy="17.417" rx="6.9356" ry="6.96774" fill="#FDBA74"/>
+<path d="M294.001 53.418L319.028 67.9341" stroke="#9BBE24" stroke-width="8"/>
+<rect width="13.9194" height="13.8873" transform="matrix(0.498267 -0.867024 0.865021 0.501735 314.808 17.875)" fill="#FDE047"/>
+<rect x="275.734" y="83.8398" width="13.9355" height="13.8712" transform="rotate(-90 275.734 83.8398)" fill="#FDE047"/>
+</g>
+</svg>

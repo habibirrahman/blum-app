@@ -19,6 +19,11 @@ const router = createRouter({
       component: () => import('../pages/PreSessionRecord.page.vue')
     },
     {
+      path: '/session-record/:slug',
+      name: 'session-record',
+      component: () => import('../pages/SessionRecord.page.vue')
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('../pages/Profile.page.vue')

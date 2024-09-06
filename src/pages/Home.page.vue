@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import AppButton from '@/components/AppButton.vue'
-import AppTextInput from '@/components/AppTextInput.vue'
-import AppActionSheet from '@/components/AppActionSheet.vue'
-import AppPagination from '@/components/AppPagination.vue'
+import Button from '@/components/Button.vue'
+import TextInput from '@/components/TextInput.vue'
+import ActionSheet from '@/components/ActionSheet.vue'
+import Pagination from '@/components/Pagination.vue'
 import UpcomingSession from '@/partitions/UpcomingSession.vue'
 import SessionItem from '@/partitions/SessionItem.vue'
 import moment from 'moment'
@@ -146,6 +146,12 @@ onMounted(() => {
 
 <template>
   <div
+    v-if="upcomingLoading || sessionsLoading"
+    class="fixed z-[1000] grid h-screen w-screen place-content-center bg-slate-10/30"
+  >
+    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
+  </div>
+  <div
     class="space-y-3 pt-3 transition-all"
     :class="{ 'bg-chestnut-1': sessionStore.upcoming_sessions_count }"
   >
@@ -158,10 +164,7 @@ onMounted(() => {
         {{ sessionStore.sessions_count }}
       </div>
     </div>
-    <div v-if="upcomingLoading" class="flex h-[110px] w-full items-center justify-center">
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
-    </div>
-    <div v-else-if="sessionStore.upcoming_sessions_count" class="space-y-1.5">
+    <div v-if="sessionStore.upcoming_sessions_count" class="space-y-1.5">
       <div class="flex items-center gap-1.5 px-4">
         <div class="text-xs font-semibold text-dark-purple-1">Your upcoming sessions for today</div>
         <div
@@ -175,7 +178,11 @@ onMounted(() => {
           <RouterLink
             v-for="session in sessionStore.upcoming_sessions"
             :key="session.id"
-            :to="`/pre-session-record/${session?.slug}?redirect=/home`"
+            :to="{
+              name: 'pre-session-record',
+              params: { slug: session?.slug },
+              query: { redirect: '/home' }
+            }"
           >
             <UpcomingSession :session="session" />
           </RouterLink>
@@ -185,7 +192,7 @@ onMounted(() => {
   </div>
   <div class="sticky top-0 space-y-3 bg-white pt-3">
     <div class="px-4">
-      <AppTextInput
+      <TextInput
         name="query"
         placeholder="Search draft by client name or ID"
         v-model="query"
@@ -230,11 +237,8 @@ onMounted(() => {
       </div>
     </div>
   </div>
-  <div v-if="sessionsLoading" class="flex h-64 w-full items-center justify-center">
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
-  </div>
   <div
-    v-else-if="!sessionStore.sessions_count"
+    v-if="!sessionStore.sessions_count"
     class="flex h-64 w-full items-center justify-center px-4"
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
@@ -261,19 +265,19 @@ onMounted(() => {
       <RouterLink
         v-for="session in sessionStore.sessions"
         :key="session.id"
-        :to="`/pre-session-record/${session?.slug}?redirect=/home`"
+        :to="{
+          name: session.status === 'ongoing' ? 'session-record' : 'pre-session-record',
+          params: { slug: session?.slug },
+          query: { redirect: '/home' }
+        }"
       >
         <SessionItem :session="session" />
       </RouterLink>
     </div>
-    <AppPagination
-      :page="page"
-      :total_count="sessionStore.sessions_count"
-      @change="page = $event"
-    />
+    <Pagination :page="page" :total_count="sessionStore.sessions_count" @change="page = $event" />
   </div>
 
-  <AppActionSheet :show="showStatus" @close="showStatus = false">
+  <ActionSheet :show="showStatus" @close="showStatus = false">
     <div class="flex flex-col items-center gap-4">
       <div class="flex w-full items-center justify-between">
         <div class="text-xl font-semibold">Statuses</div>
@@ -298,12 +302,12 @@ onMounted(() => {
         />
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
-        <AppButton size="sm" kind="plain" @click="onResetStatus">Reset</AppButton>
-        <AppButton size="sm" @click="onApplyStatus">Apply</AppButton>
+        <Button kind="plain" @click="onResetStatus">Reset</Button>
+        <Button @click="onApplyStatus">Apply</Button>
       </div>
     </div>
-  </AppActionSheet>
-  <AppActionSheet :show="showSort" @close="showSort = false">
+  </ActionSheet>
+  <ActionSheet :show="showSort" @close="showSort = false">
     <div class="flex flex-col items-center gap-4">
       <div class="flex w-full items-center justify-between">
         <div class="text-xl font-semibold">Sort by</div>
@@ -328,9 +332,9 @@ onMounted(() => {
         />
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
-        <AppButton size="sm" kind="plain" @click="onResetSort">Reset</AppButton>
-        <AppButton size="sm" @click="onApplySort">Apply</AppButton>
+        <Button kind="plain" @click="onResetSort">Reset</Button>
+        <Button @click="onApplySort">Apply</Button>
       </div>
     </div>
-  </AppActionSheet>
+  </ActionSheet>
 </template>

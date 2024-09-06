@@ -1,29 +1,33 @@
 import { defineStore } from 'pinia'
 import { removeAccountStorage, setAccountStorage } from '@/plugins/preferences.plugin'
-import type { User } from '@/lib/types'
+import type { NetworkStatus, User } from '@/lib/types'
 import axios from 'axios'
 
 interface StateSchema {
   user: User | null
+  network_status: NetworkStatus
 }
 interface SigninSchema {
   email: string
   password: string
 }
 
-export const useAccountStore = defineStore('account', {
-  state: (): StateSchema => ({ user: null }),
+export const useAppStore = defineStore('app', {
+  state: (): StateSchema => ({
+    user: null,
+    network_status: { connected: false, connection_type: 'none' }
+  }),
   getters: {},
   actions: {
     async getAccount() {
       return axios
         .get('/api/v1/current_user')
-        .then(async ({ data }) => {
+        .then(({ data }) => {
           this.user = data
           return { success: true, data, message: 'You have signed in' }
         })
         .catch(({ response }) => {
-          return { success: false, data: null, message: response.data.error }
+          return { success: false, data: null, message: response?.data?.error }
         })
     },
     async signin({ email, password }: SigninSchema) {
@@ -36,7 +40,7 @@ export const useAccountStore = defineStore('account', {
           return { success: true, message: 'Successfully signed in' }
         })
         .catch(({ response }) => {
-          return { success: false, message: response.data.error }
+          return { success: false, message: response?.data?.error }
         })
     },
     async signout() {

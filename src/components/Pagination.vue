@@ -63,7 +63,7 @@ const pages = computed<(number | null)[]>(() => {
         'bg-white text-slate-8': page > 1,
         'bg-slate-2 text-slate-6': page === 1
       }"
-      @click="$emit('change', page - 1)"
+      @click="emit('change', page - 1)"
     >
       <Icon icon="ph:caret-left" />
     </div>
@@ -72,7 +72,7 @@ const pages = computed<(number | null)[]>(() => {
         v-if="i"
         class="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded text-sm transition-all"
         :class="{ 'bg-light-purple-5 text-white': page === i, 'bg-white text-slate-8': page !== i }"
-        @click="$emit('change', i)"
+        @click="emit('change', i)"
       >
         {{ i }}
       </div>
@@ -89,7 +89,7 @@ const pages = computed<(number | null)[]>(() => {
         'bg-white text-slate-8': page < Number(pages[pages.length - 1]),
         'bg-slate-2 text-slate-6': page === Number(pages[pages.length - 1])
       }"
-      @click="$emit('change', page + 1)"
+      @click="emit('change', page + 1)"
     >
       <Icon icon="ph:caret-right" />
     </div>

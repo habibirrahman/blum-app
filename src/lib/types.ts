@@ -1,3 +1,8 @@
+export interface NetworkStatus {
+  connected: boolean
+  connection_type: 'wifi' | 'cellular' | 'none' | 'unknown'
+}
+
 export interface User {
   id?: number
   email?: string
@@ -121,7 +126,7 @@ export type MeasurementType =
 export interface Measurement {
   id?: number
   type?: MeasurementType
-  marked_as?: string // enum
+  marked_as?: TargetStatus
   position?: number
   results?: any
   comment?: string
