@@ -5,12 +5,13 @@ import { Icon } from '@iconify/vue'
 interface Props {
   label?: string
   name: string
-  type?: 'text' | 'email' | 'password' | 'number' | 'date'
+  type?: 'text' | 'email' | 'password' | 'number' | 'date' | 'textarea'
   placeholder?: string
   disabled?: boolean
   required?: boolean
   error?: string
   suffix_icon?: string
+  borderless?: boolean
 }
 
 const model = defineModel({ type: String || Number })
@@ -20,7 +21,8 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   required: false,
   error: '',
-  suffix_icon: ''
+  suffix_icon: '',
+  borderless: false
 })
 
 const openPassword = ref<boolean>(false)
@@ -36,19 +38,40 @@ const openPassword = ref<boolean>(false)
       <span>{{ label }}</span>
       <span v-if="required" class="ml-1 text-tomato-7">{{ '*' }}</span>
     </div>
-    <input
-      class="group w-full rounded border px-4 py-2 text-sm outline-none ring-offset-2 transition-all focus:outline-none"
+    <textarea
+      v-if="type === 'textarea'"
+      :id="name"
+      :name="name"
+      :placeholder="placeholder"
+      :disabled="disabled"
+      v-model="model"
+      class="group h-full w-full rounded text-sm outline-none ring-offset-2 transition-all focus:outline-none"
       :class="{
         'focus:ring-2': !disabled,
         'bg-slate-2': disabled,
         'border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2': !error,
-        'border-tomato-7 focus:ring-tomato-2': error
+        'border-tomato-7 focus:ring-tomato-2': error,
+        'border px-4 py-2': !borderless,
+        'border-none px-0 py-1 focus:ring-0': borderless
       }"
+    ></textarea>
+    <input
+      v-else
       :id="name"
+      :name="name"
       :type="type === 'password' ? (openPassword ? 'text' : 'password') : type"
       :placeholder="placeholder"
       :disabled="disabled"
       v-model="model"
+      class="group h-full w-full rounded text-sm outline-none ring-offset-2 transition-all focus:outline-none"
+      :class="{
+        'focus:ring-2': !disabled,
+        'bg-slate-2': disabled,
+        'border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2': !error,
+        'border-tomato-7 focus:ring-tomato-2': error,
+        'border px-4 py-2': !borderless,
+        'border-none px-0 py-1 focus:ring-0': borderless
+      }"
     />
     <Icon
       v-if="type === 'password'"

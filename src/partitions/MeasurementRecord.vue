@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useSessionStore } from '@/stores/session.store'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
 import Button from '@/components/Button.vue'
+import TextInput from '@/components/TextInput.vue'
 import type { Measurement } from '@/lib/types'
 import Toggle from '@/components/Toggle.vue'
 import { getTargetType } from '@/lib/func'
@@ -47,6 +48,28 @@ const onDrop = async (bool: boolean) => {
   isDropped.value = data.is_dropped
 }
 
+const comment = ref<string>('')
+const commentLoading = ref<boolean>(false)
+watch(display, (val) => {
+  if (val === 'comment') comment.value = props.measurement.comment || ''
+})
+const isDisabledSaveComment = computed<boolean>(
+  () => comment.value === (props.measurement.comment || '')
+)
+const onSaveComment = async () => {
+  const measurement: Measurement = {
+    comment: comment.value
+  }
+  commentLoading.value = true
+  const { success } = await sessionStore.updateMeasurement({
+    id: props.measurement.id,
+    measurement
+  })
+  commentLoading.value = false
+  if (!success) return
+  display.value = 'target'
+}
+
 onMounted(() => {
   isDropped.value = props.measurement.is_dropped || false
 })
@@ -67,11 +90,15 @@ onMounted(() => {
         <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
       </div>
       <div
-        class="flex h-6 w-6 items-center justify-center rounded transition-all"
+        class="relative flex h-6 w-6 items-center justify-center rounded transition-all"
         :class="{ 'bg-white': display === 'comment' }"
         @click="display = display === 'comment' ? 'target' : 'comment'"
       >
         <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
+        <div
+          class="absolute right-px top-px h-2 w-2 rounded-full bg-light-purple-5 transition-all"
+          :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
+        ></div>
       </div>
       <div>
         <Toggle
@@ -194,9 +221,25 @@ onMounted(() => {
         </div>
         <Button kind="outline" class="w-full" @click="display = 'target'">Close</Button>
       </div>
-      <div v-if="display === 'comment'" class="flex min-h-[400px] flex-col justify-between gap-3">
-        COMMENT AYAM
-        <Button kind="outline" class="w-full" @click="display = 'target'">Close</Button>
+      <div v-if="display === 'comment'" class="flex h-[400px] flex-col justify-between gap-3">
+        <TextInput
+          :name="`measurement-comment-${measurement.id}`"
+          type="textarea"
+          placeholder="Type your comment here..."
+          v-model="comment"
+          borderless
+          class="mt-2 h-full"
+        />
+        <div class="grid grid-cols-2">
+          <Button kind="plain" class="w-full" @click="display = 'target'">Cancel</Button>
+          <Button
+            class="w-full"
+            :disabled="isDisabledSaveComment"
+            :loading="commentLoading"
+            @click="onSaveComment"
+            >Save</Button
+          >
+        </div>
       </div>
     </div>
   </div>
