@@ -4,9 +4,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
-import Button from '@/components/Button.vue'
+import AppButton from '@/components/AppButton.vue'
 import MeasurementRecord from '@/partitions/MeasurementRecord.vue'
 import type { Measurement } from '@/lib/types'
+import SessionComments from '@/partitions/SessionComments.vue'
 
 const route = useRoute()
 const appStore = useAppStore()
@@ -67,6 +68,8 @@ const onToggleRunning = (id: Measurement['id']) => {
   if (idx > -1) runningMeasurements.value.splice(idx, 1)
   else runningMeasurements.value.push(id)
 }
+
+const showSessionComments = ref<boolean>(false)
 </script>
 
 <template>
@@ -84,8 +87,15 @@ const onToggleRunning = (id: Measurement['id']) => {
       >
         {{ sessionStore.session_measurements.length }}
       </div>
-      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded">
+      <div
+        class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded"
+        @click="showSessionComments = true"
+      >
         <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
+        <div
+          class="absolute right-1 top-1 h-2 w-2 rounded-full bg-light-purple-5 transition-all"
+          :class="[sessionStore.session?.comments?.length ? 'opacity-100' : 'opacity-0']"
+        ></div>
       </div>
     </div>
     <div class="flex w-full items-center justify-end gap-2">
@@ -104,7 +114,7 @@ const onToggleRunning = (id: Measurement['id']) => {
         <div class="flex justify-center">{{ recordingTime.split(':')[2] }}</div>
       </div>
     </div>
-    <Button class="px-4">End</Button>
+    <AppButton class="px-4">End</AppButton>
   </div>
   <div class="space-y-4 bg-prim-3 px-4 pb-36 pt-4">
     <MeasurementRecord
@@ -114,10 +124,9 @@ const onToggleRunning = (id: Measurement['id']) => {
       :counter="counter"
       @toggle-running="onToggleRunning"
     />
-    <!-- <div class="text-xs">
-      <pre>{{ sessionStore.session_measurements }}</pre>
-    </div> -->
   </div>
   <!-- <div class="fixed bottom-0 z-10 h-36 w-screen bg-prim-3 px-4">
   </div> -->
+
+  <SessionComments :show="showSessionComments" @close="showSessionComments = false" />
 </template>

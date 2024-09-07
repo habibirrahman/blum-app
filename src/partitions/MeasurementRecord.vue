@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { useSessionStore } from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
-import Button from '@/components/Button.vue'
-import TextInput from '@/components/TextInput.vue'
+import AppButton from '@/components/AppButton.vue'
+import AppTextInput from '@/components/AppTextInput.vue'
 import type { Measurement } from '@/lib/types'
-import Toggle from '@/components/Toggle.vue'
+import AppToggle from '@/components/AppToggle.vue'
 import { getTargetType } from '@/lib/func'
 import Prompting from './measurement/Prompting.vue'
 import Frequency from './measurement/Frequency.vue'
@@ -16,7 +15,6 @@ import Duration from './measurement/Duration.vue'
 import Percentage from './measurement/Percentage.vue'
 import Probing from './measurement/Probing.vue'
 
-const route = useRoute()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
@@ -48,17 +46,17 @@ const onDrop = async (bool: boolean) => {
   isDropped.value = data.is_dropped
 }
 
-const comment = ref<string>('')
+const commentInput = ref<string>('')
 const commentLoading = ref<boolean>(false)
 watch(display, (val) => {
-  if (val === 'comment') comment.value = props.measurement.comment || ''
+  if (val === 'comment') commentInput.value = props.measurement.comment || ''
 })
 const isDisabledSaveComment = computed<boolean>(
-  () => comment.value === (props.measurement.comment || '')
+  () => commentInput.value === (props.measurement.comment || '')
 )
 const onSaveComment = async () => {
   const measurement: Measurement = {
-    comment: comment.value
+    comment: commentInput.value
   }
   commentLoading.value = true
   const { success } = await sessionStore.updateMeasurement({
@@ -101,7 +99,7 @@ onMounted(() => {
         ></div>
       </div>
       <div>
-        <Toggle
+        <AppToggle
           :name="`toggle_measurement_${measurement.id}`"
           :checked="!isDropped"
           :loading="isDropLoading"
@@ -120,7 +118,7 @@ onMounted(() => {
           <div class="w-72 space-y-2">
             <div class="text-center font-semibold">Entry not recorded</div>
             <div class="text-center text-sm text-slate-8">
-              This entry will not be saved when the Session ends. Toggle back to save this entry
+              This entry will not be saved when the Session ends. AppToggle back to save this entry
               recording.
             </div>
           </div>
@@ -219,26 +217,27 @@ onMounted(() => {
             phase.
           </div>
         </div>
-        <Button kind="outline" class="w-full" @click="display = 'target'">Close</Button>
+        <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
       </div>
       <div v-if="display === 'comment'" class="flex h-[400px] flex-col justify-between gap-3">
-        <TextInput
+        <AppTextInput
           :name="`measurement-comment-${measurement.id}`"
           type="textarea"
           placeholder="Type your comment here..."
-          v-model="comment"
+          v-model="commentInput"
           borderless
           class="mt-2 h-full"
         />
         <div class="grid grid-cols-2">
-          <Button kind="plain" class="w-full" @click="display = 'target'">Cancel</Button>
-          <Button
+          <AppButton kind="plain" class="w-full" @click="display = 'target'">Cancel</AppButton>
+          <AppButton
             class="w-full"
             :disabled="isDisabledSaveComment"
             :loading="commentLoading"
             @click="onSaveComment"
-            >Save</Button
           >
+            Save
+          </AppButton>
         </div>
       </div>
     </div>

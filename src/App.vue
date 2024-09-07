@@ -3,10 +3,9 @@ import { kApp } from 'konsta/vue'
 import { computed, onBeforeMount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import router from './router'
-import { useAppStore } from './stores/app.store'
+import { useAppStore, type NetworkStatus } from './stores/app.store'
 import { Icon } from '@iconify/vue'
 import { Network } from '@capacitor/network'
-import type { NetworkStatus } from './lib/types'
 
 const route = useRoute()
 const appStore = useAppStore()

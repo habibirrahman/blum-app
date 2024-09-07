@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSessionStore, type MeasurementResultsParams } from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, ref } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
@@ -39,7 +39,7 @@ const percentageScore = computed(() => {
 
 const percentageLoading = ref<boolean>(false)
 const onChangePercentage = async (box: PercentageBox) => {
-  const params: MeasurementResultsParams = {
+  const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     results: {}
   }

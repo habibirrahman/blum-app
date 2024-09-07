@@ -1,42 +1,37 @@
-export interface NetworkStatus {
-  connected: boolean
-  connection_type: 'wifi' | 'cellular' | 'none' | 'unknown'
-}
-
 export interface User {
   id?: number
   email?: string
   name?: string
-  role?: string // enum
-  status?: string // enum
-  restriction_type?: string // enum
+  role?: string // not
+  status?: string // not
+  restriction_type?: string // not
   sign_in_token?: string
   deactivated_at?: string
   center_enable_sales_pipeline?: boolean
   center_enable_appointment?: boolean
   center_enable_branch?: boolean
   can_deactivate?: boolean
-  parent_form_id?: number
-  user_tags?: any[]
-  upcoming_todos?: any[]
-  branch_accesses?: any[]
+  parent_form_id?: number // not
+  user_tags?: any[] // not
+  upcoming_todos?: any[] // not
+  branch_accesses?: any[] // not
 }
 
 export interface Session {
   id?: number
   slug?: string
   name?: string
-  status?: string // enum
+  status?: string // not
   start_time?: string
   end_time?: string
   deleted_at?: string
   current_recording_time?: (number | string)[]
   number_of_measurements?: number
-  client_id?: number
+  client_id?: Client['id']
   client?: Client
-  user_id?: number
+  user_id?: User['id']
   user?: User
-  appointment_id?: number
+  appointment_id?: Appointment['id']
   appointment?: Appointment
   comments?: Comment[]
   measurements?: Measurement[]
@@ -47,51 +42,51 @@ export interface Client {
   name?: string
   birthday?: string
   email?: string
-  status?: string // enum
-  gender?: string // enum
+  status?: string // not
+  gender?: string // not
   note?: string
   admitted_at?: string
   archived_at?: string
   deleted_at?: string
-  discharge_reason?: string // enum
+  discharge_reason?: string // not
   other_discharge_reason?: string
   last_status_updated_at?: string
-  center_id?: number
-  prospect_id?: number
+  center_id?: number // not
+  prospect_id?: number // not
 }
 
 export interface Appointment {
   id?: number
   date?: string
-  status?: string // enum
-  type?: string // enum
+  status?: string // not
+  type?: string // not
   start_time_string?: string
   end_time_string?: string
   cancelled_at?: string
-  reschedule_reason?: string // enum
+  reschedule_reason?: string // not
   other_cancellation_reason?: string
-  cancellation_reason?: string // enum
+  cancellation_reason?: string // not
   cancelled_by?: string
   subtract_session_credit?: boolean | null
-  user_id?: number
+  user_id?: User['id']
   user?: User
-  client_id?: number
-  room_id?: number
+  client_id?: Client['id']
+  room_id?: Room['id']
   room?: Room
   supervisors?: User[]
-  recurring_appointment_id?: number
-  credit_transaction_id?: number
-  booking_appointment_id?: number
-  reschedule_requester_type?: string // enum
-  reschedule_requester_id?: number
-  cancellation_requester_type?: string // enum
-  cancellation_requester_id?: number
+  recurring_appointment_id?: number // not
+  credit_transaction_id?: number // not
+  booking_appointment_id?: number // not
+  reschedule_requester_type?: 'User' | 'Client'
+  reschedule_requester_id?: User['id'] | Client['id']
+  cancellation_requester_type?: 'User' | 'Client'
+  cancellation_requester_id?: User['id'] | Client['id']
 }
 
 export interface Room {
   id?: number
   name?: string
-  branch_id?: number
+  branch_id?: Branch['id']
   branch?: Branch
 }
 
@@ -107,13 +102,22 @@ export interface Comment {
   body?: string
   is_edited?: boolean
   user_id?: number
-  user_name?: string
+  user_name?: User['name']
+  target_name?: Target['name']
+  color?: Curriculum['color']
+  antecedent?: string
+  behavior?: string
+  consequence?: string
+  type?: 'Assessment::InSession' // not
+  client_id?: Client['id']
+  session_id?: Session['id']
+  measurement_id?: Measurement['id']
   commentable_id?: number
   commentable_type?: string
-  created_at: string
-  updated_at: string
-  created_at_string: string
-  updated_at_string: string
+  created_at?: string
+  updated_at?: string
+  created_at_string?: string
+  updated_at_string?: string
 }
 
 export type MeasurementType =
@@ -135,10 +139,10 @@ export interface Measurement {
   visible?: boolean
   deleted_at?: string
   submitted_at?: string
-  session_id?: number
-  target_id?: number
+  session_id?: Session['id']
+  target_id?: Target['id']
   target?: Target
-  comment_user_id?: number
+  comment_user_id?: User['id']
   comment_user?: Comment
 }
 
@@ -168,15 +172,21 @@ export interface Target {
   deleted_at?: string
   date_introduce?: string
   date_mastered?: string
-  client_id?: number
-  curriculum_id?: number
-  curriculum_color?: string
-  curriculum_name?: string
-  targetable_id?: number
-  targetable_type?: string
+  client_id?: Client['id']
+  curriculum_id?: Curriculum['id']
+  curriculum_color?: Curriculum['color']
+  curriculum_name?: Curriculum['name']
+  targetable_id?: number // not
+  targetable_type?: string // not
   last_phase_line?: {
     label?: string
     color?: string
     description?: string
   }
+}
+
+export interface Curriculum {
+  id?: number
+  color?: string
+  name?: string
 }

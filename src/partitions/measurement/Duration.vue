@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useSessionStore, type MeasurementResultsParams } from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, onMounted, ref } from 'vue'
 import type { Measurement } from '@/lib/types'
-import Button from '@/components/Button.vue'
+import AppButton from '@/components/AppButton.vue'
 
 const sessionStore = useSessionStore()
 
@@ -50,7 +50,7 @@ const onToggleTimer = async () => {
     emit('toggle-running')
   } else {
     clearInterval(timerInterval.value)
-    const params: MeasurementResultsParams = {
+    const params: UpdateMeasurementResultsParams = {
       id: props.measurement.id,
       results: durationTiming.value
     }
@@ -86,9 +86,9 @@ onMounted(() => {
       <div class="flex justify-center pb-2">:</div>
       <div class="flex justify-center">{{ durationTiming.split(':')[2] }}</div>
     </div>
-    <Button class="w-60 rounded-full" :loading="timerLoading" @click="onToggleTimer">
+    <AppButton class="w-60 rounded-full" :loading="timerLoading" @click="onToggleTimer">
       {{ started ? 'Stop timer' : 'Start timer' }}
-    </Button>
+    </AppButton>
   </div>
   <div class="shrink-0 text-center text-xs font-medium text-slate-7">
     Goal: {{ measurement.target?.goal_time }}

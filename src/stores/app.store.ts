@@ -1,14 +1,19 @@
 import { defineStore } from 'pinia'
 import { removeAccountStorage, setAccountStorage } from '@/plugins/preferences.plugin'
-import type { NetworkStatus, User } from '@/lib/types'
+import type { User } from '@/lib/types'
 import axios from 'axios'
 
 interface StateSchema {
   user: User | null
   network_status: NetworkStatus
 }
+
+export interface NetworkStatus {
+  connected: boolean
+  connection_type: 'wifi' | 'cellular' | 'none' | 'unknown'
+}
 interface SigninSchema {
-  email: string
+  email: User['email']
   password: string
 }
 

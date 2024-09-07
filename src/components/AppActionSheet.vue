@@ -8,9 +8,7 @@ interface Emits {
   (e: 'close'): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  show: false
-})
+const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 </script>
 
@@ -30,7 +28,7 @@ const emit = defineEmits<Emits>()
       <div class="fixed inset-0 bg-[#151021]/50" aria-hidden="true" />
     </TransitionChild>
 
-    <!-- Sliding sidebar -->
+    <!-- Sliding -->
     <TransitionChild
       enter="transition ease-in-out duration-300 transform"
       enter-from="translate-y-full"

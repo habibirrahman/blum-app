@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useSessionStore, type MeasurementResultsParams } from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { ref } from 'vue'
 import type { Measurement } from '@/lib/types'
+import { Icon } from '@iconify/vue'
 
 const sessionStore = useSessionStore()
 
@@ -12,7 +13,7 @@ const props = withDefaults(defineProps<Props>(), {})
 
 const scoreLoading = ref<boolean>(false)
 const onChangeScore = async (score: number) => {
-  const params: MeasurementResultsParams = {
+  const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     results: props.measurement.results?.score + score
   }
@@ -26,14 +27,12 @@ const onChangeScore = async (score: number) => {
   <div class="flex h-full flex-wrap content-center items-center justify-center gap-x-3 gap-y-4">
     <div class="space-y-1">
       <div
-        class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] bg-light-purple-5 font-bold text-white"
+        class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] bg-light-purple-5 text-4xl font-bold text-white"
         :class="{ 'pointer-events-none': scoreLoading }"
         @click="onChangeScore(1)"
       >
-        <div v-if="measurement.results?.score" class="text-4xl">
-          {{ measurement.results?.score }}
-        </div>
-        <div v-else class="mb-1 text-5xl">+</div>
+        <div v-if="measurement.results?.score">{{ measurement.results?.score }}</div>
+        <Icon v-else icon="ph:plus-bold" />
       </div>
       <div
         class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"

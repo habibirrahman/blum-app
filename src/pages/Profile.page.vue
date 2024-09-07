@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Button from '@/components/Button.vue'
+import AppButton from '@/components/AppButton.vue'
 import router from '@/router'
 import { useAppStore } from '@/stores/app.store'
 import { ref } from 'vue'
@@ -22,6 +22,6 @@ async function onSignout() {
     <div class="text-xs">
       <pre>{{ appStore.user }}</pre>
     </div>
-    <Button :loading="signoutLoading" @click="() => onSignout()">Sign out</Button>
+    <AppButton :loading="signoutLoading" @click="() => onSignout()">Sign out</AppButton>
   </div>
 </template>

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import Button from '@/components/Button.vue'
-import TextInput from '@/components/TextInput.vue'
-import ActionSheet from '@/components/ActionSheet.vue'
-import Pagination from '@/components/Pagination.vue'
+import AppButton from '@/components/AppButton.vue'
+import AppTextInput from '@/components/AppTextInput.vue'
+import AppActionSheet from '@/components/AppActionSheet.vue'
+import AppPagination from '@/components/AppPagination.vue'
 import UpcomingSession from '@/partitions/UpcomingSession.vue'
 import SessionItem from '@/partitions/SessionItem.vue'
 import moment from 'moment'
@@ -192,7 +192,7 @@ onMounted(() => {
   </div>
   <div class="sticky top-0 space-y-3 bg-white pt-3">
     <div class="px-4">
-      <TextInput
+      <AppTextInput
         name="query"
         placeholder="Search draft by client name or ID"
         v-model="query"
@@ -204,7 +204,7 @@ onMounted(() => {
         <div
           v-for="opt in dateOptions"
           :key="opt.value"
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-4 text-xs transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
           :class="[
             date === opt.value
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -215,7 +215,7 @@ onMounted(() => {
           {{ opt.label }}
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs capitalize transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium capitalize transition-all"
           :class="[
             status
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -227,7 +227,7 @@ onMounted(() => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs capitalize transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium capitalize transition-all"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />
@@ -274,67 +274,75 @@ onMounted(() => {
         <SessionItem :session="session" />
       </RouterLink>
     </div>
-    <Pagination :page="page" :total_count="sessionStore.sessions_count" @change="page = $event" />
+    <AppPagination
+      :page="page"
+      :total_count="sessionStore.sessions_count"
+      @change="page = $event"
+    />
   </div>
 
-  <ActionSheet :show="showStatus" @close="showStatus = false">
-    <div class="flex flex-col items-center gap-4">
+  <AppActionSheet :show="showStatus" @close="showStatus = false">
+    <div class="space-y-4">
       <div class="flex w-full items-center justify-between">
         <div class="text-xl font-semibold">Statuses</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
         </div>
       </div>
-      <div
-        v-for="opt in statusOptions"
-        :key="opt.value"
-        class="flex h-14 w-full items-center justify-between border-b border-slate-3"
-      >
-        <label :for="`status_filter_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
-        <input
-          type="radio"
-          name="status_filter"
-          :id="`status_filter_${opt.value}`"
-          :checked="selectStatus === opt.value"
-          :value="opt.value"
-          class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
-          @click="selectStatus = opt.value"
-        />
+      <div>
+        <div
+          v-for="opt in statusOptions"
+          :key="opt.value"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+        >
+          <label :for="`status_filter_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
+          <input
+            type="radio"
+            name="status_filter"
+            :id="`status_filter_${opt.value}`"
+            :checked="selectStatus === opt.value"
+            :value="opt.value"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            @click="selectStatus = opt.value"
+          />
+        </div>
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
-        <Button kind="plain" @click="onResetStatus">Reset</Button>
-        <Button @click="onApplyStatus">Apply</Button>
+        <AppButton kind="plain" @click="onResetStatus">Reset</AppButton>
+        <AppButton @click="onApplyStatus">Apply</AppButton>
       </div>
     </div>
-  </ActionSheet>
-  <ActionSheet :show="showSort" @close="showSort = false">
-    <div class="flex flex-col items-center gap-4">
+  </AppActionSheet>
+  <AppActionSheet :show="showSort" @close="showSort = false">
+    <div class="space-y-4">
       <div class="flex w-full items-center justify-between">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">
           <Icon icon="ph:x" class="text-2xl" />
         </div>
       </div>
-      <div
-        v-for="opt in sortOptions"
-        :key="opt.value"
-        class="flex h-14 w-full items-center justify-between border-b border-slate-3"
-      >
-        <label :for="`sort_by_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
-        <input
-          type="radio"
-          name="sort_by"
-          :id="`sort_by_${opt.value}`"
-          :checked="selectSort === opt.value"
-          :value="opt.value"
-          class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
-          @click="selectSort = opt.value"
-        />
+      <div>
+        <div
+          v-for="opt in sortOptions"
+          :key="opt.value"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+        >
+          <label :for="`sort_by_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
+          <input
+            type="radio"
+            name="sort_by"
+            :id="`sort_by_${opt.value}`"
+            :checked="selectSort === opt.value"
+            :value="opt.value"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            @click="selectSort = opt.value"
+          />
+        </div>
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
-        <Button kind="plain" @click="onResetSort">Reset</Button>
-        <Button @click="onApplySort">Apply</Button>
+        <AppButton kind="plain" @click="onResetSort">Reset</AppButton>
+        <AppButton @click="onApplySort">Apply</AppButton>
       </div>
     </div>
-  </ActionSheet>
+  </AppActionSheet>
 </template>

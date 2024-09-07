@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { useSessionStore, type MeasurementResultsParams } from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, ref } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { promptColors } from '@/lib/data'
+import { Icon } from '@iconify/vue'
 
 const sessionStore = useSessionStore()
 
@@ -35,7 +36,7 @@ const promptBoxes = computed(() => {
 
 const scoreLoading = ref<boolean>(false)
 const onChangeScore = async (prompt: any, score: number) => {
-  const params: MeasurementResultsParams = {
+  const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     results: { ...props.measurement.results }
   }
@@ -53,7 +54,7 @@ const onChangeScore = async (prompt: any, score: number) => {
   <div class="flex h-full flex-wrap content-center items-center justify-center gap-x-3 gap-y-4">
     <div v-for="prompt in promptBoxes" :key="prompt.id" class="space-y-1">
       <div
-        class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] border font-bold"
+        class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] border pt-2 text-4xl font-bold"
         :class="{ 'pointer-events-none': scoreLoading }"
         :style="{
           backgroundColor: promptColors[prompt.color].primaryColor,
@@ -63,8 +64,8 @@ const onChangeScore = async (prompt: any, score: number) => {
         @click="onChangeScore(prompt, 1)"
       >
         <div class="absolute top-px text-xs font-semibold">{{ prompt.abbreviation }}</div>
-        <div v-if="prompt.score" class="pt-2 text-4xl">{{ prompt.score }}</div>
-        <div v-else class="text-5xl">+</div>
+        <div v-if="prompt.score">{{ prompt.score }}</div>
+        <Icon v-else icon="ph:plus-bold" />
       </div>
       <div
         class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"

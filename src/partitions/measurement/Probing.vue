@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import {
   useSessionStore,
-  type MeasurementMarkProbingParams,
-  type MeasurementResultsParams
+  type UpdateMeasurementMarkProbingParams,
+  type UpdateMeasurementResultsParams
 } from '@/stores/session.store'
 import { computed, ref } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { TransitionRoot } from '@headlessui/vue'
-import Button from '@/components/Button.vue'
-import Chip from '@/components/Chip.vue'
+import AppButton from '@/components/AppButton.vue'
+import AppChip from '@/components/AppChip.vue'
 
 const sessionStore = useSessionStore()
 
@@ -48,7 +48,7 @@ const probingScore = computed(() => {
 
 const probingLoading = ref<boolean>(false)
 const onAdd = async (bool: boolean) => {
-  const params: MeasurementResultsParams = {
+  const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     results: { ...props.measurement.results }
   }
@@ -62,7 +62,7 @@ const onAdd = async (bool: boolean) => {
   page.value = Math.floor(newLength / perPage.value) + 1
 }
 const onRemove = async (circle: ProbingCircle) => {
-  const params: MeasurementResultsParams = {
+  const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     results: {}
   }
@@ -210,7 +210,7 @@ const probingActionOptions = computed(() => {
 
 const saveLoading = ref<boolean>(false)
 const onSave = async () => {
-  const params: MeasurementMarkProbingParams = {
+  const params: UpdateMeasurementMarkProbingParams = {
     id: props.measurement.id,
     visible: probingAction.value?.visible,
     marked_as: probingAction.value?.marked_as
@@ -246,7 +246,7 @@ const onSave = async () => {
       ></div>
     </div>
     <div v-if="measurement.submitted_at" class="flex w-60 justify-center">
-      <Chip :chip="measurement.marked_as" />
+      <AppChip :chip="measurement.marked_as" />
     </div>
   </div>
   <div class="shrink-0 space-y-2">
@@ -371,15 +371,17 @@ const onSave = async () => {
         >
           <div class="flex items-center gap-2">
             <div class="text-sm font-semibold text-slate-8">{{ opt.title }}</div>
-            <Chip v-if="opt.status" :chip="opt.status" />
+            <AppChip v-if="opt.status" :chip="opt.status" />
           </div>
           <div v-if="opt.message" class="text-sm text-slate-8">{{ opt.message }}</div>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <Button kind="plain" color="lime" @click="showPanel = false">Back to Session</Button>
-          <Button color="lime" :loading="saveLoading" :disabled="!probingAction" @click="onSave">
+          <AppButton kind="plain" color="lime" @click="showPanel = false"
+            >Back to Session</AppButton
+          >
+          <AppButton color="lime" :loading="saveLoading" :disabled="!probingAction" @click="onSave">
             Save
-          </Button>
+          </AppButton>
         </div>
       </div>
     </div>

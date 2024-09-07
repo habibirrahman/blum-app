@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import Button from '@/components/Button.vue'
-import TextInput from '@/components/TextInput.vue'
-import ActionSheet from '@/components/ActionSheet.vue'
+import AppButton from '@/components/AppButton.vue'
+import AppTextInput from '@/components/AppTextInput.vue'
+import AppActionSheet from '@/components/AppActionSheet.vue'
 import router from '@/router'
 import { useAppStore } from '@/stores/app.store'
 
@@ -39,7 +39,7 @@ async function onSignin() {
     <div class="flex w-full flex-col gap-10 p-4">
       <div class="text-center font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
       <div class="flex flex-col gap-5">
-        <TextInput
+        <AppTextInput
           label="Email"
           name="email"
           type="email"
@@ -47,34 +47,36 @@ async function onSignin() {
           v-model="email"
           :error="error"
         />
-        <TextInput
+        <AppTextInput
           label="Password"
           name="password"
           type="password"
           placeholder="Enter your password"
           v-model="password"
         />
-        <Button :loading="loading" :disabled="!email && !password" @click="onSignin">
+        <AppButton :loading="loading" :disabled="!email && !password" @click="onSignin">
           Log in
-        </Button>
+        </AppButton>
       </div>
     </div>
     <div class="absolute bottom-0 w-screen py-1">
-      <Button kind="plain" class="w-full" @click="showForgotPassword = true">
+      <AppButton kind="plain" class="w-full" @click="showForgotPassword = true">
         Forgot password?
-      </Button>
+      </AppButton>
     </div>
   </div>
-  <ActionSheet :show="showForgotPassword" @close="showForgotPassword = false">
+  <AppActionSheet :show="showForgotPassword" @close="showForgotPassword = false">
     <div class="flex flex-col items-center gap-4">
       <div class="text-center text-xl font-semibold">Reset password</div>
       <div class="text-center text-sm">
         Password resets aren't available on mobile yet. Please log in to Blüm on a desktop and
         update it from your profile, or contact your admin for assistance.
       </div>
-      <Button kind="plain" class="w-full" @click="showForgotPassword = false"> Got it! </Button>
+      <AppButton kind="plain" class="w-full" @click="showForgotPassword = false">
+        Got it!
+      </AppButton>
     </div>
-  </ActionSheet>
+  </AppActionSheet>
 </template>
 
 <style></style>

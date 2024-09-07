@@ -4,11 +4,13 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { displayDate, getTargetType } from '@/lib/func'
-import Button from '@/components/Button.vue'
+import AppButton from '@/components/AppButton.vue'
 import moment from 'moment'
 import { useAppStore } from '@/stores/app.store'
-import ActionSheet from '@/components/ActionSheet.vue'
+import AppActionSheet from '@/components/AppActionSheet.vue'
 import router from '@/router'
+import CommentItem from '@/partitions/CommentItem.vue'
+import type { Session } from '@/lib/types'
 
 const route = useRoute()
 const appStore = useAppStore()
@@ -21,9 +23,14 @@ const isScheduled = computed<boolean>(() => sessionStore.session?.appointment_id
 async function fetchSession() {
   sessionLoading.value = true
   const slug = route.params.slug.toString()
-  const { success } = await sessionStore.getSession({ slug })
+  const { success: success1, data } = await sessionStore.getSession({ slug })
+  if (!success1) return
+  const { success: success2 } = await sessionStore.getSessionComments({
+    id: data.id,
+    filter: 'general'
+  })
   sessionLoading.value = false
-  if (!success) return
+  if (!success2) return
   document.getElementById('app')?.scroll({
     top: 0,
     behavior: 'smooth'
@@ -182,6 +189,11 @@ const onStartSession = () => {
           <div class="text-2xl font-bold">{{ sessionStore.session_comments.length }}</div>
           <div class="text-sm">comment(s)</div>
         </div>
+        <CommentItem
+          v-for="comment in sessionStore.session_comments"
+          :key="comment.id"
+          :comment="comment"
+        />
         <div
           v-for="comment in sessionStore.session_comments"
           :key="comment.id"
@@ -302,16 +314,16 @@ const onStartSession = () => {
     v-if="!sessionLoading"
     class="fixed bottom-0 z-10 flex h-[68px] w-screen items-center bg-prim-3 px-4"
   >
-    <Button
+    <AppButton
       :disabled="!sessionStore.session_measurements.length"
       class="w-full"
       :loading="lunchLoading"
       @click="onStartSession"
     >
       Start session
-    </Button>
+    </AppButton>
   </div>
-  <ActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
+  <AppActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
     <div class="flex flex-col items-center gap-4">
       <div
         v-if="isLunchBeforeSchedule && !isLunchNotAssigned"
@@ -362,9 +374,9 @@ const onStartSession = () => {
         </div>
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
-        <Button kind="plain" @click="showActionBeforeLunch = false">Cancel</Button>
-        <Button :loading="lunchLoading" @click="onLaunchSession">Process</Button>
+        <AppButton kind="plain" @click="showActionBeforeLunch = false">Cancel</AppButton>
+        <AppButton :loading="lunchLoading" @click="onLaunchSession">Process</AppButton>
       </div>
     </div>
-  </ActionSheet>
+  </AppActionSheet>
 </template>
