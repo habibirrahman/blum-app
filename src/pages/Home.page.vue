@@ -144,7 +144,7 @@ onMounted(() => {
 <template>
   <div
     v-if="upcomingLoading || sessionsLoading"
-    class="fixed z-[1000] grid h-screen w-screen place-content-center bg-slate-10/30"
+    class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
   </div>

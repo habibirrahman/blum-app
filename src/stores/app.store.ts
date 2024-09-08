@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia'
-import { removeAccountStorage, setAccountStorage } from '@/plugins/preferences.plugin'
+import {
+  removeAcccoutStorage,
+  removeAccessStorage,
+  setAcccoutStorage,
+  setAccessStorage
+} from '@/plugins/preferences.plugin'
 import type { User } from '@/lib/types'
 import axios from 'axios'
 
@@ -24,14 +29,20 @@ export const useAppStore = defineStore('app', {
   }),
   getters: {},
   actions: {
+    async setNetworkStatus(networkStatus: NetworkStatus) {
+      this.network_status = networkStatus
+    },
     async getAccount() {
       return axios
         .get('/api/v1/current_user')
-        .then(({ data }) => {
+        .then(async ({ data }) => {
+          const { success } = await setAcccoutStorage({ user: data })
+          if (!success) return { success: false }
           this.user = data
           return { success: true, data, message: 'You have signed in' }
         })
-        .catch(({ response }) => {
+        .catch(async ({ response }) => {
+          if (response.status === 401) await removeAcccoutStorage()
           return { success: false, data: null, message: response?.data?.error }
         })
     },
@@ -39,8 +50,10 @@ export const useAppStore = defineStore('app', {
       return axios
         .post('/signin', { email, password })
         .then(async ({ data }) => {
-          const { success } = await setAccountStorage(data)
-          if (!success) return { success: false }
+          const { success: s1 } = await setAccessStorage(data)
+          if (!s1) return { success: false }
+          const { success: s2 } = await setAcccoutStorage({ user: data.user })
+          if (!s2) return { success: false }
           this.user = data.user
           return { success: true, message: 'Successfully signed in' }
         })
@@ -51,8 +64,8 @@ export const useAppStore = defineStore('app', {
     async signout() {
       const { status } = await axios.delete('/signin')
       if (status !== 200) return { success: false }
-      const { success } = await removeAccountStorage()
-      if (!success) return { success: false }
+      await removeAcccoutStorage()
+      await removeAccessStorage()
       this.user = null
       return { success: true }
     }

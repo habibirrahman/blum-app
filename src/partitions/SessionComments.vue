@@ -122,15 +122,15 @@ const onCreate = async () => {
     leave-from="translate-x-0"
     leave-to="-translate-x-full"
     id="session-comments"
-    class="fixed left-0 top-0 z-20 h-screen w-screen overflow-y-auto bg-prim-3"
+    class="fixed left-0 top-0 z-[20] h-screen w-screen overflow-y-auto bg-prim-3"
   >
     <div
       v-if="commentsLoading"
-      class="fixed z-[1000] grid h-screen w-screen place-content-center bg-slate-10/30"
+      class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30"
     >
       <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
     </div>
-    <div class="sticky top-0 z-10 shrink-0">
+    <div class="sticky top-0 z-[10] shrink-0">
       <div class="flex h-13 items-center gap-3 bg-white px-4">
         <div
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
@@ -197,7 +197,7 @@ const onCreate = async () => {
     leave-to="opacity-0 scale-75"
     class="fixed left-0 top-0 z-[21] h-screen w-screen rounded border-2 bg-white"
   >
-    <div class="sticky top-0 z-10 flex h-13 shrink-0 items-center gap-3 bg-white px-4">
+    <div class="sticky top-0 z-[10] flex h-13 shrink-0 items-center gap-3 bg-white px-4">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
         @click="showNew = false"

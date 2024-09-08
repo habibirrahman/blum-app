@@ -23,14 +23,14 @@ const isScheduled = computed<boolean>(() => sessionStore.session?.appointment_id
 async function fetchSession() {
   sessionLoading.value = true
   const slug = route.params.slug.toString()
-  const { success: success1, data } = await sessionStore.getSession({ slug })
-  if (!success1) return
-  const { success: success2 } = await sessionStore.getSessionComments({
+  const { success: s1, data } = await sessionStore.getSession({ slug })
+  if (!s1) return
+  const { success: s2 } = await sessionStore.getSessionComments({
     id: data.id,
     filter: 'general'
   })
   sessionLoading.value = false
-  if (!success2) return
+  if (!s2) return
   document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
 }
 
@@ -121,12 +121,12 @@ const onStartSession = () => {
 <template>
   <div
     v-if="sessionLoading"
-    class="fixed z-[1000] grid h-screen w-screen place-content-center"
+    class="fixed z-[99] grid h-screen w-screen place-content-center"
     :style="{ background: 'linear-gradient(180deg, #FFFFFF 0%, #EBE4F0 15.77%)' }"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
   </div>
-  <div v-if="!sessionLoading" class="sticky top-0 z-10 bg-white">
+  <div v-if="!sessionLoading" class="sticky top-0 z-[10] bg-white">
     <div class="flex items-center justify-between gap-4 px-4 py-3">
       <div class="flex items-center gap-3 truncate">
         <RouterLink :to="redirect" class="flex h-8 w-8 shrink-0 items-center justify-center">
@@ -309,7 +309,7 @@ const onStartSession = () => {
   </div>
   <div
     v-if="!sessionLoading"
-    class="fixed bottom-0 z-10 flex h-[68px] w-screen items-center bg-prim-3 px-4"
+    class="fixed bottom-0 z-[10] flex h-[68px] w-screen items-center bg-prim-3 px-4"
   >
     <AppButton
       :disabled="!sessionStore.session_measurements.length"

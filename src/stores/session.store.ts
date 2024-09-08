@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Session, Comment, Measurement, User, Client } from '@/lib/types'
 import axios from 'axios'
+import { useAppStore } from './app.store'
 
 interface StateSchema {
   session: Session | null
@@ -74,6 +75,8 @@ export const useSessionStore = defineStore('session', {
   getters: {},
   actions: {
     async getSession({ slug }: { slug: Session['slug'] }) {
+      const { network_status: { connected } } = useAppStore()
+      console.log('network_status connected', connected)
       return axios
         .get(`/api/v1/sessions/${slug}`)
         .then(async ({ data }) => {

@@ -11,13 +11,19 @@ const route = useRoute()
 const appStore = useAppStore()
 
 const loadingApp = ref<boolean>(false)
+const routeName = computed<string>(() => route.name?.toString() || '')
+const isUseNav = computed<boolean>(
+  () => routeName.value !== 'signin' && !routeName.value.includes('record')
+)
 const networkStatus: NetworkStatus = reactive({
   connected: false,
   connection_type: 'none'
 })
-const routeName = computed<string>(() => route.name?.toString() || '')
-const isUseNav = computed<boolean>(
-  () => routeName.value !== 'signin' && !routeName.value.includes('record')
+watch(
+  () => networkStatus.connected,
+  () => {
+    appStore.setNetworkStatus(networkStatus)
+  }
 )
 
 async function fetchCurrentUser() {
@@ -107,13 +113,13 @@ const navigations = computed<Nav[]>(() => {
     </div>
     <div v-else :class="{ 'pb-14': isUseNav }">
       <div
-        v-if="!appStore.network_status.connected"
-        class="fixed left-0 top-0 z-[99999] h-1 w-screen bg-tomato-7"
+        class="fixed left-0 z-[999] h-1 w-screen bg-tomato-7 transition-all"
+        :class="{ 'top-0': !networkStatus.connected, '-top-1': networkStatus.connected }"
       ></div>
       <RouterView />
     </div>
 
-    <footer v-if="isUseNav" class="fixed bottom-0 flex h-14 w-screen bg-white">
+    <footer v-if="isUseNav" class="fixed bottom-0 z-[100] flex h-14 w-screen bg-white">
       <nav class="grid h-full w-full grid-cols-4 items-center">
         <RouterLink v-for="nav in navigations" :key="nav.route_name" :to="{ name: nav.route_name }">
           <Icon v-if="nav.is_active" :icon="nav.active_icon" class="text-xl text-light-purple-5" />

@@ -1,4 +1,4 @@
-import { getAccountStorage } from '@/plugins/preferences.plugin'
+import { getAccessStorage } from '@/plugins/preferences.plugin'
 import router from '@/router'
 import axios from 'axios'
 
@@ -14,7 +14,7 @@ axios.defaults.withCredentials = true
 // Request interceptor
 axios.interceptors.request.use(async (config) => {
   // Modify the request config here
-  const { success, data } = await getAccountStorage()
+  const { success, data } = await getAccessStorage()
   config.headers['Content-Type'] = 'application/json'
   if (success) {
     config.headers['Authorization'] = `Bearer ${data?.access}`
@@ -33,7 +33,7 @@ axios.interceptors.response.use(
     if (error.response) {
       if (error.response.status === 401) {
         // Redirect to login page
-        // await removeAccountStorage()
+        // await removeAccessStorage()
         router.push('/')
       } else {
         // Show a generic error message

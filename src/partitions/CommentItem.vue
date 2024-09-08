@@ -100,7 +100,7 @@ const onDelete = async () => {
   <div
     class="w-full transform transition duration-300 ease-in-out"
     :class="{
-      'fixed top-1/3 z-[1000] -translate-x-4 -translate-y-1/2 px-4': showAction
+      'fixed top-1/3 z-[100] -translate-x-4 -translate-y-1/2 px-4': showAction
     }"
   >
     <div
@@ -199,9 +199,9 @@ const onDelete = async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[1001] h-screen w-screen -translate-y-4 rounded border-2 bg-white"
+    class="fixed left-0 top-0 z-[101] h-screen w-screen -translate-y-4 rounded border-2 bg-white"
   >
-    <div class="sticky top-0 z-10 flex h-13 shrink-0 items-center gap-3 bg-white px-4">
+    <div class="sticky top-0 z-[10] flex h-13 shrink-0 items-center gap-3 bg-white px-4">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
         @click="showEdit = false"

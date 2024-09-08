@@ -138,13 +138,13 @@ const isMeasurementCollapsed = ref<boolean>(true)
 <template>
   <div
     v-if="sessionLoading"
-    class="fixed z-[1000] grid h-screen w-screen place-content-center opacity-75"
+    class="fixed z-[99] grid h-screen w-screen place-content-center opacity-75"
     :style="{ background: 'linear-gradient(180deg, #FFFFFF 0%, #EBE4F0 15.77%)' }"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
   </div>
 
-  <div class="sticky top-0 z-10 flex h-13 shrink-0 items-center gap-3 bg-white px-4">
+  <div class="sticky top-0 z-[10] flex h-13 shrink-0 items-center gap-3 bg-white px-4">
     <div class="flex items-center gap-2">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-all"
@@ -240,7 +240,7 @@ const isMeasurementCollapsed = ref<boolean>(true)
 
   <div
     v-if="fixedMeasurement && !showReviewMode"
-    class="fixed bottom-0 z-10 flex w-screen bg-prim-3 px-4 transition-all"
+    class="fixed bottom-0 z-[10] flex w-screen bg-prim-3 px-4 transition-all"
     :class="{
       'h-[142px] justify-center pt-2': isMeasurementCollapsed,
       'h-[calc(100vh-52px)] flex-col items-center gap-4 overflow-y-auto py-4':
@@ -269,7 +269,7 @@ const isMeasurementCollapsed = ref<boolean>(true)
 
   <div
     v-if="!fixedMeasurement"
-    class="fixed bottom-0 z-10 flex h-16 w-screen items-center gap-6 bg-prim-3 pl-4 transition-all delay-500 duration-500"
+    class="fixed bottom-0 z-[10] flex h-16 w-screen items-center gap-6 bg-prim-3 pl-4 transition-all delay-500 duration-500"
     :class="{ 'bottom-0': !showReviewMode, '-bottom-16': showReviewMode }"
   >
     <div class="relative" @click="showReviewMode = !showReviewMode">
