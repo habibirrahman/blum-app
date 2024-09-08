@@ -106,6 +106,10 @@ const navigations = computed<Nav[]>(() => {
       </div>
     </div>
     <div v-else :class="{ 'pb-14': isUseNav }">
+      <div
+        v-if="!appStore.network_status.connected"
+        class="fixed left-0 top-0 z-[99999] h-1 w-screen bg-tomato-7"
+      ></div>
       <RouterView />
     </div>
 

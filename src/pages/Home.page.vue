@@ -132,10 +132,7 @@ async function fetchSessions() {
   const { success } = await sessionStore.getSessions({ params: params.value })
   sessionsLoading.value = false
   if (!success) return
-  document.getElementById('app')?.scroll({
-    top: 0,
-    behavior: 'smooth'
-  })
+  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
 }
 
 onMounted(() => {

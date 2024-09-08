@@ -31,10 +31,7 @@ async function fetchSession() {
   })
   sessionLoading.value = false
   if (!success2) return
-  document.getElementById('app')?.scroll({
-    top: 0,
-    behavior: 'smooth'
-  })
+  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
 }
 
 onMounted(() => {

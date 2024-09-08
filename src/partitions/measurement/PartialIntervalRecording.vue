@@ -8,6 +8,7 @@ const sessionStore = useSessionStore()
 interface Props {
   measurement: Measurement
   counter: number
+  is_collapsed: boolean
 }
 const props = withDefaults(defineProps<Props>(), {})
 
@@ -56,16 +57,29 @@ const onAddScore = async () => {
 </script>
 
 <template>
-  <div class="flex h-full flex-wrap content-center items-center justify-center gap-x-3 gap-y-4">
+  <div
+    class="flex h-full flex-wrap content-center items-center gap-x-3 gap-y-4 transition-all"
+    :class="{ 'justify-center': !is_collapsed, 'justify-between': is_collapsed }"
+  >
+    <div v-if="is_collapsed"></div>
+    <div v-if="is_collapsed" class="flex flex-col items-center justify-between gap-2 text-slate-7">
+      <div class="text-[32px] font-bold">{{ totalScore }}</div>
+      <div class="text-xs">Total score</div>
+    </div>
     <div
-      class="flex h-[200px] w-[200px] shrink-0 items-center justify-center rounded-full bg-light-purple-5"
-      :class="{ 'pointer-events-none': scoreLoading }"
+      class="flex shrink-0 items-center justify-center rounded-full bg-light-purple-5 transition-all"
+      :class="{
+        'pointer-events-none': scoreLoading,
+        'w-full max-w-[200px] aspect-square': !is_collapsed,
+        'h-[90px] w-[90px]': is_collapsed
+      }"
       @click="onAddScore()"
     >
       <div class="text-sm font-semibold text-white">Incident</div>
     </div>
   </div>
-  <div class="shrink-0 space-y-1 text-xs font-medium text-slate-7">
+
+  <div v-if="!is_collapsed" class="shrink-0 space-y-1 text-xs font-medium text-slate-7">
     <div class="flex items-center justify-between">
       <div>Interval</div>
       <div>{{ currentInterval }} / {{ intervalRound }}</div>

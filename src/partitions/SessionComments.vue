@@ -46,10 +46,7 @@ async function fetchComments() {
   })
   commentsLoading.value = false
   if (!success) return
-  document.getElementById('session-comments')?.scroll({
-    top: 0,
-    behavior: 'smooth'
-  })
+  document.getElementById('session-comments')?.scroll({ top: 0, behavior: 'smooth' })
 }
 
 watch(

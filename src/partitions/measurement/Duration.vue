@@ -8,6 +8,7 @@ const sessionStore = useSessionStore()
 
 interface Props {
   measurement: Measurement
+  is_collapsed: boolean
 }
 interface Emits {
   (e: 'toggle-running'): void
@@ -75,9 +76,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-wrap content-center items-center justify-center gap-x-3 gap-y-4">
+  <div
+    class="flex h-full flex-grow-0 flex-col content-center items-center justify-center gap-x-3 transition-all"
+    :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2': is_collapsed }"
+  >
     <div
-      class="grid w-48 grid-cols-5 items-center text-4xl font-bold transition-all"
+      class="grid grid-cols-5 items-center text-3xl text-[32px] font-bold transition-all"
       :class="{ 'text-slate-6': !started, 'text-slate-8': started }"
     >
       <div class="flex justify-center">{{ durationTiming.split(':')[0] }}</div>
@@ -86,11 +90,12 @@ onMounted(() => {
       <div class="flex justify-center pb-2">:</div>
       <div class="flex justify-center">{{ durationTiming.split(':')[2] }}</div>
     </div>
-    <AppButton class="w-60 rounded-full" :loading="timerLoading" @click="onToggleTimer">
+    <AppButton class="w-full max-w-56 rounded-full" :loading="timerLoading" @click="onToggleTimer">
       {{ started ? 'Stop timer' : 'Start timer' }}
     </AppButton>
   </div>
-  <div class="shrink-0 text-center text-xs font-medium text-slate-7">
+
+  <div v-if="!is_collapsed" class="shrink-0 text-center text-xs font-medium text-slate-7">
     Goal: {{ measurement.target?.goal_time }}
   </div>
 </template>

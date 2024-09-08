@@ -8,6 +8,7 @@ const sessionStore = useSessionStore()
 
 interface Props {
   measurement: Measurement
+  is_collapsed: boolean
 }
 const props = withDefaults(defineProps<Props>(), {})
 
@@ -24,10 +25,13 @@ const onChangeScore = async (score: number) => {
 </script>
 
 <template>
-  <div class="flex h-full flex-wrap content-center items-center justify-center gap-x-3 gap-y-4">
+  <div
+    class="flex h-full flex-wrap content-center items-center justify-center gap-x-3 gap-y-4"
+    :class="{ 'scale-90': is_collapsed }"
+  >
     <div class="space-y-1">
       <div
-        class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] bg-light-purple-5 text-4xl font-bold text-white"
+        class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] bg-light-purple-5 text-4xl font-bold text-white transition-all"
         :class="{ 'pointer-events-none': scoreLoading }"
         @click="onChangeScore(1)"
       >
@@ -43,7 +47,8 @@ const onChangeScore = async (score: number) => {
       </div>
     </div>
   </div>
-  <div class="shrink-0 text-center text-xs font-medium text-slate-7">
+
+  <div v-if="!is_collapsed" class="shrink-0 text-center text-xs font-medium text-slate-7">
     Goal: {{ measurement.target?.goal }} attempt(s) per session
   </div>
 </template>
