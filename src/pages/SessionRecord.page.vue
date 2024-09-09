@@ -8,8 +8,11 @@ import AppButton from '@/components/AppButton.vue'
 import MeasurementRecord from '@/partitions/MeasurementRecord.vue'
 import type { Measurement } from '@/lib/types'
 import SessionComments from '@/partitions/SessionComments.vue'
+import AppActionSheet from '@/components/AppActionSheet.vue'
+import { useToast } from 'vue-toastification'
 
 const route = useRoute()
+const toast = useToast()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
@@ -17,12 +20,26 @@ const sessionLoading = ref<boolean>(false)
 const cycleLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
 
-async function fetchSession() {
+const showOffline = ref<boolean>(false)
+watch(
+  () => appStore.network_status.connected,
+  (val) => {
+    if (!val) showOffline.value = true
+  }
+)
+
+interface FetchSessionProps {
+  is_swiped?: boolean
+}
+async function fetchSession({ is_swiped }: FetchSessionProps = { is_swiped: false }) {
   const slug = route.params.slug.toString()
   const { success, data } = await sessionStore.getSession({ slug })
   sessionLoading.value = false
   cycleLoading.value = false
   if (!success) return
+  if (is_swiped) {
+    toast.success('Results are now up-to-date!')
+  }
   counter.value = data.current_recording_time[0]
   counterTimer()
   document.getElementById('app')?.scroll({ top: 56, behavior: 'smooth' })
@@ -40,7 +57,7 @@ const scrollListener = (e: any) => {
   scrollingTimeout.value = setTimeout(() => {
     if (top <= 0) {
       cycleLoading.value = true
-      fetchSession()
+      fetchSession({ is_swiped: true })
     }
     if (top < 56) {
       document.getElementById('app')?.scroll({ top: 56, behavior: 'smooth' })
@@ -88,16 +105,20 @@ const recordingTime = computed<string>(() => {
   return `${hours}:${minutes}:${seconds}`
 })
 
-const runningMeasurements = ref<Measurement['id'][]>([])
-const onToggleRunning = (id: Measurement['id']) => {
-  const idx = runningMeasurements.value.indexOf(id)
-  if (idx > -1) runningMeasurements.value.splice(idx, 1)
-  else runningMeasurements.value.push(id)
+const runningMeasurements = ref<Measurement[]>([])
+const onToggleRunning = (data: Measurement) => {
+  const found = runningMeasurements.value.find((i) => i.id === data.id)
+  if (found) {
+    runningMeasurements.value = runningMeasurements.value.filter((i) => i.id !== data.id)
+  } else {
+    runningMeasurements.value.push(data)
+  }
 }
 
 const showReviewMode = ref<boolean>(false)
-watch(showReviewMode, () => {
+watch(showReviewMode, (val) => {
   document.getElementById('app')?.scroll({ top: 56, behavior: 'smooth' })
+  if (val) focusMeasurement.value = 0
 })
 const focusMeasurement = ref<Measurement['id']>(0)
 const onFocusMeasurement = (val: Measurement) => {
@@ -144,7 +165,7 @@ const isMeasurementCollapsed = ref<boolean>(true)
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
   </div>
 
-  <div class="sticky top-0 z-[10] flex h-13 shrink-0 items-center gap-3 bg-white px-4">
+  <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
     <div class="flex items-center gap-2">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-all"
@@ -183,12 +204,14 @@ const isMeasurementCollapsed = ref<boolean>(true)
         <div class="flex justify-center">{{ recordingTime.split(':')[2] }}</div>
       </div>
     </div>
-    <AppButton class="px-4">End</AppButton>
+    <AppButton class="px-4" :disabled="!appStore.network_status.connected">
+      {{ appStore.network_status.connected ? 'End' : 'Offline' }}</AppButton
+    >
   </div>
 
   <div
     class="fixed left-1/2 z-[9] flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full bg-white transition-all"
-    :class="{ 'top-15': cycleLoading, '-top-15': !cycleLoading }"
+    :class="{ 'top-[60px]': cycleLoading, '-top-[60px]': !cycleLoading }"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
   </div>
@@ -200,7 +223,12 @@ const isMeasurementCollapsed = ref<boolean>(true)
       <div>Can't refresh while the timer is running.</div>
       <div>Please stop the timer first.</div>
     </div>
-    <div v-else>Pull down to refresh the results.</div>
+    <div v-else>
+      <div v-if="!appStore.network_status.connected">
+        Can't refresh while your connection is lost
+      </div>
+      <div v-else>Pull down to refresh the results.</div>
+    </div>
   </div>
 
   <div
@@ -260,7 +288,7 @@ const isMeasurementCollapsed = ref<boolean>(true)
     />
     <div
       v-if="!isMeasurementCollapsed"
-      class="flex h-15 w-15 shrink-0 items-center justify-center rounded-full bg-prim-1"
+      class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-prim-1"
       @click="isMeasurementCollapsed = true"
     >
       <Icon icon="ph:x" class="text-[32px] text-light-purple-5" />
@@ -304,4 +332,17 @@ const isMeasurementCollapsed = ref<boolean>(true)
   </div>
 
   <SessionComments :show="showSessionComments" @close="showSessionComments = false" />
+
+  <AppActionSheet :show="showOffline" @close="showOffline = false">
+    <div class="flex flex-col items-center gap-4">
+      <div class="text-center text-xl font-semibold">Oops! You're offline</div>
+      <div class="text-center text-sm">
+        Your connection is lost. You can keep tracking data, but you'll need to go online to end the
+        session.
+      </div>
+      <AppButton kind="plain" class="w-full" @click="showOffline = false">
+        Back to session
+      </AppButton>
+    </div>
+  </AppActionSheet>
 </template>

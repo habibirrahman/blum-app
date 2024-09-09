@@ -23,11 +23,23 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
+const showPopup = ref<boolean>(false)
+const popupTimeout = ref<any>(null)
+const onDisplayPopup = () => {
+  if (!props.is_collapsed) return
+  showPopup.value = true
+  clearTimeout(popupTimeout.value)
+  popupTimeout.value = setTimeout(() => {
+    showPopup.value = false
+  }, 3000)
+}
+
 const page = ref<number>(1)
 watch(
   () => props.is_collapsed,
   () => (page.value = 1)
 )
+watch(page, () => onDisplayPopup())
 const perPage = computed<number>(() => 20)
 const pageCount = computed<number>(() => {
   const results = props.measurement.results
@@ -65,17 +77,6 @@ const probingScore = computed(() => {
   const totalSuccess = Object.values(results).filter((i) => i).length
   return (totalSuccess / trials) * 100 || 0
 })
-
-const showPopup = ref<boolean>(false)
-const popupTimeout = ref<any>(null)
-const onDisplayPopup = () => {
-  if (!props.is_collapsed) return
-  showPopup.value = true
-  clearTimeout(popupTimeout.value)
-  popupTimeout.value = setTimeout(() => {
-    showPopup.value = false
-  }, 3000)
-}
 
 const probingLoading = ref<boolean>(false)
 const onAdd = async (bool: boolean) => {
@@ -266,8 +267,8 @@ const onSave = async () => {
   <div
     class="flex flex-col content-center items-center justify-center gap-2 transition-all"
     :class="{
-      'h-full': !is_collapsed,
-      'absolute mb-2 rounded border border-prim-3 bg-white py-3': is_collapsed,
+      'h-full w-full': !is_collapsed,
+      'absolute mb-2 w-64 rounded border border-prim-3 bg-white py-3': is_collapsed,
       'bottom-full opacity-100': is_collapsed && showPopup,
       '-z[1] bottom-0 opacity-0': is_collapsed && !showPopup
     }"
@@ -309,10 +310,10 @@ const onSave = async () => {
     >
       <AppChip :chip="measurement.marked_as" />
     </div>
-    <div class="space-y-4" :class="{ 'h-full': is_collapsed }">
+    <div class="flex flex-col" :class="{ 'gap-4': !is_collapsed, 'gap-0': is_collapsed }">
       <div
         class="flex items-center justify-center"
-        :class="{ 'h-full scale-75 gap-3': is_collapsed, 'gap-4': !is_collapsed }"
+        :class="{ 'scale-75 gap-3': is_collapsed, 'gap-4': !is_collapsed }"
       >
         <div
           class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-all"
@@ -350,7 +351,7 @@ const onSave = async () => {
           <div class="text-sm font-semibold text-white">Submit</div>
         </div>
       </div>
-      <div v-if="!is_collapsed" class="flex h-2 items-center justify-center gap-2">
+      <div class="flex h-2 items-center justify-center gap-2">
         <div
           v-for="n in pageCount"
           :key="n"

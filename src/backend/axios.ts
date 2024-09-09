@@ -1,6 +1,6 @@
 import { getAccessStorage } from '@/plugins/preferences.plugin'
-import router from '@/router'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
 const API_URL = 'https://blum-staging.herokuapp.com'
 
@@ -30,6 +30,7 @@ axios.interceptors.request.use(async (config) => {
 axios.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const router = useRouter()
     if (error.response) {
       if (error.response.status === 401) {
         // Redirect to login page

@@ -13,8 +13,10 @@ import { TransitionRoot } from '@headlessui/vue'
 import { displayDate } from '@/lib/func'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
+import { useToast } from 'vue-toastification'
 
 const appStore = useAppStore()
+const toast = useToast()
 const sessionStore = useSessionStore()
 
 interface Props {
@@ -91,6 +93,7 @@ const onDelete = async () => {
   const { success } = await sessionStore.deleteSessionComment(params)
   deleteLoading.value = false
   if (!success) return
+  toast.success('The comment has been deleted.')
   showRemove.value = false
   showAction.value = false
 }
@@ -100,7 +103,7 @@ const onDelete = async () => {
   <div
     class="w-full transform transition duration-300 ease-in-out"
     :class="{
-      'fixed top-1/3 z-[100] -translate-x-4 -translate-y-1/2 px-4': showAction
+      'fixed top-1/3 z-[1000] -translate-x-4 -translate-y-1/2 px-4': showAction
     }"
   >
     <div
@@ -161,23 +164,25 @@ const onDelete = async () => {
       ></div>
     </div>
   </div>
+  
   <AppActionSheet :show="showAction" @close="showAction = false">
     <div class="space-y-4">
       <div class="flex justify-end" @click="showAction = false">
         <Icon icon="ph:x" class="text-2xl" />
       </div>
       <div>
-        <div class="flex h-13 w-full items-center gap-2" @click="showEdit = true">
+        <div class="flex h-[52px] w-full items-center gap-2" @click="showEdit = true">
           <Icon icon="ph:pencil-simple" class="text-xl text-slate-7" />
           <div class="text-sm">Edit</div>
         </div>
         <div class="h-px w-full bg-slate-3"></div>
-        <div class="flex h-13 w-full items-center gap-2" @click="showRemove = true">
+        <div class="flex h-[52px] w-full items-center gap-2" @click="showRemove = true">
           <Icon icon="ph:trash" class="text-xl text-slate-7" />
           <div class="text-sm">Delete</div>
         </div>
       </div>
     </div>
+    
     <AppActionSheet :show="showRemove" @close="showRemove = false">
       <div class="flex flex-col items-center gap-4">
         <div class="text-center text-xl font-semibold">Delete this comment?</div>
@@ -191,6 +196,7 @@ const onDelete = async () => {
       </div>
     </AppActionSheet>
   </AppActionSheet>
+  
   <TransitionRoot
     :show="showEdit"
     enter="transition-all duration-300 ease-out"
@@ -201,7 +207,7 @@ const onDelete = async () => {
     leave-to="opacity-0 scale-75"
     class="fixed left-0 top-0 z-[101] h-screen w-screen -translate-y-4 rounded border-2 bg-white"
   >
-    <div class="sticky top-0 z-[10] flex h-13 shrink-0 items-center gap-3 bg-white px-4">
+    <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
         @click="showEdit = false"

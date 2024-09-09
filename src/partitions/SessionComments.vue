@@ -131,7 +131,7 @@ const onCreate = async () => {
       <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
     </div>
     <div class="sticky top-0 z-[10] shrink-0">
-      <div class="flex h-13 items-center gap-3 bg-white px-4">
+      <div class="flex h-[52px] items-center gap-3 bg-white px-4">
         <div
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
           @click="emit('close')"
@@ -179,7 +179,7 @@ const onCreate = async () => {
       :class="{ 'opacity-0': filter === 'target' }"
     >
       <div
-        class="flex h-15 w-15 shrink-0 items-center justify-center rounded-full border-2 border-white bg-light-purple-5"
+        class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full border-2 border-white bg-light-purple-5"
         :style="{ boxShadow: '2px 2px 0px 0px #D6C7E066' }"
         @click="showNew = true"
       >
@@ -187,6 +187,7 @@ const onCreate = async () => {
       </div>
     </div>
   </TransitionRoot>
+  
   <TransitionRoot
     :show="showNew"
     enter="transition-all duration-300 ease-out"
@@ -197,7 +198,7 @@ const onCreate = async () => {
     leave-to="opacity-0 scale-75"
     class="fixed left-0 top-0 z-[21] h-screen w-screen rounded border-2 bg-white"
   >
-    <div class="sticky top-0 z-[10] flex h-13 shrink-0 items-center gap-3 bg-white px-4">
+    <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
         @click="showNew = false"

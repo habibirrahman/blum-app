@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { kApp } from 'konsta/vue'
 import { computed, onBeforeMount, onMounted, reactive, ref, watch } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
-import router from './router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAppStore, type NetworkStatus } from './stores/app.store'
 import { Icon } from '@iconify/vue'
 import { Network } from '@capacitor/network'
+import { useScreenSafeArea } from '@vueuse/core'
 
+const {
+  top: paddingTop,
+  right: paddingRight,
+  bottom: paddingBottom,
+  left: paddingLeft
+} = useScreenSafeArea()
 const route = useRoute()
+const router = useRouter()
 const appStore = useAppStore()
 
-const loadingApp = ref<boolean>(false)
+const loadingApp = ref<boolean>(true)
 const routeName = computed<string>(() => route.name?.toString() || '')
 const isUseNav = computed<boolean>(
   () => routeName.value !== 'signin' && !routeName.value.includes('record')
@@ -27,7 +33,6 @@ watch(
 )
 
 async function fetchCurrentUser() {
-  loadingApp.value = true
   const { success } = await appStore.getAccount()
   loadingApp.value = false
   if (!success) {
@@ -105,7 +110,7 @@ const navigations = computed<Nav[]>(() => {
 </script>
 
 <template>
-  <k-app safe-areas theme="ios" class="font-sans">
+  <div class="font-sans" :style="{ paddingLeft, paddingTop, paddingRight, paddingBottom }">
     <div v-if="loadingApp" class="grid h-screen w-screen place-items-center">
       <div class="flex animate-pulse items-center font-logo text-4xl font-bold text-light-purple-5">
         Blüm
@@ -113,9 +118,12 @@ const navigations = computed<Nav[]>(() => {
     </div>
     <div v-else :class="{ 'pb-14': isUseNav }">
       <div
-        class="fixed left-0 z-[999] h-1 w-screen bg-tomato-7 transition-all"
-        :class="{ 'top-0': !networkStatus.connected, '-top-1': networkStatus.connected }"
-      ></div>
+        v-if="routeName !== 'session-record'"
+        class="sticky left-0 top-0 z-[999] flex w-screen items-center justify-center bg-rose-3 text-sm font-medium text-rose-7 transition-all"
+        :class="{ 'h-8': !networkStatus.connected, 'h-0': networkStatus.connected }"
+      >
+        <div v-if="!networkStatus.connected">You're offline. Connect to sync your data.</div>
+      </div>
       <RouterView />
     </div>
 
@@ -133,7 +141,7 @@ const navigations = computed<Nav[]>(() => {
         </RouterLink>
       </nav>
     </footer>
-  </k-app>
+  </div>
 </template>
 
 <style scoped>

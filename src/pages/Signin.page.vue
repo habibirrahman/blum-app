@@ -3,18 +3,24 @@ import { ref, watch } from 'vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
-import router from '@/router'
 import { useAppStore } from '@/stores/app.store'
+import { useToast } from 'vue-toastification'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const appStore = useAppStore()
+const toast = useToast()
+
 const email = ref<string>('')
 const password = ref<string>('')
 const error = ref<string>('')
 const loading = ref<boolean>(false)
-
 const showForgotPassword = ref<boolean>(false)
 
 watch(email, () => {
+  error.value = ''
+})
+watch(password, () => {
   error.value = ''
 })
 
@@ -28,6 +34,7 @@ async function onSignin() {
   loading.value = false
   if (!success) {
     error.value = message
+    toast.error(message)
     return
   }
   router.push({ name: 'home' })
@@ -53,6 +60,7 @@ async function onSignin() {
           type="password"
           placeholder="Enter your password"
           v-model="password"
+          :error="error ? true : false"
         />
         <AppButton :loading="loading" :disabled="!email && !password" @click="onSignin">
           Log in

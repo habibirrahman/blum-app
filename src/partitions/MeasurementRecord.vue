@@ -25,7 +25,7 @@ interface Props {
   review_mode?: boolean
 }
 interface Emits {
-  (e: 'toggle-running', id: Measurement['id']): void
+  (e: 'toggle-running', data: Measurement): void
   (e: 'toggle-collapsed', bool: boolean): void
   (e: 'set-focus'): void
 }
@@ -164,7 +164,7 @@ onMounted(() => {
               v-if="measurement.type === 'Measurement::Duration'"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
-              @toggle-running="emit('toggle-running', measurement.id)"
+              @toggle-running="emit('toggle-running', measurement)"
             />
             <Frequency
               v-if="measurement.type === 'Measurement::Frequency'"

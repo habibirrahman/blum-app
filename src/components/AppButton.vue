@@ -26,22 +26,6 @@ const emit = defineEmits<Emits>()
 const isLoading = computed<boolean>(() => !props.disabled && props.loading)
 const isDisabled = computed<boolean>(() => props.disabled && !props.loading)
 
-const isPrimary = computed<boolean>(
-  () => !props.disabled && !props.loading && props.kind === 'primary'
-)
-const isPrimaryLoading = computed<boolean>(() => isLoading.value && props.kind === 'primary')
-const isPrimaryDisabled = computed<boolean>(() => isDisabled.value && props.kind === 'primary')
-
-const isOutline = computed<boolean>(
-  () => !props.disabled && !props.loading && props.kind === 'outline'
-)
-const isOutlineLoading = computed<boolean>(() => isLoading.value && props.kind === 'outline')
-const isOutlineDisabled = computed<boolean>(() => isDisabled.value && props.kind === 'outline')
-
-const isPlain = computed<boolean>(() => !props.disabled && !props.loading && props.kind === 'plain')
-const isPlainLoading = computed<boolean>(() => isLoading.value && props.kind === 'plain')
-const isPlainDisabled = computed<boolean>(() => isDisabled.value && props.kind === 'plain')
-
 const currentClass = computed<string>(() => {
   let name = `app-button-${props.kind} app-button-${props.color}`
   if (isDisabled.value) name += ` app-button-disabled`
@@ -68,21 +52,20 @@ const currentClass = computed<string>(() => {
 
 <style>
 .app-button-primary {
-  @apply text-white;
   &.app-button-purple {
-    @apply border-light-purple-5 bg-light-purple-5;
+    @apply border-light-purple-5 bg-light-purple-5 text-white;
     &.app-button-loading {
       @apply border-dark-purple-3 bg-dark-purple-3;
     }
   }
   &.app-button-lime {
-    @apply border-lime-7 bg-lime-7;
+    @apply border-lime-7 bg-lime-7 text-white;
     &.app-button-loading {
       @apply border-lime-10 bg-lime-10;
     }
   }
   &.app-button-disabled {
-    @apply border-slate-4 bg-slate-4;
+    @apply border-slate-4 bg-slate-4 text-slate-6;
   }
 }
 /*  */

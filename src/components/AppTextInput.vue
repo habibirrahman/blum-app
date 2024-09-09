@@ -9,7 +9,7 @@ interface Props {
   placeholder?: string
   disabled?: boolean
   required?: boolean
-  error?: string
+  error?: string | boolean
   suffix_icon?: string
   borderless?: boolean
 }
@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '',
   disabled: false,
   required: false,
-  error: '',
+  error: false,
   suffix_icon: '',
   borderless: false
 })
@@ -86,6 +86,6 @@ const openPassword = ref<boolean>(false)
       class="absolute right-2 cursor-pointer text-2xl text-slate-7"
       :class="[label ? 'top-[30px]' : 'top-2']"
     />
-    <div v-if="error" class="mt-1 text-sm text-tomato-7">{{ error }}</div>
+    <div v-if="error" class="mt-1 text-sm text-tomato-7">{{ error === true ? '' : error }}</div>
   </label>
 </template>

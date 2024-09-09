@@ -1,7 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-const konstaConfig = require('konsta/config')
-
-export default konstaConfig({
+export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx,vue}'],
   theme: {
     fontFamily: {
@@ -148,4 +146,4 @@ export default konstaConfig({
     }
   },
   plugins: [require('@tailwindcss/forms')]
-})
+}

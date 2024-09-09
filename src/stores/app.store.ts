@@ -36,8 +36,7 @@ export const useAppStore = defineStore('app', {
       return axios
         .get('/api/v1/current_user')
         .then(async ({ data }) => {
-          const { success } = await setAcccoutStorage({ user: data })
-          if (!success) return { success: false }
+          await setAcccoutStorage({ user: data })
           this.user = data
           return { success: true, data, message: 'You have signed in' }
         })
@@ -50,10 +49,8 @@ export const useAppStore = defineStore('app', {
       return axios
         .post('/signin', { email, password })
         .then(async ({ data }) => {
-          const { success: s1 } = await setAccessStorage(data)
-          if (!s1) return { success: false }
-          const { success: s2 } = await setAcccoutStorage({ user: data.user })
-          if (!s2) return { success: false }
+          await setAccessStorage(data)
+          await setAcccoutStorage({ user: data.user })
           this.user = data.user
           return { success: true, message: 'Successfully signed in' }
         })

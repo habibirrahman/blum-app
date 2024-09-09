@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import AppButton from '@/components/AppButton.vue'
-import router from '@/router'
 import { useAppStore } from '@/stores/app.store'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router';
 
+const router = useRouter()
 const appStore = useAppStore()
 const signoutLoading = ref<boolean>(false)
 

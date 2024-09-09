@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { useSessionStore } from '@/stores/session.store'
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { displayDate, getTargetType } from '@/lib/func'
 import AppButton from '@/components/AppButton.vue'
 import moment from 'moment'
 import { useAppStore } from '@/stores/app.store'
 import AppActionSheet from '@/components/AppActionSheet.vue'
-import router from '@/router'
 import CommentItem from '@/partitions/CommentItem.vue'
 import type { Session } from '@/lib/types'
 
 const route = useRoute()
+const router = useRouter()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
@@ -85,11 +85,7 @@ const onLaunchSession = async () => {
   lunchLoading.value = false
   if (!success) return
   showActionBeforeLunch.value = false
-  router.push({
-    name: 'session-record',
-    params: { slug: sessionStore.session?.slug },
-    query: { redirect: '/home' }
-  })
+  router.push({ name: 'session-record', params: { slug: sessionStore.session?.slug } })
 }
 const onStartSession = () => {
   isLunchBeforeSchedule.value = false
@@ -182,7 +178,7 @@ const onStartSession = () => {
         Before you begin this session, take a moment to review the targets and the comments.
       </div>
       <div v-if="sessionStore.session_comments.length" class="space-y-2 px-4">
-        <div class="flex h-7.5 items-center justify-center gap-1 text-dark-purple-1">
+        <div class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1">
           <div class="text-2xl font-bold">{{ sessionStore.session_comments.length }}</div>
           <div class="text-sm">comment(s)</div>
         </div>
@@ -208,7 +204,7 @@ const onStartSession = () => {
         </div>
       </div>
       <div v-if="sessionStore.session_measurements.length" class="space-y-2 px-4">
-        <div class="flex h-7.5 items-center justify-center gap-1 text-dark-purple-1">
+        <div class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1">
           <div class="text-2xl font-bold">{{ sessionStore.session_measurements.length }}</div>
           <div class="text-sm">target(s)</div>
         </div>
@@ -312,14 +308,17 @@ const onStartSession = () => {
     class="fixed bottom-0 z-[10] flex h-[68px] w-screen items-center bg-prim-3 px-4"
   >
     <AppButton
-      :disabled="!sessionStore.session_measurements.length"
+      :disabled="!sessionStore.session_measurements.length || !appStore.network_status.connected"
       class="w-full"
       :loading="lunchLoading"
       @click="onStartSession"
     >
-      Start session
+      {{
+        appStore.network_status.connected ? 'Start session' : 'Offline: connect to start session'
+      }}
     </AppButton>
   </div>
+
   <AppActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
     <div class="flex flex-col items-center gap-4">
       <div

@@ -9,7 +9,14 @@ import moment from 'moment'
 import { useSessionStore } from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import type { Session } from '@/lib/types'
+import { useRoute, useRouter } from 'vue-router'
+import { useAppStore } from '@/stores/app.store'
+import { TransitionRoot } from '@headlessui/vue'
 
+const route = useRoute()
+const router = useRouter()
+const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
 const upcomingLoading = ref<boolean>(false)
@@ -139,6 +146,26 @@ onMounted(() => {
   fetchUpcoming()
   fetchSessions()
 })
+
+const showJoinConfirmation = ref<boolean>(false)
+const sessionToJoin = ref<Session | null>(null)
+const onOpenSession = (session: Session) => {
+  sessionToJoin.value = null
+  if (session.status === 'draft') {
+    router.push({
+      name: 'pre-session-record',
+      params: { slug: session?.slug },
+      query: { redirect: '/home' }
+    })
+  } else {
+    if (session.user_id === appStore.user?.id) {
+      router.push({ name: 'session-record', params: { slug: session?.slug } })
+    } else {
+      sessionToJoin.value = session
+      showJoinConfirmation.value = true
+    }
+  }
+}
 </script>
 
 <template>
@@ -148,6 +175,7 @@ onMounted(() => {
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
   </div>
+
   <div
     class="space-y-3 pt-3 transition-all"
     :class="{ 'bg-chestnut-1': sessionStore.upcoming_sessions_count }"
@@ -187,6 +215,7 @@ onMounted(() => {
       </div>
     </div>
   </div>
+
   <div class="sticky top-0 space-y-3 bg-white pt-3">
     <div class="px-4">
       <AppTextInput
@@ -234,6 +263,7 @@ onMounted(() => {
       </div>
     </div>
   </div>
+
   <div
     v-if="!sessionStore.sessions_count"
     class="flex h-64 w-full items-center justify-center px-4"
@@ -259,17 +289,12 @@ onMounted(() => {
       <span> of {{ sessionStore.sessions_count }}</span>
     </div>
     <div class="px-4">
-      <RouterLink
+      <SessionItem
         v-for="session in sessionStore.sessions"
         :key="session.id"
-        :to="{
-          name: session.status === 'ongoing' ? 'session-record' : 'pre-session-record',
-          params: { slug: session?.slug },
-          query: { redirect: '/home' }
-        }"
-      >
-        <SessionItem :session="session" />
-      </RouterLink>
+        :session="session"
+        @click="onOpenSession(session)"
+      />
     </div>
     <AppPagination
       :page="page"
@@ -310,6 +335,7 @@ onMounted(() => {
       </div>
     </div>
   </AppActionSheet>
+
   <AppActionSheet :show="showSort" @close="showSort = false">
     <div class="space-y-4">
       <div class="flex w-full items-center justify-between">
@@ -342,4 +368,52 @@ onMounted(() => {
       </div>
     </div>
   </AppActionSheet>
+
+  <TransitionRoot
+    :show="showJoinConfirmation"
+    enter="transition-all duration-300 ease-out"
+    enter-from="opacity-0 scale-75"
+    enter-to="opacity-100 scale-100"
+    leave="transition-all duration-200 ease-in"
+    leave-from="opacity-100 scale-100"
+    leave-to="opacity-0 scale-75"
+    class="fixed left-0 top-0 z-[101] flex h-screen w-screen items-center justify-center rounded border-2 bg-white"
+  >
+    <div
+      class="absolute top-0 -z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
+    ></div>
+    <div class="flex flex-col items-center gap-4 px-6">
+      <div class="flex flex-col items-center gap-2">
+        <div
+          class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3 text-xl font-semibold text-lime-8"
+        >
+          {{ sessionToJoin?.client?.name?.charAt(0) }}
+        </div>
+        <div class="text-sm text-light-purple-4">Session ID {{ sessionToJoin?.id }}</div>
+        <div class="text-center text-xl font-semibold text-dark-purple-1">
+          Session in progress for {{ sessionToJoin?.client?.name }}
+        </div>
+        <div class="flex flex-col items-center gap-4 text-sm text-light-purple-5">
+          <div class="text-center">
+            This session with
+            <span class="font-semibold">{{ sessionToJoin?.client?.name }}</span> is currently being
+            conducted by <span class="font-semibold">{{ sessionToJoin?.user?.name }}</span
+            >.
+          </div>
+          <div class="text-center">
+            If you join,
+            <span class="font-semibold">you won't be able to leave until the session ends.</span>
+          </div>
+          <div class="text-center">Are you sure you want to join?</div>
+        </div>
+      </div>
+      <RouterLink
+        :to="{ name: 'session-record', params: { slug: sessionToJoin?.slug } }"
+        class="w-full"
+      >
+        <AppButton kind="outline" class="w-full">Join this session</AppButton>
+      </RouterLink>
+      <AppButton class="w-full" @click="showJoinConfirmation = false">Cancel</AppButton>
+    </div>
+  </TransitionRoot>
 </template>
