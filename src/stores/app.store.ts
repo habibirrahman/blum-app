@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import {
+  getAcccoutStorage,
   removeAcccoutStorage,
   removeAccessStorage,
+  removeSessionStorage,
   setAcccoutStorage,
   setAccessStorage
 } from '@/plugins/preferences.plugin'
@@ -9,7 +11,7 @@ import type { User } from '@/lib/types'
 import axios from 'axios'
 
 interface StateSchema {
-  user: User | null
+  account: User | null
   network_status: NetworkStatus
 }
 
@@ -24,20 +26,32 @@ interface SigninSchema {
 
 export const useAppStore = defineStore('app', {
   state: (): StateSchema => ({
-    user: null,
+    account: null,
     network_status: { connected: false, connection_type: 'none' }
   }),
   getters: {},
   actions: {
+    async generateAccount() {
+      return getAcccoutStorage().then(({ success, data }) => {
+        if (!success) {
+          return { success: false, data: null }
+        }
+        this.account = data as User
+        return { success: true, data }
+      })
+    },
     async setNetworkStatus(networkStatus: NetworkStatus) {
       this.network_status = networkStatus
     },
     async getAccount() {
+      if (!this.network_status.connected) {
+        return this.generateAccount()
+      }
       return axios
         .get('/api/v1/current_user')
         .then(async ({ data }) => {
           await setAcccoutStorage({ user: data })
-          this.user = data
+          this.account = data
           return { success: true, data, message: 'You have signed in' }
         })
         .catch(async ({ response }) => {
@@ -51,7 +65,7 @@ export const useAppStore = defineStore('app', {
         .then(async ({ data }) => {
           await setAccessStorage(data)
           await setAcccoutStorage({ user: data.user })
-          this.user = data.user
+          this.account = data.user
           return { success: true, message: 'Successfully signed in' }
         })
         .catch(({ response }) => {
@@ -61,9 +75,10 @@ export const useAppStore = defineStore('app', {
     async signout() {
       const { status } = await axios.delete('/signin')
       if (status !== 200) return { success: false }
-      await removeAcccoutStorage()
       await removeAccessStorage()
-      this.user = null
+      await removeAcccoutStorage()
+      await removeSessionStorage()
+      this.account = null
       return { success: true }
     }
   }

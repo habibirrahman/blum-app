@@ -142,7 +142,9 @@ async function fetchSessions() {
   document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
 }
 
-onMounted(() => {
+onMounted(async () => {
+  /** generate session.store from storage */
+  await  sessionStore.generateSessionStore();
   fetchUpcoming()
   fetchSessions()
 })
@@ -158,7 +160,7 @@ const onOpenSession = (session: Session) => {
       query: { redirect: '/home' }
     })
   } else {
-    if (session.user_id === appStore.user?.id) {
+    if (session.user_id === appStore.account?.id) {
       router.push({ name: 'session-record', params: { slug: session?.slug } })
     } else {
       sessionToJoin.value = session

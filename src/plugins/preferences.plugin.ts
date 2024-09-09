@@ -1,4 +1,5 @@
 import type { User } from '@/lib/types'
+import type { SessionStateSchema } from '@/stores/session.store'
 import { Preferences } from '@capacitor/preferences'
 
 interface SetAccessStorageProps {
@@ -49,10 +50,7 @@ export const removeAccessStorage = async () => {
   }
 }
 
-interface SetAccountStorageProps {
-  user: User
-}
-export const setAcccoutStorage = async ({ user }: SetAccountStorageProps) => {
+export const setAcccoutStorage = async ({ user }: { user: User }) => {
   try {
     await Preferences.set({ key: 'account', value: JSON.stringify(user) })
     return { success: true }
@@ -63,14 +61,11 @@ export const setAcccoutStorage = async ({ user }: SetAccountStorageProps) => {
 }
 export const getAcccoutStorage = async () => {
   try {
-    const account = await Preferences.get({ key: 'account' })
-    console.log('account', account)
-    if (!account.value || account.value === 'undefined') {
+    const storage = await Preferences.get({ key: 'account' })
+    if (!storage.value || storage.value === 'undefined') {
       return { success: false, data: null }
     } else {
-      const data = {
-        account: JSON.parse(account.value || '')
-      }
+      const data = JSON.parse(storage.value || '')
       return { success: true, data }
     }
   } catch (error) {
@@ -81,6 +76,39 @@ export const getAcccoutStorage = async () => {
 export const removeAcccoutStorage = async () => {
   try {
     await Preferences.remove({ key: 'account' })
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false }
+  }
+}
+
+export const setSessionStorage = async (data: SessionStateSchema) => {
+  try {
+    await Preferences.set({ key: 'session.store', value: JSON.stringify(data) })
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false }
+  }
+}
+export const getSessionStorage = async () => {
+  try {
+    const storage = await Preferences.get({ key: 'session.store' })
+    if (!storage.value || storage.value === 'undefined') {
+      return { success: false, data: null }
+    } else {
+      const data = JSON.parse(storage.value || '')
+      return { success: true, data }
+    }
+  } catch (error) {
+    console.error(error)
+    return { success: false, data: null }
+  }
+}
+export const removeSessionStorage = async () => {
+  try {
+    await Preferences.remove({ key: 'session.store' })
     return { success: true }
   } catch (error) {
     console.error(error)

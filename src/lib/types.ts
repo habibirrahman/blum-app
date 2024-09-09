@@ -98,7 +98,7 @@ export interface Branch {
 }
 
 export interface Comment {
-  id?: number
+  id?: number | string
   body?: string
   is_edited?: boolean
   user_id?: number

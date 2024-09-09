@@ -46,10 +46,13 @@ const percentageScore = computed(() => {
 
 const scoreLoading = ref<boolean>(false)
 const onAddScore = async () => {
+  const interval = currentInterval.value - 1
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: currentInterval.value - 1
+    results: interval,
+    data_result: { ...props.measurement }
   }
+  params.data_result.results[interval] = props.measurement.results[interval] + 1
   scoreLoading.value = true
   const { success } = await sessionStore.updateMeasurementResults(params)
   scoreLoading.value = false
@@ -70,7 +73,7 @@ const onAddScore = async () => {
       class="flex shrink-0 items-center justify-center rounded-full bg-light-purple-5 transition-all"
       :class="{
         'pointer-events-none': scoreLoading,
-        'w-full max-w-[200px] aspect-square': !is_collapsed,
+        'aspect-square w-full max-w-[200px]': !is_collapsed,
         'h-[90px] w-[90px]': is_collapsed
       }"
       @click="onAddScore()"

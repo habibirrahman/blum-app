@@ -10,7 +10,9 @@ import { Icon } from '@iconify/vue'
 import { TransitionRoot } from '@headlessui/vue'
 import AppButton from '@/components/AppButton.vue'
 import AppChip from '@/components/AppChip.vue'
+import { useAppStore } from '@/stores/app.store'
 
+const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
 interface Props {
@@ -59,11 +61,11 @@ const probingCircles = computed(() => {
   for (let idx = 0; idx < trial; idx++) {
     circles.push({ key: idx, value: 'empty' })
   }
-  Object.keys(results).forEach((key) => {
+  for (let key in results) {
     const idx = circles.findIndex((i) => Number(i.key) === Number(key))
     if (idx > -1) circles[idx].value = results[key]
     else circles.push({ key, value: results[key] })
-  })
+  }
   if (!props.measurement.submitted_at && Object.keys(results).length >= trial) {
     circles.push({ key: 0, value: 'empty' })
   }
@@ -83,10 +85,12 @@ const onAdd = async (bool: boolean) => {
   onDisplayPopup()
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: { ...props.measurement.results }
+    results: { ...props.measurement.results },
+    data_result: { ...props.measurement }
   }
   const length = Object.keys(params.results).length
   params.results[length] = bool
+  params.data_result.results = params.results
   probingLoading.value = true
   const { success } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
@@ -99,17 +103,19 @@ const onRemove = async (circle: ProbingCircle) => {
   onDisplayPopup()
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: {}
+    results: {},
+    data_result: { ...props.measurement }
   }
   const res = props.measurement.results
   res[circle.key] = 'removing'
   let idx = 0
-  Object.keys(res).forEach((key) => {
+  for (let key in res) {
     if (res[key] === true || res[key] === false) {
       params.results[idx] = res[key]
       idx++
     }
-  })
+  }
+  params.data_result.results = params.results
   probingLoading.value = true
   const { success } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
@@ -441,11 +447,16 @@ const onSave = async () => {
           <div v-if="opt.message" class="text-sm text-slate-8">{{ opt.message }}</div>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <AppButton kind="plain" color="lime" @click="showPanel = false"
-            >Back to Session</AppButton
+          <AppButton kind="plain" color="lime" @click="showPanel = false">
+            Back to Session
+          </AppButton>
+          <AppButton
+            color="lime"
+            :loading="saveLoading"
+            :disabled="!probingAction || !appStore.network_status.connected"
+            @click="onSave"
           >
-          <AppButton color="lime" :loading="saveLoading" :disabled="!probingAction" @click="onSave">
-            Save
+            {{ appStore.network_status.connected ? 'Save' : 'Offline' }}
           </AppButton>
         </div>
       </div>

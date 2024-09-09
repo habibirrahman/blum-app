@@ -20,14 +20,11 @@ const sessionLoading = ref<boolean>(false)
 const cycleLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
 
-const showOffline = ref<boolean>(false)
-watch(
-  () => appStore.network_status.connected,
-  (val) => {
-    if (!val) showOffline.value = true
-  }
-)
-
+async function syncSession() {
+  sessionLoading.value = true
+  const { success } = await sessionStore.resolvePendingProgress()
+  sessionLoading.value = false
+}
 interface FetchSessionProps {
   is_swiped?: boolean
 }
@@ -36,8 +33,9 @@ async function fetchSession({ is_swiped }: FetchSessionProps = { is_swiped: fals
   const { success, data } = await sessionStore.getSession({ slug })
   sessionLoading.value = false
   cycleLoading.value = false
+  syncSession()
   if (!success) return
-  if (is_swiped) {
+  if (is_swiped && appStore.network_status.connected) {
     toast.success('Results are now up-to-date!')
   }
   counter.value = data.current_recording_time[0]
@@ -45,9 +43,22 @@ async function fetchSession({ is_swiped }: FetchSessionProps = { is_swiped: fals
   document.getElementById('app')?.scroll({ top: 56, behavior: 'smooth' })
 }
 
+const showOffline = ref<boolean>(false)
+watch(
+  () => appStore.network_status.connected,
+  async (val) => {
+    if (!val) showOffline.value = true
+    if (val) syncSession()
+  }
+)
+
+
 const scrollingTimeout = ref<any>(null)
 const scrollListener = (e: any) => {
   let top = e.currentTarget.scrollTop
+  if (!appStore.network_status.connected && top < 56) {
+    document.getElementById('app')?.scroll({ top: 56, behavior: 'instant' })
+  }
   let timer = 750
   clearTimeout(scrollingTimeout.value)
   if (top <= 0 && runningMeasurements.value.length) {
@@ -65,12 +76,14 @@ const scrollListener = (e: any) => {
   }, timer)
 }
 
-onMounted(() => {
+onMounted(async () => {
   const app = document.getElementById('app')
   app?.scroll({ top: 56, behavior: 'smooth' })
   app?.addEventListener('scroll', scrollListener)
+  /** generate session.store from storage */
+  await sessionStore.generateSessionStore()
   sessionLoading.value = true
-  fetchSession()
+  await fetchSession()
   redirect.value = route.query.redirect?.toString() || '/home'
 })
 
@@ -154,6 +167,69 @@ const fixedMeasurement = computed<Measurement | undefined>(() =>
   sessionStore.session_measurements.find((i) => i.is_fixed)
 )
 const isMeasurementCollapsed = ref<boolean>(true)
+
+/**
+ * end session
+ * 1. normal
+ * 2. group
+ *    - 2 timer(s) are still running
+ *    - Minimum required probes have not been met
+ *    - Actions for probing have not been saved
+ * 3. all measurement results is empty
+ *
+ * runningMeasurements
+ */
+const endSessionStatus = ref<'normal' | 'group_reason' | 'empty_record'>('normal')
+const groupReasons = ref<string[]>([])
+const isAllMeasurementResultEmpty = computed<boolean>(() => {
+  const isAllEmpty = []
+  sessionStore.session_measurements.forEach((i) => {
+    if (!i.is_dropped) {
+      let isResultsEmpty = true
+      if (i.type === 'Measurement::Percentage') {
+        for (let key in i.results) {
+          if (i.results[key] !== null) isResultsEmpty = false
+        }
+      }
+      if (i.type === 'Measurement::Probing') {
+        const arr = Object.keys(i.results)
+        if (arr.length > 0) isResultsEmpty = false
+      }
+      if (i.type === 'Measurement::Duration') {
+        if (i.results['seconds'] > 0) isResultsEmpty = false
+      }
+      if (i.type === 'Measurement::Pir') {
+        for (let key in i.results) {
+          if (i.results[key] > 0) isResultsEmpty = false
+        }
+      }
+      if (i.type === 'Measurement::Frequency') {
+        if (i.results['score'] > 0) isResultsEmpty = false
+      }
+      if (i.type === 'Measurement::Prompting') {
+        for (let key in i.results) {
+          if (i.results[key].score > 0) isResultsEmpty = false
+        }
+      }
+      isAllEmpty.push(isResultsEmpty)
+    }
+  })
+  if (isAllEmpty.length === 0) isAllEmpty.push(false)
+  return !isAllEmpty.includes(false)
+})
+const openEndSession = () => {
+  const unfinishedProbings: Measurement[] = sessionStore.session_measurements.filter(
+    (i) => i.type === 'Measurement::Probing' && !i.submitted_at && !i.is_dropped
+  )
+  let isNotCompletedProbes = false
+  let isNotSavedProbing = false
+  unfinishedProbings.forEach((i) => {
+    const probes = Object.keys(i.results).length
+    const trials = i.target?.probing_number_of_trial || 0
+    if (probes < trials) isNotCompletedProbes = true
+    else isNotSavedProbing = true
+  })
+}
 </script>
 
 <template>

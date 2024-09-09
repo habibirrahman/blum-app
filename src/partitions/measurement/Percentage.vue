@@ -46,13 +46,15 @@ const percentageLoading = ref<boolean>(false)
 const onChangePercentage = async (box: PercentageBox) => {
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: {}
+    results: {},
+    data_result: { ...props.measurement }
   }
   let val = null
   if (box.value === null) val = true
   if (box.value === true) val = false
   if (box.value === false) val = null
   params.results[box.key] = val
+  params.data_result.results[box.key] = val
   percentageLoading.value = true
   const { success } = await sessionStore.updateMeasurementResults(params)
   percentageLoading.value = false

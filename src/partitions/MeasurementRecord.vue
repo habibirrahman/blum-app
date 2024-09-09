@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSessionStore } from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
@@ -46,14 +46,13 @@ watch(
 const isDropped = ref<boolean>(false)
 const isDropLoading = ref<boolean>(false)
 const onDrop = async (bool: boolean) => {
-  const measurement: Measurement = {
-    is_dropped: !bool
+  const params: UpdateMeasurementParams = {
+    id: props.measurement.id,
+    measurement: { is_dropped: !bool },
+    data_result: { ...props.measurement, is_dropped: !bool }
   }
   isDropLoading.value = true
-  const { success, data } = await sessionStore.updateMeasurement({
-    id: props.measurement.id,
-    measurement
-  })
+  const { success, data } = await sessionStore.updateMeasurement(params)
   isDropLoading.value = false
   if (!success) return
   isDropped.value = data.is_dropped
@@ -68,14 +67,13 @@ const isDisabledSaveComment = computed<boolean>(
   () => commentInput.value === (props.measurement.comment || '')
 )
 const onSaveComment = async () => {
-  const measurement: Measurement = {
-    comment: commentInput.value
+  const params: UpdateMeasurementParams = {
+    id: props.measurement.id,
+    measurement: { comment: commentInput.value },
+    data_result: { ...props.measurement, comment: commentInput.value }
   }
   commentLoading.value = true
-  const { success } = await sessionStore.updateMeasurement({
-    id: props.measurement.id,
-    measurement
-  })
+  const { success } = await sessionStore.updateMeasurement(params)
   commentLoading.value = false
   if (!success) return
   display.value = 'target'

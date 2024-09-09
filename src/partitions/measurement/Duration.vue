@@ -53,9 +53,12 @@ const onToggleTimer = async () => {
     clearInterval(timerInterval.value)
     const params: UpdateMeasurementResultsParams = {
       id: props.measurement.id,
-      results: durationTiming.value
+      results: durationTiming.value,
+      data_result: {
+        ...props.measurement,
+        results: { string: durationTiming.value, seconds: counter.value }
+      }
     }
-    const results: Measurement['results'] = durationTiming.value
     timerLoading.value = true
     const { success } = await sessionStore.updateMeasurementResults(params)
     timerLoading.value = false

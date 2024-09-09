@@ -11,6 +11,8 @@ import AppButton from '@/components/AppButton.vue'
 import { TransitionRoot } from '@headlessui/vue'
 import CommentItem from './CommentItem.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
+import { getRandomString } from '@/lib/func'
+import moment from 'moment'
 
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
@@ -95,13 +97,28 @@ const onCreate = async () => {
     client_id: sessionStore.session?.client_id,
     session_id: sessionStore.session?.id,
     type: typeInput.value,
-    session_comment: { user_id: appStore.user?.id, body: bodyInput.value },
+    session_comment: { user_id: appStore.account?.id, body: bodyInput.value },
     assessment: {
       session_id: sessionStore.session?.id,
       antecedent: antecedentInput.value,
       behavior: behaviorInput.value,
       consequence: consequenceInput.value,
       type: 'Assessment::InSession'
+    },
+    data_result: {
+      id: getRandomString(),
+      body: bodyInput.value,
+      is_edited: false,
+      user_id: appStore.account?.id,
+      user_name: appStore.account?.name,
+      antecedent: antecedentInput.value,
+      behavior: behaviorInput.value,
+      consequence: consequenceInput.value,
+      type: typeInput.value === 'assessment' ? 'Assessment::InSession' : undefined,
+      client_id: sessionStore.session?.client_id,
+      session_id: sessionStore.session?.id,
+      created_at: moment().format(),
+      updated_at: moment().format()
     }
   }
   createLoading.value = true
@@ -171,7 +188,7 @@ const onCreate = async () => {
         v-for="comment in sessionStore.session_comments"
         :key="comment.id"
         :comment="comment"
-        :actionable="comment.user_id === appStore.user?.id && !comment.measurement_id"
+        :actionable="comment.user_id === appStore.account?.id && !comment.measurement_id"
       />
     </div>
     <div
@@ -187,7 +204,7 @@ const onCreate = async () => {
       </div>
     </div>
   </TransitionRoot>
-  
+
   <TransitionRoot
     :show="showNew"
     enter="transition-all duration-300 ease-out"

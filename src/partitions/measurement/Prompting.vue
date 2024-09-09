@@ -43,12 +43,14 @@ const scoreLoading = ref<boolean>(false)
 const onChangeScore = async (prompt: any, score: number) => {
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: { ...props.measurement.results }
+    results: { ...props.measurement.results },
+    data_result: { ...props.measurement }
   }
   params.results[prompt.key] = {
     ...prompt,
     score: prompt.score + score
   }
+  params.data_result.results = params.results
   scoreLoading.value = true
   const { success } = await sessionStore.updateMeasurementResults(params)
   scoreLoading.value = false

@@ -45,3 +45,7 @@ export const getRandomString = (prefix = '', length = 16) => {
   }
   return `${prefix}${combination}`
 }
+
+export const onlyUniqueId = (value: any, index: number, array: any[]) => {
+  return array.map((i) => i.id).indexOf(value.id) === index
+}

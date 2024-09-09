@@ -20,18 +20,23 @@ const sessionLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
 const isScheduled = computed<boolean>(() => sessionStore.session?.appointment_id !== null)
 
+async function fetchComments() {
+  const id = sessionStore.session?.id
+  const { success } = await sessionStore.getSessionComments({ id, filter: 'general' })
+  sessionLoading.value = false
+  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+  if (!success) return
+}
 async function fetchSession() {
   sessionLoading.value = true
   const slug = route.params.slug.toString()
-  const { success: s1, data } = await sessionStore.getSession({ slug })
-  if (!s1) return
-  const { success: s2 } = await sessionStore.getSessionComments({
-    id: data.id,
-    filter: 'general'
-  })
-  sessionLoading.value = false
-  if (!s2) return
-  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+  const { success } = await sessionStore.getSession({ slug })
+  if (!success) {
+    sessionLoading.value = false
+    document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+    return
+  }
+  fetchComments()
 }
 
 onMounted(() => {
@@ -67,6 +72,11 @@ const scheduleDetails = computed<Schedule[]>(() => [
 const showActionBeforeLunch = ref<boolean>(false)
 const isLunchBeforeSchedule = ref<boolean>(false)
 const isLunchNotAssigned = ref<boolean>(false)
+const actionBeforeLunchStatus = computed<'before_schedule' | 'not_assigned' | 'both'>(() => {
+  if (isLunchBeforeSchedule.value && !isLunchNotAssigned.value) return 'before_schedule'
+  else if (!isLunchBeforeSchedule.value && isLunchNotAssigned) return 'not_assigned'
+  else return 'both'
+})
 const lunchLoading = ref<boolean>(false)
 const lunchDetails = computed<Schedule[]>(() => [
   {
@@ -95,7 +105,6 @@ const onStartSession = () => {
     onLaunchSession()
     return
   }
-
   const t = sessionStore.session.appointment?.start_time_string || '24:00'
   const d = `${sessionStore.session.appointment?.date}T${t}:00`
   const startDate = moment(d)
@@ -103,12 +112,10 @@ const onStartSession = () => {
     isLunchBeforeSchedule.value = true
     showAction = true
   }
-
-  if (sessionStore.session.appointment?.user_id !== appStore.user?.id) {
+  if (sessionStore.session.appointment?.user_id !== appStore.account?.id) {
     isLunchNotAssigned.value = true
     showAction = true
   }
-
   if (showAction) showActionBeforeLunch.value = true
   else onLaunchSession()
 }
@@ -122,6 +129,7 @@ const onStartSession = () => {
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
   </div>
+
   <div v-if="!sessionLoading" class="sticky top-0 z-[10] bg-white">
     <div class="flex items-center justify-between gap-4 px-4 py-3">
       <div class="flex items-center gap-3 truncate">
@@ -135,11 +143,13 @@ const onStartSession = () => {
       <div class="shrink-0 text-xs text-slate-8">Session ID {{ sessionStore.session?.id }}</div>
     </div>
   </div>
+
   <div
     class="fixed z-[1] h-screen w-screen"
     :class="{ 'top-36': isScheduled, 'top-14': !isScheduled }"
     :style="{ background: 'linear-gradient(180deg, #FFFFFF 0%, #EBE4F0 15.77%)' }"
   ></div>
+
   <div class="relative z-[2] pb-12">
     <div v-if="isScheduled" class="flex flex-col">
       <div class="py-3 text-center text-xs text-slate-7">This session is scheduled:</div>
@@ -257,7 +267,7 @@ const onStartSession = () => {
                 <div>
                   Prompts used in this session:
                   {{
-                    Object.keys(measurement.results)
+                    Object.keys(measurement.results || {})
                       .map((key) => measurement.results[key].name)
                       .join(', ')
                   }}
@@ -303,6 +313,7 @@ const onStartSession = () => {
       </div>
     </div>
   </div>
+
   <div
     v-if="!sessionLoading"
     class="fixed bottom-0 z-[10] flex h-[68px] w-screen items-center bg-prim-3 px-4"
@@ -322,7 +333,7 @@ const onStartSession = () => {
   <AppActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
     <div class="flex flex-col items-center gap-4">
       <div
-        v-if="isLunchBeforeSchedule && !isLunchNotAssigned"
+        v-if="actionBeforeLunchStatus === 'before_schedule'"
         class="flex flex-col items-center gap-4"
       >
         <div class="text-center text-xl font-semibold">Session launch before schedule</div>
@@ -340,7 +351,7 @@ const onStartSession = () => {
         <div class="text-center text-sm">Are you sure you want to start the session now?</div>
       </div>
       <div
-        v-if="!isLunchBeforeSchedule && isLunchNotAssigned"
+        v-if="actionBeforeLunchStatus === 'not_assigned'"
         class="flex flex-col items-center gap-4"
       >
         <div class="text-center text-xl font-semibold">You're not assigned to this session</div>
@@ -350,10 +361,7 @@ const onStartSession = () => {
           you wish to proceed?
         </div>
       </div>
-      <div
-        v-if="isLunchBeforeSchedule && isLunchNotAssigned"
-        class="flex flex-col items-center gap-4"
-      >
+      <div v-if="actionBeforeLunchStatus === 'both'" class="flex flex-col items-center gap-4">
         <div class="text-center text-xl font-semibold">Early start for unassigned session</div>
         <div class="text-center text-sm">
           The session scheduled for

@@ -2,8 +2,25 @@ import { defineStore } from 'pinia'
 import type { Session, Comment, Measurement, User, Client } from '@/lib/types'
 import axios from 'axios'
 import { useAppStore } from './app.store'
+import { getSessionStorage, setSessionStorage } from '@/plugins/preferences.plugin'
+import { onlyUniqueId } from '@/lib/func'
 
-interface StateSchema {
+interface SessionPendingProgress {
+  name:
+    | 'update_measurement'
+    | 'update_measurment_result'
+    | 'create_comment'
+    | 'update_comment'
+    | 'delete_comment'
+  params:
+    | UpdateMeasurementParams
+    | UpdateMeasurementResultsParams
+    | CreateSessionCommentParams
+    | UpdateSessionCommentParams
+    | DeleteSessionCommentParams
+}
+
+export interface SessionStateSchema {
   session: Session | null
   session_comments: Comment[]
   session_measurements: Measurement[]
@@ -11,16 +28,19 @@ interface StateSchema {
   sessions_count: number
   upcoming_sessions: Session[]
   upcoming_sessions_count: number
+  pending_progress: SessionPendingProgress[]
 }
 
 export type SessionCommentFilter = '' | 'general' | 'assessment' | 'target' | 'mine'
-interface UpdateMeasurementParams {
+export interface UpdateMeasurementParams {
   id: Measurement['id']
   measurement: Measurement
+  data_result: Measurement
 }
 export interface UpdateMeasurementResultsParams {
   id: Measurement['id']
   results: Measurement['results']
+  data_result: Measurement
 }
 export interface UpdateMeasurementMarkProbingParams {
   id: Measurement['id']
@@ -42,6 +62,7 @@ export interface CreateSessionCommentParams {
     consequence: Comment['consequence']
     type: Comment['type']
   }
+  data_result: Comment
 }
 export interface UpdateSessionCommentParams {
   client_id?: Client['id']
@@ -55,6 +76,7 @@ export interface UpdateSessionCommentParams {
     behavior: Comment['behavior']
     consequence: Comment['consequence']
   }
+  data_result: Comment
 }
 export interface DeleteSessionCommentParams {
   client_id?: Client['id']
@@ -63,24 +85,134 @@ export interface DeleteSessionCommentParams {
 }
 
 export const useSessionStore = defineStore('session', {
-  state: (): StateSchema => ({
+  state: (): SessionStateSchema => ({
     session: null,
     session_comments: [],
     session_measurements: [],
     sessions: [],
     sessions_count: 0,
     upcoming_sessions: [],
-    upcoming_sessions_count: 0
+    upcoming_sessions_count: 0,
+    pending_progress: []
   }),
   getters: {},
   actions: {
+    async generateSessionStore() {
+      return getSessionStorage().then(({ success, data }) => {
+        if (!success) {
+          return { success: false, data: null }
+        }
+        const storage = data as SessionStateSchema
+        this.session = storage?.session || null
+        this.session_comments = storage?.session_comments || []
+        this.session_measurements = storage?.session_measurements || []
+        this.sessions = storage?.sessions || []
+        this.sessions_count = storage?.sessions_count || 0
+        this.upcoming_sessions = storage?.upcoming_sessions || []
+        this.upcoming_sessions_count = storage?.upcoming_sessions_count || 0
+        this.pending_progress = storage?.pending_progress || []
+        return { success: true, data }
+      })
+    },
+    async syncSessionStore() {
+      const data: SessionStateSchema = {
+        session: this.session,
+        session_comments: this.session_comments,
+        session_measurements: this.session_measurements,
+        sessions: this.sessions,
+        sessions_count: this.sessions_count,
+        upcoming_sessions: this.upcoming_sessions,
+        upcoming_sessions_count: this.upcoming_sessions_count,
+        pending_progress: this.pending_progress
+      }
+      const { success } = await setSessionStorage(data)
+      return { success }
+    },
+    async resolvePendingProgress() {
+      const length = this.pending_progress.length
+      const progress = [...this.pending_progress]
+      const succeedIndexes: number[] = []
+      for (let idx = 0; idx < length; idx++) {
+        const { network_status } = useAppStore()
+        if (!network_status.connected) continue
+        const p = progress[idx]
+        if (p.name === 'update_measurement') {
+          const { success } = await this.updateMeasurement(p.params as UpdateMeasurementParams)
+          if (success) succeedIndexes.push(idx)
+        }
+        if (p.name === 'update_measurment_result') {
+          const { success } = await this.updateMeasurementResults(
+            p.params as UpdateMeasurementResultsParams
+          )
+          if (success) succeedIndexes.push(idx)
+        }
+        if (p.name === 'create_comment') {
+          const { success } = await this.createSessionComment(
+            p.params as CreateSessionCommentParams
+          )
+          if (success) succeedIndexes.push(idx)
+        }
+        if (p.name === 'update_comment') {
+          const { success } = await this.updateSessionComment(
+            p.params as UpdateSessionCommentParams
+          )
+          if (success) succeedIndexes.push(idx)
+        }
+        if (p.name === 'delete_comment') {
+          const { success } = await this.deleteSessionComment(
+            p.params as DeleteSessionCommentParams
+          )
+          if (success) succeedIndexes.push(idx)
+        }
+      }
+      const arr = progress.filter((i, idx) => !succeedIndexes.includes(idx))
+      this.pending_progress = [...arr]
+      this.syncSessionStore()
+      return { success: true }
+    },
+    //
+    setSession(data: Session) {
+      this.session = data
+      const idx = this.sessions.findIndex((i) => i.id === data.id)
+      if (idx > -1) this.sessions[idx] = data
+      this.syncSessionStore()
+    },
+    setSessionMeasurement(data: Measurement) {
+      const idx = this.session_measurements.findIndex((i) => i.id === data.id)
+      if (idx > -1) this.session_measurements[idx] = data
+      this.syncSessionStore()
+    },
+    addSessionComment(data: Comment, check: boolean = false) {
+      let arr = [...this.session_comments, data]
+      if (check) {
+        arr = arr.filter((i) => typeof i.id === 'number')
+      }
+      this.session_comments = arr
+      this.syncSessionStore()
+    },
+    setSessionComment(data: Comment) {
+      const idx = this.session_comments.findIndex((i) => i.id === data.id)
+      if (idx > -1) this.session_comments[idx] = data
+      this.syncSessionStore()
+    },
+    removeSessionComment(id: Comment['id']) {
+      this.session_comments = this.session_comments.filter((i) => i.id !== id)
+      this.syncSessionStore()
+    },
+    //
     async getSession({ slug }: { slug: Session['slug'] }) {
-      const { network_status: { connected } } = useAppStore()
-      console.log('network_status connected', connected)
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        const data = this.sessions.find((i) => i.slug === slug)
+        if (data) this.session = data
+        this.session_measurements = this.session?.measurements || []
+        return { success: true, data: this.session }
+      }
+
       return axios
         .get(`/api/v1/sessions/${slug}`)
         .then(async ({ data }) => {
-          this.session = data
+          this.setSession(data)
           await this.getSessionMeasurements({ id: data.id })
           return { success: true, data }
         })
@@ -89,12 +221,23 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async getSessionComments({ id, filter }: { id: Session['id']; filter?: SessionCommentFilter }) {
-      if (!id) return { success: false, data: null, message: '' }
+      if (!id) return { success: false, data: null }
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        this.session_comments = this.session?.comments || []
+        return { success: true, data: this.session_comments }
+      }
+
       const params = filter ? `?filter_by=${filter}` : ''
       return axios
         .get(`/api/v1/sessions/${id}/comments${params}`)
         .then(async ({ data }) => {
           this.session_comments = data
+          const session: Session = {
+            ...this.session,
+            comments: [...data, ...(this.session?.comments || [])].filter(onlyUniqueId)
+          }
+          this.setSession(session)
           return { success: true, data }
         })
         .catch(({ response }) => {
@@ -102,10 +245,21 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async getSessionMeasurements({ id }: { id: Session['id'] }) {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        this.session_measurements = this.session?.measurements || []
+        return { success: true, data: this.session_measurements }
+      }
+
       return axios
         .get(`/api/v1/sessions/${id}/measurements`)
         .then(async ({ data }) => {
           this.session_measurements = data
+          const session: Session = {
+            ...this.session,
+            measurements: [...data, ...(this.session?.measurements || [])].filter(onlyUniqueId)
+          }
+          this.setSession(session)
           return { success: true, data }
         })
         .catch(({ response }) => {
@@ -113,11 +267,20 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async getSessions({ params }: { params?: string }) {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        return {
+          success: true,
+          data: { sessions: this.sessions, total_count: this.sessions_count }
+        }
+      }
+
       return axios
         .get(`/api/v1/sessions/draft_sessions${params}`)
         .then(async ({ data }) => {
           this.sessions = data.sessions
           this.sessions_count = data.total_count
+          this.syncSessionStore()
           return { success: true, data }
         })
         .catch(({ response }) => {
@@ -125,11 +288,20 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async getUpcomingSessions() {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        return {
+          success: true,
+          data: { sessions: this.upcoming_sessions, total_count: this.upcoming_sessions_count }
+        }
+      }
+
       return axios
         .get('/api/v1/sessions/draft_sessions?upcoming=true')
         .then(async ({ data }) => {
           this.upcoming_sessions = data.sessions
           this.upcoming_sessions_count = data.total_count
+          this.syncSessionStore()
           return { success: true, data }
         })
         .catch(({ response }) => {
@@ -141,30 +313,50 @@ export const useSessionStore = defineStore('session', {
         .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'ongoing' } })
         .then(async ({ data }) => {
           this.session = data
+          this.syncSessionStore()
           return { success: true, data }
         })
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async updateMeasurement({ id, measurement }: UpdateMeasurementParams) {
+    //
+    async updateMeasurement({ id, measurement, data_result }: UpdateMeasurementParams) {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        this.pending_progress.push({
+          name: 'update_measurement',
+          params: { id, measurement, data_result }
+        })
+        this.setSessionMeasurement(data_result)
+        return { success: true, data: data_result }
+      }
+
       return axios
         .patch(`/api/v1/measurements/${id}`, { measurement })
         .then(async ({ data }) => {
-          const idx = this.session_measurements.findIndex((i) => i.id === id)
-          this.session_measurements[idx] = data
+          this.setSessionMeasurement(data)
           return { success: true, data }
         })
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async updateMeasurementResults({ id, results }: UpdateMeasurementResultsParams) {
+    async updateMeasurementResults({ id, results, data_result }: UpdateMeasurementResultsParams) {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        this.pending_progress.push({
+          name: 'update_measurment_result',
+          params: { id, results, data_result }
+        })
+        this.setSessionMeasurement(data_result)
+        return { success: true, data: data_result }
+      }
+
       return axios
         .patch(`/api/v1/measurements/${id}/update_results`, { results })
         .then(async ({ data }) => {
-          const idx = this.session_measurements.findIndex((i) => i.id === id)
-          this.session_measurements[idx] = data
+          this.setSessionMeasurement(data)
           return { success: true, data }
         })
         .catch(({ response }) => {
@@ -179,8 +371,7 @@ export const useSessionStore = defineStore('session', {
       return axios
         .patch(`/api/v1/measurements/${id}/mark_probing`, { visible, marked_as })
         .then(async ({ data }) => {
-          const idx = this.session_measurements.findIndex((i) => i.id === id)
-          this.session_measurements[idx] = data
+          this.setSessionMeasurement(data)
           return { success: true, data }
         })
         .catch(({ response }) => {
@@ -192,13 +383,24 @@ export const useSessionStore = defineStore('session', {
       session_id,
       type,
       session_comment,
-      assessment
+      assessment,
+      data_result
     }: CreateSessionCommentParams) {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        this.pending_progress.push({
+          name: 'create_comment',
+          params: { client_id, session_id, type, session_comment, assessment, data_result }
+        })
+        this.addSessionComment(data_result, false)
+        return { success: true, data: data_result }
+      }
+
       if (type === 'general') {
         return axios
           .post(`/api/v1/sessions/${session_id}/session_comments`, { session_comment })
           .then(async ({ data }) => {
-            this.session_comments = [...this.session_comments, data]
+            this.addSessionComment(data, true)
             return { success: true, data }
           })
           .catch(({ response }) => {
@@ -209,28 +411,43 @@ export const useSessionStore = defineStore('session', {
         return axios
           .post(`/api/v1/clients/${client_id}/assessments`, { assessment })
           .then(async ({ data }) => {
-            this.session_comments = [...this.session_comments, data]
+            this.addSessionComment(data, true)
             return { success: true, data }
           })
           .catch(({ response }) => {
             return { success: false, data: null, message: response?.data?.error }
           })
       }
-      return { success: false, data: null, message: '' }
+      return { success: false, data: null }
     },
     async updateSessionComment({
       client_id,
       comment_id,
       type,
       session_comment,
-      assessment
+      assessment,
+      data_result
     }: UpdateSessionCommentParams) {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        this.pending_progress.push({
+          name: 'update_comment',
+          params: { client_id, comment_id, type, session_comment, assessment, data_result }
+        })
+        this.setSessionComment(data_result)
+        return { success: true, data: data_result }
+      }
+
+      if (typeof comment_id === 'string') {
+        this.setSessionComment(data_result)
+        return { success: true, data: null }
+      }
+
       if (type === 'general') {
         return axios
           .patch(`/api/v1/session_comments/${comment_id}`, { session_comment })
           .then(async ({ data }) => {
-            const idx = this.session_comments.findIndex((i) => i.id === comment_id)
-            this.session_comments[idx] = data
+            this.setSessionComment(data)
             return { success: true, data }
           })
           .catch(({ response }) => {
@@ -241,23 +458,37 @@ export const useSessionStore = defineStore('session', {
         return axios
           .patch(`/api/v1/clients/${client_id}/assessments/${comment_id}`, { assessment })
           .then(async ({ data }) => {
-            const idx = this.session_comments.findIndex((i) => i.id === comment_id)
-            this.session_comments[idx] = data
+            this.setSessionComment(data)
             return { success: true, data }
           })
           .catch(({ response }) => {
             return { success: false, data: null, message: response?.data?.error }
           })
       }
-      return { success: false, data: null, message: '' }
+      return { success: false, data: null }
     },
     async deleteSessionComment({ client_id, comment_id, type }: DeleteSessionCommentParams) {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        this.pending_progress.push({
+          name: 'delete_comment',
+          params: { client_id, comment_id, type }
+        })
+        this.removeSessionComment(comment_id)
+        return { success: true }
+      }
+
+      if (typeof comment_id === 'string') {
+        this.removeSessionComment(comment_id)
+        return { success: true }
+      }
+
       if (type === 'general') {
         return axios
           .delete(`/api/v1/session_comments/${comment_id}`)
           .then(async ({ data }) => {
-            this.session_comments = this.session_comments.filter((i) => i.id !== comment_id)
-            return { success: true, data }
+            this.removeSessionComment(comment_id)
+            return { success: true }
           })
           .catch(({ response }) => {
             return { success: false, data: null, message: response?.data?.error }
@@ -267,14 +498,14 @@ export const useSessionStore = defineStore('session', {
         return axios
           .delete(`/api/v1/clients/${client_id}/assessments/${comment_id}`)
           .then(async ({ data }) => {
-            this.session_comments = this.session_comments.filter((i) => i.id !== comment_id)
-            return { success: true, data }
+            this.removeSessionComment(comment_id)
+            return { success: true }
           })
           .catch(({ response }) => {
-            return { success: false, data: null, message: response?.data?.error }
+            return { success: false, message: response?.data?.error }
           })
       }
-      return { success: false, data: null, message: '' }
+      return { success: false }
     }
   }
 })

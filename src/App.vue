@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeMount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeMount, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAppStore, type NetworkStatus } from './stores/app.store'
 import { Icon } from '@iconify/vue'
@@ -36,13 +36,12 @@ async function fetchCurrentUser() {
   const { success } = await appStore.getAccount()
   loadingApp.value = false
   if (!success) {
-    if (routeName.value !== 'signin') {
+    if (route.name !== 'signin') {
       router.push({ name: 'signin' })
     }
     return
   }
-
-  if (routeName.value === 'signin') {
+  if (route.name === 'signin') {
     router.push({ name: 'home' })
   }
 }
@@ -60,12 +59,16 @@ async function setupNetwork() {
   networkStatus.connection_type = connectionType
 }
 
-onBeforeMount(async () => {
-  await setupNetwork()
-  await fetchCurrentUser()
+onBeforeMount(() => {
+  loadingApp.value = true
+  setupNetwork()
 })
 onMounted(() => {
+  fetchCurrentUser()
   Network.addListener('networkStatusChange', networkListener)
+})
+onUnmounted(() => {
+  Network.removeAllListeners()
 })
 
 interface Nav {

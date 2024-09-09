@@ -34,12 +34,12 @@ const appStore = useAppStore()
       <Icon icon="ph:door" />
       <div
         class="max-w-20 truncate"
-        v-if="appStore.user?.center_enable_branch && session?.appointment?.room?.branch"
+        v-if="appStore.account?.center_enable_branch && session?.appointment?.room?.branch"
       >
         {{ session?.appointment?.room?.branch?.name }}
       </div>
       <div
-        v-if="appStore.user?.center_enable_branch && session?.appointment?.room?.branch"
+        v-if="appStore.account?.center_enable_branch && session?.appointment?.room?.branch"
         class="h-1 w-1 shrink-0 rounded bg-light-purple-4"
       ></div>
       <div class="max-w-20 truncate">

@@ -71,6 +71,13 @@ const onUpdate = async () => {
       antecedent: antecedentInput.value,
       behavior: behaviorInput.value,
       consequence: consequenceInput.value
+    },
+    data_result: {
+      ...props.comment,
+      body: bodyInput.value,
+      antecedent: antecedentInput.value,
+      behavior: behaviorInput.value,
+      consequence: consequenceInput.value
     }
   }
   updateLoading.value = true
@@ -134,7 +141,7 @@ const onDelete = async () => {
           <div
             class="whitespace-pre-line text-sm text-slate-8"
             :class="{ 'line-clamp-3': showAction }"
-            v-html="comment.antecedent"
+            v-html="comment.antecedent || '-'"
           ></div>
         </div>
         <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
@@ -143,7 +150,7 @@ const onDelete = async () => {
           <div
             class="whitespace-pre-line text-sm text-slate-8"
             :class="{ 'line-clamp-3': showAction }"
-            v-html="comment.behavior"
+            v-html="comment.behavior || '-'"
           ></div>
         </div>
         <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
@@ -152,7 +159,7 @@ const onDelete = async () => {
           <div
             class="whitespace-pre-line text-sm text-slate-8"
             :class="{ 'line-clamp-3': showAction }"
-            v-html="comment.consequence"
+            v-html="comment.consequence || '-'"
           ></div>
         </div>
       </div>
@@ -160,11 +167,11 @@ const onDelete = async () => {
         v-else
         class="whitespace-pre-line text-sm text-slate-8"
         :class="{ ' line-clamp-[10]': showAction }"
-        v-html="comment.body"
+        v-html="comment.body || '-'"
       ></div>
     </div>
   </div>
-  
+
   <AppActionSheet :show="showAction" @close="showAction = false">
     <div class="space-y-4">
       <div class="flex justify-end" @click="showAction = false">
@@ -182,7 +189,7 @@ const onDelete = async () => {
         </div>
       </div>
     </div>
-    
+
     <AppActionSheet :show="showRemove" @close="showRemove = false">
       <div class="flex flex-col items-center gap-4">
         <div class="text-center text-xl font-semibold">Delete this comment?</div>
@@ -196,7 +203,7 @@ const onDelete = async () => {
       </div>
     </AppActionSheet>
   </AppActionSheet>
-  
+
   <TransitionRoot
     :show="showEdit"
     enter="transition-all duration-300 ease-out"
@@ -205,7 +212,7 @@ const onDelete = async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[101] h-screen w-screen -translate-y-4 rounded border-2 bg-white"
+    class="fixed left-0 top-0 z-[1001] h-screen w-screen -translate-y-4 rounded border-2 bg-white"
   >
     <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
       <div

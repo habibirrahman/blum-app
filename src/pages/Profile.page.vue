@@ -21,7 +21,7 @@ async function onSignout() {
 <template>
   <div class="flex flex-col items-center gap-4 py-4">
     <div class="text-xs">
-      <pre>{{ appStore.user }}</pre>
+      <pre>{{ appStore.account }}</pre>
     </div>
     <AppButton :loading="signoutLoading" @click="() => onSignout()">Sign out</AppButton>
   </div>

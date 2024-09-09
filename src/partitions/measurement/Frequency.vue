@@ -14,9 +14,14 @@ const props = withDefaults(defineProps<Props>(), {})
 
 const scoreLoading = ref<boolean>(false)
 const onChangeScore = async (score: number) => {
+  const currentScore = props.measurement.results?.score || 0
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: props.measurement.results?.score + score
+    results: currentScore + score,
+    data_result: {
+      ...props.measurement,
+      results: { score: currentScore + score }
+    }
   }
   scoreLoading.value = true
   const { success } = await sessionStore.updateMeasurementResults(params)
