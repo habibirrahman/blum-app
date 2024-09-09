@@ -20,14 +20,16 @@ const sessionLoading = ref<boolean>(false)
 const cycleLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
 
-async function syncSession() {
+interface FetchSessionProps {
+  is_swiped?: boolean
+}
+async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false }) {
   const { success } = await sessionStore.resolvePendingProgress()
   sessionLoading.value = false
   if (!success) return
-  toast.success('Results are now up-to-date!')
-}
-interface FetchSessionProps {
-  is_swiped?: boolean
+  if (is_swiped && appStore.network_status.connected) {
+    toast.success('Results are now up-to-date!')
+  }
 }
 async function fetchSession({ is_swiped }: FetchSessionProps = { is_swiped: false }) {
   const slug = route.params.slug.toString()
@@ -50,7 +52,7 @@ watch(
     if (!val) showOffline.value = true
     if (val) {
       sessionLoading.value = true
-      syncSession()
+      syncSession({ is_swiped: true })
     }
   }
 )
