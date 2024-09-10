@@ -130,7 +130,13 @@ const navigations = computed<Nav[]>(() => {
         class="grid h-full w-full items-center"
         :style="{ gridTemplateColumns: `repeat(${navigations.length}, minmax(0, 1fr))` }"
       >
-        <RouterLink v-for="nav in navigations" :key="nav.route_name" :to="{ name: nav.route_name }">
+        <RouterLink
+          v-for="nav in navigations"
+          :key="nav.route_name"
+          :to="{ name: nav.route_name }"
+          class="flex h-full w-full flex-col items-center justify-center gap-1 transition-all"
+          :class="{ 'bg-prim-1': nav.is_active }"
+        >
           <Icon v-if="nav.is_active" :icon="nav.active_icon" class="text-xl text-light-purple-5" />
           <Icon v-else :icon="nav.icon" class="text-xl text-slate-7" />
           <div
@@ -144,13 +150,3 @@ const navigations = computed<Nav[]>(() => {
     </footer>
   </div>
 </template>
-
-<style scoped>
-nav a {
-  @apply flex h-full w-full flex-col items-center justify-center gap-1 transition-all hover:bg-light-purple-1;
-}
-
-/* nav a.router-link-exact-active {
-  @apply bg-light-purple-1 text-dark-purple-2;
-} */
-</style>

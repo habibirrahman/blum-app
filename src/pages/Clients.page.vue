@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
-import type { Branch, Client, ClientStatus } from '@/lib/types'
+import type { Branch, ClientStatus } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
@@ -43,16 +43,14 @@ const branchOptions = computed<{ value: Branch['id']; label: Branch['name'] }[]>
   appStore.branches.map((i) => ({ value: i.id, label: i.name }))
 )
 const showBranch = ref<boolean>(false)
-watch(showBranch, (val) => {
-  if (val) {
-    selectBranches.value = branches.value
-  }
+watch(showBranch, () => {
+  selectBranches.value = branches.value
 })
-const onCheckBranch = (id: Branch['id']) => {
-  if (selectBranches.value.includes(id)) {
-    selectBranches.value = selectBranches.value.filter((i) => i !== id)
+const onCheckBranch = (val: Branch['id']) => {
+  if (selectBranches.value.includes(val)) {
+    selectBranches.value = selectBranches.value.filter((i) => i !== val)
   } else {
-    selectBranches.value.push(id)
+    selectBranches.value = [...selectBranches.value, val]
   }
 }
 const onResetBranch = () => {
@@ -69,29 +67,33 @@ const onApplyBranch = () => {
   fetchClients()
 }
 
-type Status = ClientStatus | ''
-const status = ref<Status>('')
-const selectStatus = ref<Status>('')
-const statusOptions: { value: Status; label: string }[] = [
+const statuses = ref<ClientStatus[]>([])
+const selectStatuses = ref<ClientStatus[]>([])
+const statusOptions: { value: ClientStatus; label: string }[] = [
   { value: 'active', label: 'Active' },
   { value: 'archived', label: 'Discharged' },
   { value: 'at_risk_of_discharge', label: 'At risk of discharge' }
 ]
 const showStatus = ref<boolean>(false)
-watch(showStatus, (val) => {
-  if (val) {
-    selectStatus.value = status.value
-  }
+watch(showStatus, () => {
+  selectStatuses.value = statuses.value
 })
+const onCheckStatus = (val: ClientStatus) => {
+  if (selectStatuses.value.includes(val)) {
+    selectStatuses.value = selectStatuses.value.filter((i) => i !== val)
+  } else {
+    selectStatuses.value = [...selectStatuses.value, val]
+  }
+}
 const onResetStatus = () => {
-  status.value = ''
-  selectStatus.value = ''
+  statuses.value = []
+  selectStatuses.value = []
   showStatus.value = false
   page.value = 1
   fetchClients()
 }
 const onApplyStatus = () => {
-  status.value = selectStatus.value
+  statuses.value = selectStatuses.value
   showStatus.value = false
   page.value = 1
   fetchClients()
@@ -101,14 +103,13 @@ type Sort = 'alphabetical' | 'alphabetical_desc' | ''
 const sort = ref<Sort>('')
 const selectSort = ref<Sort>('')
 const sortOptions: { value: Sort; label: string }[] = [
+  { value: '', label: 'Most Recent' },
   { value: 'alphabetical', label: 'Name (A-Z)' },
   { value: 'alphabetical_desc', label: 'Name (Z-A)' }
 ]
 const showSort = ref<boolean>(false)
-watch(showSort, (val) => {
-  if (val) {
-    selectSort.value = sort.value
-  }
+watch(showSort, () => {
+  selectSort.value = sort.value
 })
 const onResetSort = () => {
   sort.value = ''
@@ -128,7 +129,7 @@ const params = computed<string>(() => {
   let p = `?page=${page.value}&per_page=25`
   if (query.value) p += `&query=${query.value}`
   if (branches.value.length) p += `&branch_ids=${branches.value.join(',')}`
-  if (status.value) p += `&status=${status.value}`
+  if (statuses.value.length) p += `&status=${statuses.value.join(',')}`
   if (sort.value) p += `&sort=${sort.value}`
   return p
 })
@@ -182,6 +183,7 @@ onMounted(async () => {
     <div class="pl-4">
       <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
         <div
+          v-if="appStore.account?.center_enable_branch"
           class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center gap-1 truncate rounded-full border px-4 text-xs font-medium capitalize transition-all"
           :class="[
             branches.length
@@ -205,13 +207,22 @@ onMounted(async () => {
         <div
           class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium capitalize transition-all"
           :class="[
-            status
+            statuses.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
               : 'border-slate-4 bg-white'
           ]"
           @click="showStatus = true"
         >
-          <span>{{ statusOptions.find((i) => i.value === status)?.label || 'All statuses' }}</span>
+          <span
+            v-if="statuses.length > 1"
+            class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+          >
+            {{ statuses.length }}
+          </span>
+          <span v-else-if="statuses.length === 1" class="truncate">
+            {{ statusOptions.find((i) => i.value === statuses[0])?.label || 'Status' }}
+          </span>
+          <span v-else>All statuses</span>
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
@@ -219,7 +230,7 @@ onMounted(async () => {
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />
-          <span>{{ sortOptions.find((i) => i.value === sort)?.label || 'Most Recent' }}</span>
+          <span>{{ sortOptions.find((i) => i.value === sort)?.label }}</span>
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
       </div>
@@ -229,6 +240,9 @@ onMounted(async () => {
   <div v-if="!clientStore.clients_count" class="flex h-64 w-full items-center justify-center px-4">
     <div v-if="query" class="text-center text-sm text-slate-8">
       Sorry, no clients match your search. Try using a different client name.
+    </div>
+    <div v-else-if="branches.length || statuses.length" class="text-center text-sm text-slate-8">
+      Oops! No clients fit your filter criteria. Try changing the filter to find more results!
     </div>
     <div v-else class="text-center text-sm text-slate-8">
       It looks like you don't have any clients yet. They'll be added here when you're assigned to
@@ -306,13 +320,13 @@ onMounted(async () => {
             {{ opt.label }}
           </label>
           <input
-            type="radio"
-            name="status_filter"
+            type="checkbox"
+            :name="`status_filter_${opt.value}`"
             :id="`status_filter_${opt.value}`"
-            :checked="selectStatus === opt.value"
+            :checked="selectStatuses.includes(opt.value)"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
-            @click="selectStatus = opt.value"
+            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            @click="onCheckStatus(opt.value)"
           />
         </div>
       </div>

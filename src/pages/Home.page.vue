@@ -64,10 +64,8 @@ const statusOptions: { value: Status; label: string }[] = [
   { value: 'unscheduled', label: 'Unscheduled' }
 ]
 const showStatus = ref<boolean>(false)
-watch(showStatus, (val) => {
-  if (val) {
-    selectStatus.value = status.value
-  }
+watch(showStatus, () => {
+  selectStatus.value = status.value
 })
 const onResetStatus = () => {
   status.value = ''
@@ -96,10 +94,8 @@ const sortOptions: { value: Sort; label: string }[] = [
   { value: 'earliest_schedule', label: 'Earliest schedule' }
 ]
 const showSort = ref<boolean>(false)
-watch(showSort, (val) => {
-  if (val) {
-    selectSort.value = sort.value
-  }
+watch(showSort, () => {
+  selectSort.value = sort.value
 })
 const onResetSort = () => {
   sort.value = 'newest_session_id'
