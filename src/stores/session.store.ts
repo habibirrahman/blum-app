@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import type { Session, Comment, Measurement, User, Client } from '@/lib/types'
 import axios from 'axios'
-import { useAppStore } from './app.store'
 import { getSessionStorage, setSessionStorage } from '@/plugins/preferences.plugin'
+import { useAppStore, type ResponseSchema } from './app.store'
 import { onlyUniqueId } from '@/lib/func'
+import type { Session, Comment, Measurement, User, Client } from '@/lib/types'
 
 interface SessionPendingProgress {
   name:
@@ -96,7 +96,7 @@ export const useSessionStore = defineStore('session', {
   }),
   getters: {},
   actions: {
-    async generateSessionStore() {
+    async generateSessionStore(): Promise<ResponseSchema> {
       return getSessionStorage().then(({ success, data }) => {
         if (!success) {
           return { success: false, data: null }
@@ -113,7 +113,7 @@ export const useSessionStore = defineStore('session', {
         return { success: true, data }
       })
     },
-    async syncSessionStore() {
+    async syncSessionStore(): Promise<ResponseSchema> {
       const data: SessionStateSchema = {
         session: this.session,
         session_comments: this.session_comments,
@@ -127,7 +127,7 @@ export const useSessionStore = defineStore('session', {
       const { success } = await setSessionStorage(data)
       return { success }
     },
-    async resolvePendingProgress() {
+    async resolvePendingProgress(): Promise<ResponseSchema> {
       const length = this.pending_progress.length
       const progress = [...this.pending_progress]
       const succeedIndexes: number[] = []
@@ -199,7 +199,7 @@ export const useSessionStore = defineStore('session', {
       this.syncSessionStore()
     },
     //
-    async getSession({ slug }: { slug: Session['slug'] }) {
+    async getSession({ slug }: { slug: Session['slug'] }): Promise<ResponseSchema> {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
         const data = this.sessions.find((i) => i.slug === slug)

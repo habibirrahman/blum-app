@@ -1,4 +1,6 @@
 import type { User } from '@/lib/types'
+import type { AppStateSchema } from '@/stores/app.store'
+import type { ClientStateSchema } from '@/stores/client.store'
 import type { SessionStateSchema } from '@/stores/session.store'
 import { Preferences } from '@capacitor/preferences'
 
@@ -50,18 +52,18 @@ export const removeAccessStorage = async () => {
   }
 }
 
-export const setAcccoutStorage = async ({ user }: { user: User }) => {
+export const setAppStorage = async (data: AppStateSchema) => {
   try {
-    await Preferences.set({ key: 'account', value: JSON.stringify(user) })
+    await Preferences.set({ key: 'app.storage', value: JSON.stringify(data) })
     return { success: true }
   } catch (error) {
     console.error(error)
     return { success: false }
   }
 }
-export const getAcccoutStorage = async () => {
+export const getAppStorage = async () => {
   try {
-    const storage = await Preferences.get({ key: 'account' })
+    const storage = await Preferences.get({ key: 'app.storage' })
     if (!storage.value || storage.value === 'undefined') {
       return { success: false, data: null }
     } else {
@@ -73,9 +75,9 @@ export const getAcccoutStorage = async () => {
     return { success: false, data: null }
   }
 }
-export const removeAcccoutStorage = async () => {
+export const removeAppStorage = async () => {
   try {
-    await Preferences.remove({ key: 'account' })
+    await Preferences.remove({ key: 'app.storage' })
     return { success: true }
   } catch (error) {
     console.error(error)
@@ -109,6 +111,39 @@ export const getSessionStorage = async () => {
 export const removeSessionStorage = async () => {
   try {
     await Preferences.remove({ key: 'session.store' })
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false }
+  }
+}
+
+export const setClientStorage = async (data: ClientStateSchema) => {
+  try {
+    await Preferences.set({ key: 'client.store', value: JSON.stringify(data) })
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false }
+  }
+}
+export const getClientStorage = async () => {
+  try {
+    const storage = await Preferences.get({ key: 'client.store' })
+    if (!storage.value || storage.value === 'undefined') {
+      return { success: false, data: null }
+    } else {
+      const data = JSON.parse(storage.value || '')
+      return { success: true, data }
+    }
+  } catch (error) {
+    console.error(error)
+    return { success: false, data: null }
+  }
+}
+export const removelientStorage = async () => {
+  try {
+    await Preferences.remove({ key: 'client.store' })
     return { success: true }
   } catch (error) {
     console.error(error)

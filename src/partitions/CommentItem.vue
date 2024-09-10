@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import {
   useSessionStore,
   type DeleteSessionCommentParams,
   type UpdateSessionCommentParams
 } from '@/stores/session.store'
-import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
 import AppButton from '@/components/AppButton.vue'

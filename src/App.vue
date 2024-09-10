@@ -33,8 +33,8 @@ watch(
 )
 
 async function fetchCurrentUser() {
-  const { success } = await appStore.getAccount()
-  setTimeout(() => {
+  setTimeout(async () => {
+    const { success } = await appStore.getAccount()
     loadingApp.value = false
     if (!success) {
       if (route.name !== 'signin') {
@@ -90,11 +90,11 @@ const navigations = computed<Nav[]>(() => {
       is_active: routeName.value.includes('home')
     },
     {
-      route_name: 'about',
+      route_name: 'clients',
       icon: 'ph:user-square',
       active_icon: 'ph:user-square-fill',
       label: 'Clients',
-      is_active: routeName.value.includes('about')
+      is_active: routeName.value.includes('client')
     },
     {
       route_name: 'profile',

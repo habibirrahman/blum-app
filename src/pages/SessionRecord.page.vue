@@ -85,9 +85,9 @@ onMounted(async () => {
   const app = document.getElementById('app')
   app?.scroll({ top: 56, behavior: 'smooth' })
   app?.addEventListener('scroll', scrollListener)
+  sessionLoading.value = true
   /** generate session.store from storage */
   await sessionStore.generateSessionStore()
-  sessionLoading.value = true
   await fetchSession()
   await syncSession()
   redirect.value = route.query.redirect?.toString() || '/home'

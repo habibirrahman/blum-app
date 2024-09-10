@@ -37,12 +37,13 @@ export interface Session {
   measurements?: Measurement[]
 }
 
+export type ClientStatus = 'active' | 'archived' | 'at_risk_of_discharge'
 export interface Client {
   id?: number
   name?: string
   birthday?: string
   email?: string
-  status?: string // not
+  status?: ClientStatus
   gender?: string // not
   note?: string
   admitted_at?: string
@@ -51,8 +52,38 @@ export interface Client {
   discharge_reason?: string // not
   other_discharge_reason?: string
   last_status_updated_at?: string
+  total_recommendation?: number
+  tags?: { id?: number; label_id?: number; name?: string }[]
+  pre_session_assessments?: Assessment[]
+  accesses?: { id?: number; client_id?: Client['id']; user_id?: User['id']; user?: User }[]
+  branches?: Branch[]
+  running_create_target_job?: any // not
+  documents?: any[] // not
   center_id?: number // not
   prospect_id?: number // not
+}
+
+export interface Assessment {
+  id?: number
+  date?: string
+  observer?: User['name']
+  start_time?: string
+  end_time?: string
+  antecedent?: string
+  behavior?: string
+  consequence?: string
+  escape_or_avoidance?: boolean
+  gaining_attention?: boolean
+  expression_of_anger?: boolean
+  frustation?: boolean
+  obtain_tangible_item?: boolean
+  sensory_stimulation?: boolean
+  fear_or_anxiety?: boolean
+  other?: boolean
+  deleted_at?: string
+  client_id?: Client['id']
+  user_id?: User['id']
+  session_id?: Session['id']
 }
 
 export interface Appointment {

@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { TransitionRoot } from '@headlessui/vue'
+import { useAppStore } from '@/stores/app.store'
+import { useSessionStore } from '@/stores/session.store'
+import type { Session } from '@/lib/types'
+import { Icon } from '@iconify/vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
@@ -6,13 +13,6 @@ import AppPagination from '@/components/AppPagination.vue'
 import UpcomingSession from '@/partitions/UpcomingSession.vue'
 import SessionItem from '@/partitions/SessionItem.vue'
 import moment from 'moment'
-import { useSessionStore } from '@/stores/session.store'
-import { computed, onMounted, ref, watch } from 'vue'
-import { Icon } from '@iconify/vue'
-import type { Session } from '@/lib/types'
-import { useRoute, useRouter } from 'vue-router'
-import { useAppStore } from '@/stores/app.store'
-import { TransitionRoot } from '@headlessui/vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -143,6 +143,7 @@ async function fetchSessions() {
 }
 
 onMounted(async () => {
+  upcomingLoading.value = true
   /** generate session.store from storage */
   await sessionStore.generateSessionStore()
   fetchUpcoming()
@@ -190,7 +191,7 @@ const onOpenSession = (session: Session) => {
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Draft Sessions</div>
       <div
         v-if="!sessionsLoading"
-        class="flex h-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
+        class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
       >
         {{ sessionStore.sessions_count }}
       </div>
@@ -255,7 +256,7 @@ const onOpenSession = (session: Session) => {
           ]"
           @click="showStatus = true"
         >
-          <span>{{ !status ? 'All statuses' : status }}</span>
+          <span>{{ statusOptions.find((i) => i.value === status)?.label || 'All statuses' }}</span>
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
