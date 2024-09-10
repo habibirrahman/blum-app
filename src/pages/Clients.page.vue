@@ -260,7 +260,11 @@ onMounted(async () => {
       <span> of {{ clientStore.clients_count }}</span>
     </div>
     <div class="px-4">
-      <RouterLink v-for="client in clientStore.clients" :key="client.id" :to="{ name: 'home' }">
+      <RouterLink
+        v-for="client in clientStore.clients"
+        :key="client.id"
+        :to="{ name: 'client', params: { id: client.id } }"
+      >
         <ClientItem :client="client" />
       </RouterLink>
     </div>

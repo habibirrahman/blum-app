@@ -4,14 +4,14 @@ import { displayDate } from '@/lib/func'
 
 interface Props {
   session: Session
+  title: string
 }
 
 const props = withDefaults(defineProps<Props>(), {})
-
 </script>
 
 <template>
-  <div class="flex h-[110px] w-full items-center gap-3 border-b border-slate-3 py-3">
+  <div class="flex h-[110px] w-full items-center gap-3 truncate border-b border-slate-3 py-3">
     <div class="w-[46px] shrink-0 rounded-sm" :style="{ boxShadow: '1px 1px 0px 0px #0000000D' }">
       <div
         class="flex h-[14px] shrink-0 items-center justify-center rounded-t-sm text-[8px] uppercase"
@@ -35,9 +35,7 @@ const props = withDefaults(defineProps<Props>(), {})
     </div>
     <div class="flex flex-col gap-1.5 truncate">
       <div class="text-xs text-slate-8">Session ID {{ session.id }}</div>
-      <div class="truncate text-sm">
-        {{ session.client?.name }}
-      </div>
+      <div class="truncate text-sm font-semibold">{{ title }}</div>
       <div
         v-if="!session.appointment_id && session.status === 'draft'"
         class="text-xs text-slate-7"
@@ -46,7 +44,7 @@ const props = withDefaults(defineProps<Props>(), {})
       </div>
       <div
         v-else-if="session.appointment_id && session.status === 'draft'"
-        class="flex items-center gap-1.5 text-xs"
+        class="flex items-center gap-1.5 truncate text-xs"
       >
         <div class="text-slate-7">Scheduled on</div>
         <div class="font-medium text-slate-8">
@@ -60,7 +58,7 @@ const props = withDefaults(defineProps<Props>(), {})
         </div>
       </div>
       <div v-else-if="session.status === 'ongoing'" class="flex items-center gap-1.5 text-xs">
-        <div class="font-medium text-slate-8">
+        <div class="truncate font-medium text-slate-8">
           <span>In progress</span>
           <span v-if="session.user?.name"> with {{ session.user?.name }}</span>
         </div>

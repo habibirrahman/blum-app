@@ -48,10 +48,13 @@ export const useClientStore = defineStore('client', {
     },
     //
     async getClient({ id }: { id: Client['id'] }): Promise<ResponseSchema> {
+      const data = this.clients.find((i) => i.id === id)
+      if (data) {
+        this.setClient(data)
+      }
+
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        const data = this.clients.find((i) => i.id === id)
-        if (data) this.client = data
         return { success: true, data: this.client }
       }
 

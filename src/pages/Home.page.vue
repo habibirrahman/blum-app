@@ -296,6 +296,7 @@ const onOpenSession = (session: Session) => {
         v-for="session in sessionStore.sessions"
         :key="session.id"
         :session="session"
+        :title="session.client?.name || 'Client name'"
         @click="onOpenSession(session)"
       />
     </div>

@@ -200,11 +200,14 @@ export const useSessionStore = defineStore('session', {
     },
     //
     async getSession({ slug }: { slug: Session['slug'] }): Promise<ResponseSchema> {
+      const data = this.sessions.find((i) => i.slug === slug)
+      if (data) {
+        this.session_measurements = data?.measurements || []
+        this.setSession(data)
+      }
+
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        const data = this.sessions.find((i) => i.slug === slug)
-        if (data) this.session = data
-        this.session_measurements = this.session?.measurements || []
         return { success: true, data: this.session }
       }
 
@@ -221,9 +224,10 @@ export const useSessionStore = defineStore('session', {
     },
     async getSessionComments({ id, filter }: { id: Session['id']; filter?: SessionCommentFilter }) {
       if (!id) return { success: false, data: null }
+      this.session_comments = this.session?.comments || []
+
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        this.session_comments = this.session?.comments || []
         return { success: true, data: this.session_comments }
       }
 
@@ -244,9 +248,11 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async getSessionMeasurements({ id }: { id: Session['id'] }) {
+      if (!id) return { success: false, data: null }
+      this.session_measurements = this.session?.measurements || []
+
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        this.session_measurements = this.session?.measurements || []
         return { success: true, data: this.session_measurements }
       }
 

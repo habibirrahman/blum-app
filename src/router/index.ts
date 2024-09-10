@@ -29,6 +29,11 @@ const router = createRouter({
       component: () => import('../pages/Clients.page.vue')
     },
     {
+      path: '/client/:id',
+      name: 'client',
+      component: () => import('../pages/Client.page.vue')
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('../pages/Profile.page.vue')

@@ -2,7 +2,7 @@
 import AppButton from '@/components/AppButton.vue'
 import { useAppStore } from '@/stores/app.store'
 import { ref } from 'vue'
-import { useRouter } from 'vue-router';
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -19,7 +19,7 @@ async function onSignout() {
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-4 py-4">
+  <div class="flex flex-col items-center gap-4 p-4">
     <div class="text-xs">
       <pre>{{ appStore.account }}</pre>
     </div>
