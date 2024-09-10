@@ -19,7 +19,6 @@ interface SessionPendingProgress {
     | UpdateSessionCommentParams
     | DeleteSessionCommentParams
 }
-
 export interface SessionStateSchema {
   session: Session | null
   session_comments: Comment[]
@@ -311,6 +310,18 @@ export const useSessionStore = defineStore('session', {
     async startSession() {
       return axios
         .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'ongoing' } })
+        .then(async ({ data }) => {
+          this.session = data
+          this.syncSessionStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async endSession() {
+      return axios
+        .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'completed' } })
         .then(async ({ data }) => {
           this.session = data
           this.syncSessionStore()

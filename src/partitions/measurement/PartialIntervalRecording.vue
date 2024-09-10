@@ -12,7 +12,7 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), {})
 
-const intervalRound = computed(() => {
+const intervalRound = computed<number>(() => {
   const intervalCount = props.measurement.target?.interval || 0
   if (!props.measurement.target || !intervalCount) {
     return 1
@@ -20,7 +20,7 @@ const intervalRound = computed(() => {
   const duration = Object.keys(props.measurement.results).length * intervalCount
   return duration / intervalCount
 })
-const currentInterval = computed(() => {
+const currentInterval = computed<number>(() => {
   const intervalCount = props.measurement.target?.interval
   if (!props.counter) return 0
   if (!props.measurement.target || !intervalCount) {
@@ -29,16 +29,16 @@ const currentInterval = computed(() => {
   const interval = Math.ceil(props.counter / (intervalCount * 60))
   return interval > intervalRound.value ? intervalRound.value : interval
 })
-const scoreInInterval = computed(() => {
+const scoreInInterval = computed<number>(() => {
   if (!props.measurement.results) return 0
   if (!props.measurement.results[currentInterval.value - 1]) return 0
   return props.measurement.results[currentInterval.value - 1]
 })
-const totalScore = computed(() => {
+const totalScore = computed<number>(() => {
   if (!props.measurement.results) return 0
   return Object.values(props.measurement.results).reduce((a: any, b: any) => a + b, 0)
 })
-const percentageScore = computed(() => {
+const percentageScore = computed<number>(() => {
   if (!props.measurement.results) return 0
   const res = Object.values(props.measurement.results).filter((a: any) => a)
   return Math.floor((res.length / intervalRound.value) * 100)

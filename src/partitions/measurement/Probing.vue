@@ -54,7 +54,7 @@ interface ProbingCircle {
   key: number | string
   value: boolean | 'empty' | 'removing'
 }
-const probingCircles = computed(() => {
+const probingCircles = computed<ProbingCircle[]>(() => {
   const results = props.measurement.results
   const trial = props.measurement.target?.probing_number_of_trial || 0
   const circles: ProbingCircle[] = []
@@ -73,7 +73,7 @@ const probingCircles = computed(() => {
   const end = page.value * perPage.value
   return circles.slice(start, end)
 })
-const probingScore = computed(() => {
+const probingScore = computed<number>(() => {
   const results = props.measurement.results
   const trials = Object.values(results).length
   const totalSuccess = Object.values(results).filter((i) => i).length
@@ -150,7 +150,7 @@ interface ProbingAction {
   message: string | null
 }
 const probingAction = ref<ProbingAction | null>(null)
-const probingActionOptions = computed(() => {
+const probingActionOptions = computed<ProbingAction[]>(() => {
   const passed: ProbingAction[] = [
     {
       id: 'pass_and_mastered',
@@ -400,18 +400,18 @@ const onSave = async () => {
     >
       <img
         v-if="isProbingPassed"
-        alt="probing-confetti"
+        alt="probing_confetti"
         class="absolute bottom-0 -z-[1] w-full"
-        src="@/assets/probing-confetti.svg"
+        src="@/assets/probing_confetti.svg"
       />
       <img
         v-if="!isProbingPassed"
-        alt="probing-failed"
+        alt="probing_failed"
         class="w-20"
         :class="{
           'absolute right-2 top-2 -z-[1] opacity-50': measurement.target?.status === 'mastered'
         }"
-        src="@/assets/probing-failed.svg"
+        src="@/assets/probing_failed.svg"
       />
       <div class="w-[270px] space-y-3">
         <div v-if="isProbingPassed" class="space-y-1 text-center">

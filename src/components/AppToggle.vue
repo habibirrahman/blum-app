@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<Emits>()
 
-const inputId = computed(() => getRandomString())
+const inputId = computed<string>(() => getRandomString())
 </script>
 
 <template>

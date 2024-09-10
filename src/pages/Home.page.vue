@@ -144,7 +144,7 @@ async function fetchSessions() {
 
 onMounted(async () => {
   /** generate session.store from storage */
-  await  sessionStore.generateSessionStore();
+  await sessionStore.generateSessionStore()
   fetchUpcoming()
   fetchSessions()
 })
@@ -161,7 +161,11 @@ const onOpenSession = (session: Session) => {
     })
   } else {
     if (session.user_id === appStore.account?.id) {
-      router.push({ name: 'session-record', params: { slug: session?.slug } })
+      router.push({
+        name: 'session-record',
+        params: { slug: session?.slug },
+        query: { redirect: '/home' }
+      })
     } else {
       sessionToJoin.value = session
       showJoinConfirmation.value = true
@@ -410,7 +414,11 @@ const onOpenSession = (session: Session) => {
         </div>
       </div>
       <RouterLink
-        :to="{ name: 'session-record', params: { slug: sessionToJoin?.slug } }"
+        :to="{
+          name: 'session-record',
+          params: { slug: sessionToJoin?.slug },
+          query: { redirect: '/home' }
+        }"
         class="w-full"
       >
         <AppButton kind="outline" class="w-full">Join this session</AppButton>

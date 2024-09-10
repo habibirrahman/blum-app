@@ -34,16 +34,18 @@ watch(
 
 async function fetchCurrentUser() {
   const { success } = await appStore.getAccount()
-  loadingApp.value = false
-  if (!success) {
-    if (route.name !== 'signin') {
-      router.push({ name: 'signin' })
+  setTimeout(() => {
+    loadingApp.value = false
+    if (!success) {
+      if (route.name !== 'signin') {
+        router.push({ name: 'signin' })
+      }
+      return
     }
-    return
-  }
-  if (route.name === 'signin') {
-    router.push({ name: 'home' })
-  }
+    if (route.name === 'signin') {
+      router.push({ name: 'home' })
+    }
+  }, 1000)
 }
 
 const networkListener = (status: any) => {
@@ -95,13 +97,6 @@ const navigations = computed<Nav[]>(() => {
       is_active: routeName.value.includes('about')
     },
     {
-      route_name: 'about',
-      icon: 'ph:camera',
-      active_icon: 'ph:camera-fill',
-      label: 'Scan Sessions',
-      is_active: routeName.value.includes('about')
-    },
-    {
       route_name: 'profile',
       icon: 'ph:user-circle',
       active_icon: 'ph:user-circle-fill',
@@ -131,7 +126,10 @@ const navigations = computed<Nav[]>(() => {
     </div>
 
     <footer v-if="isUseNav" class="fixed bottom-0 z-[100] flex h-14 w-screen bg-white">
-      <nav class="grid h-full w-full grid-cols-4 items-center">
+      <nav
+        class="grid h-full w-full items-center"
+        :style="{ gridTemplateColumns: `repeat(${navigations.length}, minmax(0, 1fr))` }"
+      >
         <RouterLink v-for="nav in navigations" :key="nav.route_name" :to="{ name: nav.route_name }">
           <Icon v-if="nav.is_active" :icon="nav.active_icon" class="text-xl text-light-purple-5" />
           <Icon v-else :icon="nav.icon" class="text-xl text-slate-7" />

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useSessionStore } from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
 import AppButton from '@/components/AppButton.vue'
@@ -12,6 +12,7 @@ import AppActionSheet from '@/components/AppActionSheet.vue'
 import { useToast } from 'vue-toastification'
 
 const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
@@ -91,7 +92,6 @@ onMounted(async () => {
   await syncSession()
   redirect.value = route.query.redirect?.toString() || '/home'
 })
-
 onUnmounted(() => {
   const app = document.getElementById('app')
   app?.removeEventListener('scroll', scrollListener)
@@ -173,55 +173,45 @@ const fixedMeasurement = computed<Measurement | undefined>(() =>
 )
 const isMeasurementCollapsed = ref<boolean>(true)
 
-/**
- * end session
- * 1. normal
- * 2. group
- *    - 2 timer(s) are still running
- *    - Minimum required probes have not been met
- *    - Actions for probing have not been saved
- * 3. all measurement results is empty
- *
- * runningMeasurements
- */
 const endSessionStatus = ref<'normal' | 'group_reason' | 'empty_record'>('normal')
 const groupReasons = ref<string[]>([])
 const isAllMeasurementResultEmpty = computed<boolean>(() => {
-  const isAllEmpty = []
-  sessionStore.session_measurements.forEach((i) => {
-    if (!i.is_dropped) {
-      let isResultsEmpty = true
-      if (i.type === 'Measurement::Percentage') {
-        for (let key in i.results) {
-          if (i.results[key] !== null) isResultsEmpty = false
-        }
+  const isEmpties = []
+  const recordMeasurments = sessionStore.session_measurements.filter((i) => !i.is_dropped)
+  recordMeasurments.forEach((i) => {
+    let isResultsEmpty = true
+    if (i.type === 'Measurement::Percentage') {
+      for (let key in i.results) {
+        if (i.results[key] !== null) isResultsEmpty = false
       }
-      if (i.type === 'Measurement::Probing') {
-        const arr = Object.keys(i.results)
-        if (arr.length > 0) isResultsEmpty = false
-      }
-      if (i.type === 'Measurement::Duration') {
-        if (i.results['seconds'] > 0) isResultsEmpty = false
-      }
-      if (i.type === 'Measurement::Pir') {
-        for (let key in i.results) {
-          if (i.results[key] > 0) isResultsEmpty = false
-        }
-      }
-      if (i.type === 'Measurement::Frequency') {
-        if (i.results['score'] > 0) isResultsEmpty = false
-      }
-      if (i.type === 'Measurement::Prompting') {
-        for (let key in i.results) {
-          if (i.results[key].score > 0) isResultsEmpty = false
-        }
-      }
-      isAllEmpty.push(isResultsEmpty)
     }
+    if (i.type === 'Measurement::Probing') {
+      const arr = Object.keys(i.results)
+      if (arr.length > 0) isResultsEmpty = false
+    }
+    if (i.type === 'Measurement::Duration') {
+      if (i.results['seconds'] > 0) isResultsEmpty = false
+    }
+    if (i.type === 'Measurement::Pir') {
+      for (let key in i.results) {
+        if (i.results[key] > 0) isResultsEmpty = false
+      }
+    }
+    if (i.type === 'Measurement::Frequency') {
+      if (i.results['score'] > 0) isResultsEmpty = false
+    }
+    if (i.type === 'Measurement::Prompting') {
+      for (let key in i.results) {
+        if (i.results[key].score > 0) isResultsEmpty = false
+      }
+    }
+    isEmpties.push(isResultsEmpty)
   })
-  if (isAllEmpty.length === 0) isAllEmpty.push(false)
-  return !isAllEmpty.includes(false)
+  if (isEmpties.length === 0) isEmpties.push(false)
+  return !isEmpties.includes(false)
 })
+const showEndSession = ref<boolean>(false)
+const endSessionLoading = ref<boolean>(false)
 const openEndSession = () => {
   const unfinishedProbings: Measurement[] = sessionStore.session_measurements.filter(
     (i) => i.type === 'Measurement::Probing' && !i.submitted_at && !i.is_dropped
@@ -234,6 +224,59 @@ const openEndSession = () => {
     if (probes < trials) isNotCompletedProbes = true
     else isNotSavedProbing = true
   })
+
+  groupReasons.value = []
+  const running = runningMeasurements.value.length
+  if (running || isNotCompletedProbes || isNotSavedProbing) {
+    endSessionStatus.value = 'group_reason'
+    if (running) groupReasons.value.push(`${running} timer(s) are still running`)
+    if (isNotCompletedProbes) groupReasons.value.push('Minimum required probes have not been met')
+    if (isNotSavedProbing) groupReasons.value.push('Actions for probing have not been saved')
+  } else if (isAllMeasurementResultEmpty.value) {
+    endSessionStatus.value = 'empty_record'
+  } else {
+    endSessionStatus.value = 'normal'
+  }
+  showEndSession.value = true
+}
+const onTrunOffAllAndEndSession = async () => {
+  showEndSession.value = false
+  showReviewMode.value = true
+  cycleLoading.value = true
+  const length = sessionStore.session_measurements.length
+  for (let idx = 0; idx < length; idx++) {
+    const measurement: Measurement = sessionStore.session_measurements[idx]
+    if (!measurement.is_dropped) {
+      const params: UpdateMeasurementParams = {
+        id: measurement.id,
+        measurement: { is_dropped: true },
+        data_result: { ...measurement, is_dropped: true }
+      }
+      const { success } = await sessionStore.updateMeasurement(params)
+    }
+  }
+  endSessionStatus.value = 'normal'
+  setTimeout(() => {
+    cycleLoading.value = false
+    showEndSession.value = true
+  }, 500)
+}
+const onKeepActiveAndEndSession = () => {
+  showEndSession.value = false
+  showReviewMode.value = true
+  endSessionStatus.value = 'normal'
+  setTimeout(() => {
+    showEndSession.value = true
+  }, 500)
+}
+const onEndSession = async () => {
+  endSessionLoading.value = true
+  const { success } = await sessionStore.endSession()
+  endSessionLoading.value = false
+  if (!success) return
+  showEndSession.value = false
+  toast.success('The session has been completed.')
+  router.push(redirect.value)
 }
 </script>
 
@@ -285,9 +328,9 @@ const openEndSession = () => {
         <div class="flex justify-center">{{ recordingTime.split(':')[2] }}</div>
       </div>
     </div>
-    <AppButton class="px-4" :disabled="!appStore.network_status.connected">
-      {{ appStore.network_status.connected ? 'End' : 'Offline' }}</AppButton
-    >
+    <AppButton class="px-4" :disabled="!appStore.network_status.connected" @click="openEndSession">
+      {{ appStore.network_status.connected ? 'End' : 'Offline' }}
+    </AppButton>
   </div>
 
   <div
@@ -422,6 +465,57 @@ const openEndSession = () => {
         session.
       </div>
       <AppButton kind="plain" class="w-full" @click="showOffline = false">
+        Back to session
+      </AppButton>
+    </div>
+  </AppActionSheet>
+
+  <AppActionSheet :show="showEndSession" @close="showEndSession = false">
+    <div v-if="endSessionStatus === 'normal'" class="flex flex-col items-center gap-4">
+      <div class="text-center text-xl font-semibold">End this session?</div>
+      <div class="text-center text-sm">
+        Are you sure you want to end this session? Make sure you've reviewed all data before
+        finalizing.
+      </div>
+      <div class="grid w-full grid-cols-2 gap-2">
+        <AppButton kind="plain" @click="showEndSession = false">Cancel</AppButton>
+        <AppButton :loading="endSessionLoading" @click="onEndSession">End now</AppButton>
+      </div>
+    </div>
+    <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4">
+      <div class="text-center text-xl font-semibold">Session can't be ended</div>
+      <div class="text-center text-sm">
+        You can't end the session because of the following reason(s):
+      </div>
+      <div class="w-full px-4 text-sm">
+        <ul class="list-disc">
+          <li v-for="(text, idx) in groupReasons" :key="idx">{{ text }}</li>
+        </ul>
+      </div>
+      <div class="text-center text-sm">Please address these issues before ending the session.</div>
+      <AppButton kind="plain" class="w-full" @click="showEndSession = false">
+        Back to session
+      </AppButton>
+    </div>
+    <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col items-center gap-4">
+      <div class="text-center text-xl font-semibold">It seems you haven't recorded any data</div>
+      <img
+        alt="measurement_droped"
+        class="h-auto w-full rounded"
+        src="@/assets/measurement_droped.png"
+      />
+      <div class="text-center text-sm">
+        Please note that if you end the session now, the targets will record the data as ''0''. To
+        prevent any data recording, you can deactivate the toggle on each target. Would you like to
+        turn off the toggle for all targets?
+      </div>
+      <AppButton class="w-full" @click="onTrunOffAllAndEndSession">
+        Turn off all and end session
+      </AppButton>
+      <AppButton kind="outline" class="w-full" @click="onKeepActiveAndEndSession">
+        Keep active and end session
+      </AppButton>
+      <AppButton kind="plain" class="w-full" @click="showEndSession = false">
         Back to session
       </AppButton>
     </div>

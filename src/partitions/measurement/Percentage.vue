@@ -26,7 +26,7 @@ interface PercentageBox {
   key: number | string
   value: null | boolean
 }
-const percentageBoxes = computed(() => {
+const percentageBoxes = computed<PercentageBox[]>(() => {
   const boxes: PercentageBox[] = Object.keys(props.measurement.results).map((key) => ({
     key,
     value: props.measurement.results[key]
@@ -35,11 +35,11 @@ const percentageBoxes = computed(() => {
   const end = page.value * perPage.value
   return boxes.slice(start, end)
 })
-const percentageScore = computed(() => {
+const percentageScore = computed<number>(() => {
   const results = props.measurement.results
   const trials = Object.values(results).length
   const totalSuccess = Object.values(results).filter((i) => i).length
-  return ((totalSuccess / trials) * 100 || 0).toFixed(0)
+  return (totalSuccess / trials) * 100 || 0
 })
 
 const percentageLoading = ref<boolean>(false)
@@ -103,7 +103,7 @@ const onChangePercentage = async (box: PercentageBox) => {
       class="flex items-center justify-center gap-2 text-center text-xs font-medium text-slate-7"
     >
       <div>Goal: {{ measurement.target?.goal }}%</div>
-      <div>Score: {{ percentageScore }}%</div>
+      <div>Score: {{ percentageScore.toFixed(0) }}%</div>
     </div>
   </div>
 </template>

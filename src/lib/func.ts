@@ -7,12 +7,12 @@ interface DisplayDate {
   empty?: string
 }
 
-export const displayDate = ({ date, format = 'DD/MM/YYYY', empty = '' }: DisplayDate) => {
+export const displayDate = ({ date, format = 'DD/MM/YYYY', empty = '' }: DisplayDate): string => {
   if (!date) return empty
   return moment(date).format(format)
 }
 
-export const getMeasurementType = (type?: MeasurementType) => {
+export const getMeasurementType = (type?: MeasurementType): string => {
   if (!type) return ''
   const arr: { [key: string]: string } = {
     'Measurement::Duration': 'Duration',
@@ -25,7 +25,7 @@ export const getMeasurementType = (type?: MeasurementType) => {
   return arr[type] || ''
 }
 
-export const getTargetType = (type?: TargetType) => {
+export const getTargetType = (type?: TargetType): string => {
   if (!type) return ''
   const arr: { [key: string]: string } = {
     'Target::Duration': 'Duration',
@@ -37,7 +37,7 @@ export const getTargetType = (type?: TargetType) => {
   return arr[type] || ''
 }
 
-export const getRandomString = (prefix = '', length = 16) => {
+export const getRandomString = (prefix = '', length = 16): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   let combination = ''
   for (let i = 0; i < length; i++) {

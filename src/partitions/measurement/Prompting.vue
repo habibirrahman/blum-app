@@ -24,12 +24,35 @@ const pageCount = computed<number>(() => {
   const boxes = results.filter((i) => props.measurement.results[i].enabled).length
   return Math.ceil(boxes / perPage.value)
 })
-const promptBoxes = computed(() => {
+
+type PromptColors =
+  | 'cherry'
+  | 'blush'
+  | 'gold'
+  | 'daffodil'
+  | 'lake'
+  | 'mint'
+  | 'sky'
+  | 'hydrangeas'
+  | 'grey'
+  | 'primary'
+type PromptShapes = 'square' | 'circle' | 'triangle' | 'diamond'
+interface PromptBoxes {
+  id: number | string
+  name: string
+  color: PromptColors
+  score: number
+  shape: PromptShapes
+  enabled: boolean
+  position: number
+  abbreviation: string
+}
+const promptBoxes = computed<PromptBoxes[]>(() => {
   if (props.measurement.results) {
     const keys = Object.keys(props.measurement.results)
     if (keys && keys.length) {
-      const prompts = keys
-        .map((i) => ({ ...props.measurement.results[i], key: i }))
+      const prompts: PromptBoxes[] = keys
+        .map((key) => ({ ...props.measurement.results[key], key }) as PromptBoxes)
         .filter((i) => i.enabled)
         .sort((a, b) => a.position - b.position)
       const start = (page.value - 1) * perPage.value

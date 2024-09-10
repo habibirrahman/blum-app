@@ -77,7 +77,7 @@ const actionBeforeLunchStatus = computed<'before_schedule' | 'not_assigned' | 'b
   else if (!isLunchBeforeSchedule.value && isLunchNotAssigned) return 'not_assigned'
   else return 'both'
 })
-const lunchLoading = ref<boolean>(false)
+const startSessionLoading = ref<boolean>(false)
 const lunchDetails = computed<Schedule[]>(() => [
   {
     icon: 'ph:calendar-blank',
@@ -90,9 +90,9 @@ const lunchDetails = computed<Schedule[]>(() => [
   { icon: 'ph:user', label: sessionStore.session?.appointment?.user?.name }
 ])
 const onLaunchSession = async () => {
-  lunchLoading.value = true
+  startSessionLoading.value = true
   const { success } = await sessionStore.startSession()
-  lunchLoading.value = false
+  startSessionLoading.value = false
   if (!success) return
   showActionBeforeLunch.value = false
   router.push({ name: 'session-record', params: { slug: sessionStore.session?.slug } })
@@ -321,7 +321,7 @@ const onStartSession = () => {
     <AppButton
       :disabled="!sessionStore.session_measurements.length || !appStore.network_status.connected"
       class="w-full"
-      :loading="lunchLoading"
+      :loading="startSessionLoading"
       @click="onStartSession"
     >
       {{
@@ -379,7 +379,7 @@ const onStartSession = () => {
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
         <AppButton kind="plain" @click="showActionBeforeLunch = false">Cancel</AppButton>
-        <AppButton :loading="lunchLoading" @click="onLaunchSession">Process</AppButton>
+        <AppButton :loading="startSessionLoading" @click="onLaunchSession">Process</AppButton>
       </div>
     </div>
   </AppActionSheet>

@@ -44,6 +44,15 @@ watch(
 )
 
 const isDropped = ref<boolean>(false)
+onMounted(() => {
+  isDropped.value = props.measurement.is_dropped || false
+})
+watch(
+  () => props.measurement.is_dropped,
+  (val) => {
+    isDropped.value = val || false
+  }
+)
 const isDropLoading = ref<boolean>(false)
 const onDrop = async (bool: boolean) => {
   const params: UpdateMeasurementParams = {
@@ -78,10 +87,6 @@ const onSaveComment = async () => {
   if (!success) return
   display.value = 'target'
 }
-
-onMounted(() => {
-  isDropped.value = props.measurement.is_dropped || false
-})
 </script>
 
 <template>

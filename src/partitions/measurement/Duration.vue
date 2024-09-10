@@ -19,7 +19,7 @@ const emit = defineEmits<Emits>()
 const started = ref<boolean>(false)
 const counter = ref<number>(0)
 const timerInterval = ref<any>(null)
-const durationTiming = computed(() => {
+const durationTiming = computed<string>(() => {
   let hours: number | string = '00'
   let minutes: number | string = '00'
   let seconds: number | string = '00'
