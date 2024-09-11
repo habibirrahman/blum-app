@@ -29,7 +29,7 @@ const router = createRouter({
       component: () => import('../pages/Clients.page.vue')
     },
     {
-      path: '/client/:id',
+      path: '/client/:id/:tab',
       name: 'client',
       component: () => import('../pages/Client.page.vue')
     },

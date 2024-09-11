@@ -23,10 +23,10 @@ export interface SessionStateSchema {
   session: Session | null
   session_comments: Comment[]
   session_measurements: Measurement[]
-  sessions: Session[]
-  sessions_count: number
   upcoming_sessions: Session[]
   upcoming_sessions_count: number
+  sessions: Session[]
+  sessions_count: number
   pending_progress: SessionPendingProgress[]
 }
 
@@ -88,10 +88,10 @@ export const useSessionStore = defineStore('session', {
     session: null,
     session_comments: [],
     session_measurements: [],
-    sessions: [],
-    sessions_count: 0,
     upcoming_sessions: [],
     upcoming_sessions_count: 0,
+    sessions: [],
+    sessions_count: 0,
     pending_progress: []
   }),
   getters: {},
@@ -105,10 +105,10 @@ export const useSessionStore = defineStore('session', {
         this.session = storage?.session || null
         this.session_comments = storage?.session_comments || []
         this.session_measurements = storage?.session_measurements || []
-        this.sessions = storage?.sessions || []
-        this.sessions_count = storage?.sessions_count || 0
         this.upcoming_sessions = storage?.upcoming_sessions || []
         this.upcoming_sessions_count = storage?.upcoming_sessions_count || 0
+        this.sessions = storage?.sessions || []
+        this.sessions_count = storage?.sessions_count || 0
         this.pending_progress = storage?.pending_progress || []
         return { success: true, data }
       })
@@ -118,10 +118,10 @@ export const useSessionStore = defineStore('session', {
         session: this.session,
         session_comments: this.session_comments,
         session_measurements: this.session_measurements,
-        sessions: this.sessions,
-        sessions_count: this.sessions_count,
         upcoming_sessions: this.upcoming_sessions,
         upcoming_sessions_count: this.upcoming_sessions_count,
+        sessions: this.sessions,
+        sessions_count: this.sessions_count,
         pending_progress: this.pending_progress
       }
       const { success } = await setSessionStorage(data)
@@ -222,7 +222,13 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async getSessionComments({ id, filter }: { id: Session['id']; filter?: SessionCommentFilter }) {
+    async getSessionComments({
+      id,
+      filter
+    }: {
+      id: Session['id']
+      filter?: SessionCommentFilter
+    }): Promise<ResponseSchema> {
       if (!id) return { success: false, data: null }
       this.session_comments = this.session?.comments || []
 
@@ -247,7 +253,7 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async getSessionMeasurements({ id }: { id: Session['id'] }) {
+    async getSessionMeasurements({ id }: { id: Session['id'] }): Promise<ResponseSchema> {
       if (!id) return { success: false, data: null }
       this.session_measurements = this.session?.measurements || []
 

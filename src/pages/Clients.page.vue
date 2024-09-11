@@ -29,9 +29,9 @@ watch(page, (val, old) => {
 const query = ref<string>('')
 const queryTimeout = ref<any>(null)
 watch(query, () => {
-  clientsLoading.value = true
   clearTimeout(queryTimeout.value)
   queryTimeout.value = setTimeout(() => {
+    clientsLoading.value = true
     page.value = 1
     fetchClients()
   }, 1500)
@@ -263,7 +263,7 @@ onMounted(async () => {
       <RouterLink
         v-for="client in clientStore.clients"
         :key="client.id"
-        :to="{ name: 'client', params: { id: client.id } }"
+        :to="{ name: 'client', params: { id: client.id, tab: 'draft-sessions' } }"
       >
         <ClientItem :client="client" />
       </RouterLink>

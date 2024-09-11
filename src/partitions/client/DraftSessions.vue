@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { TransitionRoot } from '@headlessui/vue'
+import { useRoute, useRouter, type RouteParamsRaw } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
-import { useSessionStore } from '@/stores/session.store'
-import type { Session } from '@/lib/types'
+import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
-import AppButton from '@/components/AppButton.vue'
+import moment from 'moment'
+import UpcomingSession from '../UpcomingSession.vue'
+import type { Session } from '@/lib/types'
+import SessionItem from '../SessionItem.vue'
+import AppPagination from '@/components/AppPagination.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
-import AppPagination from '@/components/AppPagination.vue'
-import UpcomingSession from '@/partitions/UpcomingSession.vue'
-import SessionItem from '@/partitions/SessionItem.vue'
-import moment from 'moment'
+import AppButton from '@/components/AppButton.vue'
+import { TransitionRoot } from '@headlessui/vue'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
-const sessionStore = useSessionStore()
+const clientStore = useClientStore()
 
 const upcomingLoading = ref<boolean>(false)
 const sessionsLoading = ref<boolean>(false)
@@ -26,7 +26,7 @@ const page = ref<number>(1)
 const perPage = ref<number>(25)
 watch(page, (val, old) => {
   if (val !== old) {
-    fetchSessions()
+    fetchDraftSession()
   }
 })
 
@@ -37,13 +37,14 @@ watch(query, () => {
   queryTimeout.value = setTimeout(() => {
     sessionsLoading.value = true
     page.value = 1
-    fetchSessions()
+    fetchDraftSession()
   }, 1500)
 })
 
-type Date = 'isoWeeks' | 'months' | ''
+type Date = 'days' | 'isoWeeks' | 'months' | ''
 const date = ref<Date>('')
 const dateOptions: { value: Date; label: string }[] = [
+  { value: 'days', label: 'This day' },
   { value: 'isoWeeks', label: 'This week' },
   { value: 'months', label: 'This month' }
 ]
@@ -53,7 +54,7 @@ watch(date, (val) => {
   }
   sessionsLoading.value = true
   page.value = 1
-  fetchSessions()
+  fetchDraftSession()
 })
 
 type Status = 'scheduled' | 'unscheduled' | ''
@@ -72,7 +73,7 @@ const onResetStatus = () => {
   selectStatus.value = ''
   showStatus.value = false
   page.value = 1
-  fetchSessions()
+  fetchDraftSession()
 }
 const onApplyStatus = () => {
   status.value = selectStatus.value
@@ -81,34 +82,34 @@ const onApplyStatus = () => {
   }
   showStatus.value = false
   page.value = 1
-  fetchSessions()
+  fetchDraftSession()
 }
 
-type Sort = 'newest_session_id' | 'oldest_session_id' | 'most_recent_schedule' | 'earliest_schedule'
-const sort = ref<Sort>('newest_session_id')
-const selectSort = ref<Sort>('newest_session_id')
+type Sort = 'newest' | 'oldest' | 'duration_longest' | 'duration_shortest'
+const sort = ref<Sort>('newest')
+const selectSort = ref<Sort>('newest')
 const sortOptions: { value: Sort; label: string }[] = [
-  { value: 'newest_session_id', label: 'Newest session ID' },
-  { value: 'oldest_session_id', label: 'Oldest session ID' },
-  { value: 'most_recent_schedule', label: 'Most recent schedule' },
-  { value: 'earliest_schedule', label: 'Earliest schedule' }
+  { value: 'newest', label: 'Most recent' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'duration_longest', label: 'Duration - longest' },
+  { value: 'duration_shortest', label: 'Duration - shortest' }
 ]
 const showSort = ref<boolean>(false)
 watch(showSort, () => {
   selectSort.value = sort.value
 })
 const onResetSort = () => {
-  sort.value = 'newest_session_id'
-  selectSort.value = 'newest_session_id'
+  sort.value = 'newest'
+  selectSort.value = 'newest'
   showSort.value = false
   page.value = 1
-  fetchSessions()
+  fetchDraftSession()
 }
 const onApplySort = () => {
   sort.value = selectSort.value
   showSort.value = false
   page.value = 1
-  fetchSessions()
+  fetchDraftSession()
 }
 
 const params = computed<string>(() => {
@@ -119,31 +120,33 @@ const params = computed<string>(() => {
     p += `&start_date=${d.startOf(date.value).format('YYYY-MM-DD')}`
     p += `&end_date=${d.endOf(date.value).format('YYYY-MM-DD')}`
   }
-  if (status.value) p += `&status=${status.value}`
+  p += `&status=draft,ongoing`
+  if (status.value) p += `,${status.value}`
   p += `&sort=${sort.value}`
   return p
 })
 
-async function fetchUpcoming() {
+async function fetchUpcomingSessions() {
   upcomingLoading.value = true
-  const { success } = await sessionStore.getUpcomingSessions()
+  const id = Number(route.params.id)
+  const { success } = await clientStore.getClientUpcomingSessions({ id })
   upcomingLoading.value = false
   if (!success) return
 }
-async function fetchSessions() {
+async function fetchDraftSession() {
   sessionsLoading.value = true
-  const { success } = await sessionStore.getSessions({ params: params.value })
+  const id = Number(route.params.id)
+  const { success } = await clientStore.getClientDraftSessions({ id, params: params.value })
   sessionsLoading.value = false
-  if (!success) return
-  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+  if (!success) {
+    document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+    return
+  }
 }
 
-onMounted(async () => {
-  upcomingLoading.value = true
-  /** generate session.store from storage */
-  await sessionStore.generateSessionStore()
-  fetchUpcoming()
-  fetchSessions()
+onMounted(() => {
+  fetchUpcomingSessions()
+  fetchDraftSession()
 })
 
 const showJoinConfirmation = ref<boolean>(false)
@@ -174,14 +177,14 @@ const onOpenSession = (session: Session) => {
 <template>
   <div
     v-if="upcomingLoading || sessionsLoading"
-    class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30"
+    class="absolute top-0 z-[99] grid h-[calc(100vh-80px)] w-screen place-content-center bg-slate-10/30"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
   </div>
 
   <div
     class="space-y-3 pt-3 transition-all"
-    :class="{ 'bg-chestnut-1': sessionStore.upcoming_sessions_count }"
+    :class="{ 'bg-chestnut-1': clientStore.upcoming_sessions_count }"
   >
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Draft Sessions</div>
@@ -189,27 +192,27 @@ const onOpenSession = (session: Session) => {
         v-if="!sessionsLoading"
         class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
       >
-        {{ sessionStore.sessions_count }}
+        {{ clientStore.draft_sessions_count }}
       </div>
     </div>
-    <div v-if="sessionStore.upcoming_sessions_count" class="space-y-1.5">
+    <div v-if="clientStore.upcoming_sessions_count" class="space-y-1.5">
       <div class="flex items-center gap-1.5 px-4">
-        <div class="text-xs font-semibold text-dark-purple-1">Your upcoming sessions for today</div>
+        <div class="text-xs font-semibold text-dark-purple-1">This week sessions with you</div>
         <div
           class="flex h-6 min-w-6 items-center justify-center rounded bg-white px-1 text-xs font-semibold text-dark-purple-1"
         >
-          {{ sessionStore.upcoming_sessions_count }}
+          {{ clientStore.upcoming_sessions_count }}
         </div>
       </div>
       <div class="pl-4">
         <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
           <RouterLink
-            v-for="session in sessionStore.upcoming_sessions"
+            v-for="session in clientStore.upcoming_sessions"
             :key="session.id"
             :to="{
               name: 'pre-session-record',
               params: { slug: session?.slug },
-              query: { redirect: '/home' }
+              query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
             }"
           >
             <UpcomingSession :session="session" />
@@ -219,7 +222,7 @@ const onOpenSession = (session: Session) => {
     </div>
   </div>
 
-  <div class="sticky top-0 space-y-3 bg-white pt-3">
+  <div class="space-y-3 bg-white pt-3">
     <div class="px-4">
       <AppTextInput
         name="query"
@@ -268,15 +271,19 @@ const onOpenSession = (session: Session) => {
   </div>
 
   <div
-    v-if="!sessionStore.sessions_count"
+    v-if="!clientStore.draft_sessions_count"
     class="flex h-64 w-full items-center justify-center px-4"
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
-      No draft sessions scheduled for this {{ date === 'isoWeeks' ? 'week' : 'month' }}.
+      No draft sessions scheduled for
+      {{ date === 'days' ? 'day' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
+    </div>
+    <div v-else-if="query" class="text-center text-sm text-slate-8">
+      Sorry, no drafts match your search. Try searching with a different therapist name or session
+      ID.
     </div>
     <div v-else class="text-center text-sm text-slate-8">
-      Oops! No draft sessions fit your filter criteria. Try changing the filter to find more
-      results!
+      No draft sessions are available yet. Create drafts on your desktop to see them here.
     </div>
   </div>
   <div v-else>
@@ -284,25 +291,25 @@ const onOpenSession = (session: Session) => {
       <span>Showing </span>
       <span>
         {{ (page - 1) * perPage + 1 }}-{{
-          page * perPage > sessionStore.sessions_count
-            ? sessionStore.sessions_count
+          page * perPage > clientStore.draft_sessions_count
+            ? clientStore.draft_sessions_count
             : page * perPage
         }}
       </span>
-      <span> of {{ sessionStore.sessions_count }}</span>
+      <span> of {{ clientStore.draft_sessions_count }}</span>
     </div>
     <div class="px-4">
       <SessionItem
-        v-for="session in sessionStore.sessions"
+        v-for="session in clientStore.draft_sessions"
         :key="session.id"
         :session="session"
-        :title="session.client?.name || 'Client name'"
+        :title="session.appointment_id ? `With ${session.appointment?.user?.name}` : `Unscheduled`"
         @click="onOpenSession(session)"
       />
     </div>
     <AppPagination
       :page="page"
-      :total_count="sessionStore.sessions_count"
+      :total_count="clientStore.draft_sessions_count"
       @change="page = $event"
     />
   </div>

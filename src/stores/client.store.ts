@@ -1,11 +1,19 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import type { Client } from '@/lib/types'
+import type { Client, Session } from '@/lib/types'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getClientStorage, setClientStorage } from '@/plugins/preferences.plugin'
+import { onlyUniqueId } from '@/lib/func'
+import moment from 'moment'
 
 export interface ClientStateSchema {
   client: Client | null
+  upcoming_sessions: Session[]
+  upcoming_sessions_count: number
+  draft_sessions: Session[]
+  draft_sessions_count: number
+  past_sessions: Session[]
+  past_sessions_count: number
   clients: Client[]
   clients_count: number
 }
@@ -13,6 +21,12 @@ export interface ClientStateSchema {
 export const useClientStore = defineStore('client', {
   state: (): ClientStateSchema => ({
     client: null,
+    upcoming_sessions: [],
+    upcoming_sessions_count: 0,
+    draft_sessions: [],
+    draft_sessions_count: 0,
+    past_sessions: [],
+    past_sessions_count: 0,
     clients: [],
     clients_count: 0
   }),
@@ -25,6 +39,12 @@ export const useClientStore = defineStore('client', {
         }
         const storage = data as ClientStateSchema
         this.client = storage.client || null
+        this.upcoming_sessions = storage.upcoming_sessions || []
+        this.upcoming_sessions_count = storage.upcoming_sessions_count || 0
+        this.draft_sessions = storage.draft_sessions || []
+        this.draft_sessions_count = storage.draft_sessions_count || 0
+        this.past_sessions = storage.past_sessions || []
+        this.past_sessions_count = storage.past_sessions_count || 0
         this.clients = storage.clients || []
         this.clients_count = storage.clients_count || 0
         return { success: true, data }
@@ -33,6 +53,12 @@ export const useClientStore = defineStore('client', {
     async syncClientStore(): Promise<ResponseSchema> {
       const data: ClientStateSchema = {
         client: this.client,
+        upcoming_sessions: this.upcoming_sessions,
+        upcoming_sessions_count: this.upcoming_sessions_count,
+        draft_sessions: this.draft_sessions,
+        draft_sessions_count: this.draft_sessions_count,
+        past_sessions: this.past_sessions,
+        past_sessions_count: this.past_sessions_count,
         clients: this.clients,
         clients_count: this.clients_count
       }
@@ -62,6 +88,115 @@ export const useClientStore = defineStore('client', {
         .get(`/api/v1/clients/${id}`)
         .then(async ({ data }) => {
           this.setClient(data)
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getClientUpcomingSessions({ id }: { id: Client['id'] }): Promise<ResponseSchema> {
+      if (!id) return { success: false, data: null }
+      this.upcoming_sessions = this.client?.upcoming_sessions || []
+
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        return {
+          success: true,
+          data: { sessions: this.upcoming_sessions, total_count: this.upcoming_sessions_count }
+        }
+      }
+
+      let params = '?'
+      const d = moment()
+      params += `start_date=${d.startOf('isoWeeks').format('YYYY-MM-DD')}`
+      params += `&end_date=${d.endOf('isoWeeks').format('YYYY-MM-DD')}`
+      params += `&sort=oldest`
+      params += `&status=draft,ongoing,scheduled`
+
+      return axios
+        .get(`/api/v1/clients/${id}/sessions${params}`)
+        .then(async ({ data }) => {
+          this.upcoming_sessions = data.sessions
+          this.upcoming_sessions_count = data.total_count
+          const client: Client = {
+            ...this.client,
+            upcoming_sessions: [...data.sessions, ...(this.client?.upcoming_sessions || [])].filter(
+              onlyUniqueId
+            )
+          }
+          this.setClient(client)
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getClientDraftSessions({
+      id,
+      params
+    }: {
+      id: Client['id']
+      params: string
+    }): Promise<ResponseSchema> {
+      if (!id) return { success: false, data: null }
+      this.draft_sessions = this.client?.draft_sessions || []
+
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        return {
+          success: true,
+          data: { sessions: this.draft_sessions, total_count: this.draft_sessions_count }
+        }
+      }
+
+      return axios
+        .get(`/api/v1/clients/${id}/sessions${params}`)
+        .then(async ({ data }) => {
+          this.draft_sessions = data.sessions
+          this.draft_sessions_count = data.total_count
+          const client: Client = {
+            ...this.client,
+            draft_sessions: [...data.sessions, ...(this.client?.draft_sessions || [])].filter(
+              onlyUniqueId
+            )
+          }
+          this.setClient(client)
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getClientPastSessions({
+      id,
+      params
+    }: {
+      id: Client['id']
+      params: string
+    }): Promise<ResponseSchema> {
+      if (!id) return { success: false, data: null }
+      this.past_sessions = this.client?.past_sessions || []
+
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        return {
+          success: true,
+          data: { sessions: this.past_sessions, total_count: this.past_sessions_count }
+        }
+      }
+
+      return axios
+        .get(`/api/v1/clients/${id}/sessions${params}&status=completed,cancelled`)
+        .then(async ({ data }) => {
+          this.past_sessions = data.sessions
+          this.past_sessions_count = data.total_count
+          const client: Client = {
+            ...this.client,
+            past_sessions: [...data.sessions, ...(this.client?.past_sessions || [])].filter(
+              onlyUniqueId
+            )
+          }
+          this.setClient(client)
           return { success: true, data }
         })
         .catch(({ response }) => {

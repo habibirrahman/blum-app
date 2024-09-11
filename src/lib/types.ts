@@ -21,7 +21,7 @@ export interface Session {
   id?: number
   slug?: string
   name?: string
-  status?: string // not
+  status?: 'draft' | 'ongoing' | 'completed' | 'cancelled'
   start_time?: string
   end_time?: string
   deleted_at?: string
@@ -61,6 +61,11 @@ export interface Client {
   documents?: any[] // not
   center_id?: number // not
   prospect_id?: number // not
+
+  // for storage
+  upcoming_sessions?: Session[]
+  draft_sessions?: Session[]
+  past_sessions?: Session[]
 }
 
 export interface Assessment {

@@ -42,10 +42,8 @@ const filterOptions: { value: SessionCommentFilter; label: string }[] = [
 
 async function fetchComments() {
   commentsLoading.value = true
-  const { success } = await sessionStore.getSessionComments({
-    id: sessionStore.session?.id,
-    filter: filter.value
-  })
+  const id = sessionStore.session?.id
+  const { success } = await sessionStore.getSessionComments({ id, filter: filter.value })
   commentsLoading.value = false
   if (!success) return
   document.getElementById('session-comments')?.scroll({ top: 0, behavior: 'smooth' })
