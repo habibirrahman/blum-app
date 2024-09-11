@@ -1,17 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
-import { Icon } from '@iconify/vue'
-import type { Target, TargetStatus } from '@/lib/types'
-import AppPagination from '@/components/AppPagination.vue'
-import AppTextInput from '@/components/AppTextInput.vue'
-import AppActionSheet from '@/components/AppActionSheet.vue'
-import AppButton from '@/components/AppButton.vue'
-import TargetItem from '../TargetItem.vue'
 import AppChip from '@/components/AppChip.vue'
-import { displayDate, getClientDischargeReason, getTargetType } from '@/lib/func'
+import { displayDate, getClientDischargeReason } from '@/lib/func'
 
 const route = useRoute()
 const router = useRouter()

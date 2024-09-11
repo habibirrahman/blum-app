@@ -5,6 +5,7 @@ import { useAppStore, type NetworkStatus } from './stores/app.store'
 import { Icon } from '@iconify/vue'
 import { Network } from '@capacitor/network'
 import { useScreenSafeArea } from '@vueuse/core'
+import AppButton from './components/AppButton.vue'
 
 const {
   top: paddingTop,
@@ -17,9 +18,15 @@ const router = useRouter()
 const appStore = useAppStore()
 
 const loadingApp = ref<boolean>(true)
-const routeName = computed<string>(() => route.name?.toString() || '')
+const routeName = computed<string>(() => route.name?.toString() || 'signin')
+const isShowRunningSession = computed<boolean>(
+  () => appStore.running_sessions.length > 0 && routeName.value !== 'session-record'
+)
 const isUseNav = computed<boolean>(
-  () => routeName.value !== 'signin' && !routeName.value.includes('record')
+  () =>
+    routeName.value !== 'signin' &&
+    !routeName.value.includes('record') &&
+    !isShowRunningSession.value
 )
 const networkStatus: NetworkStatus = reactive({
   connected: false,
@@ -122,7 +129,56 @@ const navigations = computed<Nav[]>(() => {
       >
         <div v-if="!networkStatus.connected">You're offline. Connect to sync your data.</div>
       </div>
-      <RouterView />
+
+      <div
+        v-if="isShowRunningSession"
+        class="flex min-h-screen w-screen items-center justify-center bg-white"
+      >
+        <div
+          class="absolute top-0 -z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
+        ></div>
+        <div class="flex max-h-full flex-col items-center gap-4 px-6 py-6">
+          <div class="flex flex-col items-center gap-2">
+            <div class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3">
+              <div class="text-xl font-semibold text-lime-8">
+                {{ appStore.running_sessions[0].client?.name?.charAt(0) }}
+              </div>
+            </div>
+            <div class="text-center text-xl font-semibold text-dark-purple-1">
+              You've started {{ appStore.running_sessions.length }} session(s) on the web:
+            </div>
+            <div class="flex flex-col items-center gap-2">
+              <div
+                v-for="session in appStore.running_sessions"
+                :key="session.id"
+                class="text-center text-sm text-light-purple-4"
+              >
+                Session ID {{ session?.id }}
+              </div>
+            </div>
+            <div
+              v-if="appStore.running_sessions.length > 1"
+              class="text-center text-sm text-light-purple-4"
+            >
+              You'll automatically join the earliest session (Session ID
+              {{ appStore.running_sessions[0].id }}), then proceed to the other.
+            </div>
+          </div>
+          <RouterLink
+            :to="{
+              name: 'session-record',
+              params: { slug: appStore.running_sessions[0].slug },
+              query: { redirect: '/home' }
+            }"
+            class="w-full"
+          >
+            <AppButton class="w-full">
+              Join Session ID {{ appStore.running_sessions[0].id }}
+            </AppButton>
+          </RouterLink>
+        </div>
+      </div>
+      <RouterView v-else />
     </div>
 
     <footer v-if="isUseNav" class="fixed bottom-0 z-[100] flex h-14 w-screen bg-white">

@@ -332,9 +332,11 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async endSession() {
+      const { getRunningSessions } = useAppStore()
       return axios
         .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'completed' } })
         .then(async ({ data }) => {
+          await getRunningSessions()
           this.session = data
           this.syncSessionStore()
           return { success: true, data }

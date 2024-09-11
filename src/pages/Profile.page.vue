@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { getUserRole } from '@/lib/func'
-import { useAppStore } from '@/stores/app.store'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getUserRole } from '@/lib/func'
+import { useAppStore } from '@/stores/app.store'
 import { Icon } from '@iconify/vue'
+import { useToast } from 'vue-toastification'
 
 const router = useRouter()
+const toast = useToast()
 const appStore = useAppStore()
 const signoutLoading = ref<boolean>(false)
 
@@ -14,6 +16,7 @@ async function onSignout() {
   const { success } = await appStore.signout()
   signoutLoading.value = false
   if (success) {
+    toast.success("You're logged out. Have a great day!")
     router.push({ name: 'signin' })
   }
 }

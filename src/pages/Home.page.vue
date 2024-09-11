@@ -389,17 +389,17 @@ const onOpenSession = (session: Session) => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[101] flex h-screen w-screen items-center justify-center rounded border-2 bg-white"
+    class="fixed left-0 top-0 z-[101] flex h-screen w-screen items-center justify-center bg-white"
   >
     <div
       class="absolute top-0 -z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
     ></div>
     <div class="flex flex-col items-center gap-4 px-6">
       <div class="flex flex-col items-center gap-2">
-        <div
-          class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3 text-xl font-semibold text-lime-8"
-        >
-          {{ sessionToJoin?.client?.name?.charAt(0) }}
+        <div class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3">
+          <div class="text-xl font-semibold text-lime-8">
+            {{ sessionToJoin?.client?.name?.charAt(0) }}
+          </div>
         </div>
         <div class="text-sm text-light-purple-4">Session ID {{ sessionToJoin?.id }}</div>
         <div class="text-center text-xl font-semibold text-dark-purple-1">
@@ -408,9 +408,9 @@ const onOpenSession = (session: Session) => {
         <div class="flex flex-col items-center gap-4 text-sm text-light-purple-5">
           <div class="text-center">
             This session with
-            <span class="font-semibold">{{ sessionToJoin?.client?.name }}</span> is currently being
-            conducted by <span class="font-semibold">{{ sessionToJoin?.user?.name }}</span
-            >.
+            <span class="font-semibold">{{ sessionToJoin?.client?.name }}</span>
+            is currently being conducted by
+            <span class="font-semibold">{{ sessionToJoin?.user?.name }}.</span>
           </div>
           <div class="text-center">
             If you join,
