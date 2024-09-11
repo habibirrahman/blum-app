@@ -308,7 +308,7 @@ export const useSessionStore = defineStore('session', {
       }
 
       return axios
-        .get('/api/v1/sessions/draft_sessions?upcoming=true')
+        .get('/api/v1/sessions/draft_sessions?upcoming=daily&page=1&per_page=5')
         .then(async ({ data }) => {
           this.upcoming_sessions = data.sessions
           this.upcoming_sessions_count = data.total_count
@@ -453,10 +453,24 @@ export const useSessionStore = defineStore('session', {
     }: UpdateSessionCommentParams) {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        this.pending_progress.push({
-          name: 'update_comment',
-          params: { client_id, comment_id, type, session_comment, assessment, data_result }
-        })
+        if (typeof comment_id === 'number') {
+          this.pending_progress.push({
+            name: 'update_comment',
+            params: { client_id, comment_id, type, session_comment, assessment, data_result }
+          })
+        } else {
+          type CreateParams = CreateSessionCommentParams
+          const idx = this.pending_progress.findIndex((i) => {
+            return (i.params as CreateParams).data_result.id === comment_id
+          })
+          if (idx > -1) {
+            const newParams = { ...(this.pending_progress[idx].params as CreateParams) }
+            newParams.session_comment = session_comment as CreateParams['session_comment']
+            newParams.assessment = assessment as CreateParams['assessment']
+            newParams.data_result = data_result as CreateParams['data_result']
+            this.pending_progress[idx].params = newParams
+          }
+        }
         this.setSessionComment(data_result)
         return { success: true, data: data_result }
       }
@@ -493,10 +507,18 @@ export const useSessionStore = defineStore('session', {
     async deleteSessionComment({ client_id, comment_id, type }: DeleteSessionCommentParams) {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        this.pending_progress.push({
-          name: 'delete_comment',
-          params: { client_id, comment_id, type }
-        })
+        if (typeof comment_id === 'number') {
+          this.pending_progress.push({
+            name: 'delete_comment',
+            params: { client_id, comment_id, type }
+          })
+        } else {
+          this.pending_progress = [
+            ...this.pending_progress.filter((i) => {
+              return (i.params as CreateSessionCommentParams).data_result.id !== comment_id
+            })
+          ]
+        }
         this.removeSessionComment(comment_id)
         return { success: true }
       }

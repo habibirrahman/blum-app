@@ -19,6 +19,7 @@ const sessionStore = useSessionStore()
 const sessionLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
 const isScheduled = computed<boolean>(() => sessionStore.session?.appointment_id !== null)
+const showComments = ref<boolean>(true)
 
 async function fetchComments() {
   const id = sessionStore.session?.id
@@ -184,42 +185,42 @@ const onStartSession = () => {
     </div>
     <div class="space-y-6 py-6">
       <div
+        v-if="sessionStore.session_measurements.length"
+        class="px-4 text-center text-sm text-dark-purple-1"
+      >
+        Before you begin this session, take a moment to review the targets and the comments.
+      </div>
+
+      <div v-if="sessionStore.session_comments.length" class="space-y-2 px-4">
+        <div
+          class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1"
+          @click="showComments = !showComments"
+        >
+          <div class="text-2xl font-bold">{{ sessionStore.session_comments.length }}</div>
+          <div class="text-sm">comment(s)</div>
+          <Icon
+            icon="ph:caret-up"
+            class="text-sm transition-all"
+            :class="{ 'rotate-180': !showComments }"
+          />
+        </div>
+        <div class="space-y-2 overflow-hidden transition-all" :class="{ 'h-0': !showComments }">
+          <CommentItem
+            v-for="comment in sessionStore.session_comments"
+            :key="comment.id"
+            :comment="comment"
+          />
+        </div>
+      </div>
+
+      <div
         v-if="!sessionStore.session_measurements.length"
         class="flex h-[calc(100vh/2)] flex-col items-center justify-center px-4 text-center text-sm text-dark-purple-1"
       >
         <div>Whoops, no targets here!</div>
         <div>Add targets from the desktop to kick off your session.</div>
       </div>
-      <div v-else class="px-4 text-center text-sm text-dark-purple-1">
-        Before you begin this session, take a moment to review the targets and the comments.
-      </div>
-      <div v-if="sessionStore.session_comments.length" class="space-y-2 px-4">
-        <div class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1">
-          <div class="text-2xl font-bold">{{ sessionStore.session_comments.length }}</div>
-          <div class="text-sm">comment(s)</div>
-        </div>
-        <CommentItem
-          v-for="comment in sessionStore.session_comments"
-          :key="comment.id"
-          :comment="comment"
-        />
-        <div
-          v-for="comment in sessionStore.session_comments"
-          :key="comment.id"
-          class="w-full space-y-2 rounded border border-prim-4 bg-white px-4 py-3"
-          :style="{ boxShadow: '4px 4px 0px 0px #D6C7E066' }"
-        >
-          <div class="flex items-center justify-between gap-4">
-            <div class="flex h-5 items-center truncate rounded-full bg-lime-4 p-2">
-              <div class="truncate text-xs font-medium text-lime-9">{{ comment.user_name }}</div>
-            </div>
-            <div class="text-xs text-slate-8">{{ displayDate({ date: comment.created_at }) }}</div>
-          </div>
-          <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
-          <div class="whitespace-pre-line text-sm text-slate-8" v-html="comment.body"></div>
-        </div>
-      </div>
-      <div v-if="sessionStore.session_measurements.length" class="space-y-2 px-4">
+      <div v-else class="space-y-2 px-4">
         <div class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1">
           <div class="text-2xl font-bold">{{ sessionStore.session_measurements.length }}</div>
           <div class="text-sm">target(s)</div>
@@ -300,7 +301,8 @@ const onStartSession = () => {
             </div>
             <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
-              {{ measurement.target?.description }}
+              <div v-if="!measurement.target?.description" class="italic">No description</div>
+              <div v-else>{{ measurement.target?.description }}</div>
             </div>
             <div
               v-if="measurement.target?.last_phase_line"

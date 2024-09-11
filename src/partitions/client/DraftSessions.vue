@@ -85,22 +85,20 @@ const onApplyStatus = () => {
   fetchDraftSession()
 }
 
-type Sort = 'newest' | 'oldest' | 'duration_longest' | 'duration_shortest'
-const sort = ref<Sort>('newest')
-const selectSort = ref<Sort>('newest')
+type Sort = 'newest_session_id' | 'oldest_session_id'
+const sort = ref<Sort>('newest_session_id')
+const selectSort = ref<Sort>('newest_session_id')
 const sortOptions: { value: Sort; label: string }[] = [
-  { value: 'newest', label: 'Most recent' },
-  { value: 'oldest', label: 'Oldest' },
-  { value: 'duration_longest', label: 'Duration - longest' },
-  { value: 'duration_shortest', label: 'Duration - shortest' }
+  { value: 'newest_session_id', label: 'Newest session ID' },
+  { value: 'oldest_session_id', label: 'Oldest session ID' }
 ]
 const showSort = ref<boolean>(false)
 watch(showSort, () => {
   selectSort.value = sort.value
 })
 const onResetSort = () => {
-  sort.value = 'newest'
-  selectSort.value = 'newest'
+  sort.value = 'newest_session_id'
+  selectSort.value = 'newest_session_id'
   showSort.value = false
   page.value = 1
   fetchDraftSession()
@@ -197,11 +195,19 @@ const onOpenSession = (session: Session) => {
     </div>
     <div v-if="clientStore.upcoming_sessions_count" class="space-y-1.5">
       <div class="flex items-center gap-1.5 px-4">
-        <div class="text-xs font-semibold text-dark-purple-1">This week sessions with you</div>
+        <div class="text-xs font-semibold text-dark-purple-1">
+          Your {{ clientStore.upcoming_sessions.length }} session(s) for this week
+        </div>
         <div
-          class="flex h-6 min-w-6 items-center justify-center rounded bg-white px-1 text-xs font-semibold text-dark-purple-1"
+          v-if="clientStore.upcoming_sessions_count > clientStore.upcoming_sessions.length"
+          class="h-1 w-1 shrink-0 rounded bg-light-purple-4"
+        ></div>
+        <div
+          v-if="clientStore.upcoming_sessions_count > clientStore.upcoming_sessions.length"
+          class="text-xs text-light-purple-4"
         >
-          {{ clientStore.upcoming_sessions_count }}
+          {{ clientStore.upcoming_sessions_count - clientStore.upcoming_sessions.length }}
+          remaining
         </div>
       </div>
       <div class="pl-4">

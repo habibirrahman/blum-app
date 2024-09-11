@@ -53,22 +53,22 @@ watch(date, (val) => {
   fetchPastSessions()
 })
 
-type Sort = 'newest' | 'oldest' | 'duration_longest' | 'duration_shortest'
-const sort = ref<Sort>('newest')
-const selectSort = ref<Sort>('newest')
+type Sort = 'newest_session_id' | 'oldest_session_id' | 'newest' | 'oldest'
+const sort = ref<Sort>('newest_session_id')
+const selectSort = ref<Sort>('newest_session_id')
 const sortOptions: { value: Sort; label: string }[] = [
-  { value: 'newest', label: 'Most recent' },
-  { value: 'oldest', label: 'Oldest' },
-  { value: 'duration_longest', label: 'Duration - longest' },
-  { value: 'duration_shortest', label: 'Duration - shortest' }
+  { value: 'newest_session_id', label: 'Newest session ID' },
+  { value: 'oldest_session_id', label: 'Oldest session ID' },
+  { value: 'newest', label: 'Most recent completed session' },
+  { value: 'oldest', label: 'Oldest completed session' }
 ]
 const showSort = ref<boolean>(false)
 watch(showSort, () => {
   selectSort.value = sort.value
 })
 const onResetSort = () => {
-  sort.value = 'newest'
-  selectSort.value = 'newest'
+  sort.value = 'newest_session_id'
+  selectSort.value = 'newest_session_id'
   showSort.value = false
   page.value = 1
   fetchPastSessions()

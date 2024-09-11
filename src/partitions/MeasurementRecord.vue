@@ -91,8 +91,8 @@ const onSaveComment = async () => {
 
 <template>
   <div
-    class="relative w-[320px] shrink-0 rounded transition-all"
-    :class="{ 'h-[500px]': !is_collapsed, 'h-[118px]': is_collapsed }"
+    class="relative shrink-0 rounded transition-all"
+    :class="{ 'h-[500px] w-[320px]': !is_collapsed, 'h-[120px] w-full': is_collapsed }"
     @click="emit('set-focus')"
   >
     <div
@@ -252,7 +252,8 @@ const onSaveComment = async () => {
               </div>
             </div>
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
-              {{ measurement.target?.description }}
+              <div v-if="!measurement.target?.description" class="italic">No description</div>
+              <div v-else>{{ measurement.target?.description }}</div>
             </div>
             <div
               v-if="measurement.target?.last_phase_line"

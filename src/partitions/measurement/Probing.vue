@@ -47,7 +47,9 @@ const pageCount = computed<number>(() => {
   const results = props.measurement.results
   const trial = props.measurement.target?.probing_number_of_trial || 0
   let circles = Object.keys(results).length
-  if (!props.measurement.submitted_at && circles >= trial) circles++
+  // if (!props.measurement.submitted_at && circles >= trial) {
+  //   circles++
+  // }
   return Math.ceil(circles / perPage.value)
 })
 interface ProbingCircle {
@@ -66,9 +68,9 @@ const probingCircles = computed<ProbingCircle[]>(() => {
     if (idx > -1) circles[idx].value = results[key]
     else circles.push({ key, value: results[key] })
   }
-  if (!props.measurement.submitted_at && Object.keys(results).length >= trial) {
-    circles.push({ key: 0, value: 'empty' })
-  }
+  // if (!props.measurement.submitted_at && Object.keys(results).length >= trial) {
+  //   circles.push({ key: 0, value: 'empty' })
+  // }
   const start = (page.value - 1) * perPage.value
   const end = page.value * perPage.value
   return circles.slice(start, end)
@@ -95,8 +97,7 @@ const onAdd = async (bool: boolean) => {
   const { success } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
   if (!success) return
-  const newLength = Object.keys(params.results).length
-  page.value = Math.floor(newLength / perPage.value) + 1
+  page.value = pageCount.value
   onDisplayPopup()
 }
 const onRemove = async (circle: ProbingCircle) => {
@@ -120,6 +121,7 @@ const onRemove = async (circle: ProbingCircle) => {
   const { success } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
   if (!success) return
+  page.value = pageCount.value
   onDisplayPopup()
 }
 
@@ -274,7 +276,8 @@ const onSave = async () => {
     class="flex flex-col content-center items-center justify-center gap-2 transition-all"
     :class="{
       'h-full w-full': !is_collapsed,
-      'absolute mb-2 w-64 rounded border border-prim-3 bg-white py-3': is_collapsed,
+      'absolute left-1/2 mb-2 w-64 -translate-x-1/2 rounded border border-prim-3 bg-white py-3':
+        is_collapsed,
       'bottom-full opacity-100': is_collapsed && showPopup,
       '-z[1] bottom-0 opacity-0': is_collapsed && !showPopup
     }"
@@ -304,6 +307,15 @@ const onSave = async () => {
         />
       </div>
     </div>
+    <div v-if="is_collapsed" class="flex h-2 items-center justify-center gap-2">
+      <div
+        v-for="n in pageCount"
+        :key="n"
+        :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
+        class="h-2 w-2 rounded-full transition-all"
+        @click="page = n"
+      ></div>
+    </div>
     <div v-if="measurement.submitted_at && !is_collapsed" class="flex w-60 justify-center">
       <AppChip :chip="measurement.marked_as" />
     </div>
@@ -316,10 +328,19 @@ const onSave = async () => {
     >
       <AppChip :chip="measurement.marked_as" />
     </div>
-    <div class="flex flex-col" :class="{ 'gap-4': !is_collapsed, 'gap-0': is_collapsed }">
+    <div v-if="!is_collapsed" class="mb-4 flex h-2 items-center justify-center gap-2">
+      <div
+        v-for="n in pageCount"
+        :key="n"
+        :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
+        class="h-2 w-2 rounded-full transition-all"
+        @click="page = n"
+      ></div>
+    </div>
+    <div class="flex flex-col" :class="{ 'gap-4': !is_collapsed, 'gap-0 pt-2': is_collapsed }">
       <div
         class="flex items-center justify-center"
-        :class="{ 'scale-75 gap-3': is_collapsed, 'gap-4': !is_collapsed }"
+        :class="{ 'scale-90 gap-3': is_collapsed, 'gap-4': !is_collapsed }"
       >
         <div
           class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-all"
@@ -356,15 +377,6 @@ const onSave = async () => {
         >
           <div class="text-sm font-semibold text-white">Submit</div>
         </div>
-      </div>
-      <div class="flex h-2 items-center justify-center gap-2">
-        <div
-          v-for="n in pageCount"
-          :key="n"
-          :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="h-2 w-2 rounded-full transition-all"
-          @click="page = n"
-        ></div>
       </div>
     </div>
     <div v-if="!is_collapsed" class="flex items-center gap-2 text-xs font-medium text-slate-7">

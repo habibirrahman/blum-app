@@ -106,15 +106,8 @@ export const useClientStore = defineStore('client', {
         }
       }
 
-      let params = '?'
-      const d = moment()
-      params += `start_date=${d.startOf('isoWeeks').format('YYYY-MM-DD')}`
-      params += `&end_date=${d.endOf('isoWeeks').format('YYYY-MM-DD')}`
-      params += `&sort=oldest`
-      params += `&status=draft,ongoing,scheduled`
-
       return axios
-        .get(`/api/v1/clients/${id}/sessions${params}`)
+        .get(`/api/v1/sessions/draft_sessions?client_id=${id}&upcoming=weekly&page=1&per_page=5`)
         .then(async ({ data }) => {
           this.upcoming_sessions = data.sessions
           this.upcoming_sessions_count = data.total_count

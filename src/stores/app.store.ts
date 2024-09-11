@@ -7,12 +7,13 @@ import {
   setAccessStorage,
   setAppStorage
 } from '@/plugins/preferences.plugin'
-import type { Branch, User } from '@/lib/types'
+import type { Branch, Session, User } from '@/lib/types'
 import axios from 'axios'
 
 export interface AppStateSchema {
   network_status: NetworkStatus
   account: User | null
+  running_sessions: Session[]
   branches: Branch[]
 }
 
@@ -34,6 +35,7 @@ export const useAppStore = defineStore('app', {
   state: (): AppStateSchema => ({
     network_status: { connected: false, connection_type: 'none' },
     account: null,
+    running_sessions: [],
     branches: []
   }),
   getters: {},
@@ -46,6 +48,7 @@ export const useAppStore = defineStore('app', {
         const storage = data as AppStateSchema
         this.network_status = storage.network_status
         this.account = storage.account
+        this.running_sessions = storage.running_sessions
         this.branches = storage.branches
         return { success: true, data }
       })
@@ -54,6 +57,7 @@ export const useAppStore = defineStore('app', {
       const data: AppStateSchema = {
         network_status: this.network_status,
         account: this.account,
+        running_sessions: this.running_sessions,
         branches: this.branches
       }
       const { success } = await setAppStorage(data)
@@ -72,6 +76,8 @@ export const useAppStore = defineStore('app', {
         .get('/api/v1/current_user')
         .then(async ({ data }) => {
           this.account = data
+          const { success } = await this.getRunningSessions()
+          if (!success) return { success: false, data: null }
           this.syncAppStore()
           return { success: true, data, message: 'You have signed in' }
         })
@@ -104,6 +110,23 @@ export const useAppStore = defineStore('app', {
       await removeSessionStorage()
       this.account = null
       return { success: true }
+    },
+    async getRunningSessions(): Promise<ResponseSchema> {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        return { success: true, data: this.running_sessions }
+      }
+
+      return axios
+        .get(`/api/v1/current_user/running_sessions`)
+        .then(async ({ data }) => {
+          this.running_sessions = data
+          this.syncAppStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
     },
     async getBranches(): Promise<ResponseSchema> {
       if (!this.account?.center_enable_branch) {

@@ -194,11 +194,19 @@ const onOpenSession = (session: Session) => {
     </div>
     <div v-if="sessionStore.upcoming_sessions_count" class="space-y-1.5">
       <div class="flex items-center gap-1.5 px-4">
-        <div class="text-xs font-semibold text-dark-purple-1">Your upcoming sessions for today</div>
+        <div class="text-xs font-semibold text-dark-purple-1">
+          Your next {{ sessionStore.upcoming_sessions.length }} session(s) for today
+        </div>
         <div
-          class="flex h-6 min-w-6 items-center justify-center rounded bg-white px-1 text-xs font-semibold text-dark-purple-1"
+          v-if="sessionStore.upcoming_sessions_count > sessionStore.upcoming_sessions.length"
+          class="h-1 w-1 shrink-0 rounded bg-light-purple-4"
+        ></div>
+        <div
+          v-if="sessionStore.upcoming_sessions_count > sessionStore.upcoming_sessions.length"
+          class="text-xs text-light-purple-4"
         >
-          {{ sessionStore.upcoming_sessions_count }}
+          {{ sessionStore.upcoming_sessions_count - sessionStore.upcoming_sessions.length }}
+          remaining
         </div>
       </div>
       <div class="pl-4">

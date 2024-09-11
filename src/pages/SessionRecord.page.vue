@@ -35,6 +35,7 @@ async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false
 async function fetchSession({ is_swiped }: FetchSessionProps = { is_swiped: false }) {
   const slug = route.params.slug.toString()
   const { success, data } = await sessionStore.getSession({ slug })
+  await sessionStore.getSessionComments({ id: data.id, filter: '' })
   sessionLoading.value = false
   cycleLoading.value = false
   if (!success) return
@@ -172,6 +173,9 @@ const fixedMeasurement = computed<Measurement | undefined>(() =>
   sessionStore.session_measurements.find((i) => i.is_fixed)
 )
 const isMeasurementCollapsed = ref<boolean>(true)
+watch(isMeasurementCollapsed, () => {
+  document.getElementById('fixed-measurement')?.scrollTo({ top: 0, behavior: 'smooth' })
+})
 
 const endSessionStatus = ref<'normal' | 'group_reason' | 'empty_record'>('normal')
 const groupReasons = ref<string[]>([])
@@ -308,7 +312,7 @@ const onEndSession = async () => {
         <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
         <div
           class="absolute right-1 top-1 h-2 w-2 rounded-full bg-light-purple-5 transition-all"
-          :class="[sessionStore.session?.comments?.length ? 'opacity-100' : 'opacity-0']"
+          :class="[sessionStore.session_comments?.length ? 'opacity-100' : 'opacity-0']"
         ></div>
       </div>
     </div>
@@ -392,9 +396,10 @@ const onEndSession = async () => {
 
   <div
     v-if="fixedMeasurement && !showReviewMode"
-    class="fixed bottom-0 z-[10] flex w-screen bg-prim-3 px-4 transition-all"
+    id="fixed-measurement"
+    class="fixed bottom-0 z-[10] flex w-screen bg-prim-3 transition-all"
     :class="{
-      'h-[142px] justify-center pt-2': isMeasurementCollapsed,
+      'h-[120px] justify-center': isMeasurementCollapsed,
       'h-[calc(100vh-52px)] flex-col items-center gap-4 overflow-y-auto py-4':
         !isMeasurementCollapsed
     }"
