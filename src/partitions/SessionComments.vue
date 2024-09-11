@@ -186,10 +186,15 @@ const onCreate = async () => {
         v-for="comment in sessionStore.session_comments"
         :key="comment.id"
         :comment="comment"
-        :actionable="comment.user_id === appStore.account?.id && !comment.measurement_id"
+        :actionable="
+          comment.user_id === appStore.account?.id &&
+          !comment.measurement_id &&
+          sessionStore.session?.status === 'ongoing'
+        "
       />
     </div>
     <div
+      v-if="sessionStore.session?.status === 'ongoing'"
       class="fixed bottom-0 flex h-20 w-full items-center justify-center transition-all"
       :class="{ 'opacity-0': filter === 'target' }"
     >

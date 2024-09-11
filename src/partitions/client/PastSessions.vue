@@ -119,7 +119,7 @@ const onOpenSession = (session: Session) => {
 <template>
   <div
     v-if="sessionsLoading"
-    class="absolute top-0 z-[99] grid h-[calc(100vh-80px)] w-screen place-content-center bg-slate-10/30"
+    class="fixed top-20 z-[99] grid h-[calc(100vh-80px)] w-screen place-content-center bg-slate-10/30"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
   </div>

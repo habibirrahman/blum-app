@@ -37,7 +37,9 @@ const onChangeScore = async (score: number) => {
     <div class="space-y-1">
       <div
         class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] bg-light-purple-5 text-4xl font-bold text-white transition-all"
-        :class="{ 'pointer-events-none': scoreLoading }"
+        :class="{
+          'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing'
+        }"
         @click="onChangeScore(1)"
       >
         <div v-if="measurement.results?.score">{{ measurement.results?.score }}</div>
@@ -45,7 +47,12 @@ const onChangeScore = async (score: number) => {
       </div>
       <div
         class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"
-        :class="{ 'pointer-events-none': scoreLoading || !measurement.results?.score }"
+        :class="{
+          'pointer-events-none':
+            scoreLoading ||
+            !measurement.results?.score ||
+            sessionStore.session?.status !== 'ongoing'
+        }"
         @click="onChangeScore(-1)"
       >
         <div class="h-1 w-6 shrink-0 rounded bg-slate-5"></div>

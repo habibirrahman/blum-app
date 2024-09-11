@@ -89,7 +89,9 @@ const onChangeScore = async (prompt: any, score: number) => {
       <div v-for="prompt in promptBoxes" :key="prompt.id" class="space-y-1">
         <div
           class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] border text-4xl font-bold transition-all"
-          :class="{ 'pointer-events-none': scoreLoading }"
+          :class="{
+            'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing'
+          }"
           :style="{
             backgroundColor: promptColors[prompt.color].primaryColor,
             borderColor: promptColors[prompt.color].secondaryColor,
@@ -103,7 +105,10 @@ const onChangeScore = async (prompt: any, score: number) => {
         </div>
         <div
           class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white px-5"
-          :class="{ 'pointer-events-none': scoreLoading || !prompt.score }"
+          :class="{
+            'pointer-events-none':
+              scoreLoading || !prompt.score || sessionStore.session?.status !== 'ongoing'
+          }"
           @click="onChangeScore(prompt, -1)"
         >
           <div class="h-1 w-6 shrink-0 rounded bg-slate-5"></div>

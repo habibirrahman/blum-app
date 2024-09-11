@@ -133,6 +133,7 @@ const onSaveComment = async () => {
             :name="`toggle_measurement_${measurement.id}`"
             :checked="!isDropped"
             :loading="isDropLoading"
+            :disabled="sessionStore.session?.status !== 'ongoing'"
             @change="onDrop"
           />
         </div>
@@ -268,8 +269,15 @@ const onSaveComment = async () => {
             <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
           </div>
         </div>
-        <div v-if="display === 'comment'" class="flex h-full flex-col justify-between gap-3 pb-3">
+        <div v-if="display === 'comment'" class="flex h-full flex-col justify-between gap-3">
+          <div
+            v-if="sessionStore.session?.status !== 'ongoing'"
+            class="text-wrap pt-3 text-sm text-slate-8"
+          >
+            {{ measurement.comment || '-' }}
+          </div>
           <AppTextInput
+            v-else
             :name="`measurement-comment-${measurement.id}`"
             type="textarea"
             placeholder="Type your comment here..."
@@ -277,16 +285,26 @@ const onSaveComment = async () => {
             borderless
             class="mt-2 h-full"
           />
-          <div class="grid grid-cols-2">
-            <AppButton kind="plain" class="w-full" @click="display = 'target'">Cancel</AppButton>
+          <div class="sticky bottom-0 w-full bg-white py-3">
             <AppButton
+              v-if="sessionStore.session?.status !== 'ongoing'"
+              kind="outline"
               class="w-full"
-              :disabled="isDisabledSaveComment"
-              :loading="commentLoading"
-              @click="onSaveComment"
+              @click="display = 'target'"
             >
-              Save
+              Close
             </AppButton>
+            <div v-else class="grid grid-cols-2">
+              <AppButton kind="plain" class="w-full" @click="display = 'target'">Cancel</AppButton>
+              <AppButton
+                class="w-full"
+                :disabled="isDisabledSaveComment"
+                :loading="commentLoading"
+                @click="onSaveComment"
+              >
+                Save
+              </AppButton>
+            </div>
           </div>
         </div>
       </div>

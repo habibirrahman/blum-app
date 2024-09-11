@@ -73,7 +73,7 @@ const onAddScore = async () => {
     <div
       class="flex shrink-0 items-center justify-center rounded-full bg-light-purple-5 transition-all"
       :class="{
-        'pointer-events-none': scoreLoading,
+        'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing',
         'aspect-square w-full max-w-[200px]': !is_collapsed,
         'h-[90px] w-[90px]': is_collapsed
       }"

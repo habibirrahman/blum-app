@@ -93,7 +93,12 @@ onMounted(() => {
       <div class="flex justify-center pb-2">:</div>
       <div class="flex justify-center">{{ durationTiming.split(':')[2] }}</div>
     </div>
-    <AppButton class="w-full max-w-56 rounded-full" :loading="timerLoading" @click="onToggleTimer">
+    <AppButton
+      class="w-full max-w-56 rounded-full"
+      :class="{ 'pointer-events-none': sessionStore.session?.status !== 'ongoing' }"
+      :loading="timerLoading"
+      @click="onToggleTimer"
+    >
       {{ started ? 'Stop timer' : 'Start timer' }}
     </AppButton>
   </div>

@@ -75,7 +75,7 @@ const onChangePercentage = async (box: PercentageBox) => {
         :key="box.key"
         class="flex h-10 w-10 shrink-0 items-center justify-center rounded border text-2xl transition-all"
         :class="{
-          'pointer-events-none': percentageLoading,
+          'pointer-events-none': percentageLoading || sessionStore.session?.status !== 'ongoing',
           'border-slate-5 bg-white': box.value === null,
           'border-grass-7 bg-grass-1': box.value === true,
           'border-tomato-7 bg-tomato-1': box.value === false

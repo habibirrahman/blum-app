@@ -155,14 +155,14 @@ const onOpenSession = (session: Session) => {
     router.push({
       name: 'pre-session-record',
       params: { slug: session?.slug },
-      query: { redirect: '/home' }
+      query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
     })
   } else {
     if (session.user_id === appStore.account?.id) {
       router.push({
         name: 'session-record',
         params: { slug: session?.slug },
-        query: { redirect: '/home' }
+        query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
       })
     } else {
       sessionToJoin.value = session
@@ -175,7 +175,7 @@ const onOpenSession = (session: Session) => {
 <template>
   <div
     v-if="upcomingLoading || sessionsLoading"
-    class="absolute top-0 z-[99] grid h-[calc(100vh-80px)] w-screen place-content-center bg-slate-10/30"
+    class="fixed top-20 z-[99] grid h-[calc(100vh-80px)] w-screen place-content-center bg-slate-10/30"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
   </div>
@@ -428,7 +428,7 @@ const onOpenSession = (session: Session) => {
         :to="{
           name: 'session-record',
           params: { slug: sessionToJoin?.slug },
-          query: { redirect: '/home' }
+          query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
         }"
         class="w-full"
       >

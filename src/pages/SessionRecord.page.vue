@@ -6,7 +6,7 @@ import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
 import AppButton from '@/components/AppButton.vue'
 import MeasurementRecord from '@/partitions/MeasurementRecord.vue'
-import type { Measurement } from '@/lib/types'
+import type { Measurement, Session } from '@/lib/types'
 import SessionComments from '@/partitions/SessionComments.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import { useToast } from 'vue-toastification'
@@ -22,6 +22,7 @@ const cycleLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
 
 interface FetchSessionProps {
+  first?: boolean
   is_swiped?: boolean
 }
 async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false }) {
@@ -32,19 +33,28 @@ async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false
     toast.success('Results are now up-to-date!')
   }
 }
-async function fetchSession({ is_swiped }: FetchSessionProps = { is_swiped: false }) {
+async function fetchSession(
+  { first, is_swiped }: FetchSessionProps = { first: false, is_swiped: false }
+) {
   const slug = route.params.slug.toString()
   const { success, data } = await sessionStore.getSession({ slug })
-  await sessionStore.getSessionComments({ id: data.id, filter: '' })
+  const session = data as Session
+  await sessionStore.getSessionComments({ id: session.id, filter: '' })
   sessionLoading.value = false
   cycleLoading.value = false
   if (!success) return
   if (is_swiped && appStore.network_status.connected) {
     toast.success('Results are now up-to-date!')
   }
-  counter.value = data.current_recording_time[0]
-  counterTimer()
-  document.getElementById('app')?.scroll({ top: 56, behavior: 'smooth' })
+  counter.value = session.current_recording_time ? (session.current_recording_time[0] as number) : 0
+  if (session.status === 'ongoing') {
+    counterTimer()
+  }
+  const app = document.getElementById('app')
+  if (first && session.status === 'ongoing') {
+    app?.scroll({ top: 56, behavior: 'smooth' })
+    app?.addEventListener('scroll', scrollListener)
+  }
 }
 
 const showOffline = ref<boolean>(false)
@@ -83,13 +93,10 @@ const scrollListener = (e: any) => {
 }
 
 onMounted(async () => {
-  const app = document.getElementById('app')
-  app?.scroll({ top: 56, behavior: 'smooth' })
-  app?.addEventListener('scroll', scrollListener)
   sessionLoading.value = true
   /** generate session.store from storage */
   await sessionStore.generateSessionStore()
-  await fetchSession()
+  await fetchSession({ first: true })
   await syncSession()
   redirect.value = route.query.redirect?.toString() || '/home'
 })
@@ -136,7 +143,9 @@ const onToggleRunning = (data: Measurement) => {
 
 const showReviewMode = ref<boolean>(false)
 watch(showReviewMode, (val) => {
-  document.getElementById('app')?.scroll({ top: 56, behavior: 'smooth' })
+  if (sessionStore.session?.status === 'ongoing') {
+    document.getElementById('app')?.scroll({ top: 56, behavior: 'smooth' })
+  }
   if (val) focusMeasurement.value = 0
 })
 const focusMeasurement = ref<Measurement['id']>(0)
@@ -332,9 +341,18 @@ const onEndSession = async () => {
         <div class="flex justify-center">{{ recordingTime.split(':')[2] }}</div>
       </div>
     </div>
-    <AppButton class="px-4" :disabled="!appStore.network_status.connected" @click="openEndSession">
+
+    <AppButton
+      v-if="sessionStore.session?.status === 'ongoing'"
+      class="px-4"
+      :disabled="!appStore.network_status.connected"
+      @click="openEndSession"
+    >
       {{ appStore.network_status.connected ? 'End' : 'Offline' }}
     </AppButton>
+    <RouterLink v-else :to="redirect">
+      <AppButton kind="outline">Close</AppButton>
+    </RouterLink>
   </div>
 
   <div
@@ -345,6 +363,7 @@ const onEndSession = async () => {
   </div>
 
   <div
+    v-if="sessionStore.session?.status === 'ongoing'"
     class="flex h-14 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
   >
     <div v-if="runningMeasurements.length">

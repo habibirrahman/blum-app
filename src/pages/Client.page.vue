@@ -65,7 +65,6 @@ onMounted(() => {
     <div class="flex h-10 items-center justify-center font-semibold text-dark-purple-1">
       {{ clientStore.client?.name }}
     </div>
-
     <div class="flex h-10 items-end">
       <div
         class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth border-b border-chestnut-2 px-4"
