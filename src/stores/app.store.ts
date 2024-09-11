@@ -95,6 +95,8 @@ export const useAppStore = defineStore('app', {
         .then(async ({ data }) => {
           await setAccessStorage(data)
           this.account = data.user
+          const { success } = await this.getRunningSessions()
+          if (!success) return { success: false, data: null }
           this.syncAppStore()
           return { success: true, message: 'Successfully signed in' }
         })

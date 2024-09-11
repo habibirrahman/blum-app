@@ -6,6 +6,7 @@ import AppActionSheet from '@/components/AppActionSheet.vue'
 import { useAppStore } from '@/stores/app.store'
 import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
+import { Icon } from '@iconify/vue'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -14,7 +15,7 @@ const toast = useToast()
 const email = ref<string>('')
 const password = ref<string>('')
 const error = ref<string>('')
-const loading = ref<boolean>(false)
+const signinLoading = ref<boolean>(false)
 const showForgotPassword = ref<boolean>(false)
 
 watch(email, () => {
@@ -25,13 +26,13 @@ watch(password, () => {
 })
 
 async function onSignin() {
-  loading.value = true
+  signinLoading.value = true
   const input = {
     email: email.value,
     password: password.value
   }
   const { success, message } = await appStore.signin(input)
-  loading.value = false
+  signinLoading.value = false
   if (!success) {
     error.value = message || ''
     toast.error(message)
@@ -42,6 +43,13 @@ async function onSignin() {
 </script>
 
 <template>
+  <div
+    class="fixed left-1/2 z-[9] flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full bg-white shadow transition-all"
+    :class="{ 'top-5': signinLoading, '-top-10': !signinLoading }"
+  >
+    <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+  </div>
+
   <div class="flex h-screen w-screen flex-col items-center justify-center gap-6 py-4">
     <div class="flex w-full flex-col gap-10 p-4">
       <div class="text-center font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
@@ -62,7 +70,7 @@ async function onSignin() {
           v-model="password"
           :error="error ? true : false"
         />
-        <AppButton :loading="loading" :disabled="!email && !password" @click="onSignin">
+        <AppButton :loading="signinLoading" :disabled="!email && !password" @click="onSignin">
           Log in
         </AppButton>
       </div>

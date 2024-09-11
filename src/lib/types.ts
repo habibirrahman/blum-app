@@ -2,7 +2,7 @@ export interface User {
   id?: number
   email?: string
   name?: string
-  role?: string // not
+  role?: 'admin' | 'staff'
   status?: string // not
   restriction_type?: string // not
   sign_in_token?: string
@@ -38,6 +38,13 @@ export interface Session {
 }
 
 export type ClientStatus = 'active' | 'archived' | 'at_risk_of_discharge'
+export type ClientDischargeReason =
+  | 'graduated'
+  | 'family_or_personal_issues'
+  | 'expectations_did_not_match'
+  | 'schedule_conflict'
+  | 'moving'
+  | 'other'
 export interface Client {
   id?: number
   name?: string
@@ -49,7 +56,7 @@ export interface Client {
   admitted_at?: string
   archived_at?: string
   deleted_at?: string
-  discharge_reason?: string // not
+  discharge_reason?: ClientDischargeReason
   other_discharge_reason?: string
   last_status_updated_at?: string
   total_recommendation?: number
@@ -219,7 +226,7 @@ export interface Target {
     color?: string
     description?: string
   }
-  prompts?: { 
+  prompts?: {
     id?: number
     name?: string
     abbreviation?: string
@@ -229,7 +236,7 @@ export interface Target {
     is_used?: boolean
     target_id?: Target['id']
     center_id?: number // not
-   }[]
+  }[]
 }
 
 export interface Curriculum {

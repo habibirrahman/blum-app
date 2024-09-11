@@ -7,6 +7,7 @@ import { Icon } from '@iconify/vue'
 import DraftSessions from '@/partitions/client/DraftSessions.vue'
 import PastSessions from '@/partitions/client/PastSessions.vue'
 import Targets from '@/partitions/client/Targets.vue'
+import Profile from '@/partitions/client/Profile.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -99,5 +100,6 @@ onMounted(() => {
     <DraftSessions v-if="route.params.tab === 'draft-sessions'" />
     <PastSessions v-if="route.params.tab === 'past-sessions'" />
     <Targets v-if="route.params.tab === 'targets'" />
+    <Profile v-if="route.params.tab === 'profile'" />
   </div>
 </template>

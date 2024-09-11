@@ -1,5 +1,5 @@
 import moment from 'moment'
-import type { MeasurementType, TargetType } from './types'
+import type { ClientDischargeReason, MeasurementType, TargetType, User } from './types'
 
 interface DisplayDate {
   date?: string | null
@@ -35,6 +35,28 @@ export const getTargetType = (type?: TargetType): string => {
     'Target::Prompting': 'Prompting'
   }
   return arr[type] || ''
+}
+
+export const getClientDischargeReason = (reason?: ClientDischargeReason): string => {
+  if (!reason) return ''
+  const arr: { [key: string]: string } = {
+    graduated: 'Graduated',
+    family_or_personal_issues: 'Family/personal issue',
+    expectations_did_not_match: "Expectations didn't match",
+    schedule_conflict: 'Schedule conflict',
+    moving: 'Moving',
+    other: 'Other'
+  }
+  return arr[reason] || ''
+}
+
+export const getUserRole = (role?: User['role']): string => {
+  if (!role) return ''
+  const arr: { [key: string]: string } = {
+    admin: 'Admin',
+    staff: 'Therapist'
+  }
+  return arr[role] || ''
 }
 
 export const getRandomString = (prefix = '', length = 16): string => {

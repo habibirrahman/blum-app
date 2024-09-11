@@ -17,6 +17,18 @@
   .capitalize-first::first-letter {
     text-transform: capitalize;
   }
+
+  .app-account-name-admin {
+    background: linear-gradient(90deg, #07334a 0%, #0095d1 100%);
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+  }
+  
+  .app-account-name-staff {
+    background: linear-gradient(90deg, #3f4e19 0%, #9bbe24 100%);
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+  }
 }
 
 /* Vue-Toastification */
