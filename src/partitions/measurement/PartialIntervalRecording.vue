@@ -36,7 +36,8 @@ const scoreInInterval = computed<number>(() => {
 })
 const totalScore = computed<number>(() => {
   if (!props.measurement.results) return 0
-  return Object.values(props.measurement.results).reduce((a: any, b: any) => a + b, 0)
+  const results: number[] = Object.values(props.measurement.results)
+  return results.reduce((a, b) => a + b, 0) || 0
 })
 const percentageScore = computed<number>(() => {
   if (!props.measurement.results) return 0

@@ -33,7 +33,7 @@ async function onSignin() {
   const { success, message } = await appStore.signin(input)
   loading.value = false
   if (!success) {
-    error.value = message
+    error.value = message || ''
     toast.error(message)
     return
   }
