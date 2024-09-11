@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import type { Client, Session } from '@/lib/types'
+import type { Client, Session, Target } from '@/lib/types'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getClientStorage, setClientStorage } from '@/plugins/preferences.plugin'
 import { onlyUniqueId } from '@/lib/func'
@@ -14,6 +14,8 @@ export interface ClientStateSchema {
   draft_sessions_count: number
   past_sessions: Session[]
   past_sessions_count: number
+  targets: Target[]
+  targets_count: number
   clients: Client[]
   clients_count: number
 }
@@ -27,6 +29,8 @@ export const useClientStore = defineStore('client', {
     draft_sessions_count: 0,
     past_sessions: [],
     past_sessions_count: 0,
+    targets: [],
+    targets_count: 0,
     clients: [],
     clients_count: 0
   }),
@@ -45,6 +49,8 @@ export const useClientStore = defineStore('client', {
         this.draft_sessions_count = storage.draft_sessions_count || 0
         this.past_sessions = storage.past_sessions || []
         this.past_sessions_count = storage.past_sessions_count || 0
+        this.targets = storage.targets || []
+        this.targets_count = storage.targets_count || 0
         this.clients = storage.clients || []
         this.clients_count = storage.clients_count || 0
         return { success: true, data }
@@ -59,6 +65,8 @@ export const useClientStore = defineStore('client', {
         draft_sessions_count: this.draft_sessions_count,
         past_sessions: this.past_sessions,
         past_sessions_count: this.past_sessions_count,
+        targets: this.targets,
+        targets_count: this.targets_count,
         clients: this.clients,
         clients_count: this.clients_count
       }
@@ -210,6 +218,27 @@ export const useClientStore = defineStore('client', {
         .then(async ({ data }) => {
           this.clients = data.clients
           this.clients_count = data.total_clients
+          this.syncClientStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getTargets({ params }: { params?: string }): Promise<ResponseSchema> {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        return {
+          success: true,
+          data: { targets: this.targets, total_count: this.targets_count }
+        }
+      }
+
+      return axios
+        .get(`/api/v1/targets${params}`)
+        .then(async ({ data }) => {
+          this.targets = data.targets
+          this.targets_count = data.total_count
           this.syncClientStore()
           return { success: true, data }
         })

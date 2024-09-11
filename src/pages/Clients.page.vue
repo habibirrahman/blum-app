@@ -184,7 +184,7 @@ onMounted(async () => {
       <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
         <div
           v-if="appStore.account?.center_enable_branch"
-          class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center gap-1 truncate rounded-full border px-4 text-xs font-medium capitalize transition-all"
+          class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center gap-1 truncate rounded-full border px-4 text-xs font-medium transition-all"
           :class="[
             branches.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -205,7 +205,7 @@ onMounted(async () => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium capitalize transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
           :class="[
             statuses.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -226,7 +226,7 @@ onMounted(async () => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium capitalize transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />

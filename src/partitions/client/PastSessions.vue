@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter, type RouteParamsRaw } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
 import moment from 'moment'
-import UpcomingSession from '../UpcomingSession.vue'
 import type { Session } from '@/lib/types'
 import SessionItem from '../SessionItem.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppButton from '@/components/AppButton.vue'
-import { TransitionRoot } from '@headlessui/vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -161,7 +159,7 @@ const onOpenSession = (session: Session) => {
           {{ opt.label }}
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium capitalize transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />

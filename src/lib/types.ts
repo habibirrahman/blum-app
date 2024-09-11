@@ -219,6 +219,17 @@ export interface Target {
     color?: string
     description?: string
   }
+  prompts?: { 
+    id?: number
+    name?: string
+    abbreviation?: string
+    position?: number
+    color?: string
+    shape?: string
+    is_used?: boolean
+    target_id?: Target['id']
+    center_id?: number // not
+   }[]
 }
 
 export interface Curriculum {

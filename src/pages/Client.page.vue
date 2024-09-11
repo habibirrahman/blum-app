@@ -6,6 +6,7 @@ import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
 import DraftSessions from '@/partitions/client/DraftSessions.vue'
 import PastSessions from '@/partitions/client/PastSessions.vue'
+import Targets from '@/partitions/client/Targets.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -97,5 +98,6 @@ onMounted(() => {
   <div v-else>
     <DraftSessions v-if="route.params.tab === 'draft-sessions'" />
     <PastSessions v-if="route.params.tab === 'past-sessions'" />
+    <Targets v-if="route.params.tab === 'targets'" />
   </div>
 </template>

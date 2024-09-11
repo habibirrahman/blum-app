@@ -13,6 +13,10 @@
   svg {
     @apply shrink-0;
   }
+
+  .capitalize-first::first-letter {
+    text-transform: capitalize;
+  }
 }
 
 /* Vue-Toastification */

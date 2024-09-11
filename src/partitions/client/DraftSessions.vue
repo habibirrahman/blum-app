@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter, type RouteParamsRaw } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
@@ -253,7 +253,7 @@ const onOpenSession = (session: Session) => {
           {{ opt.label }}
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium capitalize transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
           :class="[
             status
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -265,7 +265,7 @@ const onOpenSession = (session: Session) => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium capitalize transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />
