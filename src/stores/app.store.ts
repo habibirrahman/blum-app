@@ -1,9 +1,5 @@
 import { defineStore } from 'pinia'
-import {
-  getAppStorage,
-  setAccessStorage,
-  setAppStorage
-} from '@/plugins/preferences.plugin'
+import { getAppStorage, setAccessStorage, setAppStorage } from '@/plugins/preferences.plugin'
 import type { Branch, Session, User } from '@/lib/types'
 import axios from 'axios'
 import { useSessionStore } from './session.store'
@@ -89,11 +85,11 @@ export const useAppStore = defineStore('app', {
           this.syncAppStore()
           return { success: true, data, message: 'You have signed in' }
         })
-        .catch(async ({ response }) => {
-          if (response.status === 401) {
+        .catch(async (error) => {
+          if (error?.response?.status === 401) {
             this.resetAppStore()
           }
-          return { success: false, data: null, message: response?.data?.error }
+          return { success: false, data: null, message: error?.response?.data?.error }
         })
     },
     async signin({ email, password }: SigninSchema): Promise<ResponseSchema> {
