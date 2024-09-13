@@ -66,11 +66,16 @@ const onUpdate = async () => {
     client_id: sessionStore.session?.client_id,
     comment_id: props.comment.id,
     type: typeInput.value,
-    session_comment: { body: bodyInput.value },
+    session_comment: {
+      user_id: appStore.account?.id,
+      body: bodyInput.value
+    },
     assessment: {
+      session_id: sessionStore.session?.id,
       antecedent: antecedentInput.value,
       behavior: behaviorInput.value,
-      consequence: consequenceInput.value
+      consequence: consequenceInput.value,
+      type: 'Assessment::InSession'
     },
     data_result: {
       ...props.comment,

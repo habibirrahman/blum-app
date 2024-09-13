@@ -95,7 +95,10 @@ const onCreate = async () => {
     client_id: sessionStore.session?.client_id,
     session_id: sessionStore.session?.id,
     type: typeInput.value,
-    session_comment: { user_id: appStore.account?.id, body: bodyInput.value },
+    session_comment: {
+      user_id: appStore.account?.id,
+      body: bodyInput.value
+    },
     assessment: {
       session_id: sessionStore.session?.id,
       antecedent: antecedentInput.value,

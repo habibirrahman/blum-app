@@ -69,12 +69,15 @@ export interface UpdateSessionCommentParams {
   comment_id: Comment['id']
   type: 'general' | 'assessment'
   session_comment?: {
+    user_id: User['id']
     body: Comment['body']
   }
   assessment?: {
+    session_id: Session['id']
     antecedent: Comment['antecedent']
     behavior: Comment['behavior']
     consequence: Comment['consequence']
+    type: Comment['type']
   }
   data_result: Comment
 }
