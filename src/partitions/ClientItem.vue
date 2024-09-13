@@ -42,14 +42,14 @@ const clientTags = computed<ClientTag[]>(() => {
   >
     <div class="flex items-center gap-3 truncate" :class="{ 'max-w-[50%]': clientTags.length > 2 }">
       <div
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full uppercase"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
         :class="{
           'bg-lime-3 text-lime-8': client.status === 'active',
           'bg-rose-4 text-rose-8': client.status === 'archived',
           'bg-orange-4 text-orange-8': client.status === 'at_risk_of_discharge'
         }"
       >
-        {{ client.name?.charAt(0) }}
+        <div class="uppercase">{{ client.name?.charAt(0) }}</div>
       </div>
       <div class="truncate text-sm font-medium">{{ client.name }}</div>
     </div>

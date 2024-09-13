@@ -140,7 +140,7 @@ const navigations = computed<Nav[]>(() => {
         <div class="z-[2] flex max-h-full flex-col items-center gap-4 px-6 py-6">
           <div class="flex flex-col items-center gap-2">
             <div class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3">
-              <div class="text-xl font-semibold text-lime-8">
+              <div class="text-xl font-semibold uppercase text-lime-8">
                 {{ appStore.running_sessions[0].client?.name?.charAt(0) }}
               </div>
             </div>

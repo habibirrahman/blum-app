@@ -42,7 +42,7 @@ onMounted(() => {
         'bg-grass-2 text-grass-8': appStore.account?.role === 'staff'
       }"
     >
-      <div class="text-2xl font-bold">{{ appStore.account?.name?.charAt(0) }}</div>
+      <div class="text-2xl font-bold uppercase">{{ appStore.account?.name?.charAt(0) }}</div>
     </div>
     <div class="flex flex-col gap-2">
       <div class="">

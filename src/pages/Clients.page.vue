@@ -99,11 +99,11 @@ const onApplyStatus = () => {
   fetchClients()
 }
 
-type Sort = 'alphabetical' | 'alphabetical_desc' | ''
-const sort = ref<Sort>('')
-const selectSort = ref<Sort>('')
+type Sort = 'most_recent' | 'alphabetical' | 'alphabetical_desc'
+const sort = ref<Sort>('most_recent')
+const selectSort = ref<Sort>('most_recent')
 const sortOptions: { value: Sort; label: string }[] = [
-  { value: '', label: 'Recently created' },
+  { value: 'most_recent', label: 'Recently created' },
   { value: 'alphabetical', label: 'Name (A-Z)' },
   { value: 'alphabetical_desc', label: 'Name (Z-A)' }
 ]
@@ -112,8 +112,8 @@ watch(showSort, () => {
   selectSort.value = sort.value
 })
 const onResetSort = () => {
-  sort.value = ''
-  selectSort.value = ''
+  sort.value = 'most_recent'
+  selectSort.value = 'most_recent'
   showSort.value = false
   page.value = 1
   fetchClients()

@@ -129,7 +129,7 @@ export const useClientStore = defineStore('client', {
       }
 
       return axios
-        .get(`/api/v1/sessions/draft_sessions?client_id=${id}&upcoming=weekly&page=1&per_page=5`)
+        .get(`/api/v1/sessions/draft_sessions?client_id=${id}&upcoming=weekly&sort=earliest_schedule&page=1&per_page=5`)
         .then(async ({ data }) => {
           this.upcoming_sessions = data.sessions
           this.upcoming_sessions_count = data.total_count
