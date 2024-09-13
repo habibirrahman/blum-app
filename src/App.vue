@@ -115,7 +115,7 @@ const navigations = computed<Nav[]>(() => {
 </script>
 
 <template>
-  <div class="font-sans" :style="{ paddingLeft, paddingTop, paddingRight, paddingBottom }">
+  <div class="font-sans bg-white" :style="{ paddingLeft, paddingTop, paddingRight, paddingBottom }">
     <div v-if="loadingApp" class="grid h-screen w-screen place-items-center">
       <div class="flex animate-pulse items-center font-logo text-4xl font-bold text-light-purple-5">
         Blüm
