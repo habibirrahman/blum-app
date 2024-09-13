@@ -77,14 +77,14 @@ const openPassword = ref<boolean>(false)
       v-if="type === 'password'"
       :icon="openPassword ? 'ph:eye-closed' : 'ph:eye'"
       class="absolute right-2 cursor-pointer text-2xl text-slate-7"
-      :class="[label ? 'top-[30px]' : 'top-2']"
+      :class="[label ? 'top-[30px]' : 'top-1']"
       @click.prevent="openPassword = !openPassword"
     />
     <Icon
       v-if="suffix_icon"
       :icon="suffix_icon"
       class="absolute right-2 cursor-pointer text-2xl text-slate-7"
-      :class="[label ? 'top-[30px]' : 'top-2']"
+      :class="[label ? 'top-[30px]' : 'top-1']"
     />
     <div v-if="error" class="mt-1 text-sm text-tomato-7">{{ error === true ? '' : error }}</div>
   </label>

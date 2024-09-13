@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserRole } from '@/lib/func'
 import { useAppStore } from '@/stores/app.store'
@@ -20,6 +20,10 @@ async function onSignout() {
     router.push({ name: 'signin' })
   }
 }
+
+onMounted(() => {
+  appStore.getRunningSessions()
+})
 </script>
 
 <template>

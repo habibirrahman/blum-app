@@ -105,6 +105,16 @@ onMounted(() => {
   fetchPastSessions()
 })
 
+const getSessionTitle = (session: Session) => {
+  if (session.status === 'completed') {
+    return session.user_id ? `With ${session.user?.name}` : 'No therapist'
+  }
+  if (session.status === 'cancelled') {
+    return session.appointment?.user_id ? `With ${session.appointment?.user?.name}` : 'No therapist'
+  }
+  return 'No therapist'
+}
+
 const onOpenSession = (session: Session) => {
   router.push({
     name: 'session-record',
@@ -176,7 +186,7 @@ const onOpenSession = (session: Session) => {
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
       No sessions completed for
-      {{ date === 'days' ? 'day' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
+      {{ date === 'days' ? 'today' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
     </div>
     <div v-else-if="query" class="text-center text-sm text-slate-8">
       Sorry, no drafts match your search. Try searching with a different therapist name or session
@@ -203,7 +213,7 @@ const onOpenSession = (session: Session) => {
         v-for="session in clientStore.past_sessions"
         :key="session.id"
         :session="session"
-        :title="session.user_id ? `With ${session.user?.name}` : `No therapist`"
+        :title="getSessionTitle(session)"
         @click="onOpenSession(session)"
       />
     </div>

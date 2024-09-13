@@ -41,9 +41,10 @@ watch(query, () => {
   }, 1500)
 })
 
-type Date = 'isoWeeks' | 'months' | ''
+type Date = 'days' | 'isoWeeks' | 'months' | ''
 const date = ref<Date>('')
 const dateOptions: { value: Date; label: string }[] = [
+  { value: 'days', label: 'Today' },
   { value: 'isoWeeks', label: 'This week' },
   { value: 'months', label: 'This month' }
 ]
@@ -85,8 +86,8 @@ const onApplyStatus = () => {
 }
 
 type Sort = 'newest_session_id' | 'oldest_session_id' | 'most_recent_schedule' | 'earliest_schedule'
-const sort = ref<Sort>('newest_session_id')
-const selectSort = ref<Sort>('newest_session_id')
+const sort = ref<Sort>('most_recent_schedule')
+const selectSort = ref<Sort>('most_recent_schedule')
 const sortOptions: { value: Sort; label: string }[] = [
   { value: 'newest_session_id', label: 'Newest session ID' },
   { value: 'oldest_session_id', label: 'Oldest session ID' },
@@ -98,8 +99,8 @@ watch(showSort, () => {
   selectSort.value = sort.value
 })
 const onResetSort = () => {
-  sort.value = 'newest_session_id'
-  selectSort.value = 'newest_session_id'
+  sort.value = 'most_recent_schedule'
+  selectSort.value = 'most_recent_schedule'
   showSort.value = false
   page.value = 1
   fetchSessions()
@@ -139,6 +140,8 @@ async function fetchSessions() {
 }
 
 onMounted(async () => {
+  appStore.getRunningSessions()
+
   upcomingLoading.value = true
   /** generate session.store from storage */
   await sessionStore.generateSessionStore()
@@ -220,7 +223,7 @@ const onOpenSession = (session: Session) => {
               query: { redirect: '/home' }
             }"
           >
-            <UpcomingSession :session="session" />
+            <UpcomingSession :session="session" :title="session.client?.name || 'No client'" />
           </RouterLink>
         </div>
       </div>
@@ -280,7 +283,8 @@ const onOpenSession = (session: Session) => {
     class="flex h-64 w-full items-center justify-center px-4"
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
-      No draft sessions scheduled for this {{ date === 'isoWeeks' ? 'week' : 'month' }}.
+      No draft sessions scheduled for
+      {{ date === 'days' ? 'today' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
     </div>
     <div v-else class="text-center text-sm text-slate-8">
       Oops! No draft sessions fit your filter criteria. Try changing the filter to find more
@@ -304,7 +308,7 @@ const onOpenSession = (session: Session) => {
         v-for="session in sessionStore.sessions"
         :key="session.id"
         :session="session"
-        :title="session.client?.name || 'Client name'"
+        :title="session.client?.name || 'No client'"
         @click="onOpenSession(session)"
       />
     </div>
@@ -392,9 +396,9 @@ const onOpenSession = (session: Session) => {
     class="fixed left-0 top-0 z-[101] flex h-screen w-screen items-center justify-center bg-white"
   >
     <div
-      class="absolute top-0 -z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
+      class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
     ></div>
-    <div class="flex flex-col items-center gap-4 px-6">
+    <div class="z-[2] flex flex-col items-center gap-4 px-6">
       <div class="flex flex-col items-center gap-2">
         <div class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3">
           <div class="text-xl font-semibold text-lime-8">

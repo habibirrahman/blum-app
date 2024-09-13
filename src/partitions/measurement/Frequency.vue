@@ -55,7 +55,13 @@ const onChangeScore = async (score: number) => {
         }"
         @click="onChangeScore(-1)"
       >
-        <div class="h-1 w-6 shrink-0 rounded bg-slate-5"></div>
+        <div
+          class="h-1 w-6 shrink-0 rounded"
+          :class="{
+            'bg-slate-5': !measurement.results?.score,
+            'bg-slate-6': measurement.results?.score
+          }"
+        ></div>
       </div>
     </div>
   </div>

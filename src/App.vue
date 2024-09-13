@@ -135,9 +135,9 @@ const navigations = computed<Nav[]>(() => {
         class="flex min-h-screen w-screen items-center justify-center bg-white"
       >
         <div
-          class="absolute top-0 -z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
+          class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
         ></div>
-        <div class="flex max-h-full flex-col items-center gap-4 px-6 py-6">
+        <div class="z-[2] flex max-h-full flex-col items-center gap-4 px-6 py-6">
           <div class="flex flex-col items-center gap-2">
             <div class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3">
               <div class="text-xl font-semibold text-lime-8">
@@ -147,13 +147,13 @@ const navigations = computed<Nav[]>(() => {
             <div class="text-center text-xl font-semibold text-dark-purple-1">
               You've started {{ appStore.running_sessions.length }} session(s) on the web:
             </div>
-            <div class="flex flex-col items-center gap-2">
+            <div class="flex w-full flex-col items-center gap-2">
               <div
                 v-for="session in appStore.running_sessions"
                 :key="session.id"
-                class="text-center text-sm text-light-purple-4"
+                class="max-w-[calc(100vw-48px)] truncate text-center text-sm text-light-purple-4"
               >
-                Session ID {{ session?.id }}
+                Session ID {{ session?.id }} {{ session.client?.name }}
               </div>
             </div>
             <div

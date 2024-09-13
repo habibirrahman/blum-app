@@ -5,7 +5,6 @@ import { computed } from 'vue'
 interface Props {
   name: string
   checked?: boolean
-  size?: 'base' | 'lg'
   disabled?: boolean
   loading?: boolean
 }
@@ -15,7 +14,6 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   checked: false,
-  size: 'base',
   disabled: false,
   loading: false
 })
@@ -43,10 +41,7 @@ const inputId = computed<string>(() => getRandomString())
     />
     <div
       class="absolute h-3 w-3 rounded-full bg-white transition-all"
-      :class="{
-        'left-4.5': checked,
-        'left-0.5': !checked
-      }"
+      :style="{ left: checked ? '17px' : '1px' }"
     ></div>
   </label>
 </template>

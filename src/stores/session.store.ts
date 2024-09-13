@@ -96,6 +96,17 @@ export const useSessionStore = defineStore('session', {
   }),
   getters: {},
   actions: {
+    resetSessionStore() {
+      this.session = null
+      this.session_comments = []
+      this.session_measurements = []
+      this.upcoming_sessions = []
+      this.upcoming_sessions_count = 0
+      this.sessions = []
+      this.sessions_count = 0
+      this.pending_progress = []
+      this.syncSessionStore()
+    },
     async generateSessionStore(): Promise<ResponseSchema> {
       return getSessionStorage().then(({ success, data }) => {
         if (!success) {
@@ -177,7 +188,7 @@ export const useSessionStore = defineStore('session', {
       this.syncSessionStore()
     },
     setSessionMeasurement(data: Measurement) {
-      const idx = this.session_measurements.findIndex((i) => i.id === data.id)
+      const idx = this.session_measurements.findIndex((i) => i.target?.id === data.target?.id)
       if (idx > -1) this.session_measurements[idx] = data
       this.syncSessionStore()
     },
@@ -308,7 +319,9 @@ export const useSessionStore = defineStore('session', {
       }
 
       return axios
-        .get('/api/v1/sessions/draft_sessions?upcoming=daily&page=1&per_page=5')
+        .get(
+          '/api/v1/sessions/draft_sessions?upcoming=daily&sort=earliest_schedule&page=1&per_page=5'
+        )
         .then(async ({ data }) => {
           this.upcoming_sessions = data.sessions
           this.upcoming_sessions_count = data.total_count

@@ -36,6 +36,20 @@ export const useClientStore = defineStore('client', {
   }),
   getters: {},
   actions: {
+    resetClientStore() {
+      this.client = null
+      this.upcoming_sessions = []
+      this.upcoming_sessions_count = 0
+      this.draft_sessions = []
+      this.draft_sessions_count = 0
+      this.past_sessions = []
+      this.past_sessions_count = 0
+      this.targets = []
+      this.targets_count = 0
+      this.clients = []
+      this.clients_count = 0
+      this.syncClientStore()
+    },
     async generateClientStore(): Promise<ResponseSchema> {
       return getClientStorage().then(({ success, data }) => {
         if (!success) {

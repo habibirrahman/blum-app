@@ -141,7 +141,7 @@ export const getClientStorage = async () => {
     return { success: false, data: null }
   }
 }
-export const removelientStorage = async () => {
+export const removeClientStorage = async () => {
   try {
     await Preferences.remove({ key: 'client.store' })
     return { success: true }

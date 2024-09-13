@@ -76,7 +76,6 @@ const sessionDate = computed<string>(() => {
           <span v-if="session.user?.name"> with {{ session.user?.name }}</span>
         </div>
       </div>
-
       <div
         v-else-if="session.status === 'completed'"
         class="flex items-center gap-1.5 truncate text-xs"
@@ -90,7 +89,7 @@ const sessionDate = computed<string>(() => {
           {{ displayDate({ date: session.end_time, format: 'HH:mm' }) }}
         </div>
       </div>
-      <div v-else-if="session.status === 'cancelled'" class="text-xs text-slate-7">Unscheduled</div>
+      <div v-else-if="session.status === 'cancelled'" class="text-xs text-slate-7">Cancelled</div>
       <div
         v-if="session.status === 'draft' || session.status === 'ongoing'"
         class="text-xs text-slate-7"

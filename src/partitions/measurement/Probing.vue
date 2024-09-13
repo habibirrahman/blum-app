@@ -39,9 +39,22 @@ const onDisplayPopup = () => {
 const page = ref<number>(1)
 watch(
   () => props.is_collapsed,
-  () => (page.value = 1)
+  () => {
+    setTimeout(() => {
+      const el = `${props.measurement.id}-probing-circle-${1}`
+      const circles = document.getElementById(el)
+      circles?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+    }, 300)
+  }
 )
-watch(page, () => onDisplayPopup())
+const onScroll = (e: any) => {
+  onDisplayPopup()
+  const left = e.currentTarget.scrollLeft
+  const w = props.is_collapsed ? 256 : 320 - 32
+  const current = Math.floor(left / w) + 1
+  if (page.value !== current) page.value = current
+}
+
 const perPage = computed<number>(() => 20)
 const pageCount = computed<number>(() => {
   const results = props.measurement.results
@@ -56,7 +69,7 @@ interface ProbingCircle {
   key: number | string
   value: boolean | 'empty' | 'removing'
 }
-const probingCircles = computed<ProbingCircle[]>(() => {
+const probingCirclesPages = computed<ProbingCircle[][]>(() => {
   const results = props.measurement.results
   const trial = props.measurement.target?.probing_number_of_trial || 0
   const circles: ProbingCircle[] = []
@@ -71,9 +84,14 @@ const probingCircles = computed<ProbingCircle[]>(() => {
   // if (!props.measurement.submitted_at && Object.keys(results).length >= trial) {
   //   circles.push({ key: 0, value: 'empty' })
   // }
-  const start = (page.value - 1) * perPage.value
-  const end = page.value * perPage.value
-  return circles.slice(start, end)
+  const res: ProbingCircle[][] = []
+  for (let idx = 1; idx <= pageCount.value; idx++) {
+    const start = (idx - 1) * perPage.value
+    const end = idx * perPage.value
+    const arr = [...circles.slice(start, end)]
+    res.push(arr)
+  }
+  return res
 })
 const probingScore = computed<number>(() => {
   const results = props.measurement.results
@@ -98,6 +116,9 @@ const onAdd = async (bool: boolean) => {
   probingLoading.value = false
   if (!success) return
   page.value = pageCount.value
+  const el = `${props.measurement.id}-probing-circle-${pageCount.value}`
+  const circles = document.getElementById(el)
+  circles?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
   onDisplayPopup()
 }
 const onRemove = async (circle: ProbingCircle) => {
@@ -122,6 +143,9 @@ const onRemove = async (circle: ProbingCircle) => {
   probingLoading.value = false
   if (!success) return
   page.value = pageCount.value
+  const el = `${props.measurement.id}-probing-circle-${pageCount.value}`
+  const circles = document.getElementById(el)
+  circles?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
   onDisplayPopup()
 }
 
@@ -282,29 +306,45 @@ const onSave = async () => {
       '-z[1] bottom-0 opacity-0': is_collapsed && !showPopup
     }"
   >
-    <div class="flex max-w-64 flex-wrap items-center justify-center gap-x-2 gap-y-2">
+    <div
+      class="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+      :class="{ 'w-[calc(320px-32px)] ': !is_collapsed, 'w-64': is_collapsed }"
+      @scroll="onScroll"
+    >
       <div
-        v-for="box in probingCircles"
-        :key="`${box.key}_${box.value}`"
-        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all"
-        :class="{
-          'pointer-events-none':
-            measurement.submitted_at ||
-            probingLoading ||
-            box.value === 'empty' ||
-            box.value === 'removing',
-          'border-2 border-dashed border-slate-5 bg-slate-2': box.value === 'empty',
-          'bg-white': box.value === 'removing',
-          'bg-lime-4': box.value === true,
-          'bg-red-cherry': box.value === false
-        }"
-        @click="onRemove(box)"
+        v-for="(probingCircles, idx) in probingCirclesPages"
+        :key="`${measurement.id}-probing-circle-${idx + 1}`"
+        :id="`${measurement.id}-probing-circle-${idx + 1}`"
+        class="flex shrink-0 snap-start justify-center"
+        :class="{ 'w-[calc(320px-32px)] ': !is_collapsed, 'w-64': is_collapsed }"
       >
-        <Icon
-          v-if="box.value === 'removing'"
-          icon="mingcute:loading-fill"
-          class="animate-spin text-2xl text-light-purple-5"
-        />
+        <div
+          class="flex max-w-64 flex-wrap content-center items-start justify-center gap-x-2 gap-y-2"
+        >
+          <div
+            v-for="box in probingCircles"
+            :key="`${box.key}_${box.value}`"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all"
+            :class="{
+              'pointer-events-none':
+                measurement.submitted_at ||
+                probingLoading ||
+                box.value === 'empty' ||
+                box.value === 'removing',
+              'border-2 border-dashed border-slate-5 bg-slate-2': box.value === 'empty',
+              'bg-white': box.value === 'removing',
+              'bg-lime-4': box.value === true,
+              'bg-red-cherry': box.value === false
+            }"
+            @click="onRemove(box)"
+          >
+            <Icon
+              v-if="box.value === 'removing'"
+              icon="mingcute:loading-fill"
+              class="animate-spin text-2xl text-light-purple-5"
+            />
+          </div>
+        </div>
       </div>
     </div>
     <div v-if="is_collapsed" class="flex h-2 items-center justify-center gap-2">
@@ -313,7 +353,6 @@ const onSave = async () => {
         :key="n"
         :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
         class="h-2 w-2 rounded-full transition-all"
-        @click="page = n"
       ></div>
     </div>
     <div v-if="measurement.submitted_at && !is_collapsed" class="flex w-60 justify-center">
@@ -334,7 +373,6 @@ const onSave = async () => {
         :key="n"
         :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
         class="h-2 w-2 rounded-full transition-all"
-        @click="page = n"
       ></div>
     </div>
     <div class="flex flex-col" :class="{ 'gap-4': !is_collapsed, 'gap-0 pt-2': is_collapsed }">
