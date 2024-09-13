@@ -1,7 +1,9 @@
 import { getAccessStorage } from '@/plugins/preferences.plugin'
 import axios from 'axios'
 import router from '@/router'
-const API_URL = 'https://blum-staging.herokuapp.com'
+
+const API_URL = 'https://blum-staging.herokuapp.com' // staging
+// const API_URL = 'https://blubridge-aba.herokuapp.com'
 
 axios.defaults.baseURL = API_URL
 axios.defaults.withCredentials = true

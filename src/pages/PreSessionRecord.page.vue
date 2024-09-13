@@ -41,6 +41,8 @@ async function fetchSession() {
 }
 
 onMounted(() => {
+  appStore.getRunningSessions()
+
   fetchSession()
   redirect.value = route.query.redirect?.toString() || '/home'
 })
@@ -384,7 +386,7 @@ const onStartSession = () => {
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
         <AppButton kind="plain" @click="showActionBeforeLunch = false">Cancel</AppButton>
-        <AppButton :loading="startSessionLoading" @click="onLaunchSession">Process</AppButton>
+        <AppButton :loading="startSessionLoading" @click="onLaunchSession">Proceed</AppButton>
       </div>
     </div>
   </AppActionSheet>

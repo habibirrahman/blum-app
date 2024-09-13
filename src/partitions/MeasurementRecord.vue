@@ -92,7 +92,7 @@ const onSaveComment = async () => {
 <template>
   <div
     class="relative shrink-0 rounded transition-all"
-    :class="{ 'h-[500px] w-[320px]': !is_collapsed, 'h-[120px] w-full': is_collapsed }"
+    :class="{ 'h-[520px] w-[320px]': !is_collapsed, 'h-[120px] w-full': is_collapsed }"
     @click="emit('set-focus')"
   >
     <div
@@ -143,7 +143,12 @@ const onSaveComment = async () => {
           <div class="text-sm font-semibold text-slate-7">
             {{ measurement.target?.curriculum_name }}
           </div>
-          <div class="text-sm font-semibold text-slate-9">{{ measurement.target?.name }}</div>
+          <div
+            class="text-sm font-semibold text-slate-9"
+            :class="{ truncate: display === 'target' || display === 'comment' }"
+          >
+            {{ measurement.target?.name }}
+          </div>
         </div>
         <div v-if="display === 'target'" class="flex h-full pb-3 transition-all">
           <div

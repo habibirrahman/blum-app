@@ -1,14 +1,13 @@
 import { defineStore } from 'pinia'
 import {
   getAppStorage,
-  removeAccessStorage,
-  removeAppStorage,
-  removeSessionStorage,
   setAccessStorage,
   setAppStorage
 } from '@/plugins/preferences.plugin'
 import type { Branch, Session, User } from '@/lib/types'
 import axios from 'axios'
+import { useSessionStore } from './session.store'
+import { useClientStore } from './client.store'
 
 export interface AppStateSchema {
   network_status: NetworkStatus
@@ -40,6 +39,17 @@ export const useAppStore = defineStore('app', {
   }),
   getters: {},
   actions: {
+    resetAppStore() {
+      const { resetSessionStore } = useSessionStore()
+      const { resetClientStore } = useClientStore()
+      resetSessionStore()
+      resetClientStore()
+
+      this.account = null
+      this.running_sessions = []
+      this.branches = []
+      this.syncAppStore()
+    },
     async generateAppStore(): Promise<ResponseSchema> {
       return getAppStorage().then(({ success, data }) => {
         if (!success) {
@@ -76,15 +86,12 @@ export const useAppStore = defineStore('app', {
         .get('/api/v1/current_user')
         .then(async ({ data }) => {
           this.account = data
-          const { success } = await this.getRunningSessions()
-          if (!success) return { success: false, data: null }
           this.syncAppStore()
           return { success: true, data, message: 'You have signed in' }
         })
         .catch(async ({ response }) => {
           if (response.status === 401) {
-            this.account = null
-            await removeAppStorage()
+            this.resetAppStore()
           }
           return { success: false, data: null, message: response?.data?.error }
         })
@@ -95,8 +102,6 @@ export const useAppStore = defineStore('app', {
         .then(async ({ data }) => {
           await setAccessStorage(data)
           this.account = data.user
-          const { success } = await this.getRunningSessions()
-          if (!success) return { success: false, data: null }
           this.syncAppStore()
           return { success: true, message: 'Successfully signed in' }
         })
@@ -107,10 +112,7 @@ export const useAppStore = defineStore('app', {
     async signout(): Promise<ResponseSchema> {
       const { status } = await axios.delete('/signin')
       if (status !== 200) return { success: false }
-      await removeAccessStorage()
-      await removeAppStorage()
-      await removeSessionStorage()
-      this.account = null
+      this.resetAppStore()
       return { success: true }
     },
     async getRunningSessions(): Promise<ResponseSchema> {

@@ -103,7 +103,7 @@ type Sort = 'alphabetical' | 'alphabetical_desc' | ''
 const sort = ref<Sort>('')
 const selectSort = ref<Sort>('')
 const sortOptions: { value: Sort; label: string }[] = [
-  { value: '', label: 'Most Recent' },
+  { value: '', label: 'Recently created' },
   { value: 'alphabetical', label: 'Name (A-Z)' },
   { value: 'alphabetical_desc', label: 'Name (Z-A)' }
 ]
@@ -143,6 +143,8 @@ async function fetchClients() {
 }
 
 onMounted(async () => {
+  appStore.getRunningSessions()
+
   clientsLoading.value = true
   /** generate client.store from storage */
   await clientStore.generateClientStore()

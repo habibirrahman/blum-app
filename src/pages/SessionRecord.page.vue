@@ -52,7 +52,7 @@ async function fetchSession(
   }
   const app = document.getElementById('app')
   if (first && session.status === 'ongoing') {
-    app?.scroll({ top: 56, behavior: 'smooth' })
+    app?.scroll({ top: 112, behavior: 'smooth' })
     app?.addEventListener('scroll', scrollListener)
   }
 }
@@ -72,22 +72,22 @@ watch(
 const scrollingTimeout = ref<any>(null)
 const scrollListener = (e: any) => {
   let top = e.currentTarget.scrollTop
-  if (!appStore.network_status.connected && top < 56) {
-    document.getElementById('app')?.scroll({ top: 56, behavior: 'instant' })
+  if (!appStore.network_status.connected && top < 112) {
+    document.getElementById('app')?.scroll({ top: 112, behavior: 'instant' })
   }
-  let timer = 750
+  let timer = 1000
   clearTimeout(scrollingTimeout.value)
   if (top <= 0 && runningMeasurements.value.length) {
     top = 1
-    timer = 1500
+    timer = 2000
   }
   scrollingTimeout.value = setTimeout(() => {
-    if (top <= 0) {
+    if (top === 0) {
       cycleLoading.value = true
       fetchSession({ is_swiped: true })
     }
-    if (top < 56) {
-      document.getElementById('app')?.scroll({ top: 56, behavior: 'smooth' })
+    if (top < 112) {
+      document.getElementById('app')?.scroll({ top: 112, behavior: 'smooth' })
     }
   }, timer)
 }
@@ -144,12 +144,18 @@ const onToggleRunning = (data: Measurement) => {
 const showReviewMode = ref<boolean>(false)
 watch(showReviewMode, (val) => {
   if (sessionStore.session?.status === 'ongoing') {
-    document.getElementById('app')?.scroll({ top: 56, behavior: 'smooth' })
+    document.getElementById('app')?.scroll({ top: 112, behavior: 'smooth' })
   }
   if (val) focusMeasurement.value = 0
 })
 const focusMeasurement = ref<Measurement['id']>(0)
 const onFocusMeasurement = (val: Measurement) => {
+  if (sessionStore.session_measurements.length > 1) {
+    const first = fixedMeasurement
+      ? sessionStore.session_measurements[1]
+      : sessionStore.session_measurements[0]
+    if (first.id === val.id) return
+  }
   if (val.id === focusMeasurement.value) {
     return
   }
@@ -364,7 +370,7 @@ const onEndSession = async () => {
 
   <div
     v-if="sessionStore.session?.status === 'ongoing'"
-    class="flex h-14 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
+    class="flex h-28 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
   >
     <div v-if="runningMeasurements.length">
       <div>Can't refresh while the timer is running.</div>

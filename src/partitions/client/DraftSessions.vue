@@ -13,6 +13,7 @@ import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppButton from '@/components/AppButton.vue'
 import { TransitionRoot } from '@headlessui/vue'
+import { displayDate } from '@/lib/func'
 
 const route = useRoute()
 const router = useRouter()
@@ -44,7 +45,7 @@ watch(query, () => {
 type Date = 'days' | 'isoWeeks' | 'months' | ''
 const date = ref<Date>('')
 const dateOptions: { value: Date; label: string }[] = [
-  { value: 'days', label: 'This day' },
+  { value: 'days', label: 'Today' },
   { value: 'isoWeeks', label: 'This week' },
   { value: 'months', label: 'This month' }
 ]
@@ -85,20 +86,22 @@ const onApplyStatus = () => {
   fetchDraftSession()
 }
 
-type Sort = 'newest_session_id' | 'oldest_session_id'
-const sort = ref<Sort>('newest_session_id')
-const selectSort = ref<Sort>('newest_session_id')
+type Sort = 'newest_session_id' | 'oldest_session_id' | 'most_recent_schedule' | 'earliest_schedule'
+const sort = ref<Sort>('most_recent_schedule')
+const selectSort = ref<Sort>('most_recent_schedule')
 const sortOptions: { value: Sort; label: string }[] = [
   { value: 'newest_session_id', label: 'Newest session ID' },
-  { value: 'oldest_session_id', label: 'Oldest session ID' }
+  { value: 'oldest_session_id', label: 'Oldest session ID' },
+  { value: 'most_recent_schedule', label: 'Most recent schedule' },
+  { value: 'earliest_schedule', label: 'Earliest schedule' }
 ]
 const showSort = ref<boolean>(false)
 watch(showSort, () => {
   selectSort.value = sort.value
 })
 const onResetSort = () => {
-  sort.value = 'newest_session_id'
-  selectSort.value = 'newest_session_id'
+  sort.value = 'most_recent_schedule'
+  selectSort.value = 'most_recent_schedule'
   showSort.value = false
   page.value = 1
   fetchDraftSession()
@@ -194,21 +197,8 @@ const onOpenSession = (session: Session) => {
       </div>
     </div>
     <div v-if="clientStore.upcoming_sessions_count" class="space-y-1.5">
-      <div class="flex items-center gap-1.5 px-4">
-        <div class="text-xs font-semibold text-dark-purple-1">
-          Your {{ clientStore.upcoming_sessions.length }} session(s) for this week
-        </div>
-        <div
-          v-if="clientStore.upcoming_sessions_count > clientStore.upcoming_sessions.length"
-          class="h-1 w-1 shrink-0 rounded bg-light-purple-4"
-        ></div>
-        <div
-          v-if="clientStore.upcoming_sessions_count > clientStore.upcoming_sessions.length"
-          class="text-xs text-light-purple-4"
-        >
-          {{ clientStore.upcoming_sessions_count - clientStore.upcoming_sessions.length }}
-          remaining
-        </div>
+      <div class="px-4 text-xs font-semibold text-dark-purple-1">
+        {{ clientStore.upcoming_sessions.length }} upcoming session(s) assigned to you this week
       </div>
       <div class="pl-4">
         <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
@@ -221,7 +211,16 @@ const onOpenSession = (session: Session) => {
               query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
             }"
           >
-            <UpcomingSession :session="session" />
+            <UpcomingSession
+              :session="session"
+              :title="
+                displayDate({
+                  date: session.appointment?.date,
+                  format: 'dddd, DD MMM YYYY',
+                  empty: 'No scheduled date'
+                })
+              "
+            />
           </RouterLink>
         </div>
       </div>
@@ -282,7 +281,7 @@ const onOpenSession = (session: Session) => {
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
       No draft sessions scheduled for
-      {{ date === 'days' ? 'day' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
+      {{ date === 'days' ? 'today' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
     </div>
     <div v-else-if="query" class="text-center text-sm text-slate-8">
       Sorry, no drafts match your search. Try searching with a different therapist name or session
@@ -397,9 +396,9 @@ const onOpenSession = (session: Session) => {
     class="fixed left-0 top-0 z-[101] flex h-screen w-screen items-center justify-center rounded border-2 bg-white"
   >
     <div
-      class="absolute top-0 -z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
+      class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
     ></div>
-    <div class="flex flex-col items-center gap-4 px-6">
+    <div class="z-[2] flex flex-col items-center gap-4 px-6">
       <div class="flex flex-col items-center gap-2">
         <div
           class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3 text-xl font-semibold text-lime-8"

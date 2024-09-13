@@ -58,14 +58,18 @@ async function fetchClient() {
 }
 
 onMounted(() => {
+  appStore.getRunningSessions()
+
   fetchClient()
 })
 </script>
 
 <template>
   <div class="sticky top-0 z-10 bg-chestnut-1">
-    <div class="flex h-10 items-center justify-center font-semibold text-dark-purple-1">
-      {{ clientStore.client?.name }}
+    <div class="flex h-10 w-full items-center justify-center font-semibold text-dark-purple-1">
+      <div class="truncate px-4">
+        {{ clientStore.client?.name }}
+      </div>
     </div>
     <div class="flex h-10 items-end">
       <div
