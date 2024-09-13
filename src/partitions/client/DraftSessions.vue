@@ -393,7 +393,7 @@ const onOpenSession = (session: Session) => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[101] flex h-screen w-screen items-center justify-center rounded border-2 bg-white"
+    class="fixed left-0 top-0 z-[101] flex h-screen w-screen items-center justify-center bg-white"
   >
     <div
       class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"

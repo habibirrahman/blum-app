@@ -43,7 +43,7 @@ watch(
     setTimeout(() => {
       const el = `${props.measurement.id}-probing-circle-${1}`
       const circles = document.getElementById(el)
-      circles?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+      circles?.scrollIntoView({ behavior: 'smooth', inline: 'center' })
     }, 300)
   }
 )
@@ -57,9 +57,9 @@ const onScroll = (e: any) => {
 
 const perPage = computed<number>(() => 20)
 const pageCount = computed<number>(() => {
-  const results = props.measurement.results
+  const results = Object.keys(props.measurement.results).length || 0
   const trial = props.measurement.target?.probing_number_of_trial || 0
-  let circles = Object.keys(results).length
+  let circles = results || trial
   // if (!props.measurement.submitted_at && circles >= trial) {
   //   circles++
   // }
@@ -115,10 +115,7 @@ const onAdd = async (bool: boolean) => {
   const { success } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
   if (!success) return
-  page.value = pageCount.value
-  const el = `${props.measurement.id}-probing-circle-${pageCount.value}`
-  const circles = document.getElementById(el)
-  circles?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+  // page.value = pageCount.value
   onDisplayPopup()
 }
 const onRemove = async (circle: ProbingCircle) => {
@@ -142,10 +139,7 @@ const onRemove = async (circle: ProbingCircle) => {
   const { success } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
   if (!success) return
-  page.value = pageCount.value
-  const el = `${props.measurement.id}-probing-circle-${pageCount.value}`
-  const circles = document.getElementById(el)
-  circles?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+  // page.value = pageCount.value
   onDisplayPopup()
 }
 

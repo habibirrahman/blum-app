@@ -27,7 +27,6 @@ interface Props {
 interface Emits {
   (e: 'toggle-running', data: Measurement): void
   (e: 'toggle-collapsed', bool: boolean): void
-  (e: 'set-focus'): void
 }
 const props = withDefaults(defineProps<Props>(), {
   is_collapsed: false,
@@ -93,7 +92,6 @@ const onSaveComment = async () => {
   <div
     class="relative shrink-0 rounded transition-all"
     :class="{ 'h-[520px] w-[320px]': !is_collapsed, 'h-[120px] w-full': is_collapsed }"
-    @click="emit('set-focus')"
   >
     <div
       v-if="review_mode && measurement.is_fixed"

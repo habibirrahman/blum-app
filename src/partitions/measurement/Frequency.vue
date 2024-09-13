@@ -17,7 +17,7 @@ const onChangeScore = async (score: number) => {
   const currentScore = props.measurement.results?.score || 0
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: currentScore + score,
+    results: score,
     data_result: {
       ...props.measurement,
       results: { score: currentScore + score }

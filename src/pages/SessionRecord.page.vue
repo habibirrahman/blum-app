@@ -6,10 +6,12 @@ import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
 import AppButton from '@/components/AppButton.vue'
 import MeasurementRecord from '@/partitions/MeasurementRecord.vue'
-import type { Measurement, Session } from '@/lib/types'
+import type { Measurement, Session, Target } from '@/lib/types'
 import SessionComments from '@/partitions/SessionComments.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import { useToast } from 'vue-toastification'
+import { TransitionRoot } from '@headlessui/vue'
+import AppChip from '@/components/AppChip.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +22,7 @@ const sessionStore = useSessionStore()
 const sessionLoading = ref<boolean>(false)
 const cycleLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
+const heightReload = 112
 
 interface FetchSessionProps {
   first?: boolean
@@ -52,7 +55,7 @@ async function fetchSession(
   }
   const app = document.getElementById('app')
   if (first && session.status === 'ongoing') {
-    app?.scroll({ top: 112, behavior: 'smooth' })
+    app?.scroll({ top: heightReload, behavior: 'smooth' })
     app?.addEventListener('scroll', scrollListener)
   }
 }
@@ -72,8 +75,8 @@ watch(
 const scrollingTimeout = ref<any>(null)
 const scrollListener = (e: any) => {
   let top = e.currentTarget.scrollTop
-  if (!appStore.network_status.connected && top < 112) {
-    document.getElementById('app')?.scroll({ top: 112, behavior: 'instant' })
+  if (!appStore.network_status.connected && top < heightReload) {
+    document.getElementById('app')?.scroll({ top: heightReload, behavior: 'instant' })
   }
   let timer = 1000
   clearTimeout(scrollingTimeout.value)
@@ -86,8 +89,8 @@ const scrollListener = (e: any) => {
       cycleLoading.value = true
       fetchSession({ is_swiped: true })
     }
-    if (top < 112) {
-      document.getElementById('app')?.scroll({ top: 112, behavior: 'smooth' })
+    if (top < heightReload) {
+      document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
     }
   }, timer)
 }
@@ -144,25 +147,27 @@ const onToggleRunning = (data: Measurement) => {
 const showReviewMode = ref<boolean>(false)
 watch(showReviewMode, (val) => {
   if (sessionStore.session?.status === 'ongoing') {
-    document.getElementById('app')?.scroll({ top: 112, behavior: 'smooth' })
+    document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
   }
   if (val) focusMeasurement.value = 0
 })
 const focusMeasurement = ref<Measurement['id']>(0)
 const onFocusMeasurement = (val: Measurement) => {
-  if (sessionStore.session_measurements.length > 1) {
-    const first = fixedMeasurement
+  let timer = 500
+  if (!showReviewMode.value) timer = 100
+  showReviewMode.value = false
+  if (val.id === focusMeasurement.value) return
+  focusMeasurement.value = val.id
+
+  const measurements = sessionStore.session_measurements
+  if (measurements.length <= 1) return
+  else {
+    const first = fixedMeasurement.value
       ? sessionStore.session_measurements[1]
       : sessionStore.session_measurements[0]
     if (first.id === val.id) return
   }
-  if (val.id === focusMeasurement.value) {
-    return
-  }
-  focusMeasurement.value = val.id
-  let timer = 500
-  if (!showReviewMode.value) timer = 100
-  showReviewMode.value = false
+
   setTimeout(() => {
     if (val.is_fixed) {
       isMeasurementCollapsed.value = false
@@ -291,10 +296,65 @@ const onKeepActiveAndEndSession = () => {
 const onEndSession = async () => {
   endSessionLoading.value = true
   const { success } = await sessionStore.endSession()
+  if (!success) {
+    endSessionLoading.value = false
+    return
+  }
+  checkActionRecommendations()
+}
+
+const showActionRecommendations = ref<boolean>(false)
+const checkActionRecommendations = async () => {
+  const { success, data } = await sessionStore.getSessionRecommendations()
   endSessionLoading.value = false
-  if (!success) return
   showEndSession.value = false
   toast.success('The session has been completed.')
+  if (!success) {
+    onExitSession()
+    return
+  }
+  if (data.action_recommendations.length) {
+    showActionRecommendations.value = true
+  } else {
+    onExitSession()
+  }
+}
+
+const generateSuccessMetric = (target?: Target) => {
+  if (!target) return ''
+  let prefix = ''
+  let goalText: string | number | undefined = ''
+  let suffix = ''
+  // prefix
+  if (
+    target.success_metric === 'equal to or greater than goal' ||
+    target.type_name === 'Prompting'
+  ) {
+    prefix = '≥ '
+  }
+  if (target.success_metric === 'less than goal') {
+    prefix = '< '
+  }
+  // goal text
+  if (target.type_name === 'Duration') {
+    goalText = target.goal_time
+  } else {
+    goalText = target.goal
+  }
+  // suffix
+  if (target.type_name === 'Percentage' || target.type_name === 'Partial interval recording') {
+    suffix = '%'
+  }
+  if (target.type_name === 'Frequency') {
+    suffix = ' attempt(s)'
+  }
+  if (target.type_name === 'Prompting') {
+    suffix = ` attempt(s) ${target.success_metric} prompts`
+  }
+  return prefix + goalText + suffix
+}
+
+const onExitSession = () => {
   router.push(redirect.value)
 }
 </script>
@@ -414,7 +474,7 @@ const onEndSession = async () => {
         :counter="counter"
         :review_mode="showReviewMode"
         @toggle-running="onToggleRunning"
-        @set-focus="onFocusMeasurement(measurement)"
+        @click="onFocusMeasurement(measurement)"
       />
     </div>
   </div>
@@ -550,4 +610,59 @@ const onEndSession = async () => {
       </AppButton>
     </div>
   </AppActionSheet>
+
+  <TransitionRoot
+    :show="showActionRecommendations"
+    enter="transition-all duration-300 ease-out"
+    enter-from="opacity-0 scale-75"
+    enter-to="opacity-100 scale-100"
+    leave="transition-all duration-200 ease-in"
+    leave-from="opacity-100 scale-100"
+    leave-to="opacity-0 scale-75"
+    class="fixed left-0 top-0 z-[21] min-h-screen w-screen bg-white"
+  >
+    <div class="sticky top-0 z-[10] flex h-14 shrink-0 items-center gap-3 bg-white px-4">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-orange-3">
+        <Icon icon="ph:seal-warning-fill" class="text-2xl text-orange-6" />
+      </div>
+      <div class="text-2xl text-[22px] font-bold">Passing success metric</div>
+    </div>
+    <div class="flex flex-col gap-3 px-4">
+      <div class="flex items-center gap-1">
+        <AppChip chip="in_progress" />
+        <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
+        <AppChip chip="mastered" />
+      </div>
+      <div class="text-sm text-slate-8">
+        The following targets have reached their success criteria. Please go to the
+        <span class="font-semibold">'Recommendation'</span>
+        tab on the web version to proceed with the next steps.
+      </div>
+      <div>
+        <div
+          v-for="recommendation in sessionStore.session_recommendations"
+          :key="recommendation.id"
+          class="flex flex-col gap-2 border-b border-slate-3 py-3"
+        >
+          <div class="text-sm font-semibold">{{ recommendation.target?.name }}</div>
+          <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+            <div class="truncate">Success metric</div>
+            <div class="truncate">{{ generateSuccessMetric(recommendation.target) }}</div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+            <div class="truncate">Total successful sessions</div>
+            <div class="truncate">{{ recommendation.target?.total_success }} session(s)</div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+            <div class="truncate">Number of consecutive success</div>
+            <div class="truncate">{{ recommendation.target?.consecutive_success }} session(s)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fixed bottom-0 flex h-16 w-full items-center justify-between bg-white px-4">
+      <AppButton class="w-full" @click="onExitSession">Close session</AppButton>
+    </div>
+  </TransitionRoot>
 </template>

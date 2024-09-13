@@ -3,7 +3,7 @@ import axios from 'axios'
 import { getSessionStorage, setSessionStorage } from '@/plugins/preferences.plugin'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { onlyUniqueId } from '@/lib/func'
-import type { Session, Comment, Measurement, User, Client } from '@/lib/types'
+import type { Session, Comment, Measurement, User, Client, ActionRecommendation } from '@/lib/types'
 
 interface SessionPendingProgress {
   name:
@@ -23,6 +23,7 @@ export interface SessionStateSchema {
   session: Session | null
   session_comments: Comment[]
   session_measurements: Measurement[]
+  session_recommendations: ActionRecommendation[]
   upcoming_sessions: Session[]
   upcoming_sessions_count: number
   sessions: Session[]
@@ -88,6 +89,7 @@ export const useSessionStore = defineStore('session', {
     session: null,
     session_comments: [],
     session_measurements: [],
+    session_recommendations: [],
     upcoming_sessions: [],
     upcoming_sessions_count: 0,
     sessions: [],
@@ -100,6 +102,7 @@ export const useSessionStore = defineStore('session', {
       this.session = null
       this.session_comments = []
       this.session_measurements = []
+      this.session_recommendations = []
       this.upcoming_sessions = []
       this.upcoming_sessions_count = 0
       this.sessions = []
@@ -116,6 +119,7 @@ export const useSessionStore = defineStore('session', {
         this.session = storage?.session || null
         this.session_comments = storage?.session_comments || []
         this.session_measurements = storage?.session_measurements || []
+        this.session_recommendations = []
         this.upcoming_sessions = storage?.upcoming_sessions || []
         this.upcoming_sessions_count = storage?.upcoming_sessions_count || 0
         this.sessions = storage?.sessions || []
@@ -129,6 +133,7 @@ export const useSessionStore = defineStore('session', {
         session: this.session,
         session_comments: this.session_comments,
         session_measurements: this.session_measurements,
+        session_recommendations: [],
         upcoming_sessions: this.upcoming_sessions,
         upcoming_sessions_count: this.upcoming_sessions_count,
         sessions: this.sessions,
@@ -352,6 +357,20 @@ export const useSessionStore = defineStore('session', {
           await getRunningSessions()
           this.session = data
           this.syncSessionStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getSessionRecommendations() {
+      this.session_recommendations = []
+      return axios
+        .get(
+          `/api/v1/clients/${this.session?.client_id}/action_recommendations??page=1&per_page=999&session_id=${this.session?.id}`
+        )
+        .then(async ({ data }) => {
+          this.session_recommendations = data.action_recommendations
           return { success: true, data }
         })
         .catch(({ response }) => {

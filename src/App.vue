@@ -115,7 +115,7 @@ const navigations = computed<Nav[]>(() => {
 </script>
 
 <template>
-  <div class="font-sans bg-white" :style="{ paddingLeft, paddingTop, paddingRight, paddingBottom }">
+  <div class="bg-white font-sans" :style="{ paddingLeft, paddingTop, paddingRight, paddingBottom }">
     <div v-if="loadingApp" class="grid h-screen w-screen place-items-center">
       <div class="flex animate-pulse items-center font-logo text-4xl font-bold text-light-purple-5">
         Blüm
@@ -171,9 +171,13 @@ const navigations = computed<Nav[]>(() => {
               query: { redirect: '/home' }
             }"
             class="w-full"
+            :class="{ 'pointer-events-none': !networkStatus.connected }"
           >
-            <AppButton class="w-full">
-              Join Session ID {{ appStore.running_sessions[0].id }}
+            <AppButton class="w-full" :disabled="!networkStatus.connected">
+              <span v-if="networkStatus.connected">
+                Join Session ID {{ appStore.running_sessions[0].id }}
+              </span>
+              <span v-else>Offline: connect to join session</span>
             </AppButton>
           </RouterLink>
         </div>

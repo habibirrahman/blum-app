@@ -237,10 +237,25 @@ export interface Target {
     target_id?: Target['id']
     center_id?: number // not
   }[]
+  type_name?: string
+  total_success?: number
+  consecutive_success?: number
 }
 
 export interface Curriculum {
   id?: number
   color?: string
   name?: string
+}
+
+export interface ActionRecommendation {
+  id?: number
+  total_success?: number
+  consecutive_success?: number
+  recommended_action?: string
+  visible?: boolean
+  passed?: boolean
+  latest_session_by?: User
+  target_id?: Target['id']
+  target?: Target
 }

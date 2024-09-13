@@ -61,7 +61,7 @@ const pages = computed<(number | null)[]>(() => {
       class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-xl transition-all"
       :class="{
         'bg-white text-slate-8': page > 1,
-        'bg-slate-2 text-slate-6': page === 1
+        'pointer-events-none bg-slate-2 text-slate-6': page === 1
       }"
       @click="emit('change', page - 1)"
     >
@@ -87,7 +87,7 @@ const pages = computed<(number | null)[]>(() => {
       class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-xl transition-all"
       :class="{
         'bg-white text-slate-8': page < Number(pages[pages.length - 1]),
-        'bg-slate-2 text-slate-6': page === Number(pages[pages.length - 1])
+        'pointer-events-none bg-slate-2 text-slate-6': page === Number(pages[pages.length - 1])
       }"
       @click="emit('change', page + 1)"
     >

@@ -216,7 +216,7 @@ const onCreate = async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[21] h-screen w-screen rounded border-2 bg-white"
+    class="fixed left-0 top-0 z-[21] min-h-screen w-screen bg-white"
   >
     <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
       <div
