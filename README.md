@@ -70,3 +70,14 @@ bunx cap sync
 bunx cap run android
 bunx cap run ios
 ```
+
+### Build APK
+
+```sh
+bun run build
+bunx cap copy
+bunx cap copy android
+bunx cap open android
+bunx cap copy ios
+bunx cap open ios
+```
