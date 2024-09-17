@@ -45,7 +45,7 @@ const openPassword = ref<boolean>(false)
       :placeholder="placeholder"
       :disabled="disabled"
       v-model="model"
-      class="group h-full w-full rounded text-sm outline-none ring-offset-2 transition-all focus:outline-none"
+      class="group h-full w-full rounded text-[16px] outline-none ring-offset-2 transition-all focus:outline-none"
       :class="{
         'focus:ring-2': !disabled,
         'bg-slate-2': disabled,
@@ -63,7 +63,7 @@ const openPassword = ref<boolean>(false)
       :placeholder="placeholder"
       :disabled="disabled"
       v-model="model"
-      class="group h-full w-full rounded text-sm outline-none ring-offset-2 transition-all focus:outline-none"
+      class="group h-full w-full rounded text-[16px] outline-none ring-offset-2 transition-all focus:outline-none"
       :class="{
         'focus:ring-2': !disabled,
         'bg-slate-2': disabled,
