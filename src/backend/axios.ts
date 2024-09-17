@@ -2,8 +2,7 @@ import { getAccessStorage } from '@/plugins/preferences.plugin'
 import axios from 'axios'
 import router from '@/router'
 
-const API_URL = 'https://blum-staging.herokuapp.com' // staging
-// const API_URL = 'https://blubridge-aba.herokuapp.com'
+const API_URL = import.meta.env.VITE_API_ENDPOINT
 
 axios.defaults.baseURL = API_URL
 axios.defaults.withCredentials = true
@@ -41,9 +40,6 @@ axios.interceptors.response.use(
         // alert('An error occurred. Please try again later.')
       }
     }
-    // if (error.message) {
-    //   alert(error.message)
-    // }
     return Promise.reject(error)
   }
 )
