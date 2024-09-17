@@ -148,7 +148,7 @@ const onOpenSession = (session: Session) => {
     <div class="px-4">
       <AppTextInput
         name="query"
-        placeholder="Search session by therapist or ID"
+        placeholder="Search session by therapist name or ID"
         v-model="query"
         suffix_icon="ph:magnifying-glass"
       />

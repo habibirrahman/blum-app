@@ -177,7 +177,7 @@ onMounted(async () => {
     <div class="px-4">
       <AppTextInput
         name="query"
-        placeholder="Search draft by client name or ID"
+        placeholder="Search client by name"
         v-model="query"
         suffix_icon="ph:magnifying-glass"
       />
