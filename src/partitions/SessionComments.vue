@@ -140,15 +140,15 @@ const onCreate = async () => {
     leave-from="translate-x-0"
     leave-to="-translate-x-full"
     id="session-comments"
-    class="fixed left-0 top-0 z-[20] h-screen w-screen overflow-y-auto bg-prim-3"
+    class="fixed left-0 z-[20] h-screen w-screen overflow-y-auto bg-prim-3 p-safe top-safe"
   >
     <div
       v-if="commentsLoading"
-      class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30"
+      class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30 p-safe"
     >
       <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
     </div>
-    <div class="sticky top-0 z-[10] shrink-0">
+    <div class="sticky z-[10] shrink-0 top-safe">
       <div class="flex h-[52px] items-center gap-3 bg-white px-4">
         <div
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
@@ -198,7 +198,7 @@ const onCreate = async () => {
     </div>
     <div
       v-if="sessionStore.session?.status === 'ongoing'"
-      class="fixed bottom-0 flex h-20 w-full items-center justify-center transition-all"
+      class="fixed flex h-20 w-full items-center justify-center transition-all bottom-safe"
       :class="{ 'opacity-0': filter === 'target' }"
     >
       <div
@@ -219,9 +219,9 @@ const onCreate = async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[21] min-h-screen w-screen bg-white"
+    class="fixed left-0 z-[21] min-h-screen w-screen bg-white p-safe top-safe"
   >
-    <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
+    <div class="sticky z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4 top-safe">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
         @click="showNew = false"
@@ -272,7 +272,7 @@ const onCreate = async () => {
         />
       </div>
     </div>
-    <div class="fixed bottom-0 flex h-16 w-full items-center justify-between bg-white px-4">
+    <div class="fixed flex h-16 w-full items-center justify-between bg-white px-4 bottom-safe">
       <div class="flex items-center gap-2">
         <div
           v-for="opt in typeInputOptions"

@@ -362,13 +362,13 @@ const onExitSession = () => {
 <template>
   <div
     v-if="sessionLoading"
-    class="fixed z-[99] grid h-screen w-screen place-content-center opacity-75"
+    class="fixed z-[99] grid h-screen w-screen place-content-center opacity-75 p-safe"
     :style="{ background: 'linear-gradient(180deg, #FFFFFF 0%, #EBE4F0 15.77%)' }"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
   </div>
 
-  <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
+  <div class="sticky z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4 top-safe">
     <div class="flex items-center gap-2">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-all"
@@ -482,7 +482,7 @@ const onExitSession = () => {
   <div
     v-if="fixedMeasurement && !showReviewMode"
     id="fixed-measurement"
-    class="fixed bottom-0 z-[10] flex w-screen bg-prim-3 transition-all"
+    class="fixed z-[10] flex w-screen bg-prim-3 transition-all bottom-safe"
     :class="{
       'h-[120px] justify-center': isMeasurementCollapsed,
       'h-[calc(100vh-52px)] flex-col items-center gap-4 overflow-y-auto py-4':
@@ -511,8 +511,8 @@ const onExitSession = () => {
 
   <div
     v-if="!fixedMeasurement"
-    class="fixed bottom-0 z-[10] flex h-16 w-screen items-center gap-6 bg-prim-3 pl-4 transition-all delay-500 duration-500"
-    :class="{ 'bottom-0': !showReviewMode, '-bottom-16': showReviewMode }"
+    class="fixed z-[10] flex h-16 w-screen items-center gap-6 bg-prim-3 pl-4 transition-all delay-500 duration-500"
+    :class="{ 'bottom-safe': !showReviewMode, '-bottom-36': showReviewMode }"
   >
     <div class="relative" @click="showReviewMode = !showReviewMode">
       <div
@@ -521,7 +521,7 @@ const onExitSession = () => {
         {{ sessionStore.session_measurements.length }}
       </div>
       <div
-        class="absolute top-0 -z-[1] h-10 w-8 rounded bg-prim-4 transition-all duration-500"
+        class="absolute -z-[1] h-10 w-8 rounded bg-prim-4 transition-all duration-500 top-safe"
         :class="{ 'left-2 rotate-[15deg]': !showReviewMode, 'left-0 rotate-0': showReviewMode }"
       ></div>
     </div>
@@ -619,9 +619,9 @@ const onExitSession = () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[21] min-h-screen w-screen bg-white"
+    class="fixed left-0 z-[21] min-h-screen w-screen bg-white p-safe top-safe"
   >
-    <div class="sticky top-0 z-[10] flex h-14 shrink-0 items-center gap-3 bg-white px-4">
+    <div class="sticky z-[10] flex h-14 shrink-0 items-center gap-3 bg-white px-4 top-safe">
       <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-orange-3">
         <Icon icon="ph:seal-warning-fill" class="text-2xl text-orange-6" />
       </div>
@@ -661,7 +661,7 @@ const onExitSession = () => {
       </div>
     </div>
 
-    <div class="fixed bottom-0 flex h-16 w-full items-center justify-between bg-white px-4">
+    <div class="fixed flex h-16 w-full items-center justify-between bg-white px-4 bottom-safe">
       <AppButton class="w-full" @click="onExitSession">Close session</AppButton>
     </div>
   </TransitionRoot>

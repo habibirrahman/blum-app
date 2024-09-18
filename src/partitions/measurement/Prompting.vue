@@ -109,7 +109,7 @@ const onChangeScore = async (prompt: any, score: number) => {
       >
         <div
           class="flex w-[calc(240px+24px)] flex-wrap content-center items-start justify-center gap-x-3 gap-y-4"
-          :class="{ '-translate-y-2 scale-75': is_collapsed }"
+          :class="{ '-translate-y-1 scale-75': is_collapsed }"
         >
           <div v-for="prompt in promptBoxes" :key="prompt.id" class="space-y-1">
             <div
@@ -147,7 +147,7 @@ const onChangeScore = async (prompt: any, score: number) => {
     </div>
   </div>
 
-  <div class="shrink-0 space-y-2" :class="{ '-translate-y-1': is_collapsed }">
+  <div class="shrink-0 space-y-2" :class="{ '-translate-y-2': is_collapsed }">
     <div class="flex h-2 items-center justify-center gap-2">
       <div
         v-for="n in pageCount"

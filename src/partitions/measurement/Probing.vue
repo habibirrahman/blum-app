@@ -297,7 +297,7 @@ const onSave = async () => {
       'absolute left-1/2 mb-2 w-64 -translate-x-1/2 rounded border border-prim-3 bg-white py-3':
         is_collapsed,
       'bottom-full opacity-100': is_collapsed && showPopup,
-      '-z[1] bottom-0 opacity-0': is_collapsed && !showPopup
+      '-z[1] bottom-safe opacity-0': is_collapsed && !showPopup
     }"
   >
     <div
@@ -432,7 +432,7 @@ const onSave = async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="absolute left-0 top-0 z-[1] h-full w-full rounded border-2 border-white"
+    class="absolute left-0 z-[1] h-full w-full rounded border-2 border-white top-safe"
     :style="{ background: 'linear-gradient(180deg, #F2F8CF 0%, #FFFFFF 100%)' }"
   >
     <div v-if="showCelebration" class="grid h-full w-full place-content-center">
@@ -445,7 +445,7 @@ const onSave = async () => {
       <img
         v-if="isProbingPassed"
         alt="probing_confetti"
-        class="absolute bottom-0 -z-[1] w-full"
+        class="absolute bottom-safe -z-[1] w-full"
         src="@/assets/probing_confetti.svg"
       />
       <img

@@ -136,7 +136,10 @@ const onSaveComment = async () => {
           />
         </div>
       </div>
-      <div class="flex h-full flex-col overflow-y-auto rounded-b bg-white px-4 pt-3">
+      <div
+        class="flex h-full flex-col rounded-b bg-white px-4 pt-3"
+        :class="{ 'overflow-y-auto': !is_collapsed }"
+      >
         <div v-if="!is_collapsed" class="flex flex-col gap-1">
           <div class="text-sm font-semibold text-slate-7">
             {{ measurement.target?.curriculum_name }}
@@ -268,7 +271,7 @@ const onSaveComment = async () => {
               phase.
             </div>
           </div>
-          <div class="sticky bottom-0 w-full bg-white py-3">
+          <div class="sticky w-full bg-white py-3 bottom-safe">
             <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
           </div>
         </div>
@@ -288,7 +291,7 @@ const onSaveComment = async () => {
             borderless
             class="mt-2 h-full"
           />
-          <div class="sticky bottom-0 w-full bg-white py-3">
+          <div class="sticky w-full bg-white py-3 bottom-safe">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"

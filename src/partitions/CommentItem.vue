@@ -217,9 +217,9 @@ const onDelete = async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[1001] h-screen w-screen -translate-y-4 bg-white"
+    class="fixed left-0 z-[1001] h-screen w-screen -translate-y-4 bg-white p-safe top-safe"
   >
-    <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
+    <div class="sticky z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4 top-safe">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
         @click="showEdit = false"
@@ -270,7 +270,7 @@ const onDelete = async () => {
         />
       </div>
     </div>
-    <div class="fixed bottom-0 flex h-16 w-full items-center bg-white px-4">
+    <div class="fixed flex h-16 w-full items-center bg-white px-4 bottom-safe">
       <AppButton
         class="w-full"
         :loading="updateLoading"

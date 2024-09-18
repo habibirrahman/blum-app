@@ -127,7 +127,7 @@ const onStartSession = () => {
 <template>
   <div
     v-if="sessionLoading"
-    class="fixed z-[99] grid h-screen w-screen place-content-center bg-opacity-10"
+    class="fixed z-[99] grid h-screen w-screen place-content-center bg-opacity-10 p-safe"
     :style="{
       background:
         'linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(235, 228, 240, 0.3) 15.77%)'
@@ -136,7 +136,7 @@ const onStartSession = () => {
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
   </div>
 
-  <div class="sticky top-0 z-[10] bg-white">
+  <div class="sticky z-[10] bg-white top-safe">
     <div class="flex items-center justify-between gap-4 px-4 py-3">
       <div class="flex items-center gap-3 truncate">
         <RouterLink :to="redirect" class="flex h-8 w-8 shrink-0 items-center justify-center">
@@ -151,7 +151,7 @@ const onStartSession = () => {
   </div>
 
   <div
-    class="fixed z-[1] h-screen w-screen"
+    class="fixed z-[1] h-screen w-screen p-safe"
     :class="{ 'top-36': isScheduled, 'top-14': !isScheduled }"
     :style="{
       background:
@@ -324,7 +324,7 @@ const onStartSession = () => {
     </div>
   </div>
 
-  <div class="fixed bottom-0 z-[10] flex h-[68px] w-screen items-center bg-prim-3 px-4">
+  <div class="fixed z-[10] flex h-[68px] w-screen items-center bg-prim-3 px-4 bottom-safe">
     <AppButton
       :disabled="!sessionStore.session_measurements.length || !appStore.network_status.connected"
       class="w-full"

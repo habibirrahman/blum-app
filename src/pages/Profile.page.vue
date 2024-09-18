@@ -34,48 +34,50 @@ onMounted(() => {
     <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
   </div>
 
-  <div class="flex h-screen w-screen flex-col justify-center gap-3 px-6">
-    <div
-      class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full"
-      :class="{
-        'bg-cornflower-2 text-cornflower-8': appStore.account?.role === 'admin',
-        'bg-grass-2 text-grass-8': appStore.account?.role === 'staff'
-      }"
-    >
-      <div class="text-2xl font-bold uppercase">{{ appStore.account?.name?.charAt(0) }}</div>
-    </div>
-    <div class="flex flex-col gap-2">
-      <div class="">
-        <div
-          class="text-2xl font-bold"
-          :class="{
-            'app-account-name-admin': appStore.account?.role === 'admin',
-            'app-account-name-staff': appStore.account?.role === 'staff'
-          }"
-        >
-          {{ appStore.account?.name }}
-        </div>
+  <div class="h-screen w-screen p-safe">
+    <div class="flex h-full flex-col justify-center gap-3 px-6">
+      <div
+        class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full"
+        :class="{
+          'bg-cornflower-2 text-cornflower-8': appStore.account?.role === 'admin',
+          'bg-grass-2 text-grass-8': appStore.account?.role === 'staff'
+        }"
+      >
+        <div class="text-2xl font-bold uppercase">{{ appStore.account?.name?.charAt(0) }}</div>
       </div>
-      <div class="flex">
-        <div
-          class="flex h-5 max-w-[calc((100vw-16px)/2)] items-center justify-center truncate rounded px-2 text-sm font-medium"
-          :class="{
-            'bg-cornflower-2 text-cornflower-8': appStore.account?.role === 'admin',
-            'bg-grass-2 text-grass-8': appStore.account?.role === 'staff'
-          }"
-        >
-          <div class="truncate">{{ getUserRole(appStore.account?.role) }}</div>
+      <div class="flex flex-col gap-2">
+        <div class="">
+          <div
+            class="text-2xl font-bold"
+            :class="{
+              'app-account-name-admin': appStore.account?.role === 'admin',
+              'app-account-name-staff': appStore.account?.role === 'staff'
+            }"
+          >
+            {{ appStore.account?.name }}
+          </div>
         </div>
+        <div class="flex">
+          <div
+            class="flex h-5 max-w-[calc((100vw-16px)/2)] items-center justify-center truncate rounded px-2 text-sm font-medium"
+            :class="{
+              'bg-cornflower-2 text-cornflower-8': appStore.account?.role === 'admin',
+              'bg-grass-2 text-grass-8': appStore.account?.role === 'staff'
+            }"
+          >
+            <div class="truncate">{{ getUserRole(appStore.account?.role) }}</div>
+          </div>
+        </div>
+        <div class="text-sm text-slate-7">{{ appStore.account?.email }}</div>
       </div>
-      <div class="text-sm text-slate-7">{{ appStore.account?.email }}</div>
-    </div>
-    <div
-      class="flex h-[52px] w-full items-center gap-2"
-      :class="{ 'pointer-events-none': signoutLoading }"
-      @click="onSignout"
-    >
-      <Icon icon="ph:sign-out" class="text-xl text-slate-7" />
-      <div class="text-sm">Log out</div>
+      <div
+        class="flex h-[52px] w-full items-center gap-2"
+        :class="{ 'pointer-events-none': signoutLoading }"
+        @click="onSignout"
+      >
+        <Icon icon="ph:sign-out" class="text-xl text-slate-7" />
+        <div class="text-sm">Log out</div>
+      </div>
     </div>
   </div>
 </template>

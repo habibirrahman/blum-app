@@ -156,7 +156,7 @@ onMounted(async () => {
 <template>
   <div
     v-if="clientsLoading"
-    class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30"
+    class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30 p-safe"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
   </div>
@@ -173,7 +173,7 @@ onMounted(async () => {
     </div>
   </div>
 
-  <div class="sticky top-0 space-y-3 bg-white pt-3">
+  <div class="sticky space-y-3 bg-white pt-3 top-safe">
     <div class="px-4">
       <AppTextInput
         name="query"

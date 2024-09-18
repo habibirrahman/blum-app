@@ -36,7 +36,7 @@ const emit = defineEmits<Emits>()
       leave="transition ease-in-out duration-300 transform"
       leave-from="-translate-y-0"
       leave-to="translate-y-full"
-      class="fixed bottom-0 left-0 w-screen"
+      class="fixed bottom-safe left-0 w-screen"
     >
       <div class="rounded-t-2xl bg-white py-4">
         <div class="max-h-[calc(100vh-72px)] overflow-y-auto px-4">

@@ -4,15 +4,8 @@ import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAppStore, type NetworkStatus } from './stores/app.store'
 import { Icon } from '@iconify/vue'
 import { Network } from '@capacitor/network'
-import { useScreenSafeArea } from '@vueuse/core'
 import AppButton from './components/AppButton.vue'
 
-const {
-  top: paddingTop,
-  right: paddingRight,
-  bottom: paddingBottom,
-  left: paddingLeft
-} = useScreenSafeArea()
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
@@ -115,8 +108,10 @@ const navigations = computed<Nav[]>(() => {
 </script>
 
 <template>
-  <div class="bg-white font-sans" :style="{ paddingLeft, paddingTop, paddingRight, paddingBottom }">
-    <div v-if="loadingApp" class="grid h-screen w-screen place-items-center">
+  <div
+    class="no-scrollbar h-screen w-screen overflow-y-auto overflow-x-hidden bg-white font-sans text-slate-10 p-safe"
+  >
+    <div v-if="loadingApp" class="grid h-screen w-screen place-items-center p-safe">
       <div class="flex animate-pulse items-center font-logo text-4xl font-bold text-light-purple-5">
         Blüm
       </div>
@@ -124,7 +119,7 @@ const navigations = computed<Nav[]>(() => {
     <div v-else :class="{ 'pb-14': isUseNav }">
       <div
         v-if="routeName !== 'session-record'"
-        class="sticky left-0 top-0 z-[999] flex w-screen items-center justify-center bg-rose-3 text-sm font-medium text-rose-7 transition-all"
+        class="sticky left-0 z-[999] flex w-screen items-center justify-center bg-rose-3 text-sm font-medium text-rose-7 transition-all top-safe"
         :class="{ 'h-8': !networkStatus.connected, 'h-0': networkStatus.connected }"
       >
         <div v-if="!networkStatus.connected">You're offline. Connect to sync your data.</div>
@@ -132,10 +127,10 @@ const navigations = computed<Nav[]>(() => {
 
       <div
         v-if="isShowRunningSession"
-        class="flex min-h-screen w-screen items-center justify-center bg-white"
+        class="flex min-h-screen w-screen items-center justify-center bg-white p-safe"
       >
         <div
-          class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
+          class="fixed z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl top-safe"
         ></div>
         <div class="z-[2] flex max-h-full flex-col items-center gap-4 px-6 py-6">
           <div class="flex flex-col items-center gap-2">
@@ -185,7 +180,7 @@ const navigations = computed<Nav[]>(() => {
       <RouterView v-else />
     </div>
 
-    <footer v-if="isUseNav" class="fixed bottom-0 z-[100] flex h-14 w-screen bg-white">
+    <footer v-if="isUseNav" class="fixed z-[100] flex h-14 w-screen bg-white bottom-safe">
       <nav
         class="grid h-full w-full items-center"
         :style="{ gridTemplateColumns: `repeat(${navigations.length}, minmax(0, 1fr))` }"

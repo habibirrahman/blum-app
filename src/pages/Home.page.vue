@@ -177,7 +177,7 @@ const onOpenSession = (session: Session) => {
 <template>
   <div
     v-if="upcomingLoading || sessionsLoading"
-    class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30"
+    class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30 p-safe"
   >
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
   </div>
@@ -230,7 +230,7 @@ const onOpenSession = (session: Session) => {
     </div>
   </div>
 
-  <div class="sticky top-0 space-y-3 bg-white pt-3">
+  <div class="sticky space-y-3 bg-white pt-3 top-safe">
     <div class="px-4">
       <AppTextInput
         name="query"
@@ -393,10 +393,10 @@ const onOpenSession = (session: Session) => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[101] flex h-screen w-screen items-center justify-center bg-white"
+    class="fixed left-0 z-[101] flex h-screen w-screen items-center justify-center bg-white p-safe top-safe"
   >
     <div
-      class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
+      class="fixed z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl top-safe"
     ></div>
     <div class="z-[2] flex flex-col items-center gap-4 px-6">
       <div class="flex flex-col items-center gap-2">

@@ -118,7 +118,7 @@ const onChangePercentage = async (box: PercentageBox) => {
     </div>
   </div>
 
-  <div class="shrink-0 space-y-2">
+  <div class="shrink-0 space-y-2" :class="{ '-translate-y-2': is_collapsed }">
     <div class="flex h-2 items-center justify-center gap-2">
       <div
         v-for="n in pageCount"

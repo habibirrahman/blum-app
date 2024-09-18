@@ -65,7 +65,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="sticky top-0 z-10 bg-chestnut-1">
+  <div class="sticky top-safe z-10 bg-chestnut-1">
     <div class="flex h-10 w-full items-center justify-center font-semibold text-dark-purple-1">
       <div class="truncate px-4">
         {{ clientStore.client?.name }}

@@ -386,7 +386,7 @@ const onOpenTarget = (target: Target) => {
         </div>
       </div>
     </div>
-    <div class="sticky bottom-0 w-full bg-white pt-4">
+    <div class="sticky bottom-safe w-full bg-white pt-4">
       <AppButton kind="plain" class="w-full" @click="showDetails = false">Close</AppButton>
     </div>
   </AppActionSheet>
