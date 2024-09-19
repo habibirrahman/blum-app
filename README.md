@@ -76,7 +76,6 @@ bunx cap run ios
 ```sh
 bun run build
 bunx cap sync
-bunx cap copy
 bunx cap copy android
 bunx cap open android
 bunx cap copy ios
