@@ -271,7 +271,7 @@ const onSaveComment = async () => {
               phase.
             </div>
           </div>
-          <div class="sticky w-full bg-white py-3 bottom-safe">
+          <div class="sticky bottom-0 w-full bg-white py-3">
             <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
           </div>
         </div>
@@ -291,7 +291,7 @@ const onSaveComment = async () => {
             borderless
             class="mt-2 h-full"
           />
-          <div class="sticky w-full bg-white py-3 bottom-safe">
+          <div class="sticky bottom-0 w-full bg-white py-3">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"

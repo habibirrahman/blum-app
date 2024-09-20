@@ -181,7 +181,7 @@ const onOpenSession = (session: Session) => {
   </div>
 
   <div
-    v-if="!clientStore.past_sessions_count"
+    v-if="!sessionsLoading && !clientStore.past_sessions_count"
     class="flex h-64 w-full items-center justify-center px-4"
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
@@ -196,7 +196,8 @@ const onOpenSession = (session: Session) => {
       No sessions completed or canceled yet. Once they are, you'll see them here.
     </div>
   </div>
-  <div v-else>
+
+  <div v-if="clientStore.past_sessions_count">
     <div class="px-4 pt-2 text-xs text-slate-7">
       <span>Showing </span>
       <span>

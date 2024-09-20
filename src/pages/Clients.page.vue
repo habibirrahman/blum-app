@@ -10,13 +10,12 @@ import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import ClientItem from '@/partitions/ClientItem.vue'
+import ClientItemLoader from '@/components/skeletons/ClientItemLoader.vue'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const clientStore = useClientStore()
-
-const clientsLoading = ref<boolean>(false)
 
 const page = ref<number>(1)
 const perPage = ref<number>(25)
@@ -134,12 +133,26 @@ const params = computed<string>(() => {
   return p
 })
 
+const clientsLoading = ref<boolean>(false)
 async function fetchClients() {
   clientsLoading.value = true
   const { success } = await clientStore.getClients({ params: params.value })
   clientsLoading.value = false
   if (!success) return
-  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+  setTimeout(() => {
+    document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+  }, 100)
+}
+
+const branchLoading = ref<boolean>(false)
+async function fetchBranch() {
+  branchLoading.value = true
+  const { success } = await appStore.getBranches()
+  branchLoading.value = false
+  if (!success) return
+  setTimeout(() => {
+    document.getElementById('filter-menu')?.scroll({ left: 0, behavior: 'smooth' })
+  }, 100)
 }
 
 onMounted(async () => {
@@ -147,20 +160,13 @@ onMounted(async () => {
 
   clientsLoading.value = true
   /** generate client.store from storage */
-  await clientStore.generateClientStore()
-  await appStore.getBranches()
+  clientStore.generateClientStore()
+  fetchBranch()
   fetchClients()
 })
 </script>
 
 <template>
-  <div
-    v-if="clientsLoading"
-    class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30 p-safe"
-  >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
-  </div>
-
   <div class="space-y-3 pt-3 transition-all">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Clients</div>
@@ -173,8 +179,8 @@ onMounted(async () => {
     </div>
   </div>
 
-  <div class="sticky space-y-3 bg-white pt-3 top-safe">
-    <div class="px-4">
+  <div class="sticky top-0 z-10 space-y-3 bg-white">
+    <div class="px-4 pt-3">
       <AppTextInput
         name="query"
         placeholder="Search client by name"
@@ -183,9 +189,16 @@ onMounted(async () => {
       />
     </div>
     <div class="pl-4">
-      <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+      <div
+        id="filter-menu"
+        class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4"
+      >
         <div
-          v-if="appStore.account?.center_enable_branch"
+          v-if="appStore.account?.center_enable_branch && branchLoading"
+          class="h-8 w-32 shrink-0 animate-pulse rounded-full bg-slate-3"
+        ></div>
+        <div
+          v-else-if="appStore.account?.center_enable_branch"
           class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center gap-1 truncate rounded-full border px-4 text-xs font-medium transition-all"
           :class="[
             branches.length
@@ -206,6 +219,7 @@ onMounted(async () => {
           <span v-else>All branches</span>
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
+
         <div
           class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
           :class="[
@@ -227,6 +241,7 @@ onMounted(async () => {
           <span v-else>All statuses</span>
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
+
         <div
           class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
           @click="showSort = true"
@@ -239,7 +254,18 @@ onMounted(async () => {
     </div>
   </div>
 
-  <div v-if="!clientStore.clients_count" class="flex h-64 w-full items-center justify-center px-4">
+  <div v-if="clientsLoading">
+    <div class="px-4 pt-2">
+      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+    </div>
+    <div class="px-4">
+      <ClientItemLoader v-for="n in 25" :key="n" />
+    </div>
+  </div>
+  <div
+    v-else-if="!clientStore.clients_count"
+    class="flex h-64 w-full items-center justify-center px-4"
+  >
     <div v-if="query" class="text-center text-sm text-slate-8">
       Sorry, no clients match your search. Try using a different client name.
     </div>

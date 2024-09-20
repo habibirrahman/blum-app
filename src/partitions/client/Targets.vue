@@ -192,7 +192,10 @@ const onOpenTarget = (target: Target) => {
     </div>
   </div>
 
-  <div v-if="!clientStore.targets_count" class="flex h-64 w-full items-center justify-center px-4">
+  <div
+    v-if="!targetsLoading && !clientStore.targets_count"
+    class="flex h-64 w-full items-center justify-center px-4"
+  >
     <div v-if="statuses.length" class="text-center text-sm text-slate-8">
       Oops! No targets fit your filter criteria. Try changing the filter to find more results!
     </div>
@@ -204,7 +207,8 @@ const onOpenTarget = (target: Target) => {
       up here.
     </div>
   </div>
-  <div v-else>
+
+  <div v-if="clientStore.targets_count">
     <div class="px-4 pt-2 text-xs text-slate-7">
       <div class="h-5">
         <span>Showing </span>
@@ -386,7 +390,7 @@ const onOpenTarget = (target: Target) => {
         </div>
       </div>
     </div>
-    <div class="sticky bottom-safe w-full bg-white pt-4">
+    <div class="sticky bottom-0 w-full bg-white pt-4">
       <AppButton kind="plain" class="w-full" @click="showDetails = false">Close</AppButton>
     </div>
   </AppActionSheet>

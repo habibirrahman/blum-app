@@ -368,7 +368,7 @@ const onExitSession = () => {
     <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
   </div>
 
-  <div class="sticky z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4 top-safe">
+  <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
     <div class="flex items-center gap-2">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-all"
@@ -482,65 +482,73 @@ const onExitSession = () => {
   <div
     v-if="fixedMeasurement && !showReviewMode"
     id="fixed-measurement"
-    class="fixed z-[10] flex w-screen bg-prim-3 transition-all bottom-safe"
-    :class="{
-      'h-[120px] justify-center': isMeasurementCollapsed,
-      'h-[calc(100vh-52px)] flex-col items-center gap-4 overflow-y-auto py-4':
-        !isMeasurementCollapsed
-    }"
+    class="fixed bottom-0 z-[10] flex w-screen bg-prim-3 transition-all px-safe pb-safe"
   >
-    <div v-if="!isMeasurementCollapsed" class="flex flex-col items-center gap-1">
-      <Icon icon="ph:lock-fill" class="text-center text-2xl text-prim-5" />
-      <div class="text-center text-xs font-medium text-prim-5">You're viewing a locked target.</div>
-    </div>
-    <MeasurementRecord
-      :measurement="fixedMeasurement"
-      :counter="counter"
-      :is_collapsed="isMeasurementCollapsed"
-      @toggle-running="onToggleRunning"
-      @toggle-collapsed="isMeasurementCollapsed = $event"
-    />
     <div
-      v-if="!isMeasurementCollapsed"
-      class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-prim-1"
-      @click="isMeasurementCollapsed = true"
+      class="flex grow"
+      :class="{
+        'h-[120px] justify-center': isMeasurementCollapsed,
+        'h-[calc(100vh-52px)] flex-col items-center gap-4 overflow-y-auto py-4':
+          !isMeasurementCollapsed
+      }"
     >
-      <Icon icon="ph:x" class="text-[32px] text-light-purple-5" />
+      <div v-if="!isMeasurementCollapsed" class="flex flex-col items-center gap-1">
+        <Icon icon="ph:lock-fill" class="text-center text-2xl text-prim-5" />
+        <div class="text-center text-xs font-medium text-prim-5">
+          You're viewing a locked target.
+        </div>
+      </div>
+      <MeasurementRecord
+        :measurement="fixedMeasurement"
+        :counter="counter"
+        :is_collapsed="isMeasurementCollapsed"
+        @toggle-running="onToggleRunning"
+        @toggle-collapsed="isMeasurementCollapsed = $event"
+      />
+      <div
+        v-if="!isMeasurementCollapsed"
+        class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-prim-1"
+        @click="isMeasurementCollapsed = true"
+      >
+        <Icon icon="ph:x" class="text-[32px] text-light-purple-5" />
+      </div>
     </div>
   </div>
 
   <div
     v-if="!fixedMeasurement"
-    class="fixed z-[10] flex h-16 w-screen items-center gap-6 bg-prim-3 pl-4 transition-all delay-500 duration-500"
-    :class="{ 'bottom-safe': !showReviewMode, '-bottom-36': showReviewMode }"
+    class="fixed z-[10] w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
+    :class="{ 'bottom-0': !showReviewMode, '-bottom-36': showReviewMode }"
   >
-    <div class="relative" @click="showReviewMode = !showReviewMode">
-      <div
-        class="flex h-10 w-8 items-center justify-center rounded bg-white text-xs font-semibold text-dark-purple-1"
-      >
-        {{ sessionStore.session_measurements.length }}
+    <div class="flex h-16 grow items-center gap-6 pl-4">
+      <div class="relative" @click="showReviewMode = !showReviewMode">
+        <div
+          class="flex h-10 w-8 items-center justify-center rounded bg-white text-xs font-semibold text-dark-purple-1"
+        >
+          {{ sessionStore.session_measurements.length }}
+        </div>
+        <div
+          class="absolute top-0 -z-[1] h-10 w-8 rounded bg-prim-4 transition-all duration-500"
+          :class="{ 'left-2 rotate-[15deg]': !showReviewMode, 'left-0 rotate-0': showReviewMode }"
+        ></div>
       </div>
       <div
-        class="absolute -z-[1] h-10 w-8 rounded bg-prim-4 transition-all duration-500 top-safe"
-        :class="{ 'left-2 rotate-[15deg]': !showReviewMode, 'left-0 rotate-0': showReviewMode }"
-      ></div>
-    </div>
-    <div
-      class="flex snap-x snap-mandatory items-center gap-2 overflow-x-auto scroll-smooth py-3 pr-4"
-    >
-      <div
-        v-for="opt in sessionStore.session_measurements"
-        :key="opt.id"
-        :id="`measurement-nav-${opt.id}`"
-        class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
-        :class="[
-          focusMeasurement === opt.id
-            ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
-            : 'border-slate-4 bg-white'
-        ]"
-        @click="onFocusMeasurement(opt)"
+        class="flex snap-x snap-mandatory items-center gap-2 overflow-x-auto scroll-smooth py-3 pr-4"
       >
-        <div class="truncate">{{ opt.target?.name }}</div>
+        <div
+          v-for="opt in sessionStore.session_measurements"
+          :key="opt.id"
+          :id="`measurement-nav-${opt.id}`"
+          class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+          :class="[
+            focusMeasurement === opt.id
+              ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
+              : 'border-slate-4 bg-white'
+          ]"
+          @click="onFocusMeasurement(opt)"
+        >
+          <div class="truncate">{{ opt.target?.name }}</div>
+        </div>
       </div>
     </div>
   </div>
@@ -619,15 +627,18 @@ const onExitSession = () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 z-[21] min-h-screen w-screen bg-white p-safe top-safe"
+    class="fixed left-0 top-0 z-[21] h-screen w-screen overflow-y-auto bg-white p-safe"
   >
-    <div class="sticky z-[10] flex h-14 shrink-0 items-center gap-3 bg-white px-4 top-safe">
+    <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
+    <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
+
+    <div class="sticky top-0 z-[10] flex h-14 shrink-0 grow items-center gap-3 bg-white px-4">
       <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-orange-3">
         <Icon icon="ph:seal-warning-fill" class="text-2xl text-orange-6" />
       </div>
       <div class="text-2xl text-[22px] font-bold">Passing success metric</div>
     </div>
-    <div class="flex flex-col gap-3 px-4">
+    <div class="flex grow flex-col gap-3 px-4">
       <div class="flex items-center gap-1">
         <AppChip chip="in_progress" />
         <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
@@ -660,9 +671,10 @@ const onExitSession = () => {
         </div>
       </div>
     </div>
-
-    <div class="fixed flex h-16 w-full items-center justify-between bg-white px-4 bottom-safe">
-      <AppButton class="w-full" @click="onExitSession">Close session</AppButton>
+    <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
+      <div class="flex h-16 grow items-center px-4">
+        <AppButton class="w-full" @click="onExitSession">Close session</AppButton>
+      </div>
     </div>
   </TransitionRoot>
 </template>

@@ -140,15 +140,19 @@ const onCreate = async () => {
     leave-from="translate-x-0"
     leave-to="-translate-x-full"
     id="session-comments"
-    class="fixed left-0 z-[20] h-screen w-screen overflow-y-auto bg-prim-3 p-safe top-safe"
+    class="fixed left-0 top-0 z-[20] h-screen w-screen overflow-y-auto bg-prim-3 p-safe"
   >
+    <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
+    <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
+
     <div
       v-if="commentsLoading"
       class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30 p-safe"
     >
       <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
     </div>
-    <div class="sticky z-[10] shrink-0 top-safe">
+
+    <div class="sticky top-0 z-[10] shrink-0">
       <div class="flex h-[52px] items-center gap-3 bg-white px-4">
         <div
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
@@ -178,13 +182,15 @@ const onCreate = async () => {
         </div>
       </div>
     </div>
+
     <div
-      v-if="!sessionStore.session_comments.length"
+      v-if="!commentsLoading && !sessionStore.session_comments.length"
       class="flex h-64 w-full items-center justify-center px-4 py-4 text-center text-sm text-light-purple-5"
     >
       Be the first to add a comment to this session.
     </div>
-    <div v-else class="space-y-4 px-4 pb-24 pt-4">
+
+    <div v-if="sessionStore.session_comments.length" class="space-y-4 px-4 pb-24 pt-4">
       <CommentItem
         v-for="comment in sessionStore.session_comments"
         :key="comment.id"
@@ -196,9 +202,10 @@ const onCreate = async () => {
         "
       />
     </div>
+
     <div
       v-if="sessionStore.session?.status === 'ongoing'"
-      class="fixed flex h-20 w-full items-center justify-center transition-all bottom-safe"
+      class="fixed bottom-0 flex h-20 w-screen items-center justify-center transition-all p-safe"
       :class="{ 'opacity-0': filter === 'target' }"
     >
       <div
@@ -219,9 +226,12 @@ const onCreate = async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 z-[21] min-h-screen w-screen bg-white p-safe top-safe"
+    class="fixed left-0 top-0 z-[21] h-screen w-screen bg-white p-safe"
   >
-    <div class="sticky z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4 top-safe">
+    <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
+    <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
+    
+    <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
         @click="showNew = false"
@@ -272,26 +282,28 @@ const onCreate = async () => {
         />
       </div>
     </div>
-    <div class="fixed flex h-16 w-full items-center justify-between bg-white px-4 bottom-safe">
-      <div class="flex items-center gap-2">
-        <div
-          v-for="opt in typeInputOptions"
-          :key="opt.value"
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
-          :class="[
-            typeInput === opt.value
-              ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
-              : 'border-slate-4 bg-white'
-          ]"
-          @click="typeInput = opt.value"
-        >
-          {{ opt.label }}
+    <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
+      <div class="flex h-16 grow items-center justify-between px-4">
+        <div class="flex items-center gap-2">
+          <div
+            v-for="opt in typeInputOptions"
+            :key="opt.value"
+            class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+            :class="[
+              typeInput === opt.value
+                ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
+                : 'border-slate-4 bg-white'
+            ]"
+            @click="typeInput = opt.value"
+          >
+            {{ opt.label }}
+          </div>
         </div>
+        <AppButton :loading="createLoading" :disabled="isDisabledCreate" @click="onCreate">
+          <div>Add</div>
+          <Icon icon="ph:plus-bold" />
+        </AppButton>
       </div>
-      <AppButton :loading="createLoading" :disabled="isDisabledCreate" @click="onCreate">
-        <div>Add</div>
-        <Icon icon="ph:plus-bold" />
-      </AppButton>
     </div>
   </TransitionRoot>
 </template>

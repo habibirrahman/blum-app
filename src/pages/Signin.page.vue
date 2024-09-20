@@ -50,7 +50,7 @@ async function onSignin() {
     <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
   </div>
 
-  <div class="flex h-screen w-screen flex-col items-center justify-center gap-6 py-4 p-safe">
+  <div class="flex h-full w-full flex-col items-center justify-center gap-6 py-4">
     <div class="flex w-full flex-col gap-10 p-4">
       <div class="text-center font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
       <div class="flex flex-col gap-5">
@@ -75,7 +75,7 @@ async function onSignin() {
         </AppButton>
       </div>
     </div>
-    <div class="absolute w-screen py-1 bottom-safe">
+    <div class="absolute bottom-0 w-screen py-1">
       <AppButton kind="plain" class="w-full" @click="showForgotPassword = true">
         Forgot password?
       </AppButton>

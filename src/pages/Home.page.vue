@@ -230,7 +230,7 @@ const onOpenSession = (session: Session) => {
     </div>
   </div>
 
-  <div class="sticky space-y-3 bg-white pt-3 top-safe">
+  <div class="sticky top-0 space-y-3 bg-white pt-3">
     <div class="px-4">
       <AppTextInput
         name="query"
@@ -279,7 +279,7 @@ const onOpenSession = (session: Session) => {
   </div>
 
   <div
-    v-if="!sessionStore.sessions_count"
+    v-if="!sessionsLoading && !sessionStore.sessions_count"
     class="flex h-64 w-full items-center justify-center px-4"
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
@@ -291,7 +291,8 @@ const onOpenSession = (session: Session) => {
       results!
     </div>
   </div>
-  <div v-else>
+
+  <div v-if="sessionStore.sessions_count">
     <div class="px-4 pt-2 text-xs text-slate-7">
       <span>Showing </span>
       <span>
@@ -393,10 +394,13 @@ const onOpenSession = (session: Session) => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 z-[101] flex h-screen w-screen items-center justify-center bg-white p-safe top-safe"
+    class="fixed left-0 top-0 z-[101] flex h-screen w-screen items-center justify-center bg-white p-safe"
   >
+    <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
+    <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
+
     <div
-      class="fixed z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl top-safe"
+      class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
     ></div>
     <div class="z-[2] flex flex-col items-center gap-4 px-6">
       <div class="flex flex-col items-center gap-2">

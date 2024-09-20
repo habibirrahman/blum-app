@@ -34,7 +34,7 @@ onMounted(() => {
     <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
   </div>
 
-  <div class="h-screen w-screen p-safe">
+  <div class="h-full w-full">
     <div class="flex h-full flex-col justify-center gap-3 px-6">
       <div
         class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full"
