@@ -11,6 +11,7 @@ import AppPagination from '@/components/AppPagination.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppButton from '@/components/AppButton.vue'
+import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -95,10 +96,10 @@ async function fetchPastSessions() {
   const id = Number(route.params.id)
   const { success } = await clientStore.getClientPastSessions({ id, params: params.value })
   sessionsLoading.value = false
-  if (!success) {
+  if (!success) return
+  setTimeout(() => {
     document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
-    return
-  }
+  }, 100)
 }
 
 onMounted(() => {
@@ -125,18 +126,12 @@ const onOpenSession = (session: Session) => {
 </script>
 
 <template>
-  <div
-    v-if="sessionsLoading"
-    class="fixed top-20 z-[99] grid h-[calc(100vh-80px)] w-screen place-content-center bg-slate-10/30"
-  >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
-  </div>
-
   <div class="space-y-3 pt-3 transition-all">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Past Sessions</div>
+      <div v-if="sessionsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
       <div
-        v-if="!sessionsLoading"
+        v-else
         class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
       >
         {{ clientStore.past_sessions_count }}
@@ -180,8 +175,16 @@ const onOpenSession = (session: Session) => {
     </div>
   </div>
 
+  <div v-if="sessionsLoading">
+    <div class="px-4 pt-2">
+      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+    </div>
+    <div class="px-4">
+      <SessionItemLoader v-for="n in perPage" :key="n" />
+    </div>
+  </div>
   <div
-    v-if="!sessionsLoading && !clientStore.past_sessions_count"
+    v-else-if="!clientStore.past_sessions_count"
     class="flex h-64 w-full items-center justify-center px-4"
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
@@ -196,8 +199,7 @@ const onOpenSession = (session: Session) => {
       No sessions completed or canceled yet. Once they are, you'll see them here.
     </div>
   </div>
-
-  <div v-if="clientStore.past_sessions_count">
+  <div v-else>
     <div class="px-4 pt-2 text-xs text-slate-7">
       <span>Showing </span>
       <span>

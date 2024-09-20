@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Target } from '@/lib/types'
-import { displayDate } from '@/lib/func'
 import AppChip from '@/components/AppChip.vue'
 
 interface Props {

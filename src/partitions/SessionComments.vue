@@ -78,6 +78,13 @@ watch(showNew, (val) => {
     antecedentInput.value = ''
     behaviorInput.value = ''
     consequenceInput.value = ''
+  } else {
+    if (filter.value === 'assessment' && typeInput.value === 'general') {
+      filter.value = ''
+    }
+    if (filter.value === 'general' && typeInput.value === 'assessment') {
+      filter.value = ''
+    }
   }
 })
 const createLoading = ref<boolean>(false)
@@ -145,13 +152,6 @@ const onCreate = async () => {
     <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
-    <div
-      v-if="commentsLoading"
-      class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30 p-safe"
-    >
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
-    </div>
-
     <div class="sticky top-0 z-[10] shrink-0">
       <div class="flex h-[52px] items-center gap-3 bg-white px-4">
         <div
@@ -183,14 +183,20 @@ const onCreate = async () => {
       </div>
     </div>
 
+    <div v-if="commentsLoading" class="space-y-4 px-4 pb-24 pt-4">
+      <div
+        v-for="n in 3"
+        :key="n"
+        class="h-32 w-full shrink-0 animate-pulse rounded bg-prim-1"
+      ></div>
+    </div>
     <div
-      v-if="!commentsLoading && !sessionStore.session_comments.length"
+      v-else-if="!sessionStore.session_comments.length"
       class="flex h-64 w-full items-center justify-center px-4 py-4 text-center text-sm text-light-purple-5"
     >
       Be the first to add a comment to this session.
     </div>
-
-    <div v-if="sessionStore.session_comments.length" class="space-y-4 px-4 pb-24 pt-4">
+    <div v-else class="space-y-4 px-4 pb-24 pt-4">
       <CommentItem
         v-for="comment in sessionStore.session_comments"
         :key="comment.id"
@@ -230,7 +236,7 @@ const onCreate = async () => {
   >
     <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
-    
+
     <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"

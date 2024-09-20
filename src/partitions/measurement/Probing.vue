@@ -296,7 +296,7 @@ const onSave = async () => {
       'h-full w-full': !is_collapsed,
       'absolute left-1/2 mb-2 w-64 -translate-x-1/2 rounded border border-prim-3 bg-white py-3':
         is_collapsed,
-      'bottom-full opacity-100': is_collapsed && showPopup,
+      'bottom-full opacity-100': is_collapsed && (showPopup || probingLoading),
       '-z[1] bottom-0 opacity-0': is_collapsed && !showPopup
     }"
   >

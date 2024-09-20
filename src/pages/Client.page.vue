@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter, type RouteParamsRaw } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
-import { Icon } from '@iconify/vue'
 import DraftSessions from '@/partitions/client/DraftSessions.vue'
 import PastSessions from '@/partitions/client/PastSessions.vue'
 import Targets from '@/partitions/client/Targets.vue'
 import Profile from '@/partitions/client/Profile.vue'
+import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -51,10 +51,10 @@ async function fetchClient() {
   const id = Number(route.params.id)
   const { success } = await clientStore.getClient({ id })
   clientLoading.value = false
-  if (!success) {
+  if (!success) return
+  setTimeout(() => {
     document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
-    return
-  }
+  }, 100)
 }
 
 onMounted(() => {
@@ -94,11 +94,40 @@ onMounted(() => {
     </div>
   </div>
 
-  <div
-    v-if="clientLoading"
-    class="grid h-[calc(100vh-80px)] w-screen place-content-center bg-slate-10/30"
-  >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
+  <div v-if="clientLoading">
+    <div class="px-4 pt-3">
+      <div class="h-8 w-56 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+    </div>
+    <div class="px-4 pt-3">
+      <div class="h-9 w-full shrink-0 animate-pulse rounded bg-slate-3"></div>
+    </div>
+    <div class="flex gap-2 px-4 pt-3">
+      <div
+        v-for="n in 3"
+        :key="n"
+        class="h-8 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"
+      ></div>
+    </div>
+    <div class="flex flex-col px-4 pt-5">
+      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <SessionItemLoader v-for="n in 12" :key="n" />
+    </div>
+    <!-- <div class="flex flex-col items-center gap-3 px-4 py-6">
+      <div class="h-[60px] w-[60px] shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="flex flex-col items-center gap-2">
+        <div class="h-6 w-56 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+        <div class="h-6 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+        <div class="flex items-center gap-1">
+          <div v-for="n in 2" :key="n" class="h-5 w-12 animate-pulse rounded bg-slate-3"></div>
+        </div>
+      </div>
+    </div>
+    <div class="px-4">
+      <div v-for="n in 12" :key="n" class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
+        <div class="h-4 w-12 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+        <div class="h-4 w-48 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      </div>
+    </div> -->
   </div>
   <div v-else>
     <DraftSessions v-if="route.params.tab === 'draft-sessions'" />

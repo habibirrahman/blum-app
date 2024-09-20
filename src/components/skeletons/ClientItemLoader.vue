@@ -1,5 +1,3 @@
-<script setup lang="ts"></script>
-
 <template>
   <div class="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-3">
     <div class="flex items-center gap-3">

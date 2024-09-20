@@ -51,10 +51,10 @@
 
 /* Vue-Toastification */
 .Vue-Toastification__container {
-  @apply !items-center !pt-4;
+  @apply !items-center !pt-safe;
 }
 .Vue-Toastification__toast {
-  @apply !flex !h-auto !min-h-10 !max-w-[328px] !items-center !justify-start !gap-2 !rounded !border !px-2 !py-2 !font-sans;
+  @apply !mt-4 !flex !h-auto !min-h-10 !max-w-[328px] !items-center !justify-start !gap-2 !rounded !border !px-2 !py-2 !font-sans;
 }
 .Vue-Toastification__toast-body {
   @apply !text-sm !font-medium;

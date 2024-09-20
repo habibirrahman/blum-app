@@ -13,6 +13,7 @@ import AppPagination from '@/components/AppPagination.vue'
 import UpcomingSession from '@/partitions/UpcomingSession.vue'
 import SessionItem from '@/partitions/SessionItem.vue'
 import moment from 'moment'
+import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -136,15 +137,17 @@ async function fetchSessions() {
   const { success } = await sessionStore.getSessions({ params: params.value })
   sessionsLoading.value = false
   if (!success) return
-  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+  setTimeout(() => {
+    document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+  }, 100)
 }
 
-onMounted(async () => {
+onMounted(() => {
   appStore.getRunningSessions()
 
   upcomingLoading.value = true
   /** generate session.store from storage */
-  await sessionStore.generateSessionStore()
+  sessionStore.generateSessionStore()
   fetchUpcoming()
   fetchSessions()
 })
@@ -176,20 +179,14 @@ const onOpenSession = (session: Session) => {
 
 <template>
   <div
-    v-if="upcomingLoading || sessionsLoading"
-    class="fixed z-[99] grid h-screen w-screen place-content-center bg-slate-10/30 p-safe"
-  >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
-  </div>
-
-  <div
     class="space-y-3 pt-3 transition-all"
     :class="{ 'bg-chestnut-1': sessionStore.upcoming_sessions_count }"
   >
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Draft Sessions</div>
+      <div v-if="sessionsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
       <div
-        v-if="!sessionsLoading"
+        v-else
         class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
       >
         {{ sessionStore.sessions_count }}
@@ -230,7 +227,7 @@ const onOpenSession = (session: Session) => {
     </div>
   </div>
 
-  <div class="sticky top-0 space-y-3 bg-white pt-3">
+  <div class="sticky top-0 z-[1] space-y-3 bg-white pt-3">
     <div class="px-4">
       <AppTextInput
         name="query"
@@ -278,8 +275,16 @@ const onOpenSession = (session: Session) => {
     </div>
   </div>
 
+  <div v-if="sessionsLoading">
+    <div class="px-4 pt-2">
+      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+    </div>
+    <div class="px-4">
+      <SessionItemLoader v-for="n in perPage" :key="n" />
+    </div>
+  </div>
   <div
-    v-if="!sessionsLoading && !sessionStore.sessions_count"
+    v-else-if="!sessionStore.sessions_count"
     class="flex h-64 w-full items-center justify-center px-4"
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
@@ -291,8 +296,7 @@ const onOpenSession = (session: Session) => {
       results!
     </div>
   </div>
-
-  <div v-if="sessionStore.sessions_count">
+  <div v-else>
     <div class="px-4 pt-2 text-xs text-slate-7">
       <span>Showing </span>
       <span>

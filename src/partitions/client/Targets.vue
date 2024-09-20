@@ -12,6 +12,7 @@ import AppButton from '@/components/AppButton.vue'
 import TargetItem from '../TargetItem.vue'
 import AppChip from '@/components/AppChip.vue'
 import { getTargetType } from '@/lib/func'
+import TargetItemLoader from '@/components/skeletons/TargetItemLoader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -129,18 +130,12 @@ const onOpenTarget = (target: Target) => {
 </script>
 
 <template>
-  <div
-    v-if="targetsLoading"
-    class="fixed top-20 z-[99] grid h-[calc(100vh-80px)] w-screen place-content-center bg-slate-10/30"
-  >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-1" />
-  </div>
-
   <div class="space-y-3 pt-3 transition-all">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Targets</div>
+      <div v-if="targetsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
       <div
-        v-if="!targetsLoading"
+        v-else
         class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
       >
         {{ clientStore.targets_count }}
@@ -192,8 +187,16 @@ const onOpenTarget = (target: Target) => {
     </div>
   </div>
 
+  <div v-if="targetsLoading">
+    <div class="px-4 pt-2">
+      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+    </div>
+    <div class="px-4">
+      <TargetItemLoader v-for="n in perPage" :key="n" />
+    </div>
+  </div>
   <div
-    v-if="!targetsLoading && !clientStore.targets_count"
+    v-else-if="!clientStore.targets_count"
     class="flex h-64 w-full items-center justify-center px-4"
   >
     <div v-if="statuses.length" class="text-center text-sm text-slate-8">
@@ -207,8 +210,7 @@ const onOpenTarget = (target: Target) => {
       up here.
     </div>
   </div>
-
-  <div v-if="clientStore.targets_count">
+  <div v-else>
     <div class="px-4 pt-2 text-xs text-slate-7">
       <div class="h-5">
         <span>Showing </span>

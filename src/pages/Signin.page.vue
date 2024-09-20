@@ -44,10 +44,12 @@ async function onSignin() {
 
 <template>
   <div
-    class="fixed left-1/2 z-[9] flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full bg-white shadow transition-all"
+    class="fixed left-1/2 z-[9] -translate-x-1/2 transition-all pt-safe"
     :class="{ 'top-5': signinLoading, '-top-10': !signinLoading }"
   >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    </div>
   </div>
 
   <div class="flex h-full w-full flex-col items-center justify-center gap-6 py-4">
@@ -75,10 +77,12 @@ async function onSignin() {
         </AppButton>
       </div>
     </div>
-    <div class="absolute bottom-0 w-screen py-1">
-      <AppButton kind="plain" class="w-full" @click="showForgotPassword = true">
-        Forgot password?
-      </AppButton>
+    <div class="absolute bottom-0 w-screen bg-white px-safe pb-safe">
+      <div class="w-full py-1">
+        <AppButton kind="plain" class="w-full" @click="showForgotPassword = true">
+          Forgot password?
+        </AppButton>
+      </div>
     </div>
   </div>
   <AppActionSheet :show="showForgotPassword" @close="showForgotPassword = false">

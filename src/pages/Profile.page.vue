@@ -28,10 +28,12 @@ onMounted(() => {
 
 <template>
   <div
-    class="fixed left-1/2 z-[9] flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full bg-white shadow transition-all"
+    class="fixed left-1/2 z-[9] -translate-x-1/2 transition-all pt-safe"
     :class="{ 'top-5': signoutLoading, '-top-10': !signoutLoading }"
   >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    </div>
   </div>
 
   <div class="h-full w-full">

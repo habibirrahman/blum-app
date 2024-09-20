@@ -17,6 +17,9 @@ const router = useRouter()
 const appStore = useAppStore()
 const clientStore = useClientStore()
 
+const clientsLoading = ref<boolean>(false)
+const branchLoading = ref<boolean>(false)
+
 const page = ref<number>(1)
 const perPage = ref<number>(25)
 watch(page, (val, old) => {
@@ -133,7 +136,6 @@ const params = computed<string>(() => {
   return p
 })
 
-const clientsLoading = ref<boolean>(false)
 async function fetchClients() {
   clientsLoading.value = true
   const { success } = await clientStore.getClients({ params: params.value })
@@ -143,8 +145,6 @@ async function fetchClients() {
     document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
   }, 100)
 }
-
-const branchLoading = ref<boolean>(false)
 async function fetchBranch() {
   branchLoading.value = true
   const { success } = await appStore.getBranches()
@@ -155,7 +155,7 @@ async function fetchBranch() {
   }, 100)
 }
 
-onMounted(async () => {
+onMounted(() => {
   appStore.getRunningSessions()
 
   clientsLoading.value = true
@@ -170,8 +170,9 @@ onMounted(async () => {
   <div class="space-y-3 pt-3 transition-all">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Clients</div>
+      <div v-if="clientsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
       <div
-        v-if="!clientsLoading"
+        v-else
         class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
       >
         {{ clientStore.clients_count }}
@@ -179,7 +180,7 @@ onMounted(async () => {
     </div>
   </div>
 
-  <div class="sticky top-0 z-10 space-y-3 bg-white">
+  <div class="sticky top-0 z-[1] space-y-3 bg-white">
     <div class="px-4 pt-3">
       <AppTextInput
         name="query"
@@ -259,7 +260,7 @@ onMounted(async () => {
       <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
     </div>
     <div class="px-4">
-      <ClientItemLoader v-for="n in 25" :key="n" />
+      <ClientItemLoader v-for="n in perPage" :key="n" />
     </div>
   </div>
   <div

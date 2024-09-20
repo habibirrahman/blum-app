@@ -55,6 +55,7 @@ async function fetchSession(
   }
   const app = document.getElementById('app')
   if (first && session.status === 'ongoing') {
+    syncSession()
     app?.scroll({ top: heightReload, behavior: 'smooth' })
     app?.addEventListener('scroll', scrollListener)
   }
@@ -95,12 +96,11 @@ const scrollListener = (e: any) => {
   }, timer)
 }
 
-onMounted(async () => {
+onMounted(() => {
   sessionLoading.value = true
   /** generate session.store from storage */
-  await sessionStore.generateSessionStore()
-  await fetchSession({ first: true })
-  await syncSession()
+  sessionStore.generateSessionStore()
+  fetchSession({ first: true })
   redirect.value = route.query.redirect?.toString() || '/home'
 })
 onUnmounted(() => {
@@ -360,14 +360,6 @@ const onExitSession = () => {
 </script>
 
 <template>
-  <div
-    v-if="sessionLoading"
-    class="fixed z-[99] grid h-screen w-screen place-content-center opacity-75 p-safe"
-    :style="{ background: 'linear-gradient(180deg, #FFFFFF 0%, #EBE4F0 15.77%)' }"
-  >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
-  </div>
-
   <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
     <div class="flex items-center gap-2">
       <div
@@ -422,14 +414,16 @@ const onExitSession = () => {
   </div>
 
   <div
-    class="fixed left-1/2 z-[9] flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full bg-white transition-all"
+    class="fixed left-1/2 z-[9] -translate-x-1/2 transition-all pt-safe"
     :class="{ 'top-[60px]': cycleLoading, '-top-[60px]': !cycleLoading }"
   >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    </div>
   </div>
 
   <div
-    v-if="sessionStore.session?.status === 'ongoing'"
+    v-if="!sessionLoading && sessionStore.session?.status === 'ongoing'"
     class="flex h-28 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
   >
     <div v-if="runningMeasurements.length">
@@ -466,7 +460,15 @@ const onExitSession = () => {
         '2xl:min-w-[calc((320px*9)+(16px*10))]': showReviewMode
       }"
     >
+      <div v-if="sessionLoading" class="flex w-full flex-wrap justify-center gap-4">
+        <div
+          v-for="n in 8"
+          :key="n"
+          class="h-[520px] w-[320px] shrink-0 animate-pulse rounded bg-prim-1"
+        ></div>
+      </div>
       <MeasurementRecord
+        v-else
         v-for="measurement in normalMeasurements"
         :key="measurement.id"
         :id="`measurement-record-${measurement.id}`"
@@ -480,7 +482,7 @@ const onExitSession = () => {
   </div>
 
   <div
-    v-if="fixedMeasurement && !showReviewMode"
+    v-if="!sessionLoading && fixedMeasurement && !showReviewMode"
     id="fixed-measurement"
     class="fixed bottom-0 z-[10] flex w-screen bg-prim-3 transition-all px-safe pb-safe"
   >
@@ -516,7 +518,7 @@ const onExitSession = () => {
   </div>
 
   <div
-    v-if="!fixedMeasurement"
+    v-if="!sessionLoading && !fixedMeasurement"
     class="fixed z-[10] w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
     :class="{ 'bottom-0': !showReviewMode, '-bottom-36': showReviewMode }"
   >

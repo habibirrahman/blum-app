@@ -16,25 +16,33 @@ const router = useRouter()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
-const sessionLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
 const isScheduled = computed<boolean>(() => sessionStore.session?.appointment_id !== null)
+
+const sessionLoading = ref<boolean>(false)
+const commentsLoading = ref<boolean>(false)
 const showComments = ref<boolean>(true)
 
 async function fetchComments() {
   const id = sessionStore.session?.id
+  commentsLoading.value = true
   const { success } = await sessionStore.getSessionComments({ id, filter: 'general' })
-  sessionLoading.value = false
-  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+  commentsLoading.value = false
   if (!success) return
+  setTimeout(() => {
+    document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+  }, 100)
 }
 async function fetchSession() {
-  sessionLoading.value = true
   const slug = route.params.slug.toString()
+  sessionLoading.value = true
+  commentsLoading.value = true
   const { success } = await sessionStore.getSession({ slug })
+  sessionLoading.value = false
   if (!success) {
-    sessionLoading.value = false
-    document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+    setTimeout(() => {
+      document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+    }, 100)
     return
   }
   fetchComments()
@@ -125,17 +133,6 @@ const onStartSession = () => {
 </script>
 
 <template>
-  <div
-    v-if="sessionLoading"
-    class="fixed z-[99] grid h-screen w-screen place-content-center bg-opacity-10 p-safe"
-    :style="{
-      background:
-        'linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(235, 228, 240, 0.3) 15.77%)'
-    }"
-  >
-    <Icon icon="mingcute:loading-fill" class="animate-spin text-5xl text-light-purple-5" />
-  </div>
-
   <div class="sticky top-0 z-[10] bg-white">
     <div class="flex items-center justify-between gap-4 px-4 py-3">
       <div class="flex items-center gap-3 truncate">
@@ -186,14 +183,27 @@ const onStartSession = () => {
       </div>
     </div>
     <div class="space-y-6 py-6">
+      <div v-if="sessionLoading">
+        <div class="h-4 w-64 shrink-0 animate-pulse rounded-full bg-prim-1"></div>
+      </div>
       <div
-        v-if="sessionStore.session_measurements.length"
+        v-else-if="sessionStore.session_measurements.length"
         class="px-4 text-center text-sm text-dark-purple-1"
       >
         Before you begin this session, take a moment to review the targets and the comments.
       </div>
 
-      <div v-if="sessionStore.session_comments.length" class="space-y-2 px-4">
+      <div v-if="commentsLoading" class="space-y-2 px-4">
+        <div class="flex h-[30px] items-center justify-center">
+          <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-prim-1"></div>
+        </div>
+        <div
+          v-for="n in 2"
+          :key="n"
+          class="h-32 w-full shrink-0 animate-pulse rounded bg-prim-1"
+        ></div>
+      </div>
+      <div v-else-if="sessionStore.session_comments.length" class="space-y-2 px-4">
         <div
           class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1"
           @click="showComments = !showComments"
@@ -215,15 +225,24 @@ const onStartSession = () => {
         </div>
       </div>
 
+      <div v-if="sessionLoading" class="space-y-2 px-4">
+        <div class="flex h-[30px] items-center justify-center">
+          <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-prim-1"></div>
+        </div>
+        <div
+          v-for="n in 8"
+          :key="n"
+          class="h-32 w-full shrink-0 animate-pulse rounded bg-prim-1"
+        ></div>
+      </div>
       <div
-        v-if="!sessionStore.session_measurements.length"
+        v-else-if="!sessionStore.session_measurements.length"
         class="flex h-[calc(100vh/2)] flex-col items-center justify-center px-4 text-center text-sm text-dark-purple-1"
       >
         <div>Whoops, no targets here!</div>
         <div>Add targets from the desktop to kick off your session.</div>
       </div>
-
-      <div v-if="sessionStore.session_measurements.length" class="space-y-2 px-4">
+      <div v-else class="space-y-2 px-4">
         <div class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1">
           <div class="text-2xl font-bold">{{ sessionStore.session_measurements.length }}</div>
           <div class="text-sm">target(s)</div>
