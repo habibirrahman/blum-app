@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "tech.simpul.blum"
+    namespace "app.simpul.blum"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "tech.simpul.blum"
+        applicationId "app.simpul.blum"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2
