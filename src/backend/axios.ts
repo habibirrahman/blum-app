@@ -2,7 +2,9 @@ import { getAccessStorage } from '@/plugins/preferences.plugin'
 import axios from 'axios'
 import router from '@/router'
 
-const API_URL = import.meta.env.VITE_API_ENDPOINT
+const API_URL = import.meta.env.PROD
+  ? import.meta.env.VITE_API_ENDPOINT_PRODUCTION
+  : import.meta.env.VITE_API_ENDPOINT
 
 axios.defaults.baseURL = API_URL
 axios.defaults.withCredentials = true
