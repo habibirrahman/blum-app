@@ -145,11 +145,20 @@ const onToggleRunning = (data: Measurement) => {
 }
 
 const showReviewMode = ref<boolean>(false)
+const containerHeight = ref<string>('100%')
 watch(showReviewMode, (val) => {
   if (sessionStore.session?.status === 'ongoing') {
     document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
   }
   if (val) focusMeasurement.value = 0
+  setTimeout(() => {
+    const el = document.getElementById('container-record-measurement')
+    let realHeight = el?.clientHeight || 0
+    if (val) realHeight = realHeight / 2
+    if (fixedMeasurement.value) realHeight = realHeight + 128
+    else realHeight = realHeight + 64
+    containerHeight.value = `${realHeight + 44}px`
+  }, 1000)
 })
 const focusMeasurement = ref<Measurement['id']>(0)
 const onFocusMeasurement = (val: Measurement) => {
@@ -439,8 +448,9 @@ const onExitSession = () => {
   </div>
 
   <div
-    class="flex min-h-[calc(100vh-52px)] w-full flex-col items-center bg-prim-3"
-    :class="{ 'pb-36': fixedMeasurement, 'pb-16': !fixedMeasurement }"
+    class="flex w-full flex-col items-center bg-prim-3"
+    :class="{ 'pb-32': fixedMeasurement, 'pb-16': !fixedMeasurement }"
+    :style="{ height: containerHeight }"
   >
     <div
       v-if="showReviewMode"
@@ -449,6 +459,7 @@ const onExitSession = () => {
       <div class="truncate">{{ sessionStore.session?.client?.name }}</div>
     </div>
     <div
+      id="container-record-measurement"
       class="flex w-full flex-wrap justify-center gap-4 px-4 py-4 transition-all duration-500"
       :class="{
         'origin-top scale-50 object-top': showReviewMode,

@@ -101,6 +101,9 @@ const probingScore = computed<number>(() => {
 })
 
 const probingLoading = ref<boolean>(false)
+const plusProbingLoading = ref<boolean>(false)
+const reduceProbingLoading = ref<boolean>(false)
+const removeProbingLoading = ref<boolean>(false)
 const onAdd = async (bool: boolean) => {
   onDisplayPopup()
   const params: UpdateMeasurementResultsParams = {
@@ -111,9 +114,15 @@ const onAdd = async (bool: boolean) => {
   const length = Object.keys(params.results).length
   params.results[length] = bool
   params.data_result.results = params.results
+
   probingLoading.value = true
+  if (bool) plusProbingLoading.value = true
+  else reduceProbingLoading.value = true
   const { success } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
+  plusProbingLoading.value = false
+  reduceProbingLoading.value = false
+
   if (!success) return
   // page.value = pageCount.value
   onDisplayPopup()
@@ -135,9 +144,13 @@ const onRemove = async (circle: ProbingCircle) => {
     }
   }
   params.data_result.results = params.results
+
   probingLoading.value = true
+  removeProbingLoading.value = true
   const { success } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
+  removeProbingLoading.value = false
+  
   if (!success) return
   // page.value = pageCount.value
   onDisplayPopup()
@@ -322,13 +335,13 @@ const onSave = async () => {
             :class="{
               'pointer-events-none':
                 measurement.submitted_at ||
-                probingLoading ||
+                removeProbingLoading ||
                 box.value === 'empty' ||
                 box.value === 'removing',
               'border-2 border-dashed border-slate-5 bg-slate-2': box.value === 'empty',
               'bg-white': box.value === 'removing',
-              'bg-lime-4': box.value === true,
-              'bg-red-cherry': box.value === false
+              'bg-lime-5': box.value === true,
+              'bg-tomato-7': box.value === false
             }"
             @click="onRemove(box)"
           >
@@ -378,9 +391,9 @@ const onSave = async () => {
           class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-all"
           :class="{
             'pointer-events-none': measurement.submitted_at || probingLoading,
-            'bg-red-700': probingLoading,
+            'bg-tomato-9': reduceProbingLoading,
             'bg-slate-5': measurement.submitted_at,
-            'bg-red-cherry': !measurement.submitted_at
+            'bg-tomato-7': !measurement.submitted_at && !reduceProbingLoading
           }"
           @click="onAdd(false)"
         >
@@ -390,9 +403,9 @@ const onSave = async () => {
           class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-all"
           :class="{
             'pointer-events-none': measurement.submitted_at || probingLoading,
-            'bg-lime-7': probingLoading,
+            'bg-lime-7': plusProbingLoading,
             'bg-slate-5': measurement.submitted_at,
-            'bg-lime-4': !measurement.submitted_at
+            'bg-lime-5': !measurement.submitted_at && !plusProbingLoading
           }"
           @click.prevent="onAdd(true)"
         >
