@@ -14,6 +14,7 @@ export interface ClientStateSchema {
   draft_sessions_count: number
   past_sessions: Session[]
   past_sessions_count: number
+  target: Target | null
   targets: Target[]
   targets_count: number
   clients: Client[]
@@ -29,6 +30,7 @@ export const useClientStore = defineStore('client', {
     draft_sessions_count: 0,
     past_sessions: [],
     past_sessions_count: 0,
+    target: null,
     targets: [],
     targets_count: 0,
     clients: [],
@@ -44,6 +46,7 @@ export const useClientStore = defineStore('client', {
       this.draft_sessions_count = 0
       this.past_sessions = []
       this.past_sessions_count = 0
+      this.target = null
       this.targets = []
       this.targets_count = 0
       this.clients = []
@@ -63,6 +66,7 @@ export const useClientStore = defineStore('client', {
         this.draft_sessions_count = storage.draft_sessions_count || 0
         this.past_sessions = storage.past_sessions || []
         this.past_sessions_count = storage.past_sessions_count || 0
+        this.target = storage.target || null
         this.targets = storage.targets || []
         this.targets_count = storage.targets_count || 0
         this.clients = storage.clients || []
@@ -79,6 +83,7 @@ export const useClientStore = defineStore('client', {
         draft_sessions_count: this.draft_sessions_count,
         past_sessions: this.past_sessions,
         past_sessions_count: this.past_sessions_count,
+        target: this.target,
         targets: this.targets,
         targets_count: this.targets_count,
         clients: this.clients,
@@ -129,7 +134,9 @@ export const useClientStore = defineStore('client', {
       }
 
       return axios
-        .get(`/api/v1/sessions/draft_sessions?client_id=${id}&upcoming=weekly&sort=earliest_schedule&page=1&per_page=5`)
+        .get(
+          `/api/v1/sessions/draft_sessions?client_id=${id}&upcoming=weekly&sort=earliest_schedule&page=1&per_page=5`
+        )
         .then(async ({ data }) => {
           this.upcoming_sessions = data.sessions
           this.upcoming_sessions_count = data.total_count
@@ -232,6 +239,26 @@ export const useClientStore = defineStore('client', {
         .then(async ({ data }) => {
           this.clients = data.clients
           this.clients_count = data.total_clients
+          this.syncClientStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getTarget({ id }: { id?: Target['id'] }): Promise<ResponseSchema> {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        return {
+          success: true,
+          data: this.target
+        }
+      }
+
+      return axios
+        .get(`/api/v1/targets/${id}`)
+        .then(async ({ data }) => {
+          this.target = data
           this.syncClientStore()
           return { success: true, data }
         })

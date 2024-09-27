@@ -2,6 +2,7 @@ import { getAccessStorage } from '@/plugins/preferences.plugin'
 import axios from 'axios'
 import router from '@/router'
 
+/* docs: https://vitejs.dev/guide/env-and-mode.html#node-env-and-modes */
 const API_URL = import.meta.env.PROD
   ? import.meta.env.VITE_API_ENDPOINT_PRODUCTION
   : import.meta.env.VITE_API_ENDPOINT

@@ -122,10 +122,18 @@ onMounted(() => {
   fetchTargets()
 })
 const showDetails = ref<boolean>(false)
+const targetLoading = ref<boolean>(false)
 const targetDetails = ref<Target | null>(null)
-const onOpenTarget = (target: Target) => {
-  targetDetails.value = target
+const onOpenTarget = async (target: Target) => {
+  targetLoading.value = true
   showDetails.value = true
+  const { success, data } = await clientStore.getTarget({ id: target.id })
+  targetLoading.value = false
+  if (!success) {
+    showDetails.value = false
+    return
+  }
+  targetDetails.value = data
 }
 </script>
 
@@ -302,98 +310,114 @@ const onOpenTarget = (target: Target) => {
   </AppActionSheet>
 
   <AppActionSheet :show="showDetails" @close="showDetails = false">
-    <div class="flex w-full flex-col gap-2">
-      <div class="flex">
-        <AppChip :chip="targetDetails?.status" />
+    <div v-if="targetLoading">
+      <div class="flex w-full flex-col gap-2">
+        <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+        <div class="h-6 w-3/4 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
       </div>
-      <div class="text-lg font-semibold">{{ targetDetails?.name }}</div>
-    </div>
-    <div class="mt-4 flex flex-col">
-      <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-        <div class="text-xs text-slate-8">Curriculum:</div>
-        <div class="text-sm">{{ targetDetails?.curriculum_name }}</div>
-      </div>
-      <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-        <div class="text-xs text-slate-8">Description:</div>
-        <div class="text-sm">{{ targetDetails?.description }}</div>
-      </div>
-      <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-        <div class="text-xs text-slate-8">Data collection method:</div>
-        <div class="text-sm">{{ getTargetType(targetDetails?.type) }}</div>
-      </div>
-      <div v-if="targetDetails?.type === 'Target::Duration'" class="flex flex-col">
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Goal time:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.goal_time }}</div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Success metric:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-        </div>
-      </div>
-      <div v-if="targetDetails?.type === 'Target::Percentage'" class="flex flex-col">
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Goal:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.goal }}%</div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Number of trials:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.number_of_trial }} trial(s)</div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Success metric:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-        </div>
-      </div>
-      <div v-if="targetDetails?.type === 'Target::Pir'" class="flex flex-col">
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Goal:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.goal }}%</div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Interval:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.interval }} minute(s)</div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Duration:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.duration }} minute(s)</div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Success metric:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-        </div>
-      </div>
-      <div v-if="targetDetails?.type === 'Target::Frequency'" class="flex flex-col">
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Goal:</div>
-          <div class="capitalize-first text-sm">
-            {{ targetDetails?.goal }} attempt(s) per session
-          </div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Success metric:</div>
-          <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-        </div>
-      </div>
-      <div v-if="targetDetails?.type === 'Target::Prompting'" class="flex flex-col">
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Prompts:</div>
-          <div class="text-sm">
-            {{ targetDetails?.prompts?.map((i) => i.name).join(', ') }}
-          </div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Goal and success metric:</div>
-          <div class="capitalize-first text-sm">
-            Achieve target with
-            <span class="font-semibold">{{ targetDetails?.success_metric }}</span> prompt, minimum
-            <span class="font-semibold">{{ targetDetails?.goal }}</span> attempt(s) per session
-          </div>
+      <div class="mt-4 flex flex-col">
+        <div v-for="n in 4" :key="n" class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+          <div class="h-4 w-2/3 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
         </div>
       </div>
     </div>
-    <div class="sticky bottom-0 w-full bg-white pt-4">
-      <AppButton kind="plain" class="w-full" @click="showDetails = false">Close</AppButton>
+    <div v-else>
+      <div class="flex w-full flex-col gap-2">
+        <div class="flex">
+          <AppChip :chip="targetDetails?.status" />
+        </div>
+        <div class="text-lg font-semibold">{{ targetDetails?.name }}</div>
+      </div>
+      <div class="mt-4 flex flex-col">
+        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="text-xs text-slate-8">Curriculum:</div>
+          <div class="text-sm">{{ targetDetails?.curriculum_name }}</div>
+        </div>
+        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="text-xs text-slate-8">Description:</div>
+          <div class="text-sm">{{ targetDetails?.description }}</div>
+        </div>
+        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="text-xs text-slate-8">Data collection method:</div>
+          <div class="text-sm">{{ getTargetType(targetDetails?.type) }}</div>
+        </div>
+        <div v-if="targetDetails?.type === 'Target::Duration'" class="flex flex-col">
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Goal time:</div>
+            <div class="capitalize-first text-sm">{{ targetDetails?.goal_time }}</div>
+          </div>
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Success metric:</div>
+            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
+          </div>
+        </div>
+        <div v-if="targetDetails?.type === 'Target::Percentage'" class="flex flex-col">
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Goal:</div>
+            <div class="capitalize-first text-sm">{{ targetDetails?.goal }}%</div>
+          </div>
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Number of trials:</div>
+            <div class="capitalize-first text-sm">
+              {{ targetDetails?.number_of_trial }} trial(s)
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Success metric:</div>
+            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
+          </div>
+        </div>
+        <div v-if="targetDetails?.type === 'Target::Pir'" class="flex flex-col">
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Goal:</div>
+            <div class="capitalize-first text-sm">{{ targetDetails?.goal }}%</div>
+          </div>
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Interval:</div>
+            <div class="capitalize-first text-sm">{{ targetDetails?.interval }} minute(s)</div>
+          </div>
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Duration:</div>
+            <div class="capitalize-first text-sm">{{ targetDetails?.duration }} minute(s)</div>
+          </div>
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Success metric:</div>
+            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
+          </div>
+        </div>
+        <div v-if="targetDetails?.type === 'Target::Frequency'" class="flex flex-col">
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Goal:</div>
+            <div class="capitalize-first text-sm">
+              {{ targetDetails?.goal }} attempt(s) per session
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Success metric:</div>
+            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
+          </div>
+        </div>
+        <div v-if="targetDetails?.type === 'Target::Prompting'" class="flex flex-col">
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Prompts:</div>
+            <div class="text-sm">
+              {{ targetDetails?.prompts?.map((i) => i.name).join(', ') }}
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Goal and success metric:</div>
+            <div class="capitalize-first text-sm">
+              Achieve target with
+              <span class="font-semibold">{{ targetDetails?.success_metric }}</span> prompt, minimum
+              <span class="font-semibold">{{ targetDetails?.goal }}</span> attempt(s) per session
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sticky bottom-0 w-full bg-white pt-4">
+        <AppButton kind="plain" class="w-full" @click="showDetails = false">Close</AppButton>
+      </div>
     </div>
   </AppActionSheet>
 </template>
