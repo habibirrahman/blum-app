@@ -316,10 +316,13 @@ const onOpenTarget = async (target: Target) => {
         <div class="h-6 w-3/4 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
       </div>
       <div class="mt-4 flex flex-col">
-        <div v-for="n in 4" :key="n" class="flex flex-col gap-1 border-b border-slate-3 py-3">
+        <div v-for="n in 5" :key="n" class="flex flex-col gap-1 border-b border-slate-3 py-3">
           <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
           <div class="h-4 w-2/3 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
         </div>
+      </div>
+      <div class="sticky bottom-0 flex w-full justify-center bg-white pt-4">
+        <div class="h-[38px] w-1/3 shrink-0 animate-pulse rounded bg-slate-3"></div>
       </div>
     </div>
     <div v-else>

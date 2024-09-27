@@ -147,7 +147,7 @@ const onCreate = async () => {
     leave-from="translate-x-0"
     leave-to="-translate-x-full"
     id="session-comments"
-    class="fixed left-0 top-0 z-[20] h-screen w-screen overflow-y-auto bg-prim-3 p-safe"
+    class="no-scrollbar fixed left-0 top-0 z-[20] h-screen w-screen overflow-y-auto bg-prim-3 p-safe"
   >
     <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>

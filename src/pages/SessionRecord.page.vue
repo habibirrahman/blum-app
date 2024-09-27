@@ -97,6 +97,10 @@ const scrollListener = (e: any) => {
 }
 
 onMounted(() => {
+  const app = document.getElementById('app')
+  if (app) {
+    app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
+  }
   sessionLoading.value = true
   /** generate session.store from storage */
   sessionStore.generateSessionStore()
@@ -105,7 +109,10 @@ onMounted(() => {
 })
 onUnmounted(() => {
   const app = document.getElementById('app')
-  app?.removeEventListener('scroll', scrollListener)
+  if (app) {
+    app.style.backgroundColor = 'rgb(255 255 255 / var(--tw-bg-opacity))' /* #ffffff */
+    app.removeEventListener('scroll', scrollListener)
+  }
 })
 
 const counter = ref<number>(0)
@@ -448,8 +455,7 @@ const onExitSession = () => {
   </div>
 
   <div
-    class="flex w-full flex-col items-center bg-prim-3"
-    :class="{ 'pb-32': fixedMeasurement, 'pb-16': !fixedMeasurement }"
+    class="flex min-h-screen w-full flex-col items-center bg-prim-3"
     :style="{ height: containerHeight }"
   >
     <div
@@ -478,17 +484,18 @@ const onExitSession = () => {
           class="h-[520px] w-[320px] shrink-0 animate-pulse rounded bg-prim-1"
         ></div>
       </div>
-      <MeasurementRecord
-        v-else
-        v-for="measurement in normalMeasurements"
-        :key="measurement.id"
-        :id="`measurement-record-${measurement.id}`"
-        :measurement="measurement"
-        :counter="counter"
-        :review_mode="showReviewMode"
-        @toggle-running="onToggleRunning"
-        @click="onFocusMeasurement(measurement)"
-      />
+      <div v-else class="flex w-full flex-wrap justify-center gap-4">
+        <MeasurementRecord
+          v-for="measurement in normalMeasurements"
+          :key="measurement.id"
+          :id="`measurement-record-${measurement.id}`"
+          :measurement="measurement"
+          :counter="counter"
+          :review_mode="showReviewMode"
+          @toggle-running="onToggleRunning"
+          @click="onFocusMeasurement(measurement)"
+        />
+      </div>
     </div>
   </div>
 
@@ -501,7 +508,7 @@ const onExitSession = () => {
       class="flex grow"
       :class="{
         'h-[120px] justify-center': isMeasurementCollapsed,
-        'h-[calc(100vh-52px)] flex-col items-center gap-4 overflow-y-auto py-4':
+        'no-scrollbar h-[calc(100vh-52px)] flex-col items-center gap-4 overflow-y-auto py-4':
           !isMeasurementCollapsed
       }"
     >
@@ -640,7 +647,7 @@ const onExitSession = () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[21] h-screen w-screen overflow-y-auto bg-white p-safe"
+    class="no-scrollbar fixed left-0 top-0 z-[21] h-screen w-screen overflow-y-auto bg-white p-safe"
   >
     <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>

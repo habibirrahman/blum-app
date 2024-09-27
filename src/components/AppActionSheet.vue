@@ -39,7 +39,7 @@ const emit = defineEmits<Emits>()
       class="fixed bottom-0 left-0 w-screen px-safe pb-safe"
     >
       <div class="rounded-t-2xl bg-white py-4">
-        <div class="max-h-[calc(100vh-72px)] overflow-y-auto px-4">
+        <div class="no-scrollbar max-h-[calc(100vh-72px)] overflow-y-auto px-4">
           <slot />
         </div>
       </div>

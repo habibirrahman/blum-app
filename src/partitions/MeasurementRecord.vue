@@ -138,7 +138,7 @@ const onSaveComment = async () => {
       </div>
       <div
         class="flex h-full flex-col rounded-b bg-white px-4 pt-3"
-        :class="{ 'overflow-y-auto': !is_collapsed }"
+        :class="{ 'no-scrollbar overflow-y-auto': !is_collapsed }"
       >
         <div v-if="!is_collapsed" class="flex flex-col gap-1">
           <div class="text-sm font-semibold text-slate-7">
