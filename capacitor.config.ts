@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'tech.simpul.blum',
-  appName: 'Blum',
+  appId: 'id.simpul.blum',
+  appName: 'Blum ABA',
   webDir: 'dist',
   plugins: {
     CapacitorHttp: {

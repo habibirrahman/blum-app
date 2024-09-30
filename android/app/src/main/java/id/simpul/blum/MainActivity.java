@@ -1,4 +1,4 @@
-package tech.simpul.blum;
+package id.simpul.blum;
 
 import com.getcapacitor.BridgeActivity;
 
