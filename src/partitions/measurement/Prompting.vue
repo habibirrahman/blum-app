@@ -4,15 +4,20 @@ import { computed, ref, watch } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { promptColors } from '@/lib/data'
 import { Icon } from '@iconify/vue'
-import { getRandomString } from '@/lib/func'
+import { useToast } from 'vue-toastification'
 
 const sessionStore = useSessionStore()
+const toast = useToast()
 
 interface Props {
   measurement: Measurement
   is_collapsed: boolean
 }
+interface Emits {
+  (e: 'fetch-session'): void
+}
 const props = withDefaults(defineProps<Props>(), {})
+const emit = defineEmits<Emits>()
 
 const page = ref<number>(1)
 watch(
@@ -90,8 +95,12 @@ const onChangeScore = async (prompt: any, score: number) => {
   params.results[prompt.key] = score
   params.data_result.results = { ...prompt, score: prompt.score + score }
   scoreLoading.value = true
-  const { success } = await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(params)
   scoreLoading.value = false
+  if (!success) {
+    emit('fetch-session')
+    toast.error(message)
+  }
 }
 </script>
 

@@ -3,14 +3,20 @@ import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/s
 import { ref } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
+import { useToast } from 'vue-toastification'
 
 const sessionStore = useSessionStore()
+const toast = useToast()
 
 interface Props {
   measurement: Measurement
   is_collapsed: boolean
 }
+interface Emits {
+  (e: 'fetch-session'): void
+}
 const props = withDefaults(defineProps<Props>(), {})
+const emit = defineEmits<Emits>()
 
 const scoreLoading = ref<boolean>(false)
 const onChangeScore = async (score: number) => {
@@ -24,8 +30,12 @@ const onChangeScore = async (score: number) => {
     }
   }
   scoreLoading.value = true
-  const { success } = await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(params)
   scoreLoading.value = false
+  if (!success) {
+    emit('fetch-session')
+    toast.error(message)
+  }
 }
 </script>
 

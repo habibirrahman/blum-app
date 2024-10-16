@@ -11,9 +11,11 @@ import { TransitionRoot } from '@headlessui/vue'
 import AppButton from '@/components/AppButton.vue'
 import AppChip from '@/components/AppChip.vue'
 import { useAppStore } from '@/stores/app.store'
+import { useToast } from 'vue-toastification'
 
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
+const toast = useToast()
 
 interface Props {
   measurement: Measurement
@@ -21,6 +23,7 @@ interface Props {
 }
 interface Emits {
   (e: 'toggle-collapsed', bool: boolean): void
+  (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -118,12 +121,16 @@ const onAdd = async (bool: boolean) => {
   probingLoading.value = true
   if (bool) plusProbingLoading.value = true
   else reduceProbingLoading.value = true
-  const { success } = await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
   plusProbingLoading.value = false
   reduceProbingLoading.value = false
 
-  if (!success) return
+  if (!success) {
+    emit('fetch-session')
+    toast.error(message)
+    return
+  }
   // page.value = pageCount.value
   onDisplayPopup()
 }
@@ -147,11 +154,15 @@ const onRemove = async (circle: ProbingCircle) => {
 
   probingLoading.value = true
   removeProbingLoading.value = true
-  const { success } = await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
   removeProbingLoading.value = false
-  
-  if (!success) return
+
+  if (!success) {
+    emit('fetch-session')
+    toast.error(message)
+    return
+  }
   // page.value = pageCount.value
   onDisplayPopup()
 }
@@ -295,9 +306,13 @@ const onSave = async () => {
     marked_as: probingAction.value?.marked_as
   }
   saveLoading.value = true
-  const { success } = await sessionStore.updateMeasurementMarkProbing(params)
+  const { success, message } = await sessionStore.updateMeasurementMarkProbing(params)
   saveLoading.value = false
-  if (!success) return
+  if (!success) {
+    emit('fetch-session')
+    toast.error(message)
+    return
+  }
   showPanel.value = false
 }
 </script>

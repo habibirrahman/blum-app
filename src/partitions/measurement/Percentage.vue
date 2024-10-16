@@ -3,14 +3,20 @@ import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/s
 import { computed, ref, watch } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
+import { useToast } from 'vue-toastification'
 
 const sessionStore = useSessionStore()
+const toast = useToast()
 
 interface Props {
   measurement: Measurement
   is_collapsed: boolean
 }
+interface Emits {
+  (e: 'fetch-session'): void
+}
 const props = withDefaults(defineProps<Props>(), {})
+const emit = defineEmits<Emits>()
 
 const page = ref<number>(1)
 watch(
@@ -73,8 +79,12 @@ const onChangePercentage = async (box: PercentageBox) => {
   params.results[box.key] = val
   params.data_result.results[box.key] = val
   percentageLoading.value = true
-  const { success } = await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(params)
   percentageLoading.value = false
+  if (!success) {
+    emit('fetch-session')
+    toast.error(message)
+  }
 }
 </script>
 

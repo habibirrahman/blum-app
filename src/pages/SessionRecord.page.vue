@@ -46,18 +46,30 @@ async function fetchSession(
   sessionLoading.value = false
   cycleLoading.value = false
   if (!success) return
-  if (is_swiped && appStore.network_status.connected) {
-    toast.success('Results are now up-to-date!')
-  }
-  counter.value = session.current_recording_time ? (session.current_recording_time[0] as number) : 0
-  if (session.status === 'ongoing') {
-    counterTimer()
-  }
+
   const app = document.getElementById('app')
-  if (first && session.status === 'ongoing') {
-    syncSession()
-    app?.scroll({ top: heightReload, behavior: 'smooth' })
-    app?.addEventListener('scroll', scrollListener)
+  const recordingTime = session.current_recording_time
+    ? (session.current_recording_time[0] as number)
+    : 0
+  
+    if (session.status === 'ongoing') {
+    if (is_swiped && appStore.network_status.connected) {
+      toast.success('Results are now up-to-date!')
+    }
+    counter.value = recordingTime
+    counterTimer()
+
+    if (first) {
+      syncSession()
+      app?.scroll({ top: heightReload, behavior: 'smooth' })
+      app?.addEventListener('scroll', scrollListener)
+    }
+  }
+
+  if (session.status === 'completed' || session.status === 'cancelled') {
+    clearInterval(counterInterval.value)
+    counter.value = recordingTime
+    app?.removeEventListener('scroll', scrollListener)
   }
 }
 
@@ -101,6 +113,8 @@ onMounted(() => {
   if (app) {
     app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
   }
+  appStore.getRunningSessions()
+
   sessionLoading.value = true
   /** generate session.store from storage */
   sessionStore.generateSessionStore()
@@ -371,6 +385,7 @@ const generateSuccessMetric = (target?: Target) => {
 }
 
 const onExitSession = () => {
+  appStore.getRunningSessions()
   router.push(redirect.value)
 }
 </script>
@@ -494,6 +509,7 @@ const onExitSession = () => {
           :review_mode="showReviewMode"
           @toggle-running="onToggleRunning"
           @click="onFocusMeasurement(measurement)"
+          @fetch-session="fetchSession"
         />
       </div>
     </div>
@@ -524,6 +540,7 @@ const onExitSession = () => {
         :is_collapsed="isMeasurementCollapsed"
         @toggle-running="onToggleRunning"
         @toggle-collapsed="isMeasurementCollapsed = $event"
+        @fetch-session="fetchSession"
       />
       <div
         v-if="!isMeasurementCollapsed"

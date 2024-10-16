@@ -27,6 +27,7 @@ interface Props {
 interface Emits {
   (e: 'toggle-running', data: Measurement): void
   (e: 'toggle-collapsed', bool: boolean): void
+  (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {
   is_collapsed: false,
@@ -175,33 +176,39 @@ const onSaveComment = async () => {
               :measurement="measurement"
               :is_collapsed="is_collapsed"
               @toggle-running="emit('toggle-running', measurement)"
+              @fetch-session="emit('fetch-session')"
             />
             <Frequency
               v-if="measurement.type === 'Measurement::Frequency'"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
+              @fetch-session="emit('fetch-session')"
             />
             <PartialIntervalRecording
               v-if="measurement.type === 'Measurement::Pir'"
               :measurement="measurement"
               :counter="counter"
               :is_collapsed="is_collapsed"
+              @fetch-session="emit('fetch-session')"
             />
             <Percentage
               v-if="measurement.type === 'Measurement::Percentage'"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
+              @fetch-session="emit('fetch-session')"
             />
             <Probing
               v-if="measurement.type === 'Measurement::Probing'"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
               @toggle-collapsed="emit('toggle-collapsed', $event)"
+              @fetch-session="emit('fetch-session')"
             />
             <Prompting
               v-if="measurement.type === 'Measurement::Prompting'"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
+              @fetch-session="emit('fetch-session')"
             />
           </div>
         </div>

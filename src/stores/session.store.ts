@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import { getSessionStorage, setSessionStorage } from '@/plugins/preferences.plugin'
 import { useAppStore, type ResponseSchema } from './app.store'
-import { onlyUniqueId } from '@/lib/func'
+import { getErrorMessage, onlyUniqueId } from '@/lib/func'
 import type { Session, Comment, Measurement, User, Client, ActionRecommendation } from '@/lib/types'
 
 interface SessionPendingProgress {
@@ -402,7 +402,11 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async updateMeasurementResults({ id, results, data_result }: UpdateMeasurementResultsParams) {
+    async updateMeasurementResults({
+      id,
+      results,
+      data_result
+    }: UpdateMeasurementResultsParams): Promise<ResponseSchema> {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
         this.pending_progress.push({
@@ -410,32 +414,34 @@ export const useSessionStore = defineStore('session', {
           params: { id, results, data_result }
         })
         this.setSessionMeasurement(data_result)
-        return { success: true, data: data_result }
+        return { success: true, data: data_result, message: '' }
       }
 
       return axios
         .patch(`/api/v1/measurements/${id}/update_results`, { results })
         .then(async ({ data }) => {
           this.setSessionMeasurement(data)
-          return { success: true, data }
+          return { success: true, data, message: '' }
         })
         .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
+          const message = getErrorMessage(response?.data?.error)
+          return { success: false, data: null, message }
         })
     },
     async updateMeasurementMarkProbing({
       id,
       visible,
       marked_as
-    }: UpdateMeasurementMarkProbingParams) {
+    }: UpdateMeasurementMarkProbingParams): Promise<ResponseSchema> {
       return axios
         .patch(`/api/v1/measurements/${id}/mark_probing`, { visible, marked_as })
         .then(async ({ data }) => {
           this.setSessionMeasurement(data)
-          return { success: true, data }
+          return { success: true, data, message: '' }
         })
         .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
+          const message = getErrorMessage(response?.data?.error)
+          return { success: false, data: null, message }
         })
     },
     async createSessionComment({

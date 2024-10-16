@@ -71,3 +71,24 @@ export const getRandomString = (prefix = '', length = 16): string => {
 export const onlyUniqueId = (value: any, index: number, array: any[]) => {
   return array.map((i) => i.id).indexOf(value.id) === index
 }
+
+export const getErrorMessage = (value: any = '') => {
+  function concatObjectKeyValue(obj: any): string[] {
+    let result = []
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        const temp = obj[key]
+        if (typeof temp === 'object') {
+          result.push(concatObjectKeyValue(obj[key]))
+        } else {
+          const k = Number(key)
+          if (!isNaN(k)) result.push(obj[key])
+          else result.push(`${key} ${obj[key]}`)
+        }
+      }
+    }
+    return result
+  }
+  console.log('asd', typeof value)
+  return typeof value === 'object' ? concatObjectKeyValue(value).join(', ') : value
+}

@@ -3,8 +3,10 @@ import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/s
 import { computed, onMounted, ref } from 'vue'
 import type { Measurement } from '@/lib/types'
 import AppButton from '@/components/AppButton.vue'
+import { useToast } from 'vue-toastification'
 
 const sessionStore = useSessionStore()
+const toast = useToast()
 
 interface Props {
   measurement: Measurement
@@ -12,6 +14,7 @@ interface Props {
 }
 interface Emits {
   (e: 'toggle-running'): void
+  (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -60,10 +63,12 @@ const onToggleTimer = async () => {
       }
     }
     timerLoading.value = true
-    const { success } = await sessionStore.updateMeasurementResults(params)
+    const { success, message } = await sessionStore.updateMeasurementResults(params)
     timerLoading.value = false
     if (!success) {
       onStartTimer()
+      emit('fetch-session')
+      toast.error(message)
       return
     }
     started.value = false
