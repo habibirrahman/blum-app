@@ -51,8 +51,8 @@ async function fetchSession(
   const recordingTime = session.current_recording_time
     ? (session.current_recording_time[0] as number)
     : 0
-  
-    if (session.status === 'ongoing') {
+
+  if (session.status === 'ongoing') {
     if (is_swiped && appStore.network_status.connected) {
       toast.success('Results are now up-to-date!')
     }
@@ -67,6 +67,7 @@ async function fetchSession(
   }
 
   if (session.status === 'completed' || session.status === 'cancelled') {
+    await appStore.getRunningSessions()
     clearInterval(counterInterval.value)
     counter.value = recordingTime
     app?.removeEventListener('scroll', scrollListener)
@@ -384,8 +385,11 @@ const generateSuccessMetric = (target?: Target) => {
   return prefix + goalText + suffix
 }
 
-const onExitSession = () => {
-  appStore.getRunningSessions()
+const exitSessionLoading = ref<boolean>(false)
+const onExitSession = async () => {
+  exitSessionLoading.value = true
+  await appStore.getRunningSessions()
+  exitSessionLoading.value = false
   router.push(redirect.value)
 }
 </script>
@@ -439,9 +443,9 @@ const onExitSession = () => {
     >
       {{ appStore.network_status.connected ? 'End' : 'Offline' }}
     </AppButton>
-    <RouterLink v-else :to="redirect">
-      <AppButton kind="outline">Close</AppButton>
-    </RouterLink>
+    <AppButton v-else kind="outline" :loading="exitSessionLoading" @click="onExitSession">
+      Close
+    </AppButton>
   </div>
 
   <div
@@ -710,7 +714,9 @@ const onExitSession = () => {
     </div>
     <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
       <div class="flex h-16 grow items-center px-4">
-        <AppButton class="w-full" @click="onExitSession">Close session</AppButton>
+        <AppButton class="w-full" :loading="exitSessionLoading" @click="onExitSession">
+          Close session
+        </AppButton>
       </div>
     </div>
   </TransitionRoot>
