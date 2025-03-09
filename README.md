@@ -75,6 +75,7 @@ bunx cap run ios
 
 ```sh
 bun run build
+// update version code and version name
 bunx cap sync
 bunx cap copy android
 bunx cap open android
