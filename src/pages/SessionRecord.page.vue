@@ -297,12 +297,14 @@ const openEndSession = () => {
   })
 
   groupReasons.value = []
-  const running = runningDurationIds.value.length
-  if (running || isNotCompletedProbes || isNotSavedProbing) {
+  const runningDuration = runningDurationIds.value.length
+  const unsavedSbt = unsavedSbtIds.value.length
+  if (runningDuration || isNotCompletedProbes || isNotSavedProbing || unsavedSbt) {
     endSessionStatus.value = 'group_reason'
-    if (running) groupReasons.value.push(`${running} timer(s) are still running`)
+    if (runningDuration) groupReasons.value.push(`${runningDuration} timer(s) are still running`)
     if (isNotCompletedProbes) groupReasons.value.push('Minimum required probes have not been met')
     if (isNotSavedProbing) groupReasons.value.push('Actions for probing have not been saved')
+    if (unsavedSbt) groupReasons.value.push("The target with SBT hasn't saved its result")
   } else if (isAllMeasurementResultEmpty.value) {
     endSessionStatus.value = 'empty_record'
   } else {
@@ -526,7 +528,7 @@ const onExitSession = async () => {
           class="h-[540px] w-[320px] shrink-0 animate-pulse rounded bg-prim-1"
         ></div>
       </div>
-      <div v-else class="flex flex-wrap justify-center w-full gap-4 pb-[50vh]">
+      <div v-else class="flex w-full flex-wrap justify-center gap-4 pb-[50vh]">
         <MeasurementRecord
           v-for="measurement in normalMeasurements"
           :key="measurement.id"
