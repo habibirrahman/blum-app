@@ -170,6 +170,7 @@ export type MeasurementType =
   | 'Measurement::Pir'
   | 'Measurement::Probing'
   | 'Measurement::Prompting'
+  | 'Measurement::Sbt'
 export interface Measurement {
   id?: number
   type?: MeasurementType
@@ -195,6 +196,7 @@ export type TargetType =
   | 'Target::Percentage'
   | 'Target::Pir'
   | 'Target::Prompting'
+  | 'Target::Sbt'
 export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued'
 export interface Target {
   id?: number
@@ -226,20 +228,52 @@ export interface Target {
     color?: string
     description?: string
   }
-  prompts?: {
-    id?: number
-    name?: string
-    abbreviation?: string
-    position?: number
-    color?: string
-    shape?: string
-    is_used?: boolean
-    target_id?: Target['id']
-    center_id?: number // not
-  }[]
+  prompts?: Prompt[]
   type_name?: string
   total_success?: number
   consecutive_success?: number
+  target_tasks?: TargetTask[]
+  target_problem_behaviors?: TargetProblemBehavior[]
+}
+
+export interface Prompt {
+  id?: number
+  name?: string
+  abbreviation?: string
+  position?: number
+  color?: string
+  shape?: string
+  score?: number
+  is_used?: boolean
+  is_default?: boolean
+  promptable_type?: string | 'Target'
+  promptable_id?: number
+  target_id?: Target['id']
+  center_id?: number // not
+  deleted_at?: string
+}
+export interface TargetTask {
+  id?: number
+  code?: string
+  code_definition?: string
+  color?: string
+  date_introduce?: string
+  date_mastered?: string
+  description?: string
+  status?: TargetStatus
+  target_id?: Target['id']
+  task_code_id?: number
+  title?: string
+}
+
+export interface TargetProblemBehavior {
+  id?: number
+  description?: string
+  code?: string
+  code_definition?: string
+  color?: string
+  problem_behavior_id?: number
+  target_id?: Target['id']
 }
 
 export interface Curriculum {

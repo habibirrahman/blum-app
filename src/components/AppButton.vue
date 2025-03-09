@@ -4,8 +4,8 @@ import { computed } from 'vue'
 interface Props {
   type?: 'button' | 'submit'
   kind?: 'primary' | 'outline' | 'plain'
-  color?: 'purple' | 'lime'
-  size?: 'base' | 'lg'
+  color?: 'purple' | 'lime' | 'teal'
+  size?:'sm'| 'base' | 'lg'
   disabled?: boolean
   loading?: boolean
 }
@@ -36,9 +36,9 @@ const currentClass = computed<string>(() => {
 
 <template>
   <button
-    class="relative flex items-center justify-center gap-2 rounded border text-sm font-semibold transition-all duration-300"
+    class="relative flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-300 border rounded"
     :class="[
-      size === 'lg' ? 'px-3 py-3' : 'px-2 py-2',
+      size==='sm' ? 'py-1 px-1.5' : size === 'lg' ? 'px-3 py-3' : 'px-2 py-2',
       isDisabled || isLoading ? 'pointer-events-none' : '',
       currentClass
     ]"
@@ -64,6 +64,12 @@ const currentClass = computed<string>(() => {
       @apply border-lime-10 bg-lime-10;
     }
   }
+  &.app-button-teal {
+    @apply border-teal-7 bg-teal-7 text-white;
+    &.app-button-loading {
+      @apply border-teal-10 bg-teal-10;
+    }
+  }
   &.app-button-disabled {
     @apply border-slate-4 bg-slate-4 text-slate-6;
   }
@@ -83,6 +89,12 @@ const currentClass = computed<string>(() => {
       @apply border-lime-10 text-lime-10;
     }
   }
+  &.app-button-teal {
+    @apply text-teal-7;
+    &.app-button-loading {
+      @apply border-teal-10 text-teal-10;
+    }
+  }
   &.app-button-disabled {
     @apply border-slate-4 bg-slate-2 text-slate-6;
   }
@@ -100,6 +112,12 @@ const currentClass = computed<string>(() => {
     @apply text-lime-7;
     &.app-button-loading {
       @apply text-lime-10;
+    }
+  }
+  &.app-button-teal {
+    @apply text-teal-7;
+    &.app-button-loading {
+      @apply text-teal-10;
     }
   }
   &.app-button-disabled {

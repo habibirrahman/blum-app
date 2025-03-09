@@ -5,7 +5,7 @@ import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
-import type { Measurement } from '@/lib/types'
+import { type MeasurementType, type Measurement, type Target, type TargetType } from '@/lib/types'
 import AppToggle from '@/components/AppToggle.vue'
 import { getTargetType } from '@/lib/func'
 import Prompting from './measurement/Prompting.vue'
@@ -14,18 +14,23 @@ import PartialIntervalRecording from './measurement/PartialIntervalRecording.vue
 import Duration from './measurement/Duration.vue'
 import Percentage from './measurement/Percentage.vue'
 import Probing from './measurement/Probing.vue'
+import { useClientStore } from '@/stores/client.store'
+import SkillBasedTreatment from './measurement/SkillBasedTreatment.vue'
 
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
+const clientStore = useClientStore()
 
 interface Props {
   measurement: Measurement
   counter: number
   is_collapsed?: boolean
   review_mode?: boolean
+  is_running?: boolean
 }
 interface Emits {
-  (e: 'toggle-running', data: Measurement): void
+  (e: 'toggle-running'): void
+  (e: 'toggle-saved', payload: { id: Measurement['id']; saved: boolean }): void
   (e: 'toggle-collapsed', bool: boolean): void
   (e: 'fetch-session'): void
 }
@@ -34,6 +39,25 @@ const props = withDefaults(defineProps<Props>(), {
   review_mode: false
 })
 const emit = defineEmits<Emits>()
+
+onMounted(async () => {
+  if (
+    props.measurement.type === 'Measurement::Probing' ||
+    props.measurement.type === 'Measurement::Sbt'
+  ) {
+    const { data } = await clientStore.getTarget({ id: props.measurement.target_id, plain: true })
+    target.value = data || {}
+  }
+  isDropped.value = props.measurement.is_dropped || false
+  cardLoading.value = false
+})
+
+const cardLoading = ref<boolean>(true)
+const target = ref<Target>()
+const measurementType = computed<MeasurementType | TargetType | ''>(() => {
+  const targetData: Target = props.measurement?.target || target.value || {}
+  return props.measurement?.type || targetData?.type || ''
+})
 
 const display = ref<'target' | 'description' | 'comment'>('target')
 watch(
@@ -44,9 +68,6 @@ watch(
 )
 
 const isDropped = ref<boolean>(false)
-onMounted(() => {
-  isDropped.value = props.measurement.is_dropped || false
-})
 watch(
   () => props.measurement.is_dropped,
   (val) => {
@@ -65,6 +86,12 @@ const onDrop = async (bool: boolean) => {
   isDropLoading.value = false
   if (!success) return
   isDropped.value = data.is_dropped
+  if (data.is_dropped && props.is_running) {
+    emit('toggle-running')
+  }
+}
+const onToggleSaved = (saved: boolean) => {
+  emit('toggle-saved', { id: props.measurement.id, saved })
 }
 
 const commentInput = ref<string>('')
@@ -91,39 +118,44 @@ const onSaveComment = async () => {
 
 <template>
   <div
-    class="relative shrink-0 rounded transition-all"
-    :class="{ 'h-[520px] w-[320px]': !is_collapsed, 'h-[120px] w-full': is_collapsed }"
+    class="relative transition-all rounded shrink-0"
+    :class="{
+      'h-[540px] w-[320px]': !is_collapsed,
+      'h-[120px] w-full': is_collapsed && !measurementType.includes('Sbt'),
+      'h-[180px] w-full': is_collapsed && measurementType.includes('Sbt')
+    }"
   >
     <div
       v-if="review_mode && measurement.is_fixed"
-      class="absolute -top-6 left-0 flex h-16 w-16 items-center justify-center rounded-full bg-white"
+      class="absolute left-0 flex items-center justify-center w-16 h-16 bg-white rounded-full -top-6"
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
-    <div class="flex h-full flex-col" :class="{ 'pointer-events-none': review_mode }">
+    <div class="flex flex-col h-full" :class="{ 'pointer-events-none': review_mode }">
       <div
         class="h-[6px] w-full shrink-0 rounded-t"
         :style="{ backgroundColor: measurement.target?.curriculum_color }"
       ></div>
       <div
         v-if="!is_collapsed"
-        class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-4"
+        id="measurememt-header"
+        class="flex items-center justify-between w-full px-4 h-9 shrink-0 bg-prim-2"
       >
         <div
-          class="flex h-6 w-6 items-center justify-center rounded transition-all"
+          class="flex items-center justify-center w-6 h-6 transition-all rounded"
           :class="{ 'bg-white': display === 'description' }"
           @click="display = display === 'description' ? 'target' : 'description'"
         >
           <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
         </div>
         <div
-          class="relative flex h-6 w-6 items-center justify-center rounded transition-all"
+          class="relative flex items-center justify-center w-6 h-6 transition-all rounded"
           :class="{ 'bg-white': display === 'comment' }"
           @click="display = display === 'comment' ? 'target' : 'comment'"
         >
           <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
           <div
-            class="absolute right-px top-px h-2 w-2 rounded-full bg-light-purple-5 transition-all"
+            class="absolute w-2 h-2 transition-all rounded-full right-px top-px bg-light-purple-5"
             :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
           ></div>
         </div>
@@ -137,8 +169,14 @@ const onSaveComment = async () => {
           />
         </div>
       </div>
+
+      <div v-if="cardLoading" class="flex flex-col items-center justify-center h-full bg-white">
+        <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      </div>
       <div
-        class="flex h-full flex-col rounded-b bg-white px-4 pt-3"
+        v-else
+        id="measurememt-body"
+        class="flex flex-col h-full px-4 pt-3 bg-white rounded-b"
         :class="{ 'no-scrollbar overflow-y-auto': !is_collapsed }"
       >
         <div v-if="!is_collapsed" class="flex flex-col gap-1">
@@ -155,64 +193,74 @@ const onSaveComment = async () => {
         <div v-if="display === 'target'" class="flex h-full pb-3 transition-all">
           <div
             v-if="is_collapsed"
-            class="flex h-full w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
+            class="flex items-center justify-center w-8 h-full rounded-full shrink-0 bg-slate-4"
             @click="emit('toggle-collapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
           </div>
-          <div v-if="isDropped" class="flex flex-grow flex-col items-center justify-center gap-4">
-            <Icon icon="solar:clipboard-remove-bold" class="h-20 w-20 text-tulip-6" />
-            <div v-if="!is_collapsed" class="w-72 space-y-2">
-              <div class="text-center font-semibold">Entry not recorded</div>
-              <div class="text-center text-sm text-slate-8">
+          <div v-if="isDropped" class="flex flex-col items-center justify-center flex-grow gap-4">
+            <Icon icon="solar:clipboard-remove-bold" class="w-20 h-20 text-tulip-6" />
+            <div v-if="!is_collapsed" class="space-y-2 w-72">
+              <div class="font-semibold text-center">Entry not recorded</div>
+              <div class="text-sm text-center text-slate-8">
                 This entry will not be saved when the Session ends. Toggle back to save this entry
                 recording.
               </div>
             </div>
           </div>
-          <div v-else class="flex h-full flex-grow flex-col justify-between">
+          <div v-else class="flex flex-col justify-between flex-grow h-full">
             <Duration
-              v-if="measurement.type === 'Measurement::Duration'"
+              v-if="measurementType.includes('Duration')"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
-              @toggle-running="emit('toggle-running', measurement)"
+              @toggle-running="emit('toggle-running')"
               @fetch-session="emit('fetch-session')"
             />
             <Frequency
-              v-if="measurement.type === 'Measurement::Frequency'"
+              v-if="measurementType.includes('Frequency')"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
               @fetch-session="emit('fetch-session')"
             />
             <PartialIntervalRecording
-              v-if="measurement.type === 'Measurement::Pir'"
+              v-if="measurementType.includes('Pir')"
               :measurement="measurement"
               :counter="counter"
               :is_collapsed="is_collapsed"
               @fetch-session="emit('fetch-session')"
             />
             <Percentage
-              v-if="measurement.type === 'Measurement::Percentage'"
+              v-if="measurementType.includes('Percentage')"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
               @fetch-session="emit('fetch-session')"
             />
             <Probing
-              v-if="measurement.type === 'Measurement::Probing'"
+              v-if="measurementType.includes('Probing')"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
               @toggle-collapsed="emit('toggle-collapsed', $event)"
               @fetch-session="emit('fetch-session')"
             />
             <Prompting
-              v-if="measurement.type === 'Measurement::Prompting'"
+              v-if="measurementType.includes('Prompting')"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
               @fetch-session="emit('fetch-session')"
             />
+            <!-- SBT -->
+            <SkillBasedTreatment
+              v-if="measurementType.includes('Sbt') && target"
+              :measurement="measurement"
+              :measurement_results="measurement.results || {}"
+              :target="target"
+              :is_collapsed="is_collapsed"
+              @toggle-saved="onToggleSaved($event)"
+              @fetch-session="emit('fetch-session')"
+            />
           </div>
         </div>
-        <div v-if="display === 'description'" class="flex h-full flex-col justify-between pt-3">
+        <div v-if="display === 'description'" class="flex flex-col justify-between h-full pt-3">
           <div class="flex flex-col gap-3">
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div>{{ getTargetType(measurement.target?.type) }}</div>
@@ -252,7 +300,7 @@ const onSaveComment = async () => {
               </div>
             </div>
             <div
-              v-if="measurement.type === 'Measurement::Probing'"
+              v-if="measurementType.includes('Probing')"
               class="space-y-0.5 text-wrap text-sm text-slate-8"
             >
               <div>Probing activated</div>
@@ -277,15 +325,44 @@ const onSaveComment = async () => {
               <span class="font-semibold">{{ measurement.target.last_phase_line?.label }}</span>
               phase.
             </div>
+
+            <div v-if="measurement.target?.type === 'Target::Sbt'">
+              <!-- sbt taks -->
+              <div class="py-3 space-y-3 bordert-2 border-slate-4">
+                <div v-for="taskCode in target?.target_tasks" :key="taskCode.id" class="space-y-1">
+                  <div class="text-sm font-semibold text-slate-8">
+                    {{ taskCode.code }} - {{ taskCode.code_definition }}
+                  </div>
+                  <div class="text-sm text-slate-8">
+                    {{ taskCode.description }}
+                  </div>
+                </div>
+              </div>
+              <!-- sbt problem behavior -->
+              <div class="py-3 space-y-3 bordert-2 border-slate-4">
+                <div
+                  v-for="problemBehavior in target?.target_problem_behaviors"
+                  :key="problemBehavior.id"
+                  class="space-y-1"
+                >
+                  <div class="text-sm font-semibold text-slate-8">
+                    {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
+                  </div>
+                  <div class="text-sm text-slate-8">
+                    {{ problemBehavior.description }}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="sticky bottom-0 w-full bg-white py-3">
+          <div class="sticky bottom-0 w-full py-3 bg-white">
             <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
           </div>
         </div>
-        <div v-if="display === 'comment'" class="flex h-full flex-col justify-between gap-3">
+        <div v-if="display === 'comment'" class="flex flex-col justify-between h-full gap-3">
           <div
             v-if="sessionStore.session?.status !== 'ongoing'"
-            class="text-wrap pt-3 text-sm text-slate-8"
+            class="pt-3 text-sm text-wrap text-slate-8"
           >
             {{ measurement.comment || '-' }}
           </div>
@@ -296,9 +373,9 @@ const onSaveComment = async () => {
             placeholder="Type your comment here..."
             v-model="commentInput"
             borderless
-            class="mt-2 h-full"
+            class="h-full mt-2"
           />
-          <div class="sticky bottom-0 w-full bg-white py-3">
+          <div class="sticky bottom-0 w-full py-3 bg-white">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"

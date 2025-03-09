@@ -140,13 +140,26 @@ export default {
           2: '#E9FCCB',
           1: '#F5FEE7'
         },
+        teal: {
+          11: '#092A2A',
+          10: '#1A4746',
+          9: '#1A5554',
+          8: '#1B6A67',
+          7: '#1D847F',
+          6: '#2AB1A8',
+          5: '#40C1B6',
+          4: '#6EDACE',
+          3: '#A4EBE0',
+          2: '#D1F6F0',
+          1: '#F2FBF9'
+        },
         // curriculum
         'red-cherry': '#FF4447'
       }
     }
   },
   corePlugins: {
-    aspectRatio: false,
+    aspectRatio: false
   },
   plugins: [
     require('@tailwindcss/typography'),

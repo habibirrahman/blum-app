@@ -246,9 +246,15 @@ export const useClientStore = defineStore('client', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async getTarget({ id }: { id?: Target['id'] }): Promise<ResponseSchema> {
+    async getTarget({
+      id,
+      plain = false
+    }: {
+      id?: Target['id']
+      plain?: boolean
+    }): Promise<ResponseSchema> {
       const { network_status } = useAppStore()
-      if (!network_status.connected) {
+      if (!network_status.connected && !plain) {
         return {
           success: true,
           data: this.target
@@ -258,6 +264,9 @@ export const useClientStore = defineStore('client', {
       return axios
         .get(`/api/v1/targets/${id}`)
         .then(async ({ data }) => {
+          if (plain) {
+            return { success: true, data }
+          }
           this.target = data
           this.syncClientStore()
           return { success: true, data }
