@@ -75,10 +75,16 @@ bunx cap run ios
 
 ```sh
 bun run build
-// update version code and version name
+```
+manual: update version code and version name
+```sh
 bunx cap sync
 bunx cap copy android
 bunx cap open android
+```
+
+```sh
+bunx cap sync
 bunx cap copy ios
 bunx cap open ios
 ```
