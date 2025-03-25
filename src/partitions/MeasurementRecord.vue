@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
+import {
+  useSessionStore,
+  type UpdateMeasurementParams,
+  type UpdateMeasurementResultsParams
+} from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
@@ -16,7 +20,9 @@ import Percentage from './measurement/Percentage.vue'
 import Probing from './measurement/Probing.vue'
 import { useClientStore } from '@/stores/client.store'
 import SkillBasedTreatment from './measurement/SkillBasedTreatment.vue'
+import { useToast } from 'vue-toastification'
 
+const toast = useToast()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
 const clientStore = useClientStore()
@@ -41,6 +47,12 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 onMounted(async () => {
+  if (props.measurement.type === 'Measurement::Duration') {
+    if (props.measurement.results && props.measurement.results.seconds) {
+      durationCounter.value = props.measurement.results.seconds
+    }
+  }
+
   if (
     props.measurement.type === 'Measurement::Probing' ||
     props.measurement.type === 'Measurement::Sbt'
@@ -48,12 +60,12 @@ onMounted(async () => {
     const { data } = await clientStore.getTarget({ id: props.measurement.target_id, plain: true })
     target.value = data || {}
   }
+
   isDropped.value = props.measurement.is_dropped || false
   cardLoading.value = false
 })
 
 const cardLoading = ref<boolean>(true)
-const target = ref<Target>()
 const measurementType = computed<MeasurementType | TargetType | ''>(() => {
   const targetData: Target = props.measurement?.target || target.value || {}
   return props.measurement?.type || targetData?.type || ''
@@ -67,6 +79,7 @@ watch(
   }
 )
 
+// drop measurement property
 const isDropped = ref<boolean>(false)
 watch(
   () => props.measurement.is_dropped,
@@ -90,10 +103,8 @@ const onDrop = async (bool: boolean) => {
     emit('toggle-running')
   }
 }
-const onToggleSaved = (saved: boolean) => {
-  emit('toggle-saved', { id: props.measurement.id, saved })
-}
 
+// comment property
 const commentInput = ref<string>('')
 const commentLoading = ref<boolean>(false)
 watch(display, (val) => {
@@ -113,6 +124,72 @@ const onSaveComment = async () => {
   commentLoading.value = false
   if (!success) return
   display.value = 'target'
+}
+
+// duration property
+const durationCounter = ref<number>(0)
+const durationStarted = ref<boolean>(false)
+const durationInterval = ref<any>(null)
+const durationLoading = ref<boolean>(false)
+
+const durationTimerRunning = computed<string>(() => {
+  let hours: number | string = '00'
+  let minutes: number | string = '00'
+  let seconds: number | string = '00'
+  if (durationCounter.value) {
+    seconds = (durationCounter.value % 60).toString().padStart(2, '0')
+    if (durationCounter.value >= 60) {
+      minutes = Math.floor(durationCounter.value / 60)
+      if (durationCounter.value >= 3600) minutes = minutes % 60
+      minutes = minutes.toString().padStart(2, '0')
+    }
+    if (durationCounter.value >= 3600) {
+      hours = Math.floor(durationCounter.value / 3600)
+        .toString()
+        .padStart(2, '0')
+    }
+  }
+  return `${hours}:${minutes}:${seconds}`
+})
+
+const onStartTimer = () => {
+  durationInterval.value = setInterval(() => {
+    durationCounter.value++
+  }, 1000)
+}
+const onToggleDurationTimer = async () => {
+  if (!durationStarted.value) {
+    durationStarted.value = true
+    onStartTimer()
+    emit('toggle-running')
+  } else {
+    clearInterval(durationInterval.value)
+    const params: UpdateMeasurementResultsParams = {
+      id: props.measurement.id,
+      results: durationTimerRunning.value,
+      data_result: {
+        ...props.measurement,
+        results: { string: durationTimerRunning.value, seconds: durationCounter.value }
+      }
+    }
+    durationLoading.value = true
+    const { success, message } = await sessionStore.updateMeasurementResults(params)
+    durationLoading.value = false
+    if (!success) {
+      onStartTimer()
+      emit('fetch-session')
+      toast.error(message)
+      return
+    }
+    durationStarted.value = false
+    emit('toggle-running')
+  }
+}
+
+// prompting & sbt property
+const target = ref<Target>()
+const onToggleSaved = (saved: boolean) => {
+  emit('toggle-saved', { id: props.measurement.id, saved })
 }
 </script>
 
@@ -212,8 +289,11 @@ const onSaveComment = async () => {
             <Duration
               v-if="measurementType.includes('Duration')"
               :measurement="measurement"
+              :started="durationStarted"
+              :timer="durationTimerRunning"
+              :update_loading="durationLoading"
               :is_collapsed="is_collapsed"
-              @toggle-running="emit('toggle-running')"
+              @toggle-timer="onToggleDurationTimer"
               @fetch-session="emit('fetch-session')"
             />
             <Frequency
