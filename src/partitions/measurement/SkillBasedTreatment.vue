@@ -374,31 +374,18 @@ const onUndoTrial = () => {
     key
   }))
 
-  let newTrial: Trial
-  if (results.length === 1) {
-    // reset results state
-    resultsState.value = {}
-
-    // reset current trial
-    newTrial = {
-      key: '1',
-      target_task_id: 0,
-      prompt_id: 0,
-      target_problem_behavior_id: null // optional
-    }
-  } else {
-    // remove last trial
-    results.pop()
-
-    // asign new result state
-    const newResultsState: Measurement['results'] = {}
-    for (let idx = 0; idx < results.length; idx++) {
-      newResultsState[results[idx].key] = { ...results[idx] }
-    }
-    resultsState.value = newResultsState
-
+  let newTrial: Trial = {
+    key: '1',
+    target_task_id: 0,
+    prompt_id: 0,
+    target_problem_behavior_id: null // optional
+  }
+  if (results.length) {
     // take last trial for current trial
-    newTrial = results[results.length - 1]
+    newTrial = {
+      ...results[results.length - 1],
+      key: results.length
+    }
   }
   // change active trial
   currentTrial.value = newTrial
@@ -418,14 +405,12 @@ const onUndoTrial = () => {
 }
 const onTakeNextTrial = (payload: { isNew: boolean }) => {
   if (sessionStore.session?.status !== 'ongoing') return
-  let newTrial: Trial = currentTrial.value
-  if (payload.isNew) {
-    newTrial = {
-      key: Number(currentTrial.value.key) + 1 + '',
-      target_task_id: nextTask.value.id,
-      prompt_id: 0,
-      target_problem_behavior_id: null // optional
-    }
+  const newKey = payload.isNew ? Number(currentTrial.value.key) + 1 + '' : currentTrial.value.key
+  const newTrial: Trial = {
+    key: newKey,
+    target_task_id: nextTask.value.id,
+    prompt_id: 0,
+    target_problem_behavior_id: null // optional
   }
   resultsState.value[newTrial.key] = {
     key: newTrial.key,
@@ -555,7 +540,7 @@ const onSaveEditTrial = async () => {
           <div class="flex items-center gap-1">
             <div class="text-sm text-slate-7">Trial</div>
             <div class="text-sm font-semibold text-teal-8">
-              {{ !isOpenEditTrial ? Object.keys(resultsState).length : currentTrial.key }}
+              {{ currentTrial.key }}
             </div>
           </div>
         </div>
@@ -628,7 +613,7 @@ const onSaveEditTrial = async () => {
             }"
           >
             <div
-              v-if="Object.keys(resultsState).length > 0"
+              v-if="currentTrial.prompt_id"
               class="flex items-center text-center"
               :class="{
                 'flex-col gap-1': !is_collapsed,
@@ -658,7 +643,7 @@ const onSaveEditTrial = async () => {
             </div>
             <div class="flex flex-col items-center gap-1">
               <div v-if="!is_collapsed" class="text-sm text-center text-slate-8">
-                {{ Object.keys(resultsState).length > 0 ? 'Next' : 'Select a task to start' }}
+                {{ currentTrial.prompt_id ? 'Next' : 'Select a task to start' }}
               </div>
               <div
                 :class="{
@@ -727,7 +712,7 @@ const onSaveEditTrial = async () => {
         </div>
       </div>
 
-      <!-- view trial hostory -->
+      <!-- view trial history -->
       <div v-if="isOpenTrialHistory && !isOpenEditTrial" class="flex flex-col">
         <div v-for="key in Object.keys(resultsState)" :key="key">
           <div
@@ -811,7 +796,7 @@ const onSaveEditTrial = async () => {
           class="flex-grow"
         >
           <AppButton
-            v-if="Object.keys(resultsState).length > 0"
+            v-if="currentTrial.prompt_id"
             color="teal"
             class="w-full"
             :loading="submitLoading"
@@ -835,7 +820,7 @@ const onSaveEditTrial = async () => {
           </AppButton>
         </div>
         <div
-          v-if="Object.keys(resultsState).length > 0"
+          v-if="Object.keys(resultsState).length > 1 || currentTrial.prompt_id"
           class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded cursor-pointer hover:brightness-90"
           :class="{
             'bg-tomato-2': !currentTrial.target_problem_behavior_id,

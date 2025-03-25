@@ -8,7 +8,7 @@ const sessionStore = useSessionStore()
 
 interface Props {
   measurement: Measurement
-  started: boolean
+  is_started: boolean
   timer: string
   update_loading: boolean
   is_collapsed: boolean
@@ -28,7 +28,7 @@ const emit = defineEmits<Emits>()
   >
     <div
       class="grid grid-cols-5 items-center text-3xl text-[32px] font-bold transition-all"
-      :class="{ 'text-slate-6': !started, 'text-slate-8': started }"
+      :class="{ 'text-slate-6': !is_started, 'text-slate-8': is_started }"
     >
       <div class="flex justify-center">{{ timer.split(':')[0] }}</div>
       <div class="flex justify-center pb-2">:</div>
@@ -42,7 +42,7 @@ const emit = defineEmits<Emits>()
       :loading="update_loading"
       @click="emit('toggle-timer')"
     >
-      {{ started ? 'Stop timer' : 'Start timer' }}
+      {{ is_started ? 'Stop timer' : 'Start timer' }}
     </AppButton>
   </div>
 

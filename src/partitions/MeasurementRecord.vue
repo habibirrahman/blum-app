@@ -152,7 +152,7 @@ const durationTimerRunning = computed<string>(() => {
   return `${hours}:${minutes}:${seconds}`
 })
 
-const onStartTimer = () => {
+const onStartDurationTimer = () => {
   durationInterval.value = setInterval(() => {
     durationCounter.value++
   }, 1000)
@@ -160,7 +160,7 @@ const onStartTimer = () => {
 const onToggleDurationTimer = async () => {
   if (!durationStarted.value) {
     durationStarted.value = true
-    onStartTimer()
+    onStartDurationTimer()
     emit('toggle-running')
   } else {
     clearInterval(durationInterval.value)
@@ -176,7 +176,7 @@ const onToggleDurationTimer = async () => {
     const { success, message } = await sessionStore.updateMeasurementResults(params)
     durationLoading.value = false
     if (!success) {
-      onStartTimer()
+      onStartDurationTimer()
       emit('fetch-session')
       toast.error(message)
       return
@@ -289,7 +289,7 @@ const onToggleSaved = (saved: boolean) => {
             <Duration
               v-if="measurementType.includes('Duration')"
               :measurement="measurement"
-              :started="durationStarted"
+              :is_started="durationStarted"
               :timer="durationTimerRunning"
               :update_loading="durationLoading"
               :is_collapsed="is_collapsed"
