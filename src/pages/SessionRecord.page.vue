@@ -273,8 +273,9 @@ const isAllMeasurementResultEmpty = computed<boolean>(() => {
       }
     }
     if (i.type === 'Measurement::Sbt') {
-      const res = Object.keys(i.results)
-      if (res.length) isResultsEmpty = false
+      for (let key in i.results) {
+        if (i.results[key].prompt_id) isResultsEmpty = false
+      }
     }
     isAllEmpty.push(isResultsEmpty)
   })

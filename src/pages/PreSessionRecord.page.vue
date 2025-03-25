@@ -136,14 +136,14 @@ const onStartSession = () => {
   <div class="sticky top-0 z-[10] bg-white">
     <div class="flex items-center justify-between gap-4 px-4 py-3">
       <div class="flex items-center gap-3 truncate">
-        <RouterLink :to="redirect" class="flex h-8 w-8 shrink-0 items-center justify-center">
+        <RouterLink :to="redirect" class="flex items-center justify-center w-8 h-8 shrink-0">
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </RouterLink>
         <div class="truncate text-[22px] text-xl font-bold">
           {{ sessionStore.session?.client?.name }}
         </div>
       </div>
-      <div class="shrink-0 text-xs text-slate-8">Session ID {{ sessionStore.session?.id }}</div>
+      <div class="text-xs shrink-0 text-slate-8">Session ID {{ sessionStore.session?.id }}</div>
     </div>
   </div>
 
@@ -158,52 +158,52 @@ const onStartSession = () => {
 
   <div class="relative z-[2] pb-12">
     <div v-if="isScheduled" class="flex flex-col">
-      <div class="py-3 text-center text-xs text-slate-7">This session is scheduled:</div>
+      <div class="py-3 text-xs text-center text-slate-7">This session is scheduled:</div>
       <div class="pl-4">
-        <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+        <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
           <div
             v-for="(item, idx) in scheduleDetails"
             :key="item.title"
-            class="flex snap-start gap-2"
+            class="flex gap-2 snap-start"
           >
             <div v-if="idx > 0" class="h-10 w-0.5 shrink-0 bg-slate-3"></div>
-            <div class="flex h-10 items-center gap-2">
+            <div class="flex items-center h-10 gap-2">
               <div
-                class="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-light-purple-1"
+                class="flex items-center justify-center rounded h-7 w-7 shrink-0 bg-light-purple-1"
               >
                 <Icon :icon="item.icon" class="text-light-purple-4" />
               </div>
               <div class="flex h-10 w-[104px] flex-col justify-between truncate">
                 <div class="text-xs text-slate-7">{{ item.title }}</div>
-                <div class="truncate text-sm font-medium text-dark-purple-1">{{ item.label }}</div>
+                <div class="text-sm font-medium truncate text-dark-purple-1">{{ item.label }}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div class="space-y-6 py-6">
+    <div class="py-6 space-y-6">
       <div v-if="sessionLoading">
-        <div class="h-4 w-64 shrink-0 animate-pulse rounded-full bg-prim-1"></div>
+        <div class="w-64 h-4 rounded-full shrink-0 animate-pulse bg-prim-1"></div>
       </div>
       <div
         v-else-if="sessionStore.session_measurements.length"
-        class="px-4 text-center text-sm text-dark-purple-1"
+        class="px-4 text-sm text-center text-dark-purple-1"
       >
         Before you begin this session, take a moment to review the targets and the comments.
       </div>
 
-      <div v-if="commentsLoading" class="space-y-2 px-4">
+      <div v-if="commentsLoading" class="px-4 space-y-2">
         <div class="flex h-[30px] items-center justify-center">
-          <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-prim-1"></div>
+          <div class="w-32 h-4 rounded-full shrink-0 animate-pulse bg-prim-1"></div>
         </div>
         <div
           v-for="n in 2"
           :key="n"
-          class="h-32 w-full shrink-0 animate-pulse rounded bg-prim-1"
+          class="w-full h-32 rounded shrink-0 animate-pulse bg-prim-1"
         ></div>
       </div>
-      <div v-else-if="sessionStore.session_comments.length" class="space-y-2 px-4">
+      <div v-else-if="sessionStore.session_comments.length" class="px-4 space-y-2">
         <div
           class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1"
           @click="showComments = !showComments"
@@ -225,14 +225,14 @@ const onStartSession = () => {
         </div>
       </div>
 
-      <div v-if="sessionLoading" class="space-y-2 px-4">
+      <div v-if="sessionLoading" class="px-4 space-y-2">
         <div class="flex h-[30px] items-center justify-center">
-          <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-prim-1"></div>
+          <div class="w-32 h-4 rounded-full shrink-0 animate-pulse bg-prim-1"></div>
         </div>
         <div
           v-for="n in 8"
           :key="n"
-          class="h-32 w-full shrink-0 animate-pulse rounded bg-prim-1"
+          class="w-full h-32 rounded shrink-0 animate-pulse bg-prim-1"
         ></div>
       </div>
       <div
@@ -242,7 +242,7 @@ const onStartSession = () => {
         <div>Whoops, no targets here!</div>
         <div>Add targets from the desktop to kick off your session.</div>
       </div>
-      <div v-else class="space-y-2 px-4">
+      <div v-else class="px-4 space-y-2">
         <div class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1">
           <div class="text-2xl font-bold">{{ sessionStore.session_measurements.length }}</div>
           <div class="text-sm">target(s)</div>
@@ -250,7 +250,7 @@ const onStartSession = () => {
         <div
           v-for="measurement in sessionStore.session_measurements"
           :key="measurement.id"
-          class="w-full rounded border border-prim-4 bg-white"
+          class="w-full bg-white border rounded border-prim-4"
           :style="{
             boxShadow: '4px 4px 0px 0px #D6C7E066'
           }"
@@ -259,12 +259,12 @@ const onStartSession = () => {
             class="h-[6px] w-full shrink-0 rounded-t"
             :style="{ backgroundColor: measurement.target?.curriculum_color }"
           ></div>
-          <div class="space-y-2 px-4 py-3">
+          <div class="px-4 py-3 space-y-2">
             <div class="space-y-0.5 truncate">
-              <div class="truncate text-xs font-medium">
+              <div class="text-xs font-medium truncate">
                 {{ measurement.target?.curriculum_name }}
               </div>
-              <div class="truncate text-sm font-semibold">{{ measurement.target?.name }}</div>
+              <div class="text-sm font-semibold truncate">{{ measurement.target?.name }}</div>
             </div>
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div>{{ getTargetType(measurement?.target?.type) }}</div>
@@ -302,6 +302,12 @@ const onStartSession = () => {
                   }}
                 </div>
               </div>
+              <div v-if="measurement.target?.type === 'Target::Sbt'" class="space-y-0.5">
+                <div>
+                  Prompts used in this session:
+                  {{ measurement.target?.prompts?.map((i) => i.name).join(', ') }}
+                </div>
+              </div>
             </div>
             <div
               v-if="measurement.type === 'Measurement::Probing'"
@@ -324,7 +330,7 @@ const onStartSession = () => {
             <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div v-if="!measurement.target?.description" class="italic">No description</div>
-              <div v-else>{{ measurement.target?.description }}</div>
+              <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
             <div
               v-if="measurement.target?.last_phase_line"
@@ -337,6 +343,46 @@ const onStartSession = () => {
               Data from this session will be added to the
               <span class="font-semibold">{{ measurement.target.last_phase_line?.label }}</span>
               phase.
+            </div>
+            <div
+              v-if="measurement.target?.type === 'Target::Sbt'"
+              class="h-0.5 w-full shrink-0 bg-slate-3"
+            ></div>
+            <div
+              v-if="measurement.target?.type === 'Target::Sbt'"
+              class="space-y-2 text-sm text-wrap text-slate-8"
+            >
+              <div
+                v-for="task in measurement.target?.target_tasks"
+                :key="task?.id"
+                class="text-sm text-slate-8"
+              >
+                <div class="font-semibold">{{ task?.code }} - {{ task?.title }}</div>
+                <div class="whitespace-pre-line">
+                  {{ task?.description || '-' }}
+                </div>
+              </div>
+            </div>
+            <div
+              v-if="measurement.target?.type === 'Target::Sbt'"
+              class="h-0.5 w-full shrink-0 bg-slate-3"
+            ></div>
+            <div
+              v-if="measurement.target?.type === 'Target::Sbt'"
+              class="space-y-2 text-sm text-wrap text-slate-8"
+            >
+              <div
+                v-for="problemBehavior in measurement.target?.target_problem_behaviors"
+                :key="problemBehavior?.id"
+                class="text-sm text-slate-8"
+              >
+                <div class="font-semibold">
+                  {{ problemBehavior?.code }} - {{ problemBehavior?.code_definition }}
+                </div>
+                <div class="whitespace-pre-line">
+                  {{ problemBehavior?.description || '-' }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -365,34 +411,34 @@ const onStartSession = () => {
         v-if="actionBeforeLunchStatus === 'before_schedule'"
         class="flex flex-col items-center gap-4"
       >
-        <div class="text-center text-xl font-semibold">Session launch before schedule</div>
-        <div class="text-center text-sm">This session is scheduled for:</div>
-        <div class="flex w-full flex-wrap justify-center gap-3">
+        <div class="text-xl font-semibold text-center">Session launch before schedule</div>
+        <div class="text-sm text-center">This session is scheduled for:</div>
+        <div class="flex flex-wrap justify-center w-full gap-3">
           <div
             v-for="item in lunchDetails"
             :key="item.icon"
             class="flex h-8 max-w-[calc((100%-0.75rem)/2)] shrink-0 items-center gap-2 rounded bg-light-purple-1 px-3"
           >
             <Icon :icon="item.icon" class="text-light-purple-4" />
-            <div class="truncate text-sm font-medium text-dark-purple-1">{{ item.label }}</div>
+            <div class="text-sm font-medium truncate text-dark-purple-1">{{ item.label }}</div>
           </div>
         </div>
-        <div class="text-center text-sm">Are you sure you want to start the session now?</div>
+        <div class="text-sm text-center">Are you sure you want to start the session now?</div>
       </div>
       <div
         v-if="actionBeforeLunchStatus === 'not_assigned'"
         class="flex flex-col items-center gap-4"
       >
-        <div class="text-center text-xl font-semibold">You're not assigned to this session</div>
-        <div class="text-center text-sm">
+        <div class="text-xl font-semibold text-center">You're not assigned to this session</div>
+        <div class="text-sm text-center">
           This session is assigned to
           <span class="font-medium">{{ sessionStore.session?.appointment?.user?.name }}.</span> Do
           you wish to proceed?
         </div>
       </div>
       <div v-if="actionBeforeLunchStatus === 'both'" class="flex flex-col items-center gap-4">
-        <div class="text-center text-xl font-semibold">Early start for unassigned session</div>
-        <div class="text-center text-sm">
+        <div class="text-xl font-semibold text-center">Early start for unassigned session</div>
+        <div class="text-sm text-center">
           The session scheduled for
           <span class="font-medium">{{
             displayDate({ date: sessionStore.session?.appointment?.date, format: 'DD MMM YYYY' })

@@ -260,6 +260,7 @@ export interface TargetTask {
   date_introduce?: string
   date_mastered?: string
   description?: string
+  position?: number
   status?: TargetStatus
   target_id?: Target['id']
   task_code_id?: number
@@ -272,6 +273,7 @@ export interface TargetProblemBehavior {
   code?: string
   code_definition?: string
   color?: string
+  position?: number
   problem_behavior_id?: number
   target_id?: Target['id']
 }

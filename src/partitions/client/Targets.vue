@@ -138,20 +138,20 @@ const onOpenTarget = async (target: Target) => {
 </script>
 
 <template>
-  <div class="space-y-3 pt-3 transition-all">
+  <div class="pt-3 space-y-3 transition-all">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Targets</div>
-      <div v-if="targetsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
+      <div v-if="targetsLoading" class="w-6 h-6 rounded shrink-0 animate-pulse bg-slate-3"></div>
       <div
         v-else
-        class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
+        class="flex items-center justify-center h-6 px-1 text-xs font-semibold text-white rounded min-w-6 bg-light-purple-5"
       >
         {{ clientStore.targets_count }}
       </div>
     </div>
   </div>
 
-  <div class="space-y-3 bg-white pt-3">
+  <div class="pt-3 space-y-3 bg-white">
     <div class="px-4">
       <AppTextInput
         name="query"
@@ -161,9 +161,9 @@ const onOpenTarget = async (target: Target) => {
       />
     </div>
     <div class="pl-4">
-      <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+      <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
           :class="[
             statuses.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -173,7 +173,7 @@ const onOpenTarget = async (target: Target) => {
         >
           <span
             v-if="statuses.length > 1"
-            class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+            class="flex items-center justify-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
           >
             {{ statuses.length }}
           </span>
@@ -184,7 +184,7 @@ const onOpenTarget = async (target: Target) => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
+          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all bg-white border rounded-full cursor-pointer shrink-0 snap-start border-slate-4"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />
@@ -197,7 +197,7 @@ const onOpenTarget = async (target: Target) => {
 
   <div v-if="targetsLoading">
     <div class="px-4 pt-2">
-      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
     </div>
     <div class="px-4">
       <TargetItemLoader v-for="n in perPage" :key="n" />
@@ -205,15 +205,15 @@ const onOpenTarget = async (target: Target) => {
   </div>
   <div
     v-else-if="!clientStore.targets_count"
-    class="flex h-64 w-full items-center justify-center px-4"
+    class="flex items-center justify-center w-full h-64 px-4"
   >
-    <div v-if="statuses.length" class="text-center text-sm text-slate-8">
+    <div v-if="statuses.length" class="text-sm text-center text-slate-8">
       Oops! No targets fit your filter criteria. Try changing the filter to find more results!
     </div>
-    <div v-else-if="query" class="text-center text-sm text-slate-8">
+    <div v-else-if="query" class="text-sm text-center text-slate-8">
       Sorry, no targets match your search. Try searching with a different name.
     </div>
-    <div v-else class="text-center text-sm text-slate-8">
+    <div v-else class="text-sm text-center text-slate-8">
       Looks like there are no targets for this client. Create them on the desktop, and they'll show
       up here.
     </div>
@@ -243,7 +243,7 @@ const onOpenTarget = async (target: Target) => {
 
   <AppActionSheet :show="showStatus" @close="showStatus = false">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold">Statuses</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -253,9 +253,9 @@ const onOpenTarget = async (target: Target) => {
         <div
           v-for="opt in statusOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
+          class="flex items-center justify-between w-full gap-4 border-b h-14 border-slate-3"
         >
-          <label :for="`status_filter_${opt.value}`" class="w-full truncate text-sm">
+          <label :for="`status_filter_${opt.value}`" class="w-full text-sm truncate">
             {{ opt.label }}
           </label>
           <input
@@ -264,7 +264,7 @@ const onOpenTarget = async (target: Target) => {
             :id="`status_filter_${opt.value}`"
             :checked="selectStatuses.includes(opt.value)"
             :value="opt.value"
-            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="onCheckStatus(opt.value)"
           />
         </div>
@@ -278,7 +278,7 @@ const onOpenTarget = async (target: Target) => {
 
   <AppActionSheet :show="showSort" @close="showSort = false">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -288,7 +288,7 @@ const onOpenTarget = async (target: Target) => {
         <div
           v-for="opt in sortOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
         >
           <label :for="`sort_by_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
           <input
@@ -297,7 +297,7 @@ const onOpenTarget = async (target: Target) => {
             :id="`sort_by_${opt.value}`"
             :checked="selectSort === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="selectSort = opt.value"
           />
         </div>
@@ -311,114 +311,154 @@ const onOpenTarget = async (target: Target) => {
 
   <AppActionSheet :show="showDetails" @close="showDetails = false">
     <div v-if="targetLoading">
-      <div class="flex w-full flex-col gap-2">
-        <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
-        <div class="h-6 w-3/4 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="flex flex-col w-full gap-2">
+        <div class="w-32 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
+        <div class="w-3/4 h-6 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
       </div>
-      <div class="mt-4 flex flex-col">
-        <div v-for="n in 5" :key="n" class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
-          <div class="h-4 w-2/3 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="flex flex-col mt-4">
+        <div v-for="n in 5" :key="n" class="flex flex-col gap-1 py-3 border-b border-slate-3">
+          <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
+          <div class="w-2/3 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
         </div>
       </div>
-      <div class="sticky bottom-0 flex w-full justify-center bg-white pt-4">
+      <div class="sticky bottom-0 flex justify-center w-full pt-4 bg-white">
         <div class="h-[38px] w-1/3 shrink-0 animate-pulse rounded bg-slate-3"></div>
       </div>
     </div>
     <div v-else>
-      <div class="flex w-full flex-col gap-2">
+      <div class="flex flex-col w-full gap-2">
         <div class="flex">
           <AppChip :chip="targetDetails?.status" />
         </div>
         <div class="text-lg font-semibold">{{ targetDetails?.name }}</div>
       </div>
-      <div class="mt-4 flex flex-col">
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+      <div class="flex flex-col mt-4">
+        <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
           <div class="text-xs text-slate-8">Curriculum:</div>
           <div class="text-sm">{{ targetDetails?.curriculum_name }}</div>
         </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+        <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
           <div class="text-xs text-slate-8">Description:</div>
-          <div class="text-sm">{{ targetDetails?.description }}</div>
+          <div class="text-sm whitespace-pre-line">{{ targetDetails?.description }}</div>
         </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+        <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
           <div class="text-xs text-slate-8">Data collection method:</div>
           <div class="text-sm">{{ getTargetType(targetDetails?.type) }}</div>
         </div>
         <div v-if="targetDetails?.type === 'Target::Duration'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal time:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.goal_time }}</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.goal_time }}</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.success_metric }}</div>
           </div>
         </div>
         <div v-if="targetDetails?.type === 'Target::Percentage'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.goal }}%</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.goal }}%</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Number of trials:</div>
-            <div class="capitalize-first text-sm">
+            <div class="text-sm capitalize-first">
               {{ targetDetails?.number_of_trial }} trial(s)
             </div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.success_metric }}</div>
           </div>
         </div>
         <div v-if="targetDetails?.type === 'Target::Pir'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.goal }}%</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.goal }}%</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Interval:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.interval }} minute(s)</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.interval }} minute(s)</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Duration:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.duration }} minute(s)</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.duration }} minute(s)</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.success_metric }}</div>
           </div>
         </div>
         <div v-if="targetDetails?.type === 'Target::Frequency'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
-            <div class="capitalize-first text-sm">
+            <div class="text-sm capitalize-first">
               {{ targetDetails?.goal }} attempt(s) per session
             </div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.success_metric }}</div>
           </div>
         </div>
         <div v-if="targetDetails?.type === 'Target::Prompting'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Prompts:</div>
             <div class="text-sm">
               {{ targetDetails?.prompts?.map((i) => i.name).join(', ') }}
             </div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal and success metric:</div>
-            <div class="capitalize-first text-sm">
+            <div class="text-sm capitalize-first">
               Achieve target with
               <span class="font-semibold">{{ targetDetails?.success_metric }}</span> prompt, minimum
               <span class="font-semibold">{{ targetDetails?.goal }}</span> attempt(s) per session
             </div>
           </div>
         </div>
+        <div v-if="targetDetails?.type === 'Target::Sbt'" class="flex flex-col">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
+            <div class="text-xs text-slate-8">Prompts:</div>
+            <div class="text-sm">
+              {{ targetDetails?.prompts?.map((i) => i.name).join(', ') }}
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
+            <div class="text-xs text-slate-8">Tasks:</div>
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="task in targetDetails?.target_tasks"
+                :key="task?.id"
+                class="text-sm text-slate-10"
+              >
+                <div class="font-semibold">{{ task?.code }} - {{ task?.title }}</div>
+                <div class="whitespace-pre-line">
+                  {{ task?.description || '-' }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
+            <div class="text-xs text-slate-8">Problem behaviors:</div>
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="problemBehavior in targetDetails?.target_problem_behaviors"
+                :key="problemBehavior?.id"
+                class="text-sm text-slate-10"
+              >
+                <div class="font-semibold">
+                  {{ problemBehavior?.code }} - {{ problemBehavior?.code_definition }}
+                </div>
+                <div class="whitespace-pre-line">
+                  {{ problemBehavior?.description || '-' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="sticky bottom-0 w-full bg-white pt-4">
+      <div class="sticky bottom-0 w-full pt-4 bg-white">
         <AppButton kind="plain" class="w-full" @click="showDetails = false">Close</AppButton>
       </div>
     </div>

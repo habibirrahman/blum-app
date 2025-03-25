@@ -17,13 +17,13 @@ const props = withDefaults(defineProps<Props>(), {})
     <div class="flex">
       <AppChip :chip="target.status" />
     </div>
-    <div class="truncate text-xs text-slate-8">
+    <div class="text-xs truncate text-slate-8">
       {{ target.curriculum_name }}
     </div>
-    <div class="truncate text-sm font-semibold">
+    <div class="text-sm font-semibold truncate">
       {{ target.name }}
     </div>
-    <div class="line-clamp-3 text-xs text-slate-8">
+    <div class="text-xs whitespace-pre-line line-clamp-3 text-slate-8">
       {{ target.description }}
     </div>
   </div>

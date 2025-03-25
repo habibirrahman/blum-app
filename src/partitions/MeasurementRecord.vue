@@ -315,7 +315,7 @@ const onSaveComment = async () => {
             </div>
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div v-if="!measurement.target?.description" class="italic">No description</div>
-              <div v-else>{{ measurement.target?.description }}</div>
+              <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
             <div
               v-if="measurement.target?.last_phase_line"
@@ -333,7 +333,7 @@ const onSaveComment = async () => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ taskCode.code }} - {{ taskCode.code_definition }}
                   </div>
-                  <div class="text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ taskCode.description }}
                   </div>
                 </div>
@@ -348,7 +348,7 @@ const onSaveComment = async () => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>

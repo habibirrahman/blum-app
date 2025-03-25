@@ -32,7 +32,8 @@ export const getTargetType = (type?: TargetType): string => {
     'Target::Frequency': 'Frequency',
     'Target::Percentage': 'Percentage',
     'Target::Pir': 'Partial interval recording',
-    'Target::Prompting': 'Prompting'
+    'Target::Prompting': 'Prompting',
+    'Target::Sbt': 'Skill-Based Treatment',
   }
   return arr[type] || ''
 }

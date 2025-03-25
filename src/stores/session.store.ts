@@ -284,13 +284,22 @@ export const useSessionStore = defineStore('session', {
       return axios
         .get(`/api/v1/sessions/${id}/measurements`)
         .then(async ({ data }) => {
-          this.session_measurements = data
+          const arr: Measurement[] = []
+          for (let idx = 0; idx < data.length; idx++) {
+            const targetIncludes = data[idx]
+            if (data[idx].type === 'Measurement::Sbt') {
+              const { data: target } = await axios.get(`/api/v1/targets/${data[idx].target_id}`)
+              targetIncludes.target = target
+            }
+            arr.push(targetIncludes)
+          }
+          this.session_measurements = arr
           const session: Session = {
             ...this.session,
-            measurements: [...data, ...(this.session?.measurements || [])].filter(onlyUniqueId)
+            measurements: [...arr, ...(this.session?.measurements || [])].filter(onlyUniqueId)
           }
           this.setSession(session)
-          return { success: true, data }
+          return { success: true, arr }
         })
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }

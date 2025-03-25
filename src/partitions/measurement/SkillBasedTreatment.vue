@@ -130,8 +130,8 @@ onMounted(() => {
   const tasks = props.target?.target_tasks || []
   const problems = props.target?.target_problem_behaviors || []
   SBTPrompts.value = props.target?.prompts || []
-  SBTTaskCodes.value = tasks.sort((a, b) => (a?.id || 0) - (b?.id || 0))
-  SBTProblemBehaviors.value = problems.sort((a, b) => (a?.id || 0) - (b?.id || 0))
+  SBTTaskCodes.value = tasks.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+  SBTProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
   resultsState.value = props.measurement_results
 
   generateRatioScores()
@@ -273,7 +273,52 @@ const onCloseTrialHistory = () => {
   isOpenTrialHistory.value = false
 }
 
-const onChoosePrompt = (prompt: Prompt) => {
+const submitLoading = ref<boolean>(false)
+
+const onSaveCurrentTrial = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return { success: false }
+  if (submitLoading.value) return { success: false }
+
+  let results = Object.keys(resultsState.value).map((key) => {
+    return { ...resultsState.value[key], key }
+  })
+
+  const index = results.findIndex((i) => i.key === currentTrial.value.key)
+  if (index > -1) {
+    results[index] = currentTrial.value
+  } else {
+    results.push(currentTrial.value)
+  }
+
+  results = results.filter((i) => i.prompt_id).map((i, idx) => ({ ...i, key: idx + 1 }))
+
+  const params: UpdateMeasurementResultsParams = {
+    id: props.measurement.id,
+    results: {},
+    data_result: { ...props.measurement }
+  }
+  for (let idx = 0; idx < results.length; idx++) {
+    params.results[idx + 1] = results[idx]
+    params.data_result.results = {}
+    params.data_result.results[idx + 1] = results[idx]
+  }
+
+  submitLoading.value = true
+  const { success, message, data } = await sessionStore.updateMeasurementResults(params)
+  submitLoading.value = false
+  if (!success) {
+    emit('fetch-session')
+    toast.error(message)
+    return { success: false }
+  }
+
+  // complete saved
+  isSaved.value = true
+  resultsState.value = data.results
+  return { success: true }
+}
+
+const onChoosePrompt = async (prompt: Prompt) => {
   if (sessionStore.session?.status !== 'ongoing') return
   const newTrial: Trial = {
     ...currentTrial.value,
@@ -289,6 +334,8 @@ const onChoosePrompt = (prompt: Prompt) => {
     return
   }
 
+  await onSaveCurrentTrial()
+
   const index = ratioScores.value.findIndex((i) => i.id === newTrial.target_task_id)
   if (index > -1 && index + 1 <= ratioScores.value.length - 1) {
     nextTask.value = ratioScores.value[index + 1]
@@ -297,7 +344,7 @@ const onChoosePrompt = (prompt: Prompt) => {
   }
   display.value = 'select-next-task'
 }
-const onChooseProblemBehavior = (problemBehavior: TargetProblemBehavior) => {
+const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) => {
   if (sessionStore.session?.status !== 'ongoing') return
   let newId: Trial['target_problem_behavior_id'] = problemBehavior.id
   if (currentTrial.value.target_problem_behavior_id === newId) {
@@ -309,10 +356,15 @@ const onChooseProblemBehavior = (problemBehavior: TargetProblemBehavior) => {
     target_problem_behavior_id: newId
   }
 
-  currentTrial.value = newTrial
-
   // choose new problem behavior value
   isSaved.value = false
+  currentTrial.value = newTrial
+
+  if (isOpenEditTrial.value) {
+    return
+  }
+
+  await onSaveCurrentTrial()
 }
 
 const onUndoTrial = () => {
@@ -387,47 +439,9 @@ const onTakeNextTrial = (payload: { isNew: boolean }) => {
   generateRatioScores()
 }
 
-const submitLoading = ref<boolean>(false)
 const onNextTrial = async () => {
-  if (sessionStore.session?.status !== 'ongoing') return
-  if (submitLoading.value) return
-
-  let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key }
-  })
-
-  const index = results.findIndex((i) => i.key === currentTrial.value.key)
-  if (index > -1) {
-    results[index] = currentTrial.value
-  } else {
-    results.push(currentTrial.value)
-  }
-
-  results = results.filter((i) => i.prompt_id).map((i, idx) => ({ ...i, key: idx + 1 }))
-
-  const params: UpdateMeasurementResultsParams = {
-    id: props.measurement.id,
-    results: {},
-    data_result: { ...props.measurement }
-  }
-  for (let idx = 0; idx < results.length; idx++) {
-    params.results[idx + 1] = results[idx]
-    params.data_result.results = {}
-    params.data_result.results[idx + 1] = results[idx]
-  }
-
-  submitLoading.value = true
-  const { success, message, data } = await sessionStore.updateMeasurementResults(params)
-  submitLoading.value = false
-  if (!success) {
-    emit('fetch-session')
-    toast.error(message)
-    return
-  }
-
-  // complete saved the last trial
-  isSaved.value = true
-  resultsState.value = data.results
+  const { success } = await onSaveCurrentTrial()
+  if (!success) return
   onTakeNextTrial({ isNew: true })
 }
 
@@ -451,45 +465,8 @@ const onCloseEditTrial = () => {
   isOpenEditTrial.value = false
 }
 const onSaveEditTrial = async () => {
-  if (sessionStore.session?.status !== 'ongoing') return
-  if (submitLoading.value) return
-
-  let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key }
-  })
-
-  const index = results.findIndex((i) => i.key === currentTrial.value.key)
-  if (index > -1) {
-    results[index] = currentTrial.value
-  } else {
-    results.push(currentTrial.value)
-  }
-
-  results = results.filter((i) => i.prompt_id).map((i, idx) => ({ ...i, key: idx + 1 }))
-
-  const params: UpdateMeasurementResultsParams = {
-    id: props.measurement.id,
-    results: {},
-    data_result: { ...props.measurement }
-  }
-  for (let idx = 0; idx < results.length; idx++) {
-    params.results[idx + 1] = results[idx]
-    params.data_result.results = {}
-    params.data_result.results[idx + 1] = results[idx]
-  }
-
-  submitLoading.value = true
-  const { success, message, data } = await sessionStore.updateMeasurementResults(params)
-  submitLoading.value = false
-  if (!success) {
-    emit('fetch-session')
-    toast.error(message)
-    return
-  }
-
-  // complete saved the edited trial
-  isSaved.value = true
-  resultsState.value = data.results
+  const { success } = await onSaveCurrentTrial()
+  if (!success) return
   isOpenEditTrial.value = false
   generateRatioScores()
 }
@@ -500,7 +477,7 @@ const onSaveEditTrial = async () => {
     class="flex flex-col justify-between flex-grow h-full"
     :class="{
       'gap-2': !is_collapsed,
-      'pl-2': is_collapsed,
+      'pl-2': is_collapsed
     }"
   >
     <div class="relative flex flex-col h-full">
@@ -516,8 +493,8 @@ const onSaveEditTrial = async () => {
           class="relative flex items-center w-10 h-10 overflow-hidden transition-all duration-300 border rounded first-letter:flex-col-reverse"
           :class="{
             'border-slate-2 bg-slate-2': taskCode.count <= 0,
-            'bg-teal-1 border-teal-1': taskCode.count >= 1,
-            'bg-teal-1 border-teal-7': taskCode.id === currentTrial.target_task_id
+            'border-teal-1 bg-teal-1': taskCode.count >= 1,
+            'border-teal-7 bg-teal-1': taskCode.id === currentTrial.target_task_id
           }"
         >
           <div v-for="(ratio, idx) in taskCode.ratios" :key="idx">
