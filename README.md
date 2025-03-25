@@ -73,10 +73,11 @@ bunx cap run ios
 
 ### Build APK
 
+manual: update version code and version name
 ```sh
 bun run build
 ```
-manual: update version code and version name
+
 ```sh
 bunx cap sync
 bunx cap copy android
