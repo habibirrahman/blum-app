@@ -286,12 +286,14 @@ export const useSessionStore = defineStore('session', {
         .then(async ({ data }) => {
           const arr: Measurement[] = []
           for (let idx = 0; idx < data.length; idx++) {
-            const targetIncludes = data[idx]
-            if (data[idx].type === 'Measurement::Sbt') {
+            const measurement = data[idx]
+            const isnNeedGetTarget =
+              data[idx].type === 'Measurement::Sbt' || data[idx].type === 'Measurement::Prompting'
+            if (isnNeedGetTarget) {
               const { data: target } = await axios.get(`/api/v1/targets/${data[idx].target_id}`)
-              targetIncludes.target = target
+              if (target) measurement.target = target
             }
-            arr.push(targetIncludes)
+            arr.push(measurement)
           }
           this.session_measurements = arr
           const session: Session = {

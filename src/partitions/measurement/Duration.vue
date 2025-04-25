@@ -2,7 +2,6 @@
 import { useSessionStore } from '@/stores/session.store'
 import type { Measurement } from '@/lib/types'
 import AppButton from '@/components/AppButton.vue'
-import { useToast } from 'vue-toastification'
 
 const sessionStore = useSessionStore()
 
@@ -15,10 +14,10 @@ interface Props {
 }
 interface Emits {
   (e: 'toggle-timer'): void
+  (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
-
 </script>
 
 <template>

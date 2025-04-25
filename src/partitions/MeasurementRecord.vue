@@ -11,7 +11,7 @@ import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import { type MeasurementType, type Measurement, type Target, type TargetType } from '@/lib/types'
 import AppToggle from '@/components/AppToggle.vue'
-import { getTargetType } from '@/lib/func'
+import { getRandomString, getTargetType } from '@/lib/func'
 import Prompting from './measurement/Prompting.vue'
 import Frequency from './measurement/Frequency.vue'
 import PartialIntervalRecording from './measurement/PartialIntervalRecording.vue'
@@ -55,6 +55,7 @@ onMounted(async () => {
 
   if (
     props.measurement.type === 'Measurement::Probing' ||
+    props.measurement.type === 'Measurement::Prompting' ||
     props.measurement.type === 'Measurement::Sbt'
   ) {
     const { data } = await clientStore.getTarget({ id: props.measurement.target_id, plain: true })
@@ -79,12 +80,15 @@ watch(
   }
 )
 
+const cardId = ref<string>('card-random-id')
+
 // drop measurement property
 const isDropped = ref<boolean>(false)
 watch(
   () => props.measurement.is_dropped,
   (val) => {
     isDropped.value = val || false
+    cardId.value = getRandomString('card-random-id')
   }
 )
 const isDropLoading = ref<boolean>(false)
@@ -198,8 +202,7 @@ const onToggleSaved = (saved: boolean) => {
     class="relative transition-all rounded shrink-0"
     :class="{
       'h-[540px] w-[320px]': !is_collapsed,
-      'h-[120px] w-full': is_collapsed && !measurementType.includes('Sbt'),
-      'h-[180px] w-full': is_collapsed && measurementType.includes('Sbt')
+      'h-full w-full': is_collapsed
     }"
   >
     <div
@@ -257,12 +260,22 @@ const onToggleSaved = (saved: boolean) => {
         :class="{ 'no-scrollbar overflow-y-auto': !is_collapsed }"
       >
         <div v-if="!is_collapsed" class="flex flex-col gap-1">
-          <div class="text-sm font-semibold text-slate-7">
-            {{ measurement.target?.curriculum_name }}
+          <div
+            class="flex items-center gap-x-2"
+            :class="{ 'flex-wrap': display === 'target' || display === 'comment' }"
+          >
+            <div class="text-sm font-semibold text-slate-7">
+              {{ measurement.target?.curriculum_name }}
+            </div>
+            <div v-if="measurementType.includes('Probing')" class="shrink-0">
+              <div class="px-2 text-sm font-semibold rounded-full bg-lime-2 text-lime-7">
+                Probing
+              </div>
+            </div>
           </div>
           <div
             class="text-sm font-semibold text-slate-9"
-            :class="{ truncate: display === 'target' || display === 'comment' }"
+            :class="{ 'truncate ': display === 'target' || display === 'comment' }"
           >
             {{ measurement.target?.name }}
           </div>
@@ -285,7 +298,11 @@ const onToggleSaved = (saved: boolean) => {
               </div>
             </div>
           </div>
-          <div v-else class="flex flex-col justify-between flex-grow h-full">
+          <div
+            v-else
+            :key="`measurement-card-${cardId}`"
+            class="flex flex-col justify-between flex-grow h-full"
+          >
             <Duration
               v-if="measurementType.includes('Duration')"
               :measurement="measurement"
@@ -323,12 +340,13 @@ const onToggleSaved = (saved: boolean) => {
               @fetch-session="emit('fetch-session')"
             />
             <Prompting
-              v-if="measurementType.includes('Prompting')"
+              v-if="measurementType.includes('Prompting') && target"
               :measurement="measurement"
+              :measurement_results="measurement.results || {}"
+              :target="target"
               :is_collapsed="is_collapsed"
               @fetch-session="emit('fetch-session')"
             />
-            <!-- SBT -->
             <SkillBasedTreatment
               v-if="measurementType.includes('Sbt') && target"
               :measurement="measurement"
@@ -342,6 +360,7 @@ const onToggleSaved = (saved: boolean) => {
         </div>
         <div v-if="display === 'description'" class="flex flex-col justify-between h-full pt-3">
           <div class="flex flex-col gap-3">
+            <!-- target information -->
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div>{{ getTargetType(measurement.target?.type) }}</div>
               <div v-if="measurement.target?.type === 'Target::Duration'" class="space-y-0.5">
@@ -364,21 +383,41 @@ const onToggleSaved = (saved: boolean) => {
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
               </div>
               <div v-if="measurement.target?.type === 'Target::Prompting'" class="space-y-0.5">
-                <div>
+                <div class="capitalize">Format: {{ measurement.target?.prompting_format }}</div>
+                <div v-if="measurement.target?.prompting_format === 'classic'">
                   Goal and success metric: Achieve target with
                   {{ measurement.target?.success_metric }} prompt, minimum
                   {{ measurement.target?.goal }} attempt(s) per session
                 </div>
+                <div v-if="measurement.target?.prompting_format === 'custom'">
+                  Goal: {{ measurement.target?.goal }}%
+                </div>
+                <div v-if="measurement.target?.prompting_format === 'custom'">
+                  Success metric: {{ measurement.target?.success_metric }}
+                </div>
                 <div>
                   Prompts used in this session:
                   {{
-                    Object.keys(measurement.results)
-                      .map((key) => measurement.results[key].name)
-                      .join(', ')
+                    Object.keys(measurement.results || {})
+                      ?.map((key) => {
+                        const found = target?.prompts?.find((i) => i.id === Number(key))
+                        const percentage = found?.score || 0
+                        return { ...measurement.results[key], percentage }
+                      })
+                      ?.sort((a, b) => a.position - b.position)
+                      ?.map((prompt) => {
+                        if (target?.prompting_format === 'custom') {
+                          return `${prompt?.name} (${prompt?.percentage}%)`
+                        }
+                        return prompt?.name
+                      })
+                      ?.join(', ')
                   }}
                 </div>
               </div>
             </div>
+            <!-- end target information -->
+            <!-- probing -->
             <div
               v-if="measurementType.includes('Probing')"
               class="space-y-0.5 text-wrap text-sm text-slate-8"
@@ -393,10 +432,14 @@ const onToggleSaved = (saved: boolean) => {
                 {{ measurement.target?.probing_number_of_trial }} trial(s)
               </div>
             </div>
+            <!-- end probing -->
+            <!-- target description -->
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div v-if="!measurement.target?.description" class="italic">No description</div>
               <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
+            <!-- end target description -->
+            <!-- last past line -->
             <div
               v-if="measurement.target?.last_phase_line"
               class="space-y-0.5 text-wrap text-sm text-slate-8"
@@ -405,7 +448,8 @@ const onToggleSaved = (saved: boolean) => {
               <span class="font-semibold">{{ measurement.target.last_phase_line?.label }}</span>
               phase.
             </div>
-
+            <!-- end last past line -->
+            <!-- sbt -->
             <div v-if="measurement.target?.type === 'Target::Sbt'">
               <!-- sbt taks -->
               <div class="py-3 space-y-3 bordert-2 border-slate-4">
@@ -434,6 +478,7 @@ const onToggleSaved = (saved: boolean) => {
                 </div>
               </div>
             </div>
+            <!-- end sbt -->
           </div>
           <div class="sticky bottom-0 w-full py-3 bg-white">
             <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
@@ -452,7 +497,6 @@ const onToggleSaved = (saved: boolean) => {
             type="textarea"
             placeholder="Type your comment here..."
             v-model="commentInput"
-            borderless
             class="h-full mt-2"
           />
           <div class="sticky bottom-0 w-full py-3 bg-white">

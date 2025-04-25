@@ -2,7 +2,6 @@
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
 import type { Measurement, Prompt, Target, TargetProblemBehavior, TargetTask } from '@/lib/types'
-import { promptColors } from '@/lib/data'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import AppButton from '@/components/AppButton.vue'
@@ -101,7 +100,10 @@ const currentTrial = computed({
 })
 
 const currentTrialData = computed(() => {
-  const trial = currentTrial.value
+  return getTrial(currentTrial.value)
+})
+
+const getTrial = (trial: Trial) => {
   const defaultTaskCode = SBTTaskCodes.value.length ? SBTTaskCodes.value[0] : { code: '' }
   const taskCode = SBTTaskCodes.value.find((i) => i.id === trial.target_task_id) || defaultTaskCode
   const prompt = SBTPrompts.value.find((i) => i.id === trial.prompt_id) || {
@@ -124,12 +126,13 @@ const currentTrialData = computed(() => {
     problem_behavior: problemBehavior || { code: 'R', code_definition: '' },
     average
   }
-})
+}
 
 onMounted(() => {
+  const prompts = props.target?.prompts || []
   const tasks = props.target?.target_tasks || []
   const problems = props.target?.target_problem_behaviors || []
-  SBTPrompts.value = props.target?.prompts || []
+  SBTPrompts.value = prompts.sort((a, b) => (b?.score || 0) - (a?.score || 0))
   SBTTaskCodes.value = tasks.sort((a, b) => (a?.position || 0) - (b?.position || 0))
   SBTProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
   resultsState.value = props.measurement_results
@@ -269,8 +272,27 @@ const onOpenTrialHistory = () => {
   isOpenTrialHistory.value = true
 }
 const onCloseTrialHistory = () => {
-  onTakeNextTrial({ isNew: false })
   isOpenTrialHistory.value = false
+
+  const results = Object.keys(resultsState.value).map((key) => ({
+    ...resultsState.value[key],
+    key
+  }))
+
+  const index = results.findIndex((i) => i.key === currentTrial.value.key)
+  if (index > -1) {
+    currentTrial.value = results[index]
+  }
+
+  if (
+    Object.keys(resultsState.value).length > 0 &&
+    resultsState.value[currentTrial.value.key] &&
+    resultsState.value[currentTrial.value.key].prompt_id
+  ) {
+    display.value = 'select-next-task'
+  } else {
+    display.value = 'select-prompt'
+  }
 }
 
 const submitLoading = ref<boolean>(false)
@@ -327,9 +349,9 @@ const onChoosePrompt = async (prompt: Prompt) => {
 
   // choose new prompt value
   isSaved.value = false
+  currentTrial.value = newTrial
 
   // if edit trial - skip assign next task and select-nest-task
-  currentTrial.value = newTrial
   if (isOpenEditTrial.value) {
     return
   }
@@ -475,7 +497,7 @@ const onSaveEditTrial = async () => {
         <div
           v-for="taskCode in ratioScores"
           :key="taskCode.id"
-          class="relative flex items-center w-10 h-10 overflow-hidden transition-all duration-300 border rounded first-letter:flex-col-reverse"
+          class="relative flex flex-col-reverse items-center w-10 h-10 overflow-hidden transition-all duration-300 border rounded"
           :class="{
             'border-slate-2 bg-slate-2': taskCode.count <= 0,
             'border-teal-1 bg-teal-1': taskCode.count >= 1,

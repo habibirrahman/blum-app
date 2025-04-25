@@ -31,9 +31,9 @@ export const getTargetType = (type?: TargetType): string => {
     'Target::Duration': 'Duration',
     'Target::Frequency': 'Frequency',
     'Target::Percentage': 'Percentage',
-    'Target::Pir': 'Partial interval recording',
+    'Target::Pir': 'Partial Interval Recording',
     'Target::Prompting': 'Prompting',
-    'Target::Sbt': 'Skill-Based Treatment',
+    'Target::Sbt': 'Skill-Based Treatment (SBT)'
   }
   return arr[type] || ''
 }
@@ -66,7 +66,8 @@ export const getRandomString = (prefix = '', length = 16): string => {
   for (let i = 0; i < length; i++) {
     combination += chars[Math.round(Math.random() * chars.length)]
   }
-  return `${prefix}${combination}`
+  if (prefix) return `${prefix}-${combination}`
+  return combination
 }
 
 export const onlyUniqueId = (value: any, index: number, array: any[]) => {
@@ -93,3 +94,18 @@ export const getErrorMessage = (value: any = '') => {
   console.log('asd', typeof value)
   return typeof value === 'object' ? concatObjectKeyValue(value).join(', ') : value
 }
+
+export function debounce<T extends (...args: any[]) => void>(
+  fn: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timer: ReturnType<typeof setTimeout>;
+
+  return function (...args: Parameters<T>) {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+}
+

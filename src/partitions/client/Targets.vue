@@ -348,7 +348,7 @@ const onOpenTarget = async (target: Target) => {
         <div v-if="targetDetails?.type === 'Target::Duration'" class="flex flex-col">
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal time:</div>
-            <div class="text-sm capitalize-first">{{ targetDetails?.goal_time }}</div>
+            <div class="text-sm">{{ targetDetails?.goal_time }}</div>
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
@@ -358,13 +358,11 @@ const onOpenTarget = async (target: Target) => {
         <div v-if="targetDetails?.type === 'Target::Percentage'" class="flex flex-col">
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
-            <div class="text-sm capitalize-first">{{ targetDetails?.goal }}%</div>
+            <div class="text-sm">{{ targetDetails?.goal }}%</div>
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Number of trials:</div>
-            <div class="text-sm capitalize-first">
-              {{ targetDetails?.number_of_trial }} trial(s)
-            </div>
+            <div class="text-sm">{{ targetDetails?.number_of_trial }} trial(s)</div>
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
@@ -374,15 +372,15 @@ const onOpenTarget = async (target: Target) => {
         <div v-if="targetDetails?.type === 'Target::Pir'" class="flex flex-col">
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
-            <div class="text-sm capitalize-first">{{ targetDetails?.goal }}%</div>
+            <div class="text-sm">{{ targetDetails?.goal }}%</div>
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Interval:</div>
-            <div class="text-sm capitalize-first">{{ targetDetails?.interval }} minute(s)</div>
+            <div class="text-sm">{{ targetDetails?.interval }} minute(s)</div>
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Duration:</div>
-            <div class="text-sm capitalize-first">{{ targetDetails?.duration }} minute(s)</div>
+            <div class="text-sm">{{ targetDetails?.duration }} minute(s)</div>
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
@@ -392,9 +390,7 @@ const onOpenTarget = async (target: Target) => {
         <div v-if="targetDetails?.type === 'Target::Frequency'" class="flex flex-col">
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
-            <div class="text-sm capitalize-first">
-              {{ targetDetails?.goal }} attempt(s) per session
-            </div>
+            <div class="text-sm">{{ targetDetails?.goal }} attempt(s) per session</div>
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
@@ -403,18 +399,51 @@ const onOpenTarget = async (target: Target) => {
         </div>
         <div v-if="targetDetails?.type === 'Target::Prompting'" class="flex flex-col">
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
-            <div class="text-xs text-slate-8">Prompts:</div>
-            <div class="text-sm">
-              {{ targetDetails?.prompts?.map((i) => i.name).join(', ') }}
+            <div class="text-xs text-slate-8">Format:</div>
+            <div class="text-sm capitalize-first">
+              {{ targetDetails?.prompting_format }}
             </div>
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
+            <div class="text-xs text-slate-8">Prompts:</div>
+            <div class="text-sm">
+              {{
+                targetDetails?.prompts
+                  ?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+                  ?.map((i) => {
+                    if (targetDetails?.prompting_format === 'custom') {
+                      return `${i.name} (${i.score}%)`
+                    }
+                    return i.name
+                  })
+                  ?.join(', ')
+              }}
+            </div>
+          </div>
+          <div
+            v-if="targetDetails?.prompting_format === 'classic'"
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
+          >
             <div class="text-xs text-slate-8">Goal and success metric:</div>
-            <div class="text-sm capitalize-first">
+            <div class="text-sm">
               Achieve target with
               <span class="font-semibold">{{ targetDetails?.success_metric }}</span> prompt, minimum
               <span class="font-semibold">{{ targetDetails?.goal }}</span> attempt(s) per session
             </div>
+          </div>
+          <div
+            v-if="targetDetails?.prompting_format === 'custom'"
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
+          >
+            <div class="text-xs text-slate-8">Goal:</div>
+            <div class="text-sm">{{ targetDetails?.goal }}%</div>
+          </div>
+          <div
+            v-if="targetDetails?.prompting_format === 'custom'"
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
+          >
+            <div class="text-xs text-slate-8">Success metric:</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.success_metric }}</div>
           </div>
         </div>
         <div v-if="targetDetails?.type === 'Target::Sbt'" class="flex flex-col">
