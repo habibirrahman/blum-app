@@ -15,7 +15,7 @@ import { getTargetType } from '@/lib/func'
 import Prompting from './measurement/Prompting.vue'
 import Frequency from './measurement/Frequency.vue'
 import PartialIntervalRecording from './measurement/PartialIntervalRecording.vue'
-import Duration from './measurement/Duration.vue'
+import DurationLatency from './measurement/DurationLatency.vue'
 import Percentage from './measurement/Percentage.vue'
 import Probing from './measurement/Probing.vue'
 import { useClientStore } from '@/stores/client.store'
@@ -47,9 +47,34 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 onMounted(async () => {
-  if (props.measurement.type === 'Measurement::Duration') {
-    if (props.measurement.results && props.measurement.results.seconds) {
-      durationCounter.value = props.measurement.results.seconds
+  if (
+    props.measurement.type === 'Measurement::Duration' ||
+    props.measurement.type === 'Measurement::Latency'
+  ) {
+    laps.value = []
+    Object.keys(props.measurement.results).forEach((lapIndex) => {
+      const lap = props.measurement.results[lapIndex]
+      if (parseInt(lapIndex) !== 0 || (lap.string !== '00:00:00' && lap.seconds !== 0)) {
+        laps.value.push({
+          lapNumber: parseInt(lapIndex),
+          time: lap.string,
+          seconds: lap.seconds
+        })
+      }
+    })
+
+    let totalSeconds = 0
+    if (laps.value.length > 0) {
+      laps.value.forEach((lap) => {
+        const [h, m, s] = lap.time.split(':').map(Number)
+        totalSeconds += h * 3600 + m * 60 + s
+      })
+      const seconds = String(totalSeconds % 60).padStart(2, '0')
+      const minutes = String(Math.floor((totalSeconds / 60) % 60)).padStart(2, '0')
+      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
+
+      lastTimer.value = `${hours}:${minutes}:${seconds}`
+      lastLapTime.value = laps.value[laps.value.length - 1].time
     }
   }
 
@@ -131,46 +156,79 @@ const durationCounter = ref<number>(0)
 const durationStarted = ref<boolean>(false)
 const durationInterval = ref<any>(null)
 const durationLoading = ref<boolean>(false)
+const lapLoading = ref<boolean>(false)
+const laps = ref<any[]>([])
+const lastLapTime = ref<any>(null)
+const lastTimer = ref<any>(null)
+const lapsLoadingReset = ref<boolean>(false)
+const resetConfirmation = ref<boolean>(false)
+const lapTimer = ref<number>(0)
 
 const durationTimerRunning = computed<string>(() => {
-  let hours: number | string = '00'
-  let minutes: number | string = '00'
-  let seconds: number | string = '00'
-  if (durationCounter.value) {
-    seconds = (durationCounter.value % 60).toString().padStart(2, '0')
-    if (durationCounter.value >= 60) {
-      minutes = Math.floor(durationCounter.value / 60)
-      if (durationCounter.value >= 3600) minutes = minutes % 60
-      minutes = minutes.toString().padStart(2, '0')
-    }
-    if (durationCounter.value >= 3600) {
-      hours = Math.floor(durationCounter.value / 3600)
-        .toString()
-        .padStart(2, '0')
-    }
+  let baseSeconds = 0
+  if (lastTimer.value) {
+    const [h, m, s] = lastTimer.value.split(':').map(Number)
+    baseSeconds = h * 3600 + m * 60 + s
   }
+
+  const totalSeconds = baseSeconds + (durationCounter.value || 0)
+
+  const seconds = String(totalSeconds % 60).padStart(2, '0')
+  const minutes = String(Math.floor((totalSeconds / 60) % 60)).padStart(2, '0')
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
+
+  return `${hours}:${minutes}:${seconds}`
+})
+
+const currentLapTime = computed<string>(() => {
+  let baseSeconds = 0
+  if (lastLapTime.value) {
+    const [h, m, s] = lastLapTime.value.split(':').map(Number)
+    baseSeconds = h * 3600 + m * 60 + s
+  }
+
+  const totalSeconds = baseSeconds + (lapTimer.value || 0)
+
+  const seconds = String(totalSeconds % 60).padStart(2, '0')
+  const minutes = String(Math.floor((totalSeconds / 60) % 60)).padStart(2, '0')
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
+
   return `${hours}:${minutes}:${seconds}`
 })
 
 const onStartDurationTimer = () => {
   durationInterval.value = setInterval(() => {
     durationCounter.value++
+    lapTimer.value++
   }, 1000)
 }
 const onToggleDurationTimer = async () => {
   if (!durationStarted.value) {
     durationStarted.value = true
     onStartDurationTimer()
+    if (laps.value.length === 0) {
+      const lapTime = currentLapTime.value
+      laps.value.push({
+        lapNumber: 0,
+        time: lapTime,
+        seconds: lapTimer.value
+      })
+    }
     emit('toggle-running')
   } else {
     clearInterval(durationInterval.value)
-    const params: UpdateMeasurementResultsParams = {
+    if (laps.value.length > 0) {
+      laps.value[laps.value.length - 1].time = currentLapTime.value
+      laps.value[laps.value.length - 1].seconds = lapTimer.value
+    }
+    const formattedResults = {}
+    laps.value.forEach((lap, index) => {
+      formattedResults[index] = lap.time
+    })
+
+    const params = {
       id: props.measurement.id,
-      results: durationTimerRunning.value,
-      data_result: {
-        ...props.measurement,
-        results: { string: durationTimerRunning.value, seconds: durationCounter.value }
-      }
+      results: formattedResults
     }
     durationLoading.value = true
     const { success, message } = await sessionStore.updateMeasurementResults(params)
@@ -184,6 +242,70 @@ const onToggleDurationTimer = async () => {
     durationStarted.value = false
     emit('toggle-running')
   }
+}
+const onRecordLap = async () => {
+  if (!durationStarted.value) return
+  if (lapLoading.value) return
+  lapLoading.value = true
+
+  const currentLapTimer = currentLapTime.value
+
+  if (laps.value.length > 0) {
+    laps.value[laps.value.length - 1].time = currentLapTimer
+    laps.value[laps.value.length - 1].seconds = lapTimer.value
+  }
+
+  const lapNumber = laps.value.length
+  laps.value.push({
+    lapNumber,
+    time: '00:00:00',
+    seconds: 0
+  })
+
+  const formattedResults = {}
+  laps.value.forEach((lap, index) => {
+    formattedResults[index] = lap.time
+  })
+
+  const params = {
+    id: props.measurement.id,
+    results: formattedResults
+  }
+
+  const { success } = await sessionStore.updateMeasurementResults(params)
+  lapLoading.value = false
+  lapTimer.value = 0
+  lastLapTime.value = null
+
+  if (!success) {
+    laps.value.pop()
+    clearInterval(durationInterval.value)
+    onStartDurationTimer()
+  }
+}
+const onResetLaps = async () => {
+  if (resetConfirmation.value) {
+    laps.value = []
+    lastLapTime.value = null
+    lastTimer.value = null
+    lapTimer.value = 0
+    durationCounter.value = 0
+    lapsLoadingReset.value = true
+
+    const params = {
+      id: props.measurement.id,
+      results: { 0: '00:00:00' }
+    }
+
+    const { success } = await sessionStore.updateMeasurementResults(params)
+    lapsLoadingReset.value = false
+
+    if (!success) {
+      lapsLoadingReset.value = false
+      return
+    }
+  }
+  resetConfirmation.value = false
 }
 
 // prompting & sbt property
@@ -199,7 +321,11 @@ const onToggleSaved = (saved: boolean) => {
     :class="{
       'h-[540px] w-[320px]': !is_collapsed,
       'h-[120px] w-full': is_collapsed && !measurementType.includes('Sbt'),
-      'h-[180px] w-full': is_collapsed && measurementType.includes('Sbt')
+      'h-[180px] w-full':
+        is_collapsed &&
+        (measurementType.includes('Sbt') ||
+          measurementType.includes('Duration') ||
+          measurementType.includes('Latency'))
     }"
   >
     <div
@@ -286,16 +412,44 @@ const onToggleSaved = (saved: boolean) => {
             </div>
           </div>
           <div v-else class="flex flex-col justify-between flex-grow h-full">
-            <Duration
-              v-if="measurementType.includes('Duration')"
+            <DurationLatency
+              v-if="
+                (measurementType.includes('Duration') || measurementType.includes('Latency')) &&
+                !resetConfirmation
+              "
               :measurement="measurement"
               :is_started="durationStarted"
               :timer="durationTimerRunning"
               :update_loading="durationLoading"
+              :lapLoading="lapLoading"
+              :laps="laps"
+              :currentLapTime="currentLapTime"
+              :lapsLoadingReset="lapsLoadingReset"
               :is_collapsed="is_collapsed"
               @toggle-timer="onToggleDurationTimer"
+              @record-lap="onRecordLap"
+              @reset-laps-confirm="resetConfirmation = true"
               @fetch-session="emit('fetch-session')"
             />
+            <div
+              v-if="
+                resetConfirmation &&
+                (measurementType.includes('Duration') || measurementType.includes('Latency'))
+              "
+              class="flex flex-col items-center justify-center h-full gap-2"
+            >
+              <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
+              <div class="text-center text-slate-8">
+                This will clear all existing lap records and begin again from Lap 1. You won’t be
+                able to recover previous data.
+              </div>
+              <div class="flex items-center justify-center w-full gap-2 pr-2">
+                <AppButton kind="plain" class="w-2/4" @click="resetConfirmation = false"
+                  >Cancel</AppButton
+                >
+                <AppButton class="w-2/4" color="tomato-7" @click="onResetLaps">Reset</AppButton>
+              </div>
+            </div>
             <Frequency
               v-if="measurementType.includes('Frequency')"
               :measurement="measurement"
