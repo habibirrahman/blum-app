@@ -9,7 +9,6 @@ import moment from 'moment'
 import { useAppStore } from '@/stores/app.store'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import CommentItem from '@/partitions/CommentItem.vue'
-import type { Session } from '@/lib/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -266,6 +265,7 @@ const onStartSession = () => {
               </div>
               <div class="text-sm font-semibold truncate">{{ measurement.target?.name }}</div>
             </div>
+            <!-- target information -->
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div>{{ getTargetType(measurement?.target?.type) }}</div>
               <div
@@ -294,17 +294,37 @@ const onStartSession = () => {
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
               </div>
               <div v-if="measurement.target?.type === 'Target::Prompting'" class="space-y-0.5">
-                <div>
+                <div class="capitalize">Format: {{ measurement.target?.prompting_format }}</div>
+                <div v-if="measurement.target?.prompting_format === 'classic'">
                   Goal and success metric: Achieve target with
                   {{ measurement.target?.success_metric }} prompt, minimum
                   {{ measurement.target?.goal }} attempt(s) per session
+                </div>
+                <div v-if="measurement.target?.prompting_format === 'custom'">
+                  Goal: {{ measurement.target?.goal }}%
+                </div>
+                <div v-if="measurement.target?.prompting_format === 'custom'">
+                  Success metric: {{ measurement.target?.success_metric }}
                 </div>
                 <div>
                   Prompts used in this session:
                   {{
                     Object.keys(measurement.results || {})
-                      .map((key) => measurement.results[key].name)
-                      .join(', ')
+                      ?.map((key) => {
+                        const found = measurement?.target?.prompts?.find(
+                          (i) => i.id === Number(key)
+                        )
+                        const percentage = found?.score || 0
+                        return { ...measurement.results[key], percentage }
+                      })
+                      ?.sort((a, b) => a.position - b.position)
+                      ?.map((prompt) => {
+                        if (measurement?.target?.prompting_format === 'custom') {
+                          return `${prompt?.name} (${prompt?.percentage}%)`
+                        }
+                        return prompt?.name
+                      })
+                      ?.join(', ')
                   }}
                 </div>
               </div>
@@ -315,6 +335,8 @@ const onStartSession = () => {
                 </div>
               </div>
             </div>
+            <!-- end target information -->
+            <!-- probing -->
             <div
               v-if="measurement.type === 'Measurement::Probing'"
               class="h-0.5 w-full shrink-0 bg-slate-3"
@@ -333,11 +355,15 @@ const onStartSession = () => {
                 {{ measurement.target?.probing_number_of_trial }} trial(s)
               </div>
             </div>
+            <!-- end probing -->
+            <!-- target description -->
             <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div v-if="!measurement.target?.description" class="italic">No description</div>
               <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
+            <!-- end target description -->
+            <!-- last phase line -->
             <div
               v-if="measurement.target?.last_phase_line"
               class="h-0.5 w-full shrink-0 bg-slate-3"
@@ -350,6 +376,8 @@ const onStartSession = () => {
               <span class="font-semibold">{{ measurement.target.last_phase_line?.label }}</span>
               phase.
             </div>
+            <!-- end last phase line -->
+            <!-- sbt -->
             <div
               v-if="measurement.target?.type === 'Target::Sbt'"
               class="h-0.5 w-full shrink-0 bg-slate-3"
@@ -390,6 +418,7 @@ const onStartSession = () => {
                 </div>
               </div>
             </div>
+            <!-- end sbt -->
           </div>
         </div>
       </div>

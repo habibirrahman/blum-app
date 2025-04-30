@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { getRandomString } from '@/lib/func'
-import { computed } from 'vue'
-
 interface Props {
   name: string
   checked?: boolean
@@ -19,13 +16,12 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<Emits>()
 
-const inputId = computed<string>(() => getRandomString())
 </script>
 
 <template>
   <label
     :for="name"
-    class="relative flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border transition-all"
+    class="relative flex items-center w-8 h-4 transition-all border rounded-full cursor-pointer shrink-0"
     :class="{
       'border-transparent bg-light-purple-3': checked,
       'border-slate-5 bg-slate-4': !checked,
@@ -40,7 +36,7 @@ const inputId = computed<string>(() => getRandomString())
       @click="emit('change', !checked)"
     />
     <div
-      class="absolute h-3 w-3 rounded-full bg-white transition-all"
+      class="absolute w-3 h-3 transition-all bg-white rounded-full"
       :style="{ left: checked ? '17px' : '1px' }"
     ></div>
   </label>

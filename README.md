@@ -78,12 +78,14 @@ manual: update version code and version name
 bun run build
 ```
 
+Android
 ```sh
 bunx cap sync
 bunx cap copy android
 bunx cap open android
 ```
 
+iOS
 ```sh
 bunx cap sync
 bunx cap copy ios

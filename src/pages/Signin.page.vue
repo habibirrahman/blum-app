@@ -47,14 +47,14 @@ async function onSignin() {
     class="fixed left-1/2 z-[9] -translate-x-1/2 transition-all pt-safe"
     :class="{ 'top-5': signinLoading, '-top-10': !signinLoading }"
   >
-    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    <div class="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
   </div>
 
-  <div class="flex h-full w-full flex-col items-center justify-center gap-6 py-4">
-    <div class="flex w-full flex-col gap-10 p-4">
-      <div class="text-center font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
+  <div class="flex flex-col items-center justify-center w-full h-full gap-6 py-4">
+    <div class="flex flex-col w-full max-w-lg gap-10 p-4">
+      <div class="text-5xl font-bold text-center font-logo text-light-purple-5">Blüm</div>
       <div class="flex flex-col gap-5">
         <AppTextInput
           label="Email"
@@ -87,8 +87,8 @@ async function onSignin() {
   </div>
   <AppActionSheet :show="showForgotPassword" @close="showForgotPassword = false">
     <div class="flex flex-col items-center gap-4">
-      <div class="text-center text-xl font-semibold">Reset password</div>
-      <div class="text-center text-sm">
+      <div class="text-xl font-semibold text-center">Reset password</div>
+      <div class="text-sm text-center">
         Password resets aren't available on mobile yet. Please log in to Blüm on a desktop and
         update it from your profile, or contact your admin for assistance.
       </div>

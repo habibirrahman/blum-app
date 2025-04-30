@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
+import { debounce } from '@/lib/func'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
@@ -18,30 +19,46 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
+const currentScore = ref<number>(0)
+onMounted(() => {
+  currentScore.value = props.measurement?.results?.score || 0
+})
+
 const scoreLoading = ref<boolean>(false)
-const onChangeScore = async (score: number) => {
-  const currentScore = props.measurement.results?.score || 0
+
+const onSaveScore = debounce(async function (score: number) {
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     results: score,
     data_result: {
       ...props.measurement,
-      results: { score: currentScore + score }
+      results: { score }
     }
   }
   scoreLoading.value = true
-  const { success, message } = await sessionStore.updateMeasurementResults(params)
+  const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   scoreLoading.value = false
   if (!success) {
+    currentScore.value = props.measurement?.results?.score || 0
     emit('fetch-session')
     toast.error(message)
   }
+  currentScore.value = data?.results?.score || 0
+}, 1000)
+
+const onChangeScore = async (score: number) => {
+  // change state
+  currentScore.value += score
+
+  // save state
+  const gapScore = currentScore.value - (props.measurement?.results?.score || 0)
+  onSaveScore(gapScore)
 }
 </script>
 
 <template>
   <div
-    class="flex h-full flex-wrap content-center items-center justify-center gap-x-3 gap-y-4"
+    class="flex flex-wrap items-center content-center justify-center h-full gap-x-3 gap-y-4"
     :class="{ 'scale-90': is_collapsed }"
   >
     <div class="space-y-1">
@@ -52,31 +69,29 @@ const onChangeScore = async (score: number) => {
         }"
         @click="onChangeScore(1)"
       >
-        <div v-if="measurement.results?.score">{{ measurement.results?.score }}</div>
-        <Icon v-else icon="ph:plus-bold" />
+        <div v-if="currentScore">{{ currentScore }}</div>
+        <Icon v-else icon="stash:plus-solid" class="text-5xl" />
       </div>
       <div
-        class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"
+        class="flex items-center justify-center h-5 border rounded border-slate-5 bg-pure-white"
         :class="{
           'pointer-events-none':
-            scoreLoading ||
-            !measurement.results?.score ||
-            sessionStore.session?.status !== 'ongoing'
+            scoreLoading || !currentScore || sessionStore.session?.status !== 'ongoing'
         }"
         @click="onChangeScore(-1)"
       >
         <div
-          class="h-1 w-6 shrink-0 rounded"
+          class="w-6 h-1 rounded shrink-0"
           :class="{
-            'bg-slate-5': !measurement.results?.score,
-            'bg-slate-6': measurement.results?.score
+            'bg-slate-5': !currentScore,
+            'bg-slate-6': currentScore
           }"
         ></div>
       </div>
     </div>
   </div>
 
-  <div v-if="!is_collapsed" class="shrink-0 text-center text-xs font-medium text-slate-7">
+  <div v-if="!is_collapsed" class="text-xs font-medium text-center shrink-0 text-slate-7">
     Goal: {{ measurement.target?.goal }} attempt(s) per session
   </div>
 </template>

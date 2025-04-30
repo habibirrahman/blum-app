@@ -198,10 +198,12 @@ export type TargetType =
   | 'Target::Prompting'
   | 'Target::Sbt'
 export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued'
+export type TargetPromptingFormat = 'classic' | 'custom'
 export interface Target {
   id?: number
   type?: TargetType
   status?: TargetStatus
+  prompting_format?: TargetPromptingFormat
   name?: string
   description?: string
   goal?: number

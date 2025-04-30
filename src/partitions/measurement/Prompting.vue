@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
-import { computed, ref, watch } from 'vue'
-import type { Measurement } from '@/lib/types'
+import { computed, onMounted, ref, watch } from 'vue'
+import type { Measurement, Target } from '@/lib/types'
 import { promptColors } from '@/lib/data'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
+import { debounce } from '@/lib/func'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
 
 interface Props {
   measurement: Measurement
+  measurement_results: Measurement['results']
+  target: Target
   is_collapsed: boolean
 }
 interface Emits {
@@ -18,6 +21,18 @@ interface Emits {
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
+
+const results = ref<Measurement['results']>({})
+
+onMounted(() => {
+  results.value = { ...props.measurement_results }
+})
+watch(
+  () => props.measurement_results,
+  (val) => {
+    results.value = { ...val }
+  }
+)
 
 const page = ref<number>(1)
 watch(
@@ -38,8 +53,8 @@ const onScroll = (e: any) => {
 
 const perPage = computed<number>(() => (props.is_collapsed ? 3 : 9))
 const pageCount = computed<number>(() => {
-  const results = props.measurement.results ? Object.keys(props.measurement.results) : []
-  const boxes = results.filter((i) => props.measurement.results[i].enabled).length
+  const res = Object.keys(results.value) || []
+  const boxes = res.filter((i) => results.value[i].enabled).length
   return Math.ceil(boxes / perPage.value)
 })
 
@@ -55,7 +70,8 @@ type PromptColors =
   | 'grey'
   | 'primary'
 type PromptShapes = 'square' | 'circle' | 'triangle' | 'diamond'
-interface PromptBoxes {
+interface PromptBox {
+  key: number | string
   id: number | string
   name: string
   color: PromptColors
@@ -65,28 +81,54 @@ interface PromptBoxes {
   position: number
   abbreviation: string
 }
-const promptBoxesPages = computed<PromptBoxes[][]>(() => {
-  if (props.measurement.results) {
-    const keys = Object.keys(props.measurement.results)
-    if (keys && keys.length) {
-      const prompts: PromptBoxes[] = keys
-        .map((key) => ({ ...props.measurement.results[key], key }) as PromptBoxes)
-        .filter((i) => i.enabled)
-        .sort((a, b) => a.position - b.position)
-      const res: PromptBoxes[][] = []
-      for (let idx = 1; idx <= pageCount.value; idx++) {
-        const start = (idx - 1) * perPage.value
-        const end = idx * perPage.value
-        const arr = [...prompts.slice(start, end)]
-        res.push(arr)
-      }
-      return res
-    } else return []
-  } else return []
+const promptBoxesPages = computed<PromptBox[][]>(() => {
+  if (!results.value) return []
+  const keys = Object.keys(results.value)
+  if (!keys || !keys.length) return []
+
+  const prompts: PromptBox[] = keys
+    .map((key) => ({ ...results.value[key], key }) as PromptBox)
+    .filter((i) => i.enabled)
+    .sort((a, b) => a.position - b.position)
+  const res: PromptBox[][] = []
+  for (let idx = 1; idx <= pageCount.value; idx++) {
+    const start = (idx - 1) * perPage.value
+    const end = idx * perPage.value
+    const arr = [...prompts.slice(start, end)]
+    res.push(arr)
+  }
+  return res
 })
 
-const scoreLoading = ref<boolean>(false)
-const onChangeScore = async (prompt: any, score: number) => {
+const getPromptScore = (id: number | string) => {
+  const found = props.target?.prompts?.find((i) => i.id === Number(id))
+  return found ? Number(found.score || 0) : 0
+}
+
+const currentScore = computed<number>(() => {
+  if (!results.value) return 0
+  const keys = Object.keys(results.value)
+  if (!keys || !keys.length) return 0
+  let count = 0
+  let total = 0
+
+  for (let idx = 0; idx < keys.length; idx++) {
+    const key = keys[idx]
+    if (results.value[key].enabled) {
+      const promptScore = getPromptScore(key)
+      const attempt = Number(results.value[key].score || 0)
+
+      count += attempt
+      total += attempt * promptScore
+    }
+  }
+  const final = total / (count || 0)
+  return Math.round(final || 0)
+})
+
+const scoreLoadingBox = ref<PromptBox['key'] | null>(null)
+const typeLoadingBox = ref<number | null>(null)
+const onSaveScore = debounce(async function (prompt: any, score: number) {
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     results: {},
@@ -94,18 +136,43 @@ const onChangeScore = async (prompt: any, score: number) => {
   }
   params.results[prompt.key] = score
   params.data_result.results = { ...prompt, score: prompt.score + score }
-  scoreLoading.value = true
+
+  // scoreLoadingBox.value = prompt.key
+  // typeLoadingBox.value = prompt.score
   const { success, message } = await sessionStore.updateMeasurementResults(params)
-  scoreLoading.value = false
+  scoreLoadingBox.value = null
+  typeLoadingBox.value = null
   if (!success) {
     emit('fetch-session')
     toast.error(message)
   }
+}, 1000)
+
+const onChangeScore = async (prompt: any, score: number) => {
+  if (scoreLoadingBox.value !== null && scoreLoadingBox.value !== prompt.key) {
+    return
+  }
+  if (typeLoadingBox.value !== null && typeLoadingBox.value !== score) {
+    return
+  }
+
+  // change state
+  const newScore = results.value[prompt.key].score + score
+  results.value[prompt.key] = {
+    ...results.value[prompt.key],
+    score: newScore
+  }
+
+  // save state
+  const gapScore = newScore - props.measurement_results[prompt.key].score
+  scoreLoadingBox.value = prompt.key
+  typeLoadingBox.value = score
+  onSaveScore(prompt, gapScore)
 }
 </script>
 
 <template>
-  <div class="flex h-full content-center items-center justify-center">
+  <div class="flex items-center content-center justify-center h-full">
     <div
       class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
       @scroll="onScroll"
@@ -124,7 +191,10 @@ const onChangeScore = async (prompt: any, score: number) => {
             <div
               class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] border text-4xl font-bold transition-all"
               :class="{
-                'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing'
+                'cursor-wait':
+                  (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
+                  (typeLoadingBox !== null && typeLoadingBox !== 1),
+                'pointer-events-none': sessionStore.session?.status !== 'ongoing'
               }"
               :style="{
                 backgroundColor: promptColors[prompt.color].primaryColor,
@@ -133,20 +203,22 @@ const onChangeScore = async (prompt: any, score: number) => {
               }"
               @click="onChangeScore(prompt, 1)"
             >
-              <div class="absolute top-px text-xs font-semibold">{{ prompt.abbreviation }}</div>
+              <div class="absolute text-xs font-semibold top-px">{{ prompt.abbreviation }}</div>
               <div v-if="prompt.score">{{ prompt.score }}</div>
-              <Icon v-else icon="ph:plus-bold" />
+              <Icon v-else icon="stash:plus-solid" class="text-5xl" />
             </div>
             <div
-              class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white px-5"
+              class="flex items-center justify-center h-5 px-5 border rounded border-slate-5 bg-pure-white"
               :class="{
-                'pointer-events-none':
-                  scoreLoading || !prompt.score || sessionStore.session?.status !== 'ongoing'
+                'cursor-wait':
+                  (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
+                  (typeLoadingBox !== null && typeLoadingBox !== -1),
+                'pointer-events-none': !prompt.score || sessionStore.session?.status !== 'ongoing'
               }"
               @click="onChangeScore(prompt, -1)"
             >
               <div
-                class="h-1 w-6 shrink-0 rounded transition-all"
+                class="w-6 h-1 transition-all rounded shrink-0"
                 :class="{ 'bg-slate-5': !prompt.score, 'bg-slate-6': prompt.score }"
               ></div>
             </div>
@@ -156,18 +228,36 @@ const onChangeScore = async (prompt: any, score: number) => {
     </div>
   </div>
 
-  <div class="shrink-0 space-y-2" :class="{ '-translate-y-2': is_collapsed }">
-    <div class="flex h-2 items-center justify-center gap-2">
+  <div class="space-y-2 shrink-0" :class="{ '-translate-y-4': is_collapsed }">
+    <div class="flex items-center justify-center h-2 gap-2">
       <div
         v-for="n in pageCount"
         :key="n"
         :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-        class="h-2 w-2 rounded-full transition-all"
+        class="w-2 h-2 transition-all rounded-full"
       ></div>
     </div>
-    <div v-if="!is_collapsed" class="text-center text-xs font-medium text-slate-7">
-      Goal: {{ measurement.target?.goal }} attempt(s)
-      {{ measurement.target?.success_metric }} prompt
+    <div v-if="!is_collapsed">
+      <div
+        v-if="measurement?.target?.prompting_format === 'classic'"
+        class="text-xs font-medium text-center text-slate-7"
+      >
+        Goal: {{ measurement.target?.goal }} attempt(s)
+        {{ measurement.target?.success_metric }} prompt
+      </div>
+      <div
+        v-if="measurement?.target?.prompting_format === 'custom'"
+        class="text-xs font-medium text-center text-slate-7"
+      >
+        <span v-if="measurement?.target?.success_metric === 'equal to or greater than goal'">
+          Goal: ≥ {{ `${measurement?.target?.goal}%` }}
+        </span>
+        <span v-if="measurement?.target?.success_metric === 'less than goal'">
+          Goal: < {{ `${measurement?.target?.goal}%` }}
+        </span>
+        <span class="w-2 shrink-0"></span>
+        Score {{ `${currentScore}%` }}
+      </div>
     </div>
   </div>
 </template>

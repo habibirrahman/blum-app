@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
+import { debounce } from '@/lib/func'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
@@ -17,6 +18,12 @@ interface Emits {
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
+
+const results = ref<Measurement['results']>({})
+
+onMounted(() => {
+  results.value = { ...props.measurement.results }
+})
 
 const page = ref<number>(1)
 watch(
@@ -36,60 +43,86 @@ const onScroll = (e: any) => {
 }
 
 const perPage = computed<number>(() => (props.is_collapsed ? 5 : 30))
-const pageCount = computed<number>(() => {
-  const boxes = Object.keys(props.measurement.results).length
-  return Math.ceil(boxes / perPage.value)
-})
 interface PercentageBox {
   key: number | string
   value: null | boolean
 }
+const currentBoxes = computed<PercentageBox[]>(() => {
+  const boxes = Object.keys(results.value).map((key) => {
+    return { key, value: results.value[key] }
+  })
+  return boxes
+})
+const pageCount = computed<number>(() => {
+  return Math.ceil(currentBoxes.value.length / perPage.value)
+})
 const percentageBoxesPages = computed<PercentageBox[][]>(() => {
-  const boxes: PercentageBox[] = Object.keys(props.measurement.results).map((key) => ({
-    key,
-    value: props.measurement.results[key]
-  }))
   const res: PercentageBox[][] = []
   for (let idx = 1; idx <= pageCount.value; idx++) {
     const start = (idx - 1) * perPage.value
     const end = idx * perPage.value
-    const arr = [...boxes.slice(start, end)]
+    const arr = [...currentBoxes.value.slice(start, end)]
     res.push(arr)
   }
   return res
 })
 const percentageScore = computed<number>(() => {
-  const results = props.measurement.results
-  const trials = Object.values(results).length
-  const totalSuccess = Object.values(results).filter((i) => i).length
+  const trials = Object.values(results.value).length
+  const totalSuccess = Object.values(results.value).filter((i) => i).length
   return (totalSuccess / trials) * 100 || 0
 })
 
 const percentageLoading = ref<boolean>(false)
-const onChangePercentage = async (box: PercentageBox) => {
+const percentageLoadingBox = ref<PercentageBox['key'] | null>(null)
+
+const onSavePercentage = debounce(async function (box: PercentageBox) {
+  let val = null
+  if (box.value === null) val = true
+  if (box.value === true) val = false
+  if (box.value === false) val = null
+
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     results: {},
     data_result: { ...props.measurement }
   }
+  params.results[box.key] = val
+  params.data_result.results[box.key] = val
+
+  percentageLoadingBox.value = box.key
+  const { success, data, message } = await sessionStore.updateMeasurementResults(params)
+  percentageLoadingBox.value = null
+  if (!success) {
+    results.value = { ...props.measurement.results }
+    emit('fetch-session')
+    toast.error(message)
+    return
+  }
+
+  results.value = { ...data.results }
+}, 1000)
+
+const onChangePercentage = async (box: PercentageBox) => {
+  if (percentageLoadingBox.value && percentageLoadingBox.value !== box.key) {
+    return
+  }
+
+  // change state
   let val = null
   if (box.value === null) val = true
   if (box.value === true) val = false
   if (box.value === false) val = null
-  params.results[box.key] = val
-  params.data_result.results[box.key] = val
-  percentageLoading.value = true
-  const { success, message } = await sessionStore.updateMeasurementResults(params)
-  percentageLoading.value = false
-  if (!success) {
-    emit('fetch-session')
-    toast.error(message)
-  }
+
+  results.value[box.key] = val
+
+  // save state
+  percentageLoadingBox.value = box.key
+  onSavePercentage(box)
 }
 </script>
 
 <template>
-  <div class="flex h-full content-center items-center justify-center">
+  <div class="flex items-center content-center justify-center h-full">
     <div
       class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
       @scroll="onScroll"
@@ -101,7 +134,7 @@ const onChangePercentage = async (box: PercentageBox) => {
         class="flex w-[calc(320px-32px)] shrink-0 snap-start justify-center"
       >
         <div
-          class="flex max-w-72 flex-wrap content-center items-start justify-center transition-all"
+          class="flex flex-wrap items-start content-center justify-center transition-all max-w-72"
           :class="{
             'gap-x-4 gap-y-4': !is_collapsed,
             'gap-x-2 gap-y-2': is_collapsed
@@ -110,7 +143,7 @@ const onChangePercentage = async (box: PercentageBox) => {
           <div
             v-for="box in percentageBoxes"
             :key="box.key"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded border text-2xl transition-all"
+            class="flex items-center justify-center w-10 h-10 text-2xl transition-all border rounded shrink-0"
             :class="{
               'pointer-events-none':
                 percentageLoading || sessionStore.session?.status !== 'ongoing',
@@ -128,18 +161,18 @@ const onChangePercentage = async (box: PercentageBox) => {
     </div>
   </div>
 
-  <div class="shrink-0 space-y-2" :class="{ '-translate-y-2': is_collapsed }">
-    <div class="flex h-2 items-center justify-center gap-2">
+  <div class="space-y-2 shrink-0" :class="{ '-translate-y-2': is_collapsed }">
+    <div class="flex items-center justify-center h-2 gap-2">
       <div
         v-for="n in pageCount"
         :key="n"
         :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-        class="h-2 w-2 rounded-full transition-all"
+        class="w-2 h-2 transition-all rounded-full"
       ></div>
     </div>
     <div
       v-if="!is_collapsed"
-      class="flex items-center justify-center gap-2 text-center text-xs font-medium text-slate-7"
+      class="flex items-center justify-center gap-2 text-xs font-medium text-center text-slate-7"
     >
       <div>Goal: {{ measurement.target?.goal }}%</div>
       <div>Score: {{ percentageScore.toFixed(0) }}%</div>
