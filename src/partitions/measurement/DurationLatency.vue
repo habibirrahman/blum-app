@@ -12,7 +12,7 @@ interface Props {
   timer: string
   update_loading: boolean
   is_collapsed: boolean
-  laps: []
+  laps: { lapNumber: number; time: string }[]
   lapLoading: boolean
   lapsLoadingReset: boolean
   currentLapTime: string
@@ -25,28 +25,32 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
-const getTextColorClass = (lap) => {
+const getTextColorClass = (lap: { lapNumber: number; time: string }) => {
   if (props.is_started && lap.lapNumber === props.laps.length - 1) {
     const timeToCheck = props.currentLapTime
 
-    if (props.measurement.target.success_metric === 'less than goal') {
-      return isTimeSuccessful(timeToCheck, 'less') ? 'text-grass-7' : 'text-rose-7'
+    if (props.measurement.target?.success_metric === 'less than goal') {
+      return isTimeSuccessful(timeToCheck, 'less') ? 'text-grass-7' : 'text-tomato-7'
     } else {
-      return isTimeSuccessful(timeToCheck, 'greater') ? 'text-grass-7' : 'text-rose-7'
+      return isTimeSuccessful(timeToCheck, 'greater') ? 'text-grass-7' : 'text-tomato-7'
     }
   } else {
-    if (props.measurement.target.success_metric === 'less than goal') {
-      return lap.time < props.measurement.target.goal_time ? 'text-grass-7' : 'text-rose-7'
+    if (props.measurement.target?.success_metric === 'less than goal') {
+      return lap.time < (props.measurement.target?.goal_time ?? '00:00:00')
+        ? 'text-grass-7'
+        : 'text-tomato-7'
     } else {
-      return lap.time >= props.measurement.target.goal_time ? 'text-grass-7' : 'text-rose-7'
+      return lap.time >= (props.measurement.target?.goal_time ?? '00:00:00')
+        ? 'text-grass-7'
+        : 'text-tomato-7'
     }
   }
 }
 
-const isTimeSuccessful = (timeString, compareMode) => {
+const isTimeSuccessful = (timeString: string, compareMode: string) => {
   try {
     const parts = timeString.split(':')
-    let timeValue
+    let timeValue = 0
 
     if (parts.length === 2) {
       const minutes = parseInt(parts[0])
@@ -59,8 +63,8 @@ const isTimeSuccessful = (timeString, compareMode) => {
       timeValue = hours * 3600 + minutes * 60 + seconds
     }
 
-    const goalParts = props.measurement.target.goal_time.split(':')
-    let goalValue
+    const goalParts = (props.measurement.target?.goal_time ?? '00:00:00').split(':')
+    let goalValue = 0
 
     if (goalParts.length === 2) {
       const minutes = parseInt(goalParts[0])
@@ -87,9 +91,12 @@ const isTimeSuccessful = (timeString, compareMode) => {
 
 <template>
   <div
-    class="flex flex-col items-center content-center justify-center flex-grow-0 h-full transition-all gap-x-3"
+    class="flex h-full flex-grow-0 flex-col content-center items-center justify-center gap-x-3 transition-all"
     :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
   >
+    <div v-if="is_collapsed" class="font-semibold text-slate-7">
+      Lap {{ laps && laps.length ? laps.length : 1 }}
+    </div>
     <div
       class="grid grid-cols-5 items-center text-3xl text-[32px] font-bold transition-all"
       :class="{ 'text-slate-6': !is_started, 'text-slate-8': is_started }"
@@ -100,7 +107,7 @@ const isTimeSuccessful = (timeString, compareMode) => {
       <div class="flex justify-center pb-2">:</div>
       <div class="flex justify-center">{{ timer.split(':')[2] }}</div>
     </div>
-    <div class="flex items-center w-full gap-3">
+    <div class="flex w-full items-center gap-3">
       <AppButton
         v-if="is_started || (!is_started && laps && laps.length === 0)"
         :loading="lapLoading"
@@ -135,7 +142,7 @@ const isTimeSuccessful = (timeString, compareMode) => {
     </div>
     <div
       v-if="laps.length > 0 && !is_collapsed"
-      class="w-full mt-2 overflow-scroll"
+      class="mt-2 w-full overflow-scroll"
       style="max-height: calc(100vh - 10rem); scrollbar-width: none"
     >
       <div
@@ -143,8 +150,8 @@ const isTimeSuccessful = (timeString, compareMode) => {
         :key="lap.lapNumber + 1"
       >
         <div
-          v-if="measurement.target.success_metric === 'less than goal'"
-          class="flex justify-between py-2 pb-2 border-b"
+          v-if="measurement.target?.success_metric === 'less than goal'"
+          class="flex justify-between border-b py-2 pb-2"
         >
           <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
           <div :class="getTextColorClass(lap)" class="font-semibold">
@@ -152,8 +159,8 @@ const isTimeSuccessful = (timeString, compareMode) => {
           </div>
         </div>
         <div
-          class="flex justify-between py-2 pb-2 border-b"
-          v-if="measurement.target.success_metric === 'equal to or greater than goal'"
+          class="flex justify-between border-b py-2 pb-2"
+          v-if="measurement.target?.success_metric === 'equal to or greater than goal'"
         >
           <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
           <div :class="getTextColorClass(lap)" class="font-semibold">
@@ -164,7 +171,7 @@ const isTimeSuccessful = (timeString, compareMode) => {
     </div>
   </div>
 
-  <div v-if="!is_collapsed" class="text-xs font-medium text-center shrink-0 text-slate-7">
+  <div v-if="!is_collapsed" class="shrink-0 text-center text-xs font-medium text-slate-7">
     Goal: {{ measurement.target?.goal_time }}
   </div>
 </template>

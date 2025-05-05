@@ -171,6 +171,7 @@ export type MeasurementType =
   | 'Measurement::Probing'
   | 'Measurement::Prompting'
   | 'Measurement::Sbt'
+  | 'Measurement::Latency'
 export interface Measurement {
   id?: number
   type?: MeasurementType

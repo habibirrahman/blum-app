@@ -220,25 +220,29 @@ const onToggleDurationTimer = async () => {
     }
     emit('toggle-running')
   } else {
+    const capturedDurationTime = durationTimerRunning.value
+    const capturedLapTime = currentLapTime.value
+    const capturedLapSeconds = lapTimer.value
     clearInterval(durationInterval.value)
     if (laps.value.length > 0) {
-      laps.value[laps.value.length - 1].time = currentLapTime.value
-      laps.value[laps.value.length - 1].seconds = lapTimer.value
+      laps.value[laps.value.length - 1].time = capturedLapTime
+      laps.value[laps.value.length - 1].seconds = capturedLapSeconds
     }
-    const formattedResults = {}
+    const formattedResults: Record<number, string> = {}
     laps.value.forEach((lap, index) => {
       formattedResults[index] = lap.time
     })
 
     const params = {
       id: props.measurement.id,
-      results: formattedResults
+      results: formattedResults,
+      data_result: { ...props.measurement, results: formattedResults }
     }
     durationLoading.value = true
     const { success, message } = await sessionStore.updateMeasurementResults(params)
     durationLoading.value = false
     if (!success) {
-      onStartDurationTimer()
+      resumeTimerFromString(capturedDurationTime, capturedLapTime)
       emit('fetch-session')
       toast.error(message)
       return
@@ -248,15 +252,18 @@ const onToggleDurationTimer = async () => {
   }
 }
 const onRecordLap = async () => {
-  if (!durationStarted.value) return
-  if (lapLoading.value) return
+  if (!durationStarted.value || lapLoading.value) return
+
+  const capturedLapTime = currentLapTime.value
+  const capturedDurationTime = durationTimerRunning.value
+  const capturedLapSeconds = lapTimer.value
+
+  clearInterval(durationInterval.value)
   lapLoading.value = true
 
-  const currentLapTimer = currentLapTime.value
-
   if (laps.value.length > 0) {
-    laps.value[laps.value.length - 1].time = currentLapTimer
-    laps.value[laps.value.length - 1].seconds = lapTimer.value
+    laps.value[laps.value.length - 1].time = capturedLapTime
+    laps.value[laps.value.length - 1].seconds = capturedLapSeconds
   }
 
   const lapNumber = laps.value.length
@@ -266,25 +273,47 @@ const onRecordLap = async () => {
     seconds: 0
   })
 
-  const formattedResults = {}
+  const formattedResults: Record<number, string> = {}
   laps.value.forEach((lap, index) => {
     formattedResults[index] = lap.time
   })
 
   const params = {
     id: props.measurement.id,
-    results: formattedResults
+    results: formattedResults,
+    data_result: { ...props.measurement, results: formattedResults }
   }
 
   const { success } = await sessionStore.updateMeasurementResults(params)
-  lapLoading.value = false
-  lapTimer.value = 0
-  lastLapTime.value = null
 
   if (!success) {
     laps.value.pop()
-    clearInterval(durationInterval.value)
-    onStartDurationTimer()
+    resumeTimerFromString(capturedDurationTime, capturedLapTime)
+  } else {
+    lapTimer.value = 0
+    lastLapTime.value = null
+  }
+
+  // Mulai timer lagi
+  startTimerAfterLap()
+  lapLoading.value = false
+}
+
+const startTimerAfterLap = () => {
+  durationInterval.value = setInterval(() => {
+    durationCounter.value++
+    lapTimer.value++
+  }, 1000)
+}
+
+const resumeTimerFromString = (durationString: string, lapString: string) => {
+  const [dHours, dMinutes, dSeconds] = durationString.split(':').map(Number)
+  durationCounter.value = dHours * 3600 + dMinutes * 60 + dSeconds
+
+  if (lapString) {
+    const [lHours, lMinutes, lSeconds] = lapString.split(':').map(Number)
+    lapTimer.value = lHours * 3600 + lMinutes * 60 + lSeconds
+    lastLapTime.value = lapString
   }
 }
 const onResetLaps = async () => {
@@ -298,7 +327,8 @@ const onResetLaps = async () => {
 
     const params = {
       id: props.measurement.id,
-      results: { 0: '00:00:00' }
+      results: { 0: '00:00:00' },
+      data_result: { ...props.measurement, results: { 0: '00:00:00' } }
     }
 
     const { success } = await sessionStore.updateMeasurementResults(params)
@@ -321,7 +351,7 @@ const onToggleSaved = (saved: boolean) => {
 
 <template>
   <div
-    class="relative transition-all rounded shrink-0"
+    class="relative shrink-0 rounded transition-all"
     :class="{
       'h-[540px] w-[320px]': !is_collapsed,
       'h-[120px] w-full': is_collapsed && !measurementType.includes('Sbt'),
@@ -334,11 +364,11 @@ const onToggleSaved = (saved: boolean) => {
   >
     <div
       v-if="review_mode && measurement.is_fixed"
-      class="absolute left-0 flex items-center justify-center w-16 h-16 bg-white rounded-full -top-6"
+      class="absolute -top-6 left-0 flex h-16 w-16 items-center justify-center rounded-full bg-white"
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
-    <div class="flex flex-col h-full" :class="{ 'pointer-events-none': review_mode }">
+    <div class="flex h-full flex-col" :class="{ 'pointer-events-none': review_mode }">
       <div
         class="h-[6px] w-full shrink-0 rounded-t"
         :style="{ backgroundColor: measurement.target?.curriculum_color }"
@@ -346,23 +376,23 @@ const onToggleSaved = (saved: boolean) => {
       <div
         v-if="!is_collapsed"
         id="measurememt-header"
-        class="flex items-center justify-between w-full px-4 h-9 shrink-0 bg-prim-2"
+        class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-4"
       >
         <div
-          class="flex items-center justify-center w-6 h-6 transition-all rounded"
+          class="flex h-6 w-6 items-center justify-center rounded transition-all"
           :class="{ 'bg-white': display === 'description' }"
           @click="display = display === 'description' ? 'target' : 'description'"
         >
           <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
         </div>
         <div
-          class="relative flex items-center justify-center w-6 h-6 transition-all rounded"
+          class="relative flex h-6 w-6 items-center justify-center rounded transition-all"
           :class="{ 'bg-white': display === 'comment' }"
           @click="display = display === 'comment' ? 'target' : 'comment'"
         >
           <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
           <div
-            class="absolute w-2 h-2 transition-all rounded-full right-px top-px bg-light-purple-5"
+            class="absolute right-px top-px h-2 w-2 rounded-full bg-light-purple-5 transition-all"
             :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
           ></div>
         </div>
@@ -377,13 +407,13 @@ const onToggleSaved = (saved: boolean) => {
         </div>
       </div>
 
-      <div v-if="cardLoading" class="flex flex-col items-center justify-center h-full bg-white">
-        <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <div v-if="cardLoading" class="flex h-full flex-col items-center justify-center bg-white">
+        <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
       </div>
       <div
         v-else
         id="measurememt-body"
-        class="flex flex-col h-full px-4 pt-3 bg-white rounded-b"
+        class="flex h-full flex-col rounded-b bg-white px-4 pt-3"
         :class="{ 'no-scrollbar overflow-y-auto': !is_collapsed }"
       >
         <div v-if="!is_collapsed" class="flex flex-col gap-1">
@@ -400,22 +430,22 @@ const onToggleSaved = (saved: boolean) => {
         <div v-if="display === 'target'" class="flex h-full pb-3 transition-all">
           <div
             v-if="is_collapsed"
-            class="flex items-center justify-center w-8 h-full rounded-full shrink-0 bg-slate-4"
+            class="flex h-full w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
             @click="emit('toggle-collapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
           </div>
-          <div v-if="isDropped" class="flex flex-col items-center justify-center flex-grow gap-4">
-            <Icon icon="solar:clipboard-remove-bold" class="w-20 h-20 text-tulip-6" />
-            <div v-if="!is_collapsed" class="space-y-2 w-72">
-              <div class="font-semibold text-center">Entry not recorded</div>
-              <div class="text-sm text-center text-slate-8">
+          <div v-if="isDropped" class="flex flex-grow flex-col items-center justify-center gap-4">
+            <Icon icon="solar:clipboard-remove-bold" class="h-20 w-20 text-tulip-6" />
+            <div v-if="!is_collapsed" class="w-72 space-y-2">
+              <div class="text-center font-semibold">Entry not recorded</div>
+              <div class="text-center text-sm text-slate-8">
                 This entry will not be saved when the Session ends. Toggle back to save this entry
                 recording.
               </div>
             </div>
           </div>
-          <div v-else class="flex flex-col justify-between flex-grow h-full">
+          <div v-else class="flex h-full flex-grow flex-col justify-between">
             <DurationLatency
               v-if="
                 (measurementType.includes('Duration') || measurementType.includes('Latency')) &&
@@ -440,14 +470,14 @@ const onToggleSaved = (saved: boolean) => {
                 resetConfirmation &&
                 (measurementType.includes('Duration') || measurementType.includes('Latency'))
               "
-              class="flex flex-col items-center justify-center h-full gap-2"
+              class="flex h-full flex-col items-center justify-center gap-2"
             >
               <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
               <div class="text-center text-slate-8">
                 This will clear all existing lap records and begin again from Lap 1. You won’t be
                 able to recover previous data.
               </div>
-              <div class="flex items-center justify-center w-full gap-2 pr-2">
+              <div class="flex w-full items-center justify-center gap-2 pr-2">
                 <AppButton kind="plain" class="w-2/4" @click="resetConfirmation = false"
                   >Cancel</AppButton
                 >
@@ -499,7 +529,7 @@ const onToggleSaved = (saved: boolean) => {
             />
           </div>
         </div>
-        <div v-if="display === 'description'" class="flex flex-col justify-between h-full pt-3">
+        <div v-if="display === 'description'" class="flex h-full flex-col justify-between pt-3">
           <div class="flex flex-col gap-3">
             <!-- target information -->
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
@@ -593,18 +623,18 @@ const onToggleSaved = (saved: boolean) => {
             <!-- sbt -->
             <div v-if="measurement.target?.type === 'Target::Sbt'">
               <!-- sbt taks -->
-              <div class="py-3 space-y-3 bordert-2 border-slate-4">
+              <div class="bordert-2 space-y-3 border-slate-4 py-3">
                 <div v-for="taskCode in target?.target_tasks" :key="taskCode.id" class="space-y-1">
                   <div class="text-sm font-semibold text-slate-8">
                     {{ taskCode.code }} - {{ taskCode.code_definition }}
                   </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
+                  <div class="whitespace-pre-line text-sm text-slate-8">
                     {{ taskCode.description }}
                   </div>
                 </div>
               </div>
               <!-- sbt problem behavior -->
-              <div class="py-3 space-y-3 bordert-2 border-slate-4">
+              <div class="bordert-2 space-y-3 border-slate-4 py-3">
                 <div
                   v-for="problemBehavior in target?.target_problem_behaviors"
                   :key="problemBehavior.id"
@@ -613,7 +643,7 @@ const onToggleSaved = (saved: boolean) => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
+                  <div class="whitespace-pre-line text-sm text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>
@@ -621,14 +651,14 @@ const onToggleSaved = (saved: boolean) => {
             </div>
             <!-- end sbt -->
           </div>
-          <div class="sticky bottom-0 w-full py-3 bg-white">
+          <div class="sticky bottom-0 w-full bg-white py-3">
             <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
           </div>
         </div>
-        <div v-if="display === 'comment'" class="flex flex-col justify-between h-full gap-3">
+        <div v-if="display === 'comment'" class="flex h-full flex-col justify-between gap-3">
           <div
             v-if="sessionStore.session?.status !== 'ongoing'"
-            class="pt-3 text-sm text-wrap text-slate-8"
+            class="text-wrap pt-3 text-sm text-slate-8"
           >
             {{ measurement.comment || '-' }}
           </div>
@@ -639,9 +669,9 @@ const onToggleSaved = (saved: boolean) => {
             placeholder="Type your comment here..."
             v-model="commentInput"
             borderless
-            class="h-full mt-2"
+            class="mt-2 h-full"
           />
-          <div class="sticky bottom-0 w-full py-3 bg-white">
+          <div class="sticky bottom-0 w-full bg-white py-3">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"

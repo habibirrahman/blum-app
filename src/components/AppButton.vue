@@ -36,7 +36,7 @@ const currentClass = computed<string>(() => {
 
 <template>
   <button
-    class="relative flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-300 border rounded"
+    class="relative flex items-center justify-center gap-2 rounded border text-sm font-semibold transition-all duration-300"
     :class="[
       size === 'sm' ? 'px-1.5 py-1' : size === 'lg' ? 'px-3 py-3' : 'px-2 py-2',
       isDisabled || isLoading ? 'pointer-events-none' : '',
@@ -79,7 +79,7 @@ const currentClass = computed<string>(() => {
   &.app-button-tomato {
     @apply border-tomato-2 bg-tomato-2 text-tomato-7;
     &.app-button-loading {
-      @apply border-tomato-10 bg-tomato-10;
+      @apply border-tomato-5 bg-tomato-5;
     }
   }
   &.app-button-tomato-7 {
@@ -91,7 +91,7 @@ const currentClass = computed<string>(() => {
   &.app-button-prim {
     @apply border-prim-2 bg-prim-2 text-light-purple-5;
     &.app-button-loading {
-      @apply border-light-purple-5 bg-light-purple-5;
+      @apply border-prim-5 bg-prim-5;
     }
   }
   &.app-button-disabled {
