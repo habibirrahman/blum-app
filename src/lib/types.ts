@@ -198,6 +198,7 @@ export type TargetType =
   | 'Target::Pir'
   | 'Target::Prompting'
   | 'Target::Sbt'
+  | 'Target::Latency'
 export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued'
 export type TargetPromptingFormat = 'classic' | 'custom'
 export interface Target {
