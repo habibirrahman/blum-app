@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -17,6 +18,7 @@ interface Props {
   is_collapsed: boolean
 }
 interface Emits {
+  (e: 'toggle-updated', bool: boolean): void
   (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
@@ -128,6 +130,18 @@ const currentScore = computed<number>(() => {
 
 const scoreLoadingBox = ref<PromptBox['key'] | null>(null)
 const typeLoadingBox = ref<number | null>(null)
+
+watch(
+  () => scoreLoadingBox.value,
+  (val) => {
+    if (val === null) {
+      emit('toggle-updated', true)
+    } else {
+      emit('toggle-updated', false)
+    }
+  }
+)
+
 const onSaveScore = debounce(async function (prompt: any, score: number) {
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
@@ -176,7 +190,7 @@ const onChangeScore = async (prompt: any, score: number) => {
 </script>
 
 <template>
-  <div class="flex h-full content-center items-center justify-center">
+  <div class="flex items-center content-center justify-center h-full">
     <div
       class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
       @scroll="onScroll"
@@ -207,12 +221,12 @@ const onChangeScore = async (prompt: any, score: number) => {
               }"
               @click="onChangeScore(prompt, 1)"
             >
-              <div class="absolute top-px text-xs font-semibold">{{ prompt.abbreviation }}</div>
+              <div class="absolute text-xs font-semibold top-px">{{ prompt.abbreviation }}</div>
               <div v-if="prompt.score">{{ prompt.score }}</div>
               <Icon v-else icon="stash:plus-solid" class="text-5xl" />
             </div>
             <div
-              class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white px-5"
+              class="flex items-center justify-center h-5 px-5 border rounded border-slate-5 bg-pure-white"
               :class="{
                 'cursor-wait':
                   (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
@@ -222,7 +236,7 @@ const onChangeScore = async (prompt: any, score: number) => {
               @click="onChangeScore(prompt, -1)"
             >
               <div
-                class="h-1 w-6 shrink-0 rounded transition-all"
+                class="w-6 h-1 transition-all rounded shrink-0"
                 :class="{ 'bg-slate-5': !prompt.score, 'bg-slate-6': prompt.score }"
               ></div>
             </div>
@@ -232,32 +246,32 @@ const onChangeScore = async (prompt: any, score: number) => {
     </div>
   </div>
 
-  <div class="shrink-0 space-y-2" :class="{ '-translate-y-4': is_collapsed }">
-    <div class="flex h-2 items-center justify-center gap-2">
+  <div class="space-y-2 shrink-0" :class="{ '-translate-y-4': is_collapsed }">
+    <div class="flex items-center justify-center h-2 gap-2">
       <div
         v-for="n in pageCount"
         :key="n"
         :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-        class="h-2 w-2 rounded-full transition-all"
+        class="w-2 h-2 transition-all rounded-full"
       ></div>
     </div>
     <div v-if="!is_collapsed">
       <div
         v-if="measurement?.target?.prompting_format === 'classic'"
-        class="text-center text-xs font-medium text-slate-7"
+        class="text-xs font-medium text-center text-slate-7"
       >
         Goal: {{ measurement.target?.goal }} attempt(s)
         {{ measurement.target?.success_metric }} prompt
       </div>
       <div
         v-if="measurement?.target?.prompting_format === 'custom'"
-        class="text-center text-xs font-medium text-slate-7"
+        class="text-xs font-medium text-center text-slate-7"
       >
         <span v-if="measurement?.target?.success_metric === 'equal to or greater than goal'">
           Goal: ≥ {{ `${measurement?.target?.goal}%` }}
         </span>
         <span v-if="measurement?.target?.success_metric === 'less than goal'">
-          Goal: < {{ `${measurement?.target?.goal}%` }}
+          Goal: {{ '<' }} {{ `${measurement?.target?.goal}%` }}
         </span>
         <span class="w-2 shrink-0"></span>
         Score {{ `${currentScore}%` }}

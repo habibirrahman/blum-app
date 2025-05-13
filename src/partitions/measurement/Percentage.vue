@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -14,6 +15,7 @@ interface Props {
   is_collapsed: boolean
 }
 interface Emits {
+  (e: 'toggle-updated', bool: boolean): void
   (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
@@ -75,6 +77,17 @@ const percentageScore = computed<number>(() => {
 const percentageLoading = ref<boolean>(false)
 const percentageLoadingBox = ref<PercentageBox['key'] | null>(null)
 
+watch(
+  () => percentageLoadingBox.value,
+  (val) => {
+    if (val === null) {
+      emit('toggle-updated', true)
+    } else {
+      emit('toggle-updated', false)
+    }
+  }
+)
+
 const onSavePercentage = debounce(async function (box: PercentageBox) {
   let val = null
   if (box.value === null) val = true
@@ -122,7 +135,7 @@ const onChangePercentage = async (box: PercentageBox) => {
 </script>
 
 <template>
-  <div class="flex h-full content-center items-center justify-center">
+  <div class="flex items-center content-center justify-center h-full">
     <div
       class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
       @scroll="onScroll"
@@ -134,7 +147,7 @@ const onChangePercentage = async (box: PercentageBox) => {
         class="flex w-[calc(320px-32px)] shrink-0 snap-start justify-center"
       >
         <div
-          class="flex max-w-72 flex-wrap content-center items-start justify-center transition-all"
+          class="flex flex-wrap items-start content-center justify-center transition-all max-w-72"
           :class="{
             'gap-x-4 gap-y-4': !is_collapsed,
             'gap-x-2 gap-y-2': is_collapsed
@@ -143,7 +156,7 @@ const onChangePercentage = async (box: PercentageBox) => {
           <div
             v-for="box in percentageBoxes"
             :key="box.key"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded border text-2xl transition-all"
+            class="flex items-center justify-center w-10 h-10 text-2xl transition-all border rounded shrink-0"
             :class="{
               'pointer-events-none':
                 percentageLoading || sessionStore.session?.status !== 'ongoing',
@@ -161,18 +174,18 @@ const onChangePercentage = async (box: PercentageBox) => {
     </div>
   </div>
 
-  <div class="shrink-0 space-y-2" :class="{ '-translate-y-2': is_collapsed }">
-    <div class="flex h-2 items-center justify-center gap-2">
+  <div class="space-y-2 shrink-0" :class="{ '-translate-y-2': is_collapsed }">
+    <div class="flex items-center justify-center h-2 gap-2">
       <div
         v-for="n in pageCount"
         :key="n"
         :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-        class="h-2 w-2 rounded-full transition-all"
+        class="w-2 h-2 transition-all rounded-full"
       ></div>
     </div>
     <div
       v-if="!is_collapsed"
-      class="flex items-center justify-center gap-2 text-center text-xs font-medium text-slate-7"
+      class="flex items-center justify-center gap-2 text-xs font-medium text-center text-slate-7"
     >
       <div>Goal: {{ measurement.target?.goal }}%</div>
       <div>Score: {{ percentageScore.toFixed(0) }}%</div>
