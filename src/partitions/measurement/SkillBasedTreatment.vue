@@ -251,13 +251,13 @@ const getCode = (id: number, data: 'task_code' | 'prompt' | 'problem_behavior') 
 
 const perPage = computed<number>(() => (props.is_collapsed ? 3 : 9))
 const pageCount = computed<number>(() => {
-  const prompts = [...SBTPrompts.value] || []
+  const prompts = [...SBTPrompts.value]
   const boxes = prompts.length
   return Math.ceil(boxes / perPage.value)
 })
 
 const promptBoxesPages = computed<Prompt[][]>(() => {
-  const prompts = [...SBTPrompts.value] || []
+  const prompts = [...SBTPrompts.value]
   const res = []
   for (let idx = 1; idx <= pageCount.value; idx++) {
     const start = (idx - 1) * perPage.value
