@@ -1,6 +1,7 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
@@ -14,6 +15,7 @@ interface Props {
   is_collapsed: boolean
 }
 interface Emits {
+  (e: 'toggle-updated', bool: boolean): void
   (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
@@ -25,6 +27,17 @@ onMounted(() => {
 })
 
 const scoreLoading = ref<boolean>(false)
+
+watch(
+  () => scoreLoading.value,
+  (val) => {
+    if (!val) {
+      emit('toggle-updated', true)
+    } else {
+      emit('toggle-updated', false)
+    }
+  }
+)
 
 const onSaveScore = debounce(async function (score: number) {
   const params: UpdateMeasurementResultsParams = {

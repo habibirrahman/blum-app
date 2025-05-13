@@ -283,6 +283,11 @@ const onStartSession = () => {
                 <div>Number of trials: {{ measurement.target.number_of_trial }} trial(s)</div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
               </div>
+              <div v-if="measurement.target?.type === 'Target::TrialByTrial'" class="space-y-0.5">
+                <div>Goal: {{ measurement.target.goal }}%</div>
+                <div>Number of minimum trial: {{ measurement.target.number_of_trial }} trial(s)</div>
+                <div>Success metric: {{ measurement.target?.success_metric }}</div>
+              </div>
               <div v-if="measurement.target?.type === 'Target::Pir'" class="space-y-0.5">
                 <div>Goal: {{ measurement.target.goal }}%</div>
                 <div>Interval: {{ measurement.target.interval }} minute(s)</div>

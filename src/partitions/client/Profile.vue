@@ -1,13 +1,11 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import AppChip from '@/components/AppChip.vue'
 import { displayDate, getClientDischargeReason } from '@/lib/func'
 
-const route = useRoute()
-const router = useRouter()
 const appStore = useAppStore()
 const clientStore = useClientStore()
 
@@ -49,12 +47,12 @@ const clientTags = computed<ClientTag[]>(() => {
       <div class="text-2xl font-bold uppercase">{{ clientStore.client?.name?.charAt(0) }}</div>
     </div>
     <div class="flex flex-col items-center gap-2">
-      <div class="text-center text-lg font-semibold">{{ clientStore.client?.name }}</div>
+      <div class="text-lg font-semibold text-center">{{ clientStore.client?.name }}</div>
       <AppChip :chip="clientStore.client?.status" />
     </div>
     <div
       v-if="clientTags.length"
-      class="flex flex-wrap content-center items-center justify-center gap-1"
+      class="flex flex-wrap items-center content-center justify-center gap-1"
     >
       <div
         v-for="tag in clientTags"

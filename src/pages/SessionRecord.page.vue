@@ -156,6 +156,17 @@ const recordingTime = computed<string>(() => {
   return `${hours}:${minutes}:${seconds}`
 })
 
+const updatingMeasurementIds = ref<Measurement['id'][]>([])
+const onToggleUpdatedMeasurment = (payload: { id: Measurement['id']; updated: boolean }) => {
+  if (payload.updated) {
+    updatingMeasurementIds.value = updatingMeasurementIds.value.filter((i) => i !== payload.id)
+  } else {
+    if (!updatingMeasurementIds.value.includes(payload.id)) {
+      updatingMeasurementIds.value.push(payload.id)
+    }
+  }
+}
+
 const runningDurationIds = ref<Measurement['id'][]>([])
 const onToggleRunningDuration = (data: Measurement) => {
   const found = runningDurationIds.value.includes(data.id)
@@ -342,7 +353,7 @@ const onTrunOffAllAndEndSession = async () => {
         measurement: { is_dropped: true },
         data_result: { ...measurement, is_dropped: true }
       }
-      const { success } = await sessionStore.updateMeasurement(params)
+      await sessionStore.updateMeasurement(params)
     }
   }
   endSessionStatus.value = 'normal'
@@ -473,7 +484,7 @@ const onExitSession = async () => {
     <AppButton
       v-if="sessionStore.session?.status === 'ongoing'"
       class="px-4"
-      :disabled="!appStore.network_status.connected"
+      :disabled="!appStore.network_status.connected || updatingMeasurementIds.length > 0"
       @click="openEndSession"
     >
       {{ appStore.network_status.connected ? 'End' : 'Offline' }}
@@ -547,6 +558,7 @@ const onExitSession = async () => {
           :counter="counter"
           :review_mode="showReviewMode"
           :is_running="runningDurationIds.includes(measurement.id)"
+          @toggle-updated="onToggleUpdatedMeasurment($event)"
           @toggle-running="onToggleRunningDuration(measurement)"
           @toggle-saved="onToggleSavedSbt($event)"
           @click="onFocusMeasurement(measurement)"
@@ -580,6 +592,7 @@ const onExitSession = async () => {
         :counter="counter"
         :is_collapsed="isMeasurementCollapsed"
         :is_running="runningDurationIds.includes(fixedMeasurement.id)"
+        @toggle-updated="onToggleUpdatedMeasurment($event)"
         @toggle-running="onToggleRunningDuration(fixedMeasurement)"
         @toggle-saved="onToggleSavedSbt($event)"
         @toggle-collapsed="isMeasurementCollapsed = $event"

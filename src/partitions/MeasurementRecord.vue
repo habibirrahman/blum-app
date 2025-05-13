@@ -16,6 +16,7 @@ import Probing from './measurement/Probing.vue'
 import { useClientStore } from '@/stores/client.store'
 import SkillBasedTreatment from './measurement/SkillBasedTreatment.vue'
 import { useToast } from 'vue-toastification'
+import TrialByTrial from './measurement/TrialByTrial.vue'
 
 const toast = useToast()
 const sessionStore = useSessionStore()
@@ -29,6 +30,7 @@ interface Props {
   is_running?: boolean
 }
 interface Emits {
+  (e: 'toggle-updated', payload: { id: Measurement['id']; updated: boolean }): void
   (e: 'toggle-running'): void
   (e: 'toggle-saved', payload: { id: Measurement['id']; saved: boolean }): void
   (e: 'toggle-collapsed', bool: boolean): void
@@ -125,6 +127,10 @@ const onDrop = async (bool: boolean) => {
   if (data.is_dropped && props.is_running) {
     emit('toggle-running')
   }
+}
+
+const onToggleUpdated = (updated: boolean) => {
+  emit('toggle-updated', { id: props.measurement.id, updated })
 }
 
 // comment property
@@ -449,7 +455,11 @@ const onToggleSaved = (saved: boolean) => {
               </div>
             </div>
           </div>
-          <div v-else class="flex flex-col justify-between flex-grow h-full">
+          <div
+            v-else
+            :key="`measurement-card-${cardId}`"
+            class="flex flex-col justify-between flex-grow h-full"
+          >
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
               :measurement="measurement"
@@ -473,6 +483,7 @@ const onToggleSaved = (saved: boolean) => {
               v-if="measurementType.includes('Frequency')"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
+              @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
             />
             <PartialIntervalRecording
@@ -486,6 +497,14 @@ const onToggleSaved = (saved: boolean) => {
               v-if="measurementType.includes('Percentage')"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
+              @toggle-updated="onToggleUpdated($event)"
+              @fetch-session="emit('fetch-session')"
+            />
+            <TrialByTrial
+              v-if="measurementType.includes('TrialByTrial')"
+              :measurement="measurement"
+              :is_collapsed="is_collapsed"
+              @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
             />
             <Probing
@@ -501,6 +520,7 @@ const onToggleSaved = (saved: boolean) => {
               :measurement_results="measurement.results || {}"
               :target="target"
               :is_collapsed="is_collapsed"
+              @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
             />
             <SkillBasedTreatment

@@ -18,9 +18,11 @@ export const getMeasurementType = (type?: MeasurementType): string => {
     'Measurement::Duration': 'Duration',
     'Measurement::Frequency': 'Frequency',
     'Measurement::Percentage': 'Percentage',
-    'Measurement::Pir': 'Partial interval recording',
+    'Measurement::TrialByTrial': 'Trial-by-Trial',
+    'Measurement::Pir': 'Partial Interval Recording',
     'Measurement::Probing': 'Probing',
-    'Measurement::Prompting': 'Prompting'
+    'Measurement::Prompting': 'Prompting',
+    'Measurement::Sbt': 'Skill-Based Treatment (SBT)'
   }
   return arr[type] || ''
 }
@@ -31,6 +33,7 @@ export const getTargetType = (type?: TargetType): string => {
     'Target::Duration': 'Duration',
     'Target::Frequency': 'Frequency',
     'Target::Percentage': 'Percentage',
+    'Target::TrialByTrial': 'Trial-by-Trial',
     'Target::Pir': 'Partial Interval Recording',
     'Target::Prompting': 'Prompting',
     'Target::Sbt': 'Skill-Based Treatment (SBT)'
@@ -46,6 +49,7 @@ export const getClientDischargeReason = (reason?: ClientDischargeReason): string
     expectations_did_not_match: "Expectations didn't match",
     schedule_conflict: 'Schedule conflict',
     moving: 'Moving',
+    too_expensive: 'Too expensive',
     other: 'Other'
   }
   return arr[reason] || ''
@@ -76,9 +80,9 @@ export const onlyUniqueId = (value: any, index: number, array: any[]) => {
 
 export const getErrorMessage = (value: any = '') => {
   function concatObjectKeyValue(obj: any): string[] {
-    let result = []
-    for (let key in obj) {
-      if (obj.hasOwnProperty(key)) {
+    const result = []
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const temp = obj[key]
         if (typeof temp === 'object') {
           result.push(concatObjectKeyValue(obj[key]))

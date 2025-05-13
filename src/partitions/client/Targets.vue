@@ -1,7 +1,7 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useAppStore } from '@/stores/app.store'
+import { useRoute } from 'vue-router'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
 import type { Target, TargetStatus } from '@/lib/types'
@@ -15,8 +15,6 @@ import { getTargetType } from '@/lib/func'
 import TargetItemLoader from '@/components/skeletons/TargetItemLoader.vue'
 
 const route = useRoute()
-const router = useRouter()
-const appStore = useAppStore()
 const clientStore = useClientStore()
 
 const targetsLoading = ref<boolean>(false)
@@ -362,6 +360,20 @@ const onOpenTarget = async (target: Target) => {
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Number of trials:</div>
+            <div class="text-sm">{{ targetDetails?.number_of_trial }} trial(s)</div>
+          </div>
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
+            <div class="text-xs text-slate-8">Success metric:</div>
+            <div class="text-sm capitalize-first">{{ targetDetails?.success_metric }}</div>
+          </div>
+        </div>
+        <div v-if="targetDetails?.type === 'Target::TrialByTrial'" class="flex flex-col">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
+            <div class="text-xs text-slate-8">Goal:</div>
+            <div class="text-sm">{{ targetDetails?.goal }}%</div>
+          </div>
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
+            <div class="text-xs text-slate-8">Number of minimum trial:</div>
             <div class="text-sm">{{ targetDetails?.number_of_trial }} trial(s)</div>
           </div>
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
