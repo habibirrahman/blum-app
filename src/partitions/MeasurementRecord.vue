@@ -20,6 +20,7 @@ import Probing from './measurement/Probing.vue'
 import { useClientStore } from '@/stores/client.store'
 import SkillBasedTreatment from './measurement/SkillBasedTreatment.vue'
 import { useToast } from 'vue-toastification'
+import TrialByTrial from './measurement/TrialByTrial.vue'
 
 const toast = useToast()
 const sessionStore = useSessionStore()
@@ -332,6 +333,13 @@ const onToggleSaved = (saved: boolean) => {
             />
             <Percentage
               v-if="measurementType.includes('Percentage')"
+              :measurement="measurement"
+              :is_collapsed="is_collapsed"
+              @toggle-updated="onToggleUpdated($event)"
+              @fetch-session="emit('fetch-session')"
+            />
+            <TrialByTrial
+              v-if="measurementType.includes('TrialByTrial')"
               :measurement="measurement"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
