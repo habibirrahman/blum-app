@@ -4,8 +4,8 @@ import { computed } from 'vue'
 interface Props {
   type?: 'button' | 'submit'
   kind?: 'primary' | 'outline' | 'plain'
-  color?: 'purple' | 'lime' | 'teal'
-  size?:'sm'| 'base' | 'lg'
+  color?: 'purple' | 'lime' | 'teal' | 'grass' | 'tomato' | 'prim' | 'tomato-7'
+  size?: 'sm' | 'base' | 'lg'
   disabled?: boolean
   loading?: boolean
 }
@@ -36,9 +36,9 @@ const currentClass = computed<string>(() => {
 
 <template>
   <button
-    class="relative flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-300 border rounded"
+    class="relative flex items-center justify-center gap-2 rounded border text-sm font-semibold transition-all duration-300"
     :class="[
-      size==='sm' ? 'py-1 px-1.5' : size === 'lg' ? 'px-3 py-3' : 'px-2 py-2',
+      size === 'sm' ? 'px-1.5 py-1' : size === 'lg' ? 'px-3 py-3' : 'px-2 py-2',
       isDisabled || isLoading ? 'pointer-events-none' : '',
       currentClass
     ]"
@@ -68,6 +68,30 @@ const currentClass = computed<string>(() => {
     @apply border-teal-7 bg-teal-7 text-white;
     &.app-button-loading {
       @apply border-teal-10 bg-teal-10;
+    }
+  }
+  &.app-button-grass {
+    @apply border-grass-2 bg-grass-2 text-grass-7;
+    &.app-button-loading {
+      @apply border-grass-10 bg-grass-10;
+    }
+  }
+  &.app-button-tomato {
+    @apply border-tomato-2 bg-tomato-2 text-tomato-7;
+    &.app-button-loading {
+      @apply border-tomato-5 bg-tomato-5;
+    }
+  }
+  &.app-button-tomato-7 {
+    @apply border-tomato-7 bg-tomato-7 text-pure-white;
+    &.app-button-loading {
+      @apply border-pure-white bg-pure-white;
+    }
+  }
+  &.app-button-prim {
+    @apply border-prim-2 bg-prim-2 text-light-purple-5;
+    &.app-button-loading {
+      @apply border-prim-5 bg-prim-5;
     }
   }
   &.app-button-disabled {

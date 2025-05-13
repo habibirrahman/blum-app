@@ -171,6 +171,7 @@ export type MeasurementType =
   | 'Measurement::Probing'
   | 'Measurement::Prompting'
   | 'Measurement::Sbt'
+  | 'Measurement::Latency'
 export interface Measurement {
   id?: number
   type?: MeasurementType
@@ -197,6 +198,7 @@ export type TargetType =
   | 'Target::Pir'
   | 'Target::Prompting'
   | 'Target::Sbt'
+  | 'Target::Latency'
 export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued'
 export type TargetPromptingFormat = 'classic' | 'custom'
 export interface Target {

@@ -257,7 +257,16 @@ const isAllMeasurementResultEmpty = computed<boolean>(() => {
       if (arr.length > 0) isResultsEmpty = false
     }
     if (i.type === 'Measurement::Duration') {
-      if (i.results['seconds'] > 0) isResultsEmpty = false
+      for (let key in i.results) {
+        const result = i.results[key]
+        if (result && result.seconds !== 0 && result.string !== '00:00:00') isResultsEmpty = false
+      }
+    }
+    if (i.type === 'Measurement::Latency') {
+      for (let key in i.results) {
+        const result = i.results[key]
+        if (result && result.seconds !== 0 && result.string !== '00:00:00') isResultsEmpty = false
+      }
     }
     if (i.type === 'Measurement::Pir') {
       for (let key in i.results) {
