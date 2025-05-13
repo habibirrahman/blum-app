@@ -2,8 +2,6 @@
 import { useSessionStore } from '@/stores/session.store'
 import type { Measurement } from '@/lib/types'
 import AppButton from '@/components/AppButton.vue'
-import { useToast } from 'vue-toastification'
-import { ref } from 'vue'
 
 const sessionStore = useSessionStore()
 
