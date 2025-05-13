@@ -1,12 +1,7 @@
 <script setup lang="ts">
-import {
-  useSessionStore,
-  type UpdateMeasurementParams,
-  type UpdateMeasurementResultsParams
-} from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useAppStore } from '@/stores/app.store'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import { type MeasurementType, type Measurement, type Target, type TargetType } from '@/lib/types'
@@ -23,7 +18,6 @@ import SkillBasedTreatment from './measurement/SkillBasedTreatment.vue'
 import { useToast } from 'vue-toastification'
 
 const toast = useToast()
-const appStore = useAppStore()
 const sessionStore = useSessionStore()
 const clientStore = useClientStore()
 
@@ -417,8 +411,18 @@ const onToggleSaved = (saved: boolean) => {
         :class="{ 'no-scrollbar overflow-y-auto': !is_collapsed }"
       >
         <div v-if="!is_collapsed" class="flex flex-col gap-1">
-          <div class="text-sm font-semibold text-slate-7">
-            {{ measurement.target?.curriculum_name }}
+          <div
+            class="flex items-center gap-x-2"
+            :class="{ 'flex-wrap': display === 'target' || display === 'comment' }"
+          >
+            <div class="text-sm font-semibold text-slate-7">
+              {{ measurement.target?.curriculum_name }}
+            </div>
+            <div v-if="measurementType.includes('Probing')" class="shrink-0">
+              <div class="rounded-full bg-lime-2 px-2 text-sm font-semibold text-lime-7">
+                Probing
+              </div>
+            </div>
           </div>
           <div
             class="text-sm font-semibold text-slate-9"
@@ -668,7 +672,6 @@ const onToggleSaved = (saved: boolean) => {
             type="textarea"
             placeholder="Type your comment here..."
             v-model="commentInput"
-            borderless
             class="mt-2 h-full"
           />
           <div class="sticky bottom-0 w-full bg-white py-3">
