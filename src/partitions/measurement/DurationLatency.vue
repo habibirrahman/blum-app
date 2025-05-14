@@ -183,7 +183,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
   <div v-if="reset_confirmation" class="flex h-full flex-col items-center justify-center gap-2">
     <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
     <div class="text-center text-slate-8">
-      This will clear all existing lap records and begin again from Lap 1. You won’t be able to
+      This will clear all existing lap records and begin again from Lap 1. You won't be able to
       recover previous data.
     </div>
     <div class="flex w-full items-center justify-center gap-2 pr-2">
