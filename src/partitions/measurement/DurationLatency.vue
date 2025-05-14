@@ -12,9 +12,8 @@ interface Props {
   update_loading: boolean
   is_collapsed: boolean
   laps: { lapNumber: number; time: string }[]
-  lapLoading: boolean
-  lapsLoadingReset: boolean
-  currentLapTime: string
+  lap_loading: boolean
+  current_lap_time: string
   reset_confirmation: boolean
 }
 interface Emits {
@@ -29,7 +28,7 @@ const emit = defineEmits<Emits>()
 
 const getTextColorClass = (lap: { lapNumber: number; time: string }) => {
   if (props.is_started && lap.lapNumber === props.laps.length - 1) {
-    const timeToCheck = props.currentLapTime
+    const timeToCheck = props.current_lap_time
 
     if (props.measurement.target?.success_metric === 'less than goal') {
       return isTimeSuccessful(timeToCheck, 'less') ? 'text-grass-7' : 'text-tomato-7'
@@ -94,7 +93,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 <template>
   <div
     v-if="!reset_confirmation"
-    class="flex flex-col items-center content-center justify-center flex-grow-0 h-full transition-all gap-x-3"
+    class="flex h-full flex-grow-0 flex-col content-center items-center justify-center gap-x-3 transition-all"
     :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
   >
     <div v-if="is_collapsed" class="font-semibold text-slate-7">
@@ -110,10 +109,10 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
       <div class="flex justify-center pb-2">:</div>
       <div class="flex justify-center">{{ timer.split(':')[2] }}</div>
     </div>
-    <div class="flex items-center w-full gap-3">
+    <div class="flex w-full items-center gap-3">
       <AppButton
         v-if="is_started || (!is_started && laps && laps.length === 0)"
-        :loading="lapLoading"
+        :loading="lap_loading"
         class="w-2/4 rounded-full"
         color="prim"
         :disabled="!is_started && sessionStore.session?.status !== 'ongoing'"
@@ -145,7 +144,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
     </div>
     <div
       v-if="laps.length > 0 && !is_collapsed"
-      class="w-full mt-2 overflow-scroll"
+      class="mt-2 w-full overflow-scroll"
       style="max-height: calc(100vh - 10rem); scrollbar-width: none"
     >
       <div
@@ -154,20 +153,20 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
       >
         <div
           v-if="measurement.target?.success_metric === 'less than goal'"
-          class="flex justify-between py-2 pb-2 border-b"
+          class="flex justify-between border-b py-2 pb-2"
         >
           <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
           <div :class="getTextColorClass(lap)" class="font-semibold">
-            {{ is_started && lap.lapNumber === laps.length - 1 ? currentLapTime : lap.time }}
+            {{ is_started && lap.lapNumber === laps.length - 1 ? current_lap_time : lap.time }}
           </div>
         </div>
         <div
-          class="flex justify-between py-2 pb-2 border-b"
+          class="flex justify-between border-b py-2 pb-2"
           v-if="measurement.target?.success_metric === 'equal to or greater than goal'"
         >
           <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
           <div :class="getTextColorClass(lap)" class="font-semibold">
-            {{ is_started && lap.lapNumber === laps.length - 1 ? currentLapTime : lap.time }}
+            {{ is_started && lap.lapNumber === laps.length - 1 ? current_lap_time : lap.time }}
           </div>
         </div>
       </div>
@@ -176,18 +175,18 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
   <div
     v-if="!is_collapsed && !reset_confirmation"
-    class="text-xs font-medium text-center shrink-0 text-slate-7"
+    class="shrink-0 text-center text-xs font-medium text-slate-7"
   >
     Goal: {{ measurement.target?.goal_time }}
   </div>
 
-  <div v-if="reset_confirmation" class="flex flex-col items-center justify-center h-full gap-2">
+  <div v-if="reset_confirmation" class="flex h-full flex-col items-center justify-center gap-2">
     <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
     <div class="text-center text-slate-8">
       This will clear all existing lap records and begin again from Lap 1. You won’t be able to
       recover previous data.
     </div>
-    <div class="flex items-center justify-center w-full gap-2 pr-2">
+    <div class="flex w-full items-center justify-center gap-2 pr-2">
       <AppButton kind="plain" class="w-2/4" @click="$emit('reset-laps-cancel')">Cancel</AppButton>
       <AppButton class="w-2/4" color="tomato-7" @click="$emit('reset-laps')">Reset</AppButton>
     </div>
