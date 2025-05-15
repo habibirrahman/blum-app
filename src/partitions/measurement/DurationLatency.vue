@@ -22,6 +22,7 @@ interface Emits {
   (e: 'reset-laps-confirm'): void
   (e: 'reset-laps-cancel'): void
   (e: 'reset-laps'): void
+  (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()

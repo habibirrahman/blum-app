@@ -534,7 +534,13 @@ const onToggleSaved = (saved: boolean) => {
             <!-- target information -->
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div>{{ getTargetType(measurement.target?.type) }}</div>
-              <div v-if="measurement.target?.type === 'Target::Duration'" class="space-y-0.5">
+              <div
+                v-if="
+                  measurement.target?.type === 'Target::Duration' ||
+                  measurement.target?.type === 'Target::Latency'
+                "
+                class="space-y-0.5"
+              >
                 <div>Goal time: {{ measurement.target.goal_time }}</div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
               </div>

@@ -17,12 +17,13 @@ export const getMeasurementType = (type?: MeasurementType): string => {
   const arr: { [key: string]: string } = {
     'Measurement::Duration': 'Duration',
     'Measurement::Frequency': 'Frequency',
+    'Measurement::Latency': 'Latency',
     'Measurement::Percentage': 'Percentage',
-    'Measurement::TrialByTrial': 'Trial-by-Trial',
     'Measurement::Pir': 'Partial Interval Recording',
     'Measurement::Probing': 'Probing',
     'Measurement::Prompting': 'Prompting',
-    'Measurement::Sbt': 'Skill-Based Treatment (SBT)'
+    'Measurement::Sbt': 'Skill-Based Treatment (SBT)',
+    'Measurement::TrialByTrial': 'Trial-by-Trial'
   }
   return arr[type] || ''
 }
@@ -32,11 +33,12 @@ export const getTargetType = (type?: TargetType): string => {
   const arr: { [key: string]: string } = {
     'Target::Duration': 'Duration',
     'Target::Frequency': 'Frequency',
+    'Target::Latency': 'Latency',
     'Target::Percentage': 'Percentage',
-    'Target::TrialByTrial': 'Trial-by-Trial',
     'Target::Pir': 'Partial Interval Recording',
     'Target::Prompting': 'Prompting',
-    'Target::Sbt': 'Skill-Based Treatment (SBT)'
+    'Target::Sbt': 'Skill-Based Treatment (SBT)',
+    'Target::TrialByTrial': 'Trial-by-Trial'
   }
   return arr[type] || ''
 }
@@ -103,13 +105,12 @@ export function debounce<T extends (...args: any[]) => void>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {
-  let timer: ReturnType<typeof setTimeout>;
+  let timer: ReturnType<typeof setTimeout>
 
   return function (...args: Parameters<T>) {
-    clearTimeout(timer);
+    clearTimeout(timer)
     timer = setTimeout(() => {
-      fn(...args);
-    }, delay);
-  };
+      fn(...args)
+    }, delay)
+  }
 }
-

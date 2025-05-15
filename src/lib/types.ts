@@ -166,13 +166,13 @@ export interface Comment {
 export type MeasurementType =
   | 'Measurement::Duration'
   | 'Measurement::Frequency'
+  | 'Measurement::Latency'
   | 'Measurement::Percentage'
-  | 'Measurement::TrialByTrial'
   | 'Measurement::Pir'
   | 'Measurement::Probing'
   | 'Measurement::Prompting'
   | 'Measurement::Sbt'
-  | 'Measurement::Latency'
+  | 'Measurement::TrialByTrial'
 export interface Measurement {
   id?: number
   type?: MeasurementType
@@ -195,12 +195,12 @@ export interface Measurement {
 export type TargetType =
   | 'Target::Duration'
   | 'Target::Frequency'
+  | 'Target::Latency'
   | 'Target::Percentage'
-  | 'Target::TrialByTrial'
   | 'Target::Pir'
   | 'Target::Prompting'
   | 'Target::Sbt'
-  | 'Target::Latency'
+  | 'Target::TrialByTrial'
 export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued'
 export type TargetPromptingFormat = 'classic' | 'custom'
 export interface Target {
