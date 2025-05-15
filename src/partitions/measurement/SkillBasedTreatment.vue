@@ -481,386 +481,381 @@ const onSaveEditTrial = async () => {
 </script>
 
 <template>
-  <div
-    class="flex h-full flex-grow flex-col justify-between"
-    :class="{
-      'gap-2': !is_collapsed,
-      'pl-2': is_collapsed
-    }"
-  >
-    <div class="relative flex h-full flex-col">
-      <!-- ratio boxes -->
+  <div class="relative flex h-full flex-grow flex-col">
+    <!-- ratio boxes -->
+    <div
+      v-if="!is_collapsed"
+      :id="`sbt-ratio-${measurement.id}-${JSON.stringify(currentTrial)}`"
+      class="flex flex-wrap items-center justify-center gap-1 pb-2"
+    >
       <div
-        v-if="!is_collapsed"
-        :id="`sbt-ratio-${measurement.id}-${JSON.stringify(currentTrial)}`"
-        class="flex flex-wrap items-center justify-center gap-1 pb-2"
+        v-for="taskCode in ratioScores"
+        :key="taskCode.id"
+        class="relative flex h-10 w-10 flex-col-reverse items-center overflow-hidden rounded border transition-all duration-300"
+        :class="{
+          'border-slate-2 bg-slate-2': taskCode.count <= 0,
+          'border-teal-1 bg-teal-1': taskCode.count >= 1,
+          'border-teal-7 bg-teal-1': taskCode.id === currentTrial.target_task_id
+        }"
       >
-        <div
-          v-for="taskCode in ratioScores"
-          :key="taskCode.id"
-          class="relative flex h-10 w-10 flex-col-reverse items-center overflow-hidden rounded border transition-all duration-300"
-          :class="{
-            'border-slate-2 bg-slate-2': taskCode.count <= 0,
-            'border-teal-1 bg-teal-1': taskCode.count >= 1,
-            'border-teal-7 bg-teal-1': taskCode.id === currentTrial.target_task_id
-          }"
-        >
-          <div v-for="(ratio, idx) in taskCode.ratios" :key="idx">
-            <div
-              v-if="ratio.prompt_id"
-              class="relative w-10 bg-teal-3"
-              :style="{
-                height: 2.5 / taskCode.max_ratio + 'rem'
-              }"
-            >
-              <div
-                v-if="ratio.target_problem_behavior_id"
-                class="absolute right-0 top-0 z-10 h-full bg-tomato-6"
-                :style="{ width: '0.3125rem' }"
-              ></div>
-            </div>
-          </div>
+        <div v-for="(ratio, idx) in taskCode.ratios" :key="idx">
           <div
-            class="absolute left-0 top-1/2 w-full -translate-y-1/2 text-center text-[10px] font-bold"
-            :class="{
-              'text-slate-6': taskCode.count === 0,
-              'text-teal-7': taskCode.count > 0 || taskCode.id === currentTrial.target_task_id
+            v-if="ratio.prompt_id"
+            class="relative w-10 bg-teal-3"
+            :style="{
+              height: 2.5 / taskCode.max_ratio + 'rem'
             }"
           >
-            {{ isOpenTrialHistory ? `${taskCode.average}%` : taskCode.code }}
+            <div
+              v-if="ratio.target_problem_behavior_id"
+              class="absolute right-0 top-0 z-10 h-full bg-tomato-6"
+              :style="{ width: '0.3125rem' }"
+            ></div>
+          </div>
+        </div>
+        <div
+          class="absolute left-0 top-1/2 w-full -translate-y-1/2 text-center text-[10px] font-bold"
+          :class="{
+            'text-slate-6': taskCode.count === 0,
+            'text-teal-7': taskCode.count > 0 || taskCode.id === currentTrial.target_task_id
+          }"
+        >
+          {{ isOpenTrialHistory ? `${taskCode.average}%` : taskCode.code }}
+        </div>
+      </div>
+    </div>
+
+    <!-- select a value for new or edit trial -->
+    <div v-if="!isOpenTrialHistory || isOpenEditTrial" class="flex h-full flex-col">
+      <!-- header information for active trial -->
+      <div
+        class="flex shrink-0 items-center justify-between"
+        :class="{
+          'h-8': !is_collapsed,
+          'h-6': is_collapsed
+        }"
+      >
+        <div class="flex items-center gap-1">
+          <div class="text-sm text-slate-7">Current</div>
+          <div class="text-sm font-semibold text-teal-8">
+            {{ currentTrialData.task_code.code }}
+          </div>
+          <div
+            v-if="display === 'select-next-task' && !isOpenEditTrial"
+            class="text-sm font-semibold text-teal-8"
+          >
+            | {{ currentTrialData.average }}%
+          </div>
+          <Icon
+            v-if="display === 'select-prompt' && !isOpenEditTrial"
+            icon="ph:pencil-simple"
+            class="text-teal-7"
+            @click="onUndoTrial"
+          />
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="text-sm text-slate-7">Trial</div>
+          <div class="text-sm font-semibold text-teal-8">
+            {{ currentTrial.key }}
           </div>
         </div>
       </div>
 
-      <!-- select a value for new or edit trial -->
-      <div v-if="!isOpenTrialHistory || isOpenEditTrial" class="flex h-full flex-col">
-        <!-- header information for active trial -->
+      <div v-if="!isOpenProblemBehavior" class="h-full">
+        <!-- select a prompt -->
         <div
-          class="flex shrink-0 items-center justify-between"
-          :class="{
-            'h-8': !is_collapsed,
-            'h-6': is_collapsed
-          }"
+          v-if="display === 'select-prompt'"
+          class="flex h-full flex-col content-center items-center justify-center gap-2"
         >
-          <div class="flex items-center gap-1">
-            <div class="text-sm text-slate-7">Current</div>
-            <div class="text-sm font-semibold text-teal-8">
-              {{ currentTrialData.task_code.code }}
-            </div>
-            <div
-              v-if="display === 'select-next-task' && !isOpenEditTrial"
-              class="text-sm font-semibold text-teal-8"
-            >
-              | {{ currentTrialData.average }}%
-            </div>
-            <Icon
-              v-if="display === 'select-prompt' && !isOpenEditTrial"
-              icon="ph:pencil-simple"
-              class="text-teal-7"
-              @click="onUndoTrial"
-            />
-          </div>
-          <div class="flex items-center gap-1">
-            <div class="text-sm text-slate-7">Trial</div>
-            <div class="text-sm font-semibold text-teal-8">
-              {{ currentTrial.key }}
-            </div>
-          </div>
-        </div>
-
-        <div v-if="!isOpenProblemBehavior" class="h-full">
-          <!-- select a prompt -->
           <div
-            v-if="display === 'select-prompt'"
-            class="flex h-full flex-col content-center items-center justify-center gap-2"
+            :id="`sbt-scroll-${measurement.id}`"
+            class="scrolling-touch flex w-full max-w-72 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+            dir="ltr"
+            @scroll="onScroll"
           >
             <div
-              :id="`sbt-scroll-${measurement.id}`"
-              class="scrolling-touch flex w-full max-w-72 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
-              dir="ltr"
-              @scroll="onScroll"
+              v-for="(promptBoxes, idx) in promptBoxesPages"
+              :key="`${measurement.id}-sbt-prompt-boxes-${idx + 1}`"
+              :id="`${measurement.id}-sbt-prompt-boxes-${idx + 1}`"
+              class="flex w-full shrink-0 snap-center justify-center"
             >
               <div
-                v-for="(promptBoxes, idx) in promptBoxesPages"
-                :key="`${measurement.id}-sbt-prompt-boxes-${idx + 1}`"
-                :id="`${measurement.id}-sbt-prompt-boxes-${idx + 1}`"
-                class="flex w-full shrink-0 snap-center justify-center"
+                class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
+                :class="{ '-translate-y-1 scale-75': is_collapsed }"
               >
-                <div
-                  class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
-                  :class="{ '-translate-y-1 scale-75': is_collapsed }"
-                >
-                  <div v-for="(prompt, promptIdx) in promptBoxes" :key="promptIdx">
+                <div v-for="(prompt, promptIdx) in promptBoxes" :key="promptIdx">
+                  <div
+                    class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-95"
+                    :class="{
+                      'bg-teal-7': prompt.id === currentTrial.prompt_id,
+                      'bg-teal-1': prompt.id !== currentTrial.prompt_id
+                    }"
+                    @click="onChoosePrompt(prompt)"
+                  >
                     <div
-                      class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-95"
+                      class="text-[2rem] font-bold"
                       :class="{
-                        'bg-teal-7': prompt.id === currentTrial.prompt_id,
-                        'bg-teal-1': prompt.id !== currentTrial.prompt_id
+                        'text-white': prompt.id === currentTrial.prompt_id,
+                        'text-teal-7': prompt.id !== currentTrial.prompt_id
                       }"
-                      @click="onChoosePrompt(prompt)"
                     >
-                      <div
-                        class="text-[2rem] font-bold"
-                        :class="{
-                          'text-white': prompt.id === currentTrial.prompt_id,
-                          'text-teal-7': prompt.id !== currentTrial.prompt_id
-                        }"
-                      >
-                        {{ prompt.abbreviation }}
-                      </div>
+                      {{ prompt.abbreviation }}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div v-if="pageCount > 1" class="flex h-3 items-center justify-center gap-2">
-              <div
-                v-for="(n, idx) in pageCount"
-                :key="idx"
-                :class="{
-                  'bg-slate-7': n === page,
-                  'bg-slate-4': n !== page
-                }"
-                class="h-3 w-3 rounded-full transition-all duration-300"
-              ></div>
-            </div>
           </div>
-
-          <!-- select a next task -->
-          <div
-            v-if="display === 'select-next-task'"
-            class="flex h-full flex-col content-center items-center justify-center"
-            :class="{
-              'gap-4': !is_collapsed,
-              'gap-2': is_collapsed
-            }"
-          >
+          <div v-if="pageCount > 1" class="flex h-3 items-center justify-center gap-2">
             <div
-              v-if="currentTrial.prompt_id"
-              class="flex items-center text-center"
+              v-for="(n, idx) in pageCount"
+              :key="idx"
               :class="{
-                'flex-col gap-1': !is_collapsed,
-                'flex-row gap-2': is_collapsed
+                'bg-slate-7': n === page,
+                'bg-slate-4': n !== page
               }"
-            >
-              <span class="text-sm font-semibold text-slate-7">
-                {{ currentTrialData.prompt.name }}
-              </span>
-              <span
-                class="text-teal-7"
-                :class="{
-                  'text-5xl font-bold': !is_collapsed,
-                  'text-sm font-semibold': is_collapsed
-                }"
-              >
-                {{ currentTrialData.prompt.score }}%
-              </span>
-              <AppButton
-                v-if="!is_collapsed"
-                kind="plain"
-                size="sm"
-                @click="display = 'select-prompt'"
-              >
-                Change
-              </AppButton>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <div v-if="!is_collapsed" class="text-center text-sm text-slate-8">
-                {{ currentTrial.prompt_id ? 'Next' : 'Select a task to start' }}
-              </div>
-              <div
-                :class="{
-                  'scrollbar-lg max-w-[calc(100vw-6rem)] overflow-x-auto pb-2': is_collapsed
-                }"
-              >
-                <div
-                  class="flex items-center gap-2"
-                  :class="{ 'flex-wrap justify-center': !is_collapsed }"
-                >
-                  <AppButton
-                    v-for="taskCode in ratioScores"
-                    :key="taskCode.id"
-                    color="teal"
-                    :kind="taskCode.id === nextTask.id ? 'primary' : 'outline'"
-                    size="sm"
-                    class="shrink-0"
-                    @click="nextTask = taskCode"
-                  >
-                    {{ taskCode.code }} | {{ taskCode.count + 1 }}
-                  </AppButton>
-                </div>
-              </div>
-            </div>
+              class="h-3 w-3 rounded-full transition-all duration-300"
+            ></div>
           </div>
         </div>
 
-        <!-- select a problem behavior -->
+        <!-- select a next task -->
         <div
-          v-if="isOpenProblemBehavior"
-          class="flex h-full w-full flex-col content-center items-center justify-center"
+          v-if="display === 'select-next-task'"
+          class="flex h-full flex-col content-center items-center justify-center"
           :class="{
-            'gap-2': !is_collapsed
+            'gap-4': !is_collapsed,
+            'gap-2': is_collapsed
           }"
         >
           <div
-            class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
-            :class="{ '-translate-y-1 scale-75': is_collapsed }"
+            v-if="currentTrial.prompt_id"
+            class="flex items-center text-center"
+            :class="{
+              'flex-col gap-1': !is_collapsed,
+              'flex-row gap-2': is_collapsed
+            }"
           >
-            <div v-for="(problemBehavior, idx) in SBTProblemBehaviors" :key="idx">
+            <span class="text-sm font-semibold text-slate-7">
+              {{ currentTrialData.prompt.name }}
+            </span>
+            <span
+              class="text-teal-7"
+              :class="{
+                'text-5xl font-bold': !is_collapsed,
+                'text-sm font-semibold': is_collapsed
+              }"
+            >
+              {{ currentTrialData.prompt.score }}%
+            </span>
+            <AppButton
+              v-if="!is_collapsed"
+              kind="plain"
+              size="sm"
+              @click="display = 'select-prompt'"
+            >
+              Change
+            </AppButton>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <div v-if="!is_collapsed" class="text-center text-sm text-slate-8">
+              {{ currentTrial.prompt_id ? 'Next' : 'Select a task to start' }}
+            </div>
+            <div
+              :class="{
+                'scrollbar-lg max-w-[calc(100vw-6rem)] overflow-x-auto pb-2': is_collapsed
+              }"
+            >
               <div
-                class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-90"
-                :class="{
-                  'h-[72px] w-[72px]': !is_collapsed,
-                  'h-[64px] w-[64px]': is_collapsed,
-                  'bg-tomato-7': problemBehavior.id === currentTrial.target_problem_behavior_id,
-                  'bg-tomato-1': problemBehavior.id !== currentTrial.target_problem_behavior_id
-                }"
-                @click="onChooseProblemBehavior(problemBehavior)"
+                class="flex items-center gap-2"
+                :class="{ 'flex-wrap justify-center': !is_collapsed }"
               >
-                <span
-                  class="text-[2rem] font-bold"
-                  :class="{
-                    'text-white': problemBehavior.id === currentTrial.target_problem_behavior_id,
-                    'text-tomato-7': problemBehavior.id !== currentTrial.target_problem_behavior_id
-                  }"
+                <AppButton
+                  v-for="taskCode in ratioScores"
+                  :key="taskCode.id"
+                  color="teal"
+                  :kind="taskCode.id === nextTask.id ? 'primary' : 'outline'"
+                  size="sm"
+                  class="shrink-0"
+                  @click="nextTask = taskCode"
                 >
-                  {{ problemBehavior.code }}
-                </span>
+                  {{ taskCode.code }} | {{ taskCode.count + 1 }}
+                </AppButton>
               </div>
             </div>
-          </div>
-          <div class="text-sm text-slate-8">
-            {{ currentTrialData.problem_behavior.code_definition }}
           </div>
         </div>
       </div>
 
-      <!-- view trial history -->
-      <div v-if="isOpenTrialHistory && !isOpenEditTrial" class="flex flex-col">
-        <div v-for="key in Object.keys(resultsState)" :key="key">
-          <div
-            v-if="resultsState[key].prompt_id"
-            class="flex items-center justify-between border-b border-slate-3 px-2 py-3"
-          >
-            <div class="flex items-center gap-2">
-              <div class="w-6 shrink-0 text-sm text-slate-8">{{ key }}.</div>
-              <div class="tex-sm font-semibold text-slate-7">
-                {{ getCode(resultsState[key].target_task_id, 'task_code') }}
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <div
-                v-if="resultsState[key].target_problem_behavior_id"
-                class="flex h-6 w-6 items-center justify-center rounded bg-tomato-7"
+      <!-- select a problem behavior -->
+      <div
+        v-if="isOpenProblemBehavior"
+        class="flex h-full w-full flex-col content-center items-center justify-center"
+        :class="{
+          'gap-2': !is_collapsed
+        }"
+      >
+        <div
+          class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
+          :class="{ '-translate-y-1 scale-75': is_collapsed }"
+        >
+          <div v-for="(problemBehavior, idx) in SBTProblemBehaviors" :key="idx">
+            <div
+              class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-90"
+              :class="{
+                'h-[72px] w-[72px]': !is_collapsed,
+                'h-[64px] w-[64px]': is_collapsed,
+                'bg-tomato-7': problemBehavior.id === currentTrial.target_problem_behavior_id,
+                'bg-tomato-1': problemBehavior.id !== currentTrial.target_problem_behavior_id
+              }"
+              @click="onChooseProblemBehavior(problemBehavior)"
+            >
+              <span
+                class="text-[2rem] font-bold"
+                :class="{
+                  'text-white': problemBehavior.id === currentTrial.target_problem_behavior_id,
+                  'text-tomato-7': problemBehavior.id !== currentTrial.target_problem_behavior_id
+                }"
               >
-                <span class="text-sm font-semibold text-white">
-                  {{ getCode(resultsState[key].target_problem_behavior_id, 'problem_behavior') }}
-                </span>
-              </div>
-              <div class="flex h-6 w-6 items-center justify-center rounded bg-teal-7">
-                <span class="text-sm font-semibold text-white">
-                  {{ getCode(resultsState[key].prompt_id, 'prompt') }}
-                </span>
-              </div>
-              <Icon icon="ph:pencil-simple" class="text-slate-8" @click="onOpenEditTrial(key)" />
+                {{ problemBehavior.code }}
+              </span>
             </div>
           </div>
-          <div
-            v-else-if="Object.keys(resultsState).length === 1"
-            class="py-4 text-center text-sm text-slate-8"
-          >
-            Trial history not found.
-          </div>
+        </div>
+        <div class="text-sm text-slate-8">
+          {{ currentTrialData.problem_behavior.code_definition }}
         </div>
       </div>
     </div>
 
-    <div v-if="!is_collapsed || display === 'select-next-task'">
-      <div v-if="isOpenProblemBehavior" class="flex-grow">
-        <AppButton
-          kind="outline"
-          class="w-full"
-          :size="is_collapsed ? 'sm' : 'base'"
-          @click="isOpenProblemBehavior = false"
+    <!-- view trial history -->
+    <div v-if="isOpenTrialHistory && !isOpenEditTrial" class="flex flex-col">
+      <div v-for="key in Object.keys(resultsState)" :key="key">
+        <div
+          v-if="resultsState[key].prompt_id"
+          class="flex items-center justify-between border-b border-slate-3 px-2 py-3"
         >
-          Back to result
-        </AppButton>
+          <div class="flex items-center gap-2">
+            <div class="w-6 shrink-0 text-sm text-slate-8">{{ key }}.</div>
+            <div class="tex-sm font-semibold text-slate-7">
+              {{ getCode(resultsState[key].target_task_id, 'task_code') }}
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div
+              v-if="resultsState[key].target_problem_behavior_id"
+              class="flex h-6 w-6 items-center justify-center rounded bg-tomato-7"
+            >
+              <span class="text-sm font-semibold text-white">
+                {{ getCode(resultsState[key].target_problem_behavior_id, 'problem_behavior') }}
+              </span>
+            </div>
+            <div class="flex h-6 w-6 items-center justify-center rounded bg-teal-7">
+              <span class="text-sm font-semibold text-white">
+                {{ getCode(resultsState[key].prompt_id, 'prompt') }}
+              </span>
+            </div>
+            <Icon icon="ph:pencil-simple" class="text-slate-8" @click="onOpenEditTrial(key)" />
+          </div>
+        </div>
+        <div
+          v-else-if="Object.keys(resultsState).length === 1"
+          class="py-4 text-center text-sm text-slate-8"
+        >
+          Trial history not found.
+        </div>
       </div>
-      <div v-else-if="isOpenTrialHistory && !isOpenEditTrial" class="flex-grow">
-        <AppButton
-          kind="outline"
-          class="w-full"
-          :size="is_collapsed ? 'sm' : 'base'"
-          @click="onCloseTrialHistory"
-        >
-          Back
-        </AppButton>
-      </div>
-      <div v-else class="flex shrink-0 items-center justify-between gap-3">
-        <AppButton
-          v-if="!isOpenEditTrial && !is_collapsed"
-          kind="outline"
-          class="shrink-0"
-          @click="onOpenTrialHistory"
-        >
-          <Icon icon="material-symbols:menu-rounded" class="text-xl" />
-        </AppButton>
-        <AppButton
-          v-if="isOpenEditTrial && !is_collapsed"
-          kind="outline"
-          class="shrink-0"
-          @click="onCloseEditTrial"
-        >
-          <Icon icon="material-symbols:menu-rounded" class="text-xl" />
-        </AppButton>
+    </div>
+  </div>
 
-        <div
-          v-if="nextTask?.code && display === 'select-next-task' && !isOpenEditTrial"
-          class="flex-grow"
+  <div
+    v-if="!is_collapsed || display === 'select-next-task'"
+    class="sticky -bottom-3 z-10 w-full bg-white py-3"
+  >
+    <div v-if="isOpenProblemBehavior" class="flex-grow">
+      <AppButton
+        kind="outline"
+        class="w-full"
+        :size="is_collapsed ? 'sm' : 'base'"
+        @click="isOpenProblemBehavior = false"
+      >
+        Back to result
+      </AppButton>
+    </div>
+    <div v-else-if="isOpenTrialHistory && !isOpenEditTrial" class="flex-grow">
+      <AppButton
+        kind="outline"
+        class="w-full"
+        :size="is_collapsed ? 'sm' : 'base'"
+        @click="onCloseTrialHistory"
+      >
+        Back
+      </AppButton>
+    </div>
+    <div v-else class="flex shrink-0 items-center justify-between gap-3">
+      <AppButton
+        v-if="!isOpenEditTrial && !is_collapsed"
+        kind="outline"
+        class="shrink-0"
+        @click="onOpenTrialHistory"
+      >
+        <Icon icon="material-symbols:menu-rounded" class="text-xl" />
+      </AppButton>
+      <AppButton
+        v-if="isOpenEditTrial && !is_collapsed"
+        kind="outline"
+        class="shrink-0"
+        @click="onCloseEditTrial"
+      >
+        <Icon icon="material-symbols:menu-rounded" class="text-xl" />
+      </AppButton>
+
+      <div
+        v-if="nextTask?.code && display === 'select-next-task' && !isOpenEditTrial"
+        class="flex-grow"
+      >
+        <AppButton
+          v-if="currentTrial.prompt_id"
+          color="teal"
+          class="w-full"
+          :loading="submitLoading"
+          @click="onNextTrial"
         >
-          <AppButton
-            v-if="currentTrial.prompt_id"
-            color="teal"
-            class="w-full"
-            :loading="submitLoading"
-            @click="onNextTrial"
-          >
-            Next: {{ nextTask.code }} | {{ nextTask.count + 1 }}
-          </AppButton>
-          <AppButton
-            v-else
-            color="teal"
-            class="w-full"
-            :loading="submitLoading"
-            @click="onTakeNextTrial({ isNew: true })"
-          >
-            Start trial: {{ nextTask.code }}
-          </AppButton>
-        </div>
-        <div v-if="isOpenEditTrial" class="flex-grow">
-          <AppButton color="teal" class="w-full" :loading="submitLoading" @click="onSaveEditTrial">
-            Update
-          </AppButton>
-        </div>
-        <div
-          v-if="Object.keys(resultsState).length > 1 || currentTrial.prompt_id"
-          class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-all duration-300 hover:brightness-90"
+          Next: {{ nextTask.code }} | {{ nextTask.count + 1 }}
+        </AppButton>
+        <AppButton
+          v-else
+          color="teal"
+          class="w-full"
+          :loading="submitLoading"
+          @click="onTakeNextTrial({ isNew: true })"
+        >
+          Start trial: {{ nextTask.code }}
+        </AppButton>
+      </div>
+      <div v-if="isOpenEditTrial" class="flex-grow">
+        <AppButton color="teal" class="w-full" :loading="submitLoading" @click="onSaveEditTrial">
+          Update
+        </AppButton>
+      </div>
+      <div
+        v-if="Object.keys(resultsState).length > 1 || currentTrial.prompt_id"
+        class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-all duration-300 hover:brightness-90"
+        :class="{
+          'bg-tomato-2': !currentTrial.target_problem_behavior_id,
+          'bg-tomato-7': currentTrial.target_problem_behavior_id
+        }"
+        @click="isOpenProblemBehavior = true"
+      >
+        <span
+          class="text-sm font-semibold"
           :class="{
-            'bg-tomato-2': !currentTrial.target_problem_behavior_id,
-            'bg-tomato-7': currentTrial.target_problem_behavior_id
+            'text-tomato-7': !currentTrial.target_problem_behavior_id,
+            'text-white': currentTrial.target_problem_behavior_id
           }"
-          @click="isOpenProblemBehavior = true"
         >
-          <span
-            class="text-sm font-semibold"
-            :class="{
-              'text-tomato-7': !currentTrial.target_problem_behavior_id,
-              'text-white': currentTrial.target_problem_behavior_id
-            }"
-          >
-            {{ currentTrialData.problem_behavior.code }}
-          </span>
-        </div>
+          {{ currentTrialData.problem_behavior.code }}
+        </span>
       </div>
     </div>
   </div>

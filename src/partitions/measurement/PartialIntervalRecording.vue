@@ -72,7 +72,7 @@ const onAddScore = async () => {
 
 <template>
   <div
-    class="flex h-full flex-wrap content-center items-center gap-x-3 gap-y-4 transition-all"
+    class="flex h-full flex-grow flex-wrap content-center items-center gap-x-3 gap-y-4 transition-all"
     :class="{ 'justify-center': !is_collapsed, 'justify-between': is_collapsed }"
   >
     <div v-if="is_collapsed"></div>

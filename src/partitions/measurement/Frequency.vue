@@ -71,7 +71,7 @@ const onChangeScore = async (score: number) => {
 
 <template>
   <div
-    class="flex flex-wrap items-center content-center justify-center h-full gap-x-3 gap-y-4"
+    class="flex h-full flex-grow flex-wrap content-center items-center justify-center gap-x-3 gap-y-4"
     :class="{ 'scale-90': is_collapsed }"
   >
     <div class="space-y-1">
@@ -86,7 +86,7 @@ const onChangeScore = async (score: number) => {
         <Icon v-else icon="stash:plus-solid" class="text-5xl" />
       </div>
       <div
-        class="flex items-center justify-center h-5 border rounded border-slate-5 bg-pure-white"
+        class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"
         :class="{
           'pointer-events-none':
             scoreLoading || !currentScore || sessionStore.session?.status !== 'ongoing'
@@ -94,7 +94,7 @@ const onChangeScore = async (score: number) => {
         @click="onChangeScore(-1)"
       >
         <div
-          class="w-6 h-1 rounded shrink-0"
+          class="h-1 w-6 shrink-0 rounded"
           :class="{
             'bg-slate-5': !currentScore,
             'bg-slate-6': currentScore
@@ -104,7 +104,7 @@ const onChangeScore = async (score: number) => {
     </div>
   </div>
 
-  <div v-if="!is_collapsed" class="text-xs font-medium text-center shrink-0 text-slate-7">
+  <div v-if="!is_collapsed" class="shrink-0 text-center text-xs font-medium text-slate-7">
     Goal: {{ measurement.target?.goal }} attempt(s) per session
   </div>
 </template>

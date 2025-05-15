@@ -94,7 +94,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 <template>
   <div
     v-if="!reset_confirmation"
-    class="flex h-full flex-grow-0 flex-col content-center items-center justify-center gap-x-3 transition-all"
+    class="flex h-full flex-grow flex-col content-center items-center justify-center gap-x-3 transition-all"
     :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
   >
     <div v-if="is_collapsed" class="font-semibold text-slate-7">
@@ -181,7 +181,10 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
     Goal: {{ measurement.target?.goal_time }}
   </div>
 
-  <div v-if="reset_confirmation" class="flex h-full flex-col items-center justify-center gap-2">
+  <div
+    v-if="reset_confirmation"
+    class="flex h-full flex-grow flex-col items-center justify-center gap-2"
+  >
     <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
     <div class="text-center text-slate-8">
       This will clear all existing lap records and begin again from Lap 1. You won't be able to

@@ -409,10 +409,10 @@ const onToggleSaved = (saved: boolean) => {
       <div
         v-else
         id="measurememt-body"
-        class="flex h-full flex-col rounded-b bg-white px-4 pt-3"
+        class="flex h-full flex-col rounded-b bg-white px-4 py-3"
         :class="{ 'no-scrollbar overflow-y-auto': !is_collapsed }"
       >
-        <div v-if="!is_collapsed" class="flex flex-col gap-1">
+        <div v-if="!is_collapsed" id="target-title" class="flex flex-col gap-1">
           <div
             class="flex items-center gap-x-2"
             :class="{ 'flex-wrap': display === 'target' || display === 'comment' }"
@@ -433,15 +433,18 @@ const onToggleSaved = (saved: boolean) => {
             {{ measurement.target?.name }}
           </div>
         </div>
-        <div v-if="display === 'target'" class="flex h-full pb-3 transition-all">
+        <div v-if="display === 'target'" class="h-[calc(100%-44px)]">
           <div
             v-if="is_collapsed"
-            class="flex h-full w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
+            class="flex w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
             @click="emit('toggle-collapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
           </div>
-          <div v-if="isDropped" class="flex flex-grow flex-col items-center justify-center gap-4">
+          <div
+            v-if="isDropped"
+            class="flex min-h-full flex-grow flex-col items-center justify-center gap-4"
+          >
             <Icon icon="solar:clipboard-remove-bold" class="h-20 w-20 text-tulip-6" />
             <div v-if="!is_collapsed" class="w-72 space-y-2">
               <div class="text-center font-semibold">Entry not recorded</div>
@@ -454,7 +457,7 @@ const onToggleSaved = (saved: boolean) => {
           <div
             v-else
             :key="`measurement-card-${cardId}`"
-            class="flex h-full flex-grow flex-col justify-between"
+            class="flex min-h-full flex-grow flex-col justify-between"
           >
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
@@ -529,7 +532,10 @@ const onToggleSaved = (saved: boolean) => {
             />
           </div>
         </div>
-        <div v-if="display === 'description'" class="flex h-full flex-col justify-between pt-3">
+        <div
+          v-if="display === 'description'"
+          class="flex h-[calc(100%-44px)] flex-col justify-between"
+        >
           <div class="flex flex-col gap-3">
             <!-- target information -->
             <div class="space-y-0.5 text-wrap text-sm text-slate-8">
@@ -657,11 +663,14 @@ const onToggleSaved = (saved: boolean) => {
             </div>
             <!-- end sbt -->
           </div>
-          <div class="sticky bottom-0 w-full bg-white py-3">
+          <div class="sticky -bottom-3 z-10 w-full bg-white py-3">
             <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
           </div>
         </div>
-        <div v-if="display === 'comment'" class="flex h-full flex-col justify-between gap-3">
+        <div
+          v-if="display === 'comment'"
+          class="flex h-[calc(100%-44px)] flex-col justify-between gap-3"
+        >
           <div
             v-if="sessionStore.session?.status !== 'ongoing'"
             class="text-wrap pt-3 text-sm text-slate-8"
@@ -676,7 +685,7 @@ const onToggleSaved = (saved: boolean) => {
             v-model="commentInput"
             class="mt-2 h-full"
           />
-          <div class="sticky bottom-0 w-full bg-white py-3">
+          <div class="sticky -bottom-3 z-10 w-full bg-white py-3">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"
