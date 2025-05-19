@@ -164,6 +164,7 @@ export interface Comment {
 }
 
 export type MeasurementType =
+  | 'Measurement::ColdProbe'
   | 'Measurement::Duration'
   | 'Measurement::Frequency'
   | 'Measurement::Latency'
@@ -193,6 +194,7 @@ export interface Measurement {
 }
 
 export type TargetType =
+  | 'Target::ColdProbe'
   | 'Target::Duration'
   | 'Target::Frequency'
   | 'Target::Latency'
@@ -203,11 +205,13 @@ export type TargetType =
   | 'Target::TrialByTrial'
 export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued'
 export type TargetPromptingFormat = 'classic' | 'custom'
+export type TargetColdProbeFormat = 'classic' | 'custom'
 export interface Target {
   id?: number
   type?: TargetType
   status?: TargetStatus
   prompting_format?: TargetPromptingFormat
+  cold_probe_format?: TargetColdProbeFormat
   name?: string
   description?: string
   goal?: number
@@ -240,6 +244,7 @@ export interface Target {
   consecutive_success?: number
   target_tasks?: TargetTask[]
   target_problem_behaviors?: TargetProblemBehavior[]
+  target_variables?: TargetVariable[]
 }
 
 export interface Prompt {
@@ -282,6 +287,12 @@ export interface TargetProblemBehavior {
   position?: number
   problem_behavior_id?: number
   target_id?: Target['id']
+}
+
+export interface TargetVariable {
+  id?: number
+  code?: string
+  title?: string
 }
 
 export interface Curriculum {

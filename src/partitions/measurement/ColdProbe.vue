@@ -1,0 +1,273 @@
+<script setup lang="ts">
+import { useSessionStore } from '@/stores/session.store'
+import type { Measurement, Target } from '@/lib/types'
+import { computed, onMounted, ref } from 'vue'
+import { Icon } from '@iconify/vue/dist/iconify.js'
+
+const sessionStore = useSessionStore()
+
+interface Props {
+  measurement: Measurement
+  is_collapsed: boolean
+  target: Target
+}
+
+interface Emits {
+  (e: 'toggle-updated', value: boolean): void
+  (e: 'check-completed-cold-probe', value: boolean): void
+  (e: 'fetch-session'): void
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+const singleVariableResult = ref<{ yes: boolean; no: boolean }>({ yes: false, no: false })
+const loading = ref<{ yes: boolean; no: boolean }>({ yes: false, no: false })
+const multipleVariableResult = ref<Record<string, string>>({})
+const loadingMultiple = ref<Record<string, boolean>>({})
+const allResults = ref<Record<string, { target_variable_id: number; score: number }>>({})
+
+const isCompletedColdProbe = computed<boolean>(() => {
+  if (props.target.cold_probe_format === 'classic') return true
+  const results = Object.keys(allResults.value)
+  if (results.length === 0) return true
+  if (results.length === props.target.target_variables?.length) return true
+  return false
+})
+onMounted(() => {
+  if (props.target.cold_probe_format === 'classic') {
+    if (props.measurement.results) {
+      singleVariableResult.value = {
+        yes: props.measurement.results.score === '100',
+        no: props.measurement.results.score === '0'
+      }
+    }
+  } else if (props.target.cold_probe_format === 'custom') {
+    if (props.measurement.results && Object.keys(props.measurement.results).length > 0) {
+      allResults.value = { ...props.measurement.results }
+      for (const id in props.measurement.results) {
+        const result = props.measurement.results[id]
+        multipleVariableResult.value[id] = result.score === 100 ? 'yes' : 'no'
+      }
+    }
+    console.log('🚀 ~ onMounted ~ isCompletedColdProbe.value:', isCompletedColdProbe.value)
+    emit('check-completed-cold-probe', isCompletedColdProbe.value)
+  }
+})
+
+const onClickSingleVariable = async (value: 'yes' | 'no') => {
+  if (sessionStore.session?.status !== 'ongoing') return
+  emit('toggle-updated', true)
+  singleVariableResult.value = {
+    yes: value === 'yes',
+    no: value === 'no'
+  }
+  loading.value = {
+    yes: value === 'yes',
+    no: value === 'no'
+  }
+
+  try {
+    await onSaveColdProbe(value)
+  } catch (error) {
+    singleVariableResult.value[value] = !singleVariableResult.value[value]
+  } finally {
+    loading.value = {
+      yes: false,
+      no: false
+    }
+  }
+}
+
+const onClickMultipleVariable = async (id: number, value: 'yes' | 'no') => {
+  if (sessionStore.session?.status !== 'ongoing') return
+  emit('toggle-updated', true)
+  loadingMultiple.value[id] = true
+  multipleVariableResult.value[id] = value
+
+  try {
+    await saveMultipleVariableResult(id, value)
+    emit('check-completed-cold-probe', isCompletedColdProbe.value)
+  } catch (error) {
+    console.log('🚀 ~ onClickMultipleVariable ~ error:', error)
+  } finally {
+    loadingMultiple.value[id] = false
+  }
+}
+
+const saveMultipleVariableResult = async (id: number, value: 'yes' | 'no') => {
+  const score = value === 'yes' ? 100 : 0
+
+  allResults.value[id] = {
+    target_variable_id: id,
+    score
+  }
+
+  const params = {
+    id: props.measurement.id,
+    results: allResults.value,
+    data_result: { ...props.measurement, results: allResults.value }
+  }
+
+  await sessionStore.updateMeasurementResults(params)
+}
+const onSaveColdProbe = async (value: 'yes' | 'no') => {
+  const params = {
+    id: props.measurement.id,
+    results: { score: value === 'yes' ? '100' : '0' },
+    data_result: { ...props.measurement, results: { score: value === 'yes' ? '100' : '0' } }
+  }
+  await sessionStore.updateMeasurementResults(params)
+}
+</script>
+
+<template>
+  <div class="flex h-full flex-grow flex-col justify-center">
+    <div
+      class="flex h-full content-center items-center justify-center"
+      :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
+    >
+      <div class="">
+        <div class="flex flex-col items-center gap-3" v-if="target.cold_probe_format === 'classic'">
+          <div class="text-sm text-slate-7">Probe</div>
+          <div
+            class="flex gap-2"
+            :class="{ 'flex-row-reverse': is_collapsed, 'flex-col': !is_collapsed }"
+          >
+            <div
+              class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300"
+              :class="{
+                'border-dotted ': !loading.yes,
+                'border-lime-5 bg-lime-5': loading.yes,
+                'cursor-not-allowed': loading.yes && !loading.no,
+                'pointer-events-none': sessionStore.session?.status !== 'ongoing',
+                'cursor-pointer': !loading.yes && !loading.no
+              }"
+              @click="!loading.yes && !loading.no && onClickSingleVariable('yes')"
+            >
+              <div class="text-4xl font-bold">
+                <Icon
+                  icon="mingcute:check-fill"
+                  class="w-20"
+                  :class="
+                    loading.yes
+                      ? 'white'
+                      : singleVariableResult.yes
+                        ? 'text-lime-5'
+                        : 'text-slate-5'
+                  "
+                />
+              </div>
+            </div>
+            <div
+              class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300"
+              :class="{
+                'border-dotted': !loading.no,
+                'border-red-cherry bg-red-cherry': loading.no,
+                'cursor-not-allowed': loading.no && !loading.yes,
+                'pointer-events-none': sessionStore.session?.status !== 'ongoing',
+                'cursor-pointer': !loading.no && !loading.yes
+              }"
+              @click="!loading.no && !loading.yes && onClickSingleVariable('no')"
+            >
+              <div class="text-4xl font-bold">
+                <Icon
+                  icon="mingcute:close-fill"
+                  class="w-12"
+                  :class="
+                    loading.no
+                      ? 'white'
+                      : singleVariableResult.no
+                        ? 'text-red-cherry'
+                        : 'text-slate-5'
+                  "
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="flex items-center justify-center gap-3"
+          v-if="target.cold_probe_format === 'custom'"
+        >
+          <div v-for="(variable, index) in target.target_variables" :key="variable.id">
+            <div class="flex flex-col items-center gap-3">
+              <div :class="{ 'pl-1 pr-4': !is_collapsed }">
+                <div class="text-sm text-slate-7">{{ variable.code }}</div>
+              </div>
+              <div
+                class="flex gap-2"
+                :class="{
+                  'border-r-2':
+                    index !== (target.target_variables ?? []).length - 1 && !is_collapsed,
+                  'flex-row': is_collapsed,
+                  'flex-col pl-1 pr-4': !is_collapsed
+                }"
+              >
+                <!-- YES BUTTON -->
+                <div
+                  class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300"
+                  :class="{
+                    'border-dotted': !loadingMultiple[variable?.id ?? ''],
+                    'border-lime-5 bg-lime-5':
+                      loadingMultiple[variable.id ?? ''] &&
+                      multipleVariableResult[variable.id ?? ''] === 'yes',
+                    'cursor-not-allowed': loadingMultiple[variable.id ?? ''],
+                    'pointer-events-none': sessionStore.session?.status !== 'ongoing',
+                    'cursor-pointer': !loadingMultiple[variable.id ?? '']
+                  }"
+                  @click="
+                    !loadingMultiple[variable.id ?? ''] &&
+                      onClickMultipleVariable(variable.id ?? 0, 'yes')
+                  "
+                >
+                  <div class="text-4xl font-bold">
+                    <Icon
+                      icon="mingcute:check-fill"
+                      class="w-20"
+                      :class="
+                        multipleVariableResult[variable?.id ?? ''] === 'yes'
+                          ? 'text-lime-5'
+                          : 'text-slate-5'
+                      "
+                    />
+                  </div>
+                </div>
+
+                <!-- NO BUTTON -->
+                <div
+                  class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300"
+                  :class="{
+                    'border-dotted': !loadingMultiple[variable?.id ?? ''],
+                    'border-red-cherry bg-red-cherry':
+                      loadingMultiple[variable?.id ?? ''] &&
+                      multipleVariableResult[variable?.id ?? ''] === 'no',
+                    'cursor-not-allowed': loadingMultiple[variable?.id ?? ''],
+                    'pointer-events-none': sessionStore.session?.status !== 'ongoing',
+                    'cursor-pointer': !loadingMultiple[variable?.id ?? '']
+                  }"
+                  @click="
+                    !loadingMultiple[variable.id ?? ''] &&
+                      onClickMultipleVariable(variable.id ?? 0, 'no')
+                  "
+                >
+                  <div class="text-4xl font-bold">
+                    <Icon
+                      icon="mingcute:close-fill"
+                      class="w-12"
+                      :class="
+                        multipleVariableResult[variable?.id ?? ''] === 'no'
+                          ? 'text-red-cherry'
+                          : 'text-slate-5'
+                      "
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

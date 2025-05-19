@@ -31,6 +31,7 @@ export const getMeasurementType = (type?: MeasurementType): string => {
 export const getTargetType = (type?: TargetType): string => {
   if (!type) return ''
   const arr: { [key: string]: string } = {
+    'Target::ColdProbe': 'Cold Probe',
     'Target::Duration': 'Duration',
     'Target::Frequency': 'Frequency',
     'Target::Latency': 'Latency',

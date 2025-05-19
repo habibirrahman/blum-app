@@ -17,6 +17,7 @@ import { useClientStore } from '@/stores/client.store'
 import SkillBasedTreatment from './measurement/SkillBasedTreatment.vue'
 import { useToast } from 'vue-toastification'
 import TrialByTrial from './measurement/TrialByTrial.vue'
+import ColdProbe from './measurement/ColdProbe.vue'
 
 const toast = useToast()
 const sessionStore = useSessionStore()
@@ -35,6 +36,7 @@ interface Emits {
   (e: 'toggle-saved', payload: { id: Measurement['id']; saved: boolean }): void
   (e: 'toggle-collapsed', bool: boolean): void
   (e: 'fetch-session'): void
+  (e: 'check-completed-cold-probe', payload: { id: Measurement['id']; isCompleted: boolean }): void
 }
 const props = withDefaults(defineProps<Props>(), {
   is_collapsed: false,
@@ -77,7 +79,8 @@ onMounted(async () => {
   if (
     props.measurement.type === 'Measurement::Probing' ||
     props.measurement.type === 'Measurement::Prompting' ||
-    props.measurement.type === 'Measurement::Sbt'
+    props.measurement.type === 'Measurement::Sbt' ||
+    props.measurement.type === 'Measurement::ColdProbe'
   ) {
     const { data } = await clientStore.getTarget({ id: props.measurement.target_id, plain: true })
     target.value = data || {}
@@ -127,6 +130,13 @@ const onDrop = async (bool: boolean) => {
   if (data.is_dropped && props.is_running) {
     emit('toggle-running')
   }
+  // Force the cold probe to be marked as completed if is_dropped is true
+  if (data.is_dropped && props.measurement.type?.includes('ColdProbe')) {
+    handleCompletedColdProbe(true)
+  }
+}
+const handleCompletedColdProbe = (isCompleted: boolean) => {
+  emit('check-completed-cold-probe', { id: props.measurement.id, isCompleted })
 }
 
 const onToggleUpdated = (updated: boolean) => {
@@ -355,7 +365,8 @@ const onToggleSaved = (saved: boolean) => {
         is_collapsed &&
         (measurementType.includes('Sbt') ||
           measurementType.includes('Duration') ||
-          measurementType.includes('Latency'))
+          measurementType.includes('Latency') ||
+          measurementType.includes('ColdProbe'))
     }"
   >
     <div
@@ -433,10 +444,10 @@ const onToggleSaved = (saved: boolean) => {
             {{ measurement.target?.name }}
           </div>
         </div>
-        <div v-if="display === 'target'" class="h-[calc(100%-44px)]">
+        <div v-if="display === 'target'" class="flex h-full pb-3 transition-all">
           <div
             v-if="is_collapsed"
-            class="flex w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
+            class="flex h-full w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
             @click="emit('toggle-collapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
@@ -457,7 +468,7 @@ const onToggleSaved = (saved: boolean) => {
           <div
             v-else
             :key="`measurement-card-${cardId}`"
-            class="flex min-h-full flex-grow flex-col justify-between"
+            class="flex h-full flex-grow flex-col justify-between"
           >
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
@@ -529,6 +540,15 @@ const onToggleSaved = (saved: boolean) => {
               :is_collapsed="is_collapsed"
               @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
+            />
+            <ColdProbe
+              v-if="measurementType.includes('ColdProbe') && target"
+              :is_collapsed="is_collapsed"
+              @toggle-updated="onToggleUpdated($event)"
+              @fetch-session="emit('fetch-session')"
+              @check-completed-cold-probe="handleCompletedColdProbe"
+              :measurement="measurement"
+              :target="target"
             />
           </div>
         </div>

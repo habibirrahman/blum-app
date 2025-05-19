@@ -132,6 +132,7 @@ onUnmounted(() => {
 
 const counter = ref<number>(0)
 const counterInterval = ref<any>(null)
+const unCompletedColdProbeIds = ref<Measurement['id'][]>([])
 const counterTimer = () => {
   clearInterval(counterInterval.value)
   counterInterval.value = setInterval(() => {
@@ -297,6 +298,19 @@ const isAllMeasurementResultEmpty = computed<boolean>(() => {
         if (i.results[key].prompt_id) isResultsEmpty = false
       }
     }
+    if (i.type === 'Measurement::ColdProbe') {
+      if (
+        i.target?.cold_probe_format === 'classic' &&
+        i.results &&
+        Object.keys(i.results).length > 0
+      )
+        isResultsEmpty = false
+      if (i.target?.cold_probe_format === 'custom') {
+        for (let key in i.results) {
+          if (i.results[key] !== null) isResultsEmpty = false
+        }
+      }
+    }
     isAllEmpty.push(isResultsEmpty)
   })
   if (isAllEmpty.length === 0) isAllEmpty.push(false)
@@ -320,12 +334,21 @@ const openEndSession = () => {
   groupReasons.value = []
   const runningDuration = runningDurationIds.value.length
   const unsavedSbt = unsavedSbtIds.value.length
-  if (runningDuration || isNotCompletedProbes || isNotSavedProbing || unsavedSbt) {
+  const unCompletedColdProbe = unCompletedColdProbeIds.value.length
+  if (
+    runningDuration ||
+    isNotCompletedProbes ||
+    isNotSavedProbing ||
+    unsavedSbt ||
+    unCompletedColdProbe
+  ) {
     endSessionStatus.value = 'group_reason'
     if (runningDuration) groupReasons.value.push(`${runningDuration} timer(s) are still running`)
     if (isNotCompletedProbes) groupReasons.value.push('Minimum required probes have not been met')
     if (isNotSavedProbing) groupReasons.value.push('Actions for probing have not been saved')
     if (unsavedSbt) groupReasons.value.push("The target with SBT hasn't saved its result")
+    if (unCompletedColdProbe)
+      groupReasons.value.push("You haven't completed data collection for the cold probe")
   } else if (isAllMeasurementResultEmpty.value) {
     endSessionStatus.value = 'empty_record'
   } else {
@@ -346,6 +369,12 @@ const onTrunOffAllAndEndSession = async () => {
       }
       if (unsavedSbtIds.value.includes(measurement.id)) {
         unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== measurement.id)
+      }
+
+      if (unCompletedColdProbeIds.value.includes(measurement.id)) {
+        unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter(
+          (i) => i !== measurement.id
+        )
       }
 
       const params: UpdateMeasurementParams = {
@@ -437,6 +466,23 @@ const onExitSession = async () => {
   await appStore.getRunningSessions()
   exitSessionLoading.value = false
   router.push(redirect.value)
+}
+
+const handleCompletedColdProbe = ({
+  id,
+  isCompleted
+}: {
+  id: number | undefined
+  isCompleted: boolean
+}) => {
+  if (id === undefined) return
+  if (isCompleted) {
+    unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter((i) => i !== id)
+  } else {
+    if (!unCompletedColdProbeIds.value.includes(id)) {
+      unCompletedColdProbeIds.value.push(id)
+    }
+  }
 }
 </script>
 
@@ -561,6 +607,7 @@ const onExitSession = async () => {
           @toggle-updated="onToggleUpdatedMeasurment($event)"
           @toggle-running="onToggleRunningDuration(measurement)"
           @toggle-saved="onToggleSavedSbt($event)"
+          @check-completed-cold-probe="handleCompletedColdProbe"
           @click="onFocusMeasurement(measurement)"
           @fetch-session="fetchSession({ first: false, is_swiped: false })"
         />
@@ -596,6 +643,7 @@ const onExitSession = async () => {
         @toggle-running="onToggleRunningDuration(fixedMeasurement)"
         @toggle-saved="onToggleSavedSbt($event)"
         @toggle-collapsed="isMeasurementCollapsed = $event"
+        @check-completed-cold-probe="handleCompletedColdProbe"
         @fetch-session="fetchSession({ first: false, is_swiped: false })"
       />
       <div
