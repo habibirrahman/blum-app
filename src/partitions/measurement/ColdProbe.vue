@@ -151,7 +151,7 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                   class="w-20"
                   :class="
                     loading.yes
-                      ? 'white'
+                      ? 'text-white'
                       : singleVariableResult.yes
                         ? 'text-lime-5'
                         : 'text-slate-5'
@@ -176,7 +176,7 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                   class="w-12"
                   :class="
                     loading.no
-                      ? 'white'
+                      ? 'text-white'
                       : singleVariableResult.no
                         ? 'text-red-cherry'
                         : 'text-slate-5'
@@ -226,9 +226,11 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                       icon="mingcute:check-fill"
                       class="w-20"
                       :class="
-                        multipleVariableResult[variable?.id ?? ''] === 'yes'
-                          ? 'text-lime-5'
-                          : 'text-slate-5'
+                        loadingMultiple[variable?.id ?? '']
+                          ? 'text-white'
+                          : multipleVariableResult[variable?.id ?? ''] === 'yes'
+                            ? 'text-lime-5'
+                            : 'text-slate-5'
                       "
                     />
                   </div>
@@ -256,9 +258,11 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                       icon="mingcute:close-fill"
                       class="w-12"
                       :class="
-                        multipleVariableResult[variable?.id ?? ''] === 'no'
-                          ? 'text-red-cherry'
-                          : 'text-slate-5'
+                        loadingMultiple[variable?.id ?? '']
+                          ? 'text-white'
+                          : multipleVariableResult[variable?.id ?? ''] === 'no'
+                            ? 'text-red-cherry'
+                            : 'text-slate-5'
                       "
                     />
                   </div>
