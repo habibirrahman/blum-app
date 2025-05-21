@@ -359,14 +359,8 @@ const onToggleSaved = (saved: boolean) => {
   <div
     class="relative shrink-0 rounded transition-all"
     :class="{
-      'h-[540px] w-[320px]': !is_collapsed,
-      'h-[120px] w-full': is_collapsed && !measurementType.includes('Sbt'),
-      'h-[180px] w-full':
-        is_collapsed &&
-        (measurementType.includes('Sbt') ||
-          measurementType.includes('Duration') ||
-          measurementType.includes('Latency') ||
-          measurementType.includes('ColdProbe'))
+      'h-[600px] w-[320px]': !is_collapsed,
+      'h-[180px] w-full': is_collapsed
     }"
   >
     <div
@@ -420,10 +414,10 @@ const onToggleSaved = (saved: boolean) => {
       <div
         v-else
         id="measurememt-body"
-        class="flex h-full flex-col rounded-b bg-white px-4 py-3"
-        :class="{ 'no-scrollbar overflow-y-auto': !is_collapsed }"
+        class="flex h-full flex-col rounded-b bg-white px-4 pb-3"
+        :class="[is_collapsed ? 'pt-3' : 'no-scrollbar overflow-y-auto']"
       >
-        <div v-if="!is_collapsed" id="target-title" class="flex flex-col gap-1">
+        <div v-if="!is_collapsed" id="card-title" class="flex flex-col gap-1 py-3">
           <div
             class="flex items-center gap-x-2"
             :class="{ 'flex-wrap': display === 'target' || display === 'comment' }"
@@ -444,14 +438,7 @@ const onToggleSaved = (saved: boolean) => {
             {{ measurement.target?.name }}
           </div>
         </div>
-        <div v-if="display === 'target'" class="flex h-full pb-3 transition-all">
-          <div
-            v-if="is_collapsed"
-            class="flex h-full w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
-            @click="emit('toggle-collapsed', false)"
-          >
-            <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
-          </div>
+        <div v-if="display === 'target'" class="flex h-full gap-3">
           <div
             v-if="isDropped"
             class="flex min-h-full flex-grow flex-col items-center justify-center gap-4"
@@ -465,11 +452,7 @@ const onToggleSaved = (saved: boolean) => {
               </div>
             </div>
           </div>
-          <div
-            v-else
-            :key="`measurement-card-${cardId}`"
-            class="flex h-full flex-grow flex-col justify-between"
-          >
+          <div v-else :key="`measurement-card-${cardId}`" class="h-full w-full">
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
               :measurement="measurement"
@@ -543,13 +526,20 @@ const onToggleSaved = (saved: boolean) => {
             />
             <ColdProbe
               v-if="measurementType.includes('ColdProbe') && target"
+              :measurement="measurement"
+              :target="target"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
               @check-completed-cold-probe="handleCompletedColdProbe"
-              :measurement="measurement"
-              :target="target"
             />
+          </div>
+          <div
+            v-if="is_collapsed"
+            class="flex w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
+            @click="emit('toggle-collapsed', false)"
+          >
+            <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
           </div>
         </div>
         <div

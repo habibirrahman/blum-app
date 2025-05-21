@@ -50,7 +50,6 @@ onMounted(() => {
         multipleVariableResult.value[id] = result.score === 100 ? 'yes' : 'no'
       }
     }
-    console.log('🚀 ~ onMounted ~ isCompletedColdProbe.value:', isCompletedColdProbe.value)
     emit('check-completed-cold-probe', isCompletedColdProbe.value)
   }
 })
@@ -226,7 +225,8 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                       icon="mingcute:check-fill"
                       class="w-20"
                       :class="
-                        loadingMultiple[variable?.id ?? '']
+                        loadingMultiple[variable?.id ?? ''] &&
+                        multipleVariableResult[variable?.id ?? ''] === 'yes'
                           ? 'text-white'
                           : multipleVariableResult[variable?.id ?? ''] === 'yes'
                             ? 'text-lime-5'
@@ -258,7 +258,8 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                       icon="mingcute:close-fill"
                       class="w-12"
                       :class="
-                        loadingMultiple[variable?.id ?? '']
+                        loadingMultiple[variable?.id ?? ''] &&
+                        multipleVariableResult[variable?.id ?? ''] === 'no'
                           ? 'text-white'
                           : multipleVariableResult[variable?.id ?? ''] === 'no'
                             ? 'text-red-cherry'

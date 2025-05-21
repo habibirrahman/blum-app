@@ -92,93 +92,94 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 </script>
 
 <template>
-  <div
-    v-if="!reset_confirmation"
-    class="flex h-full flex-grow flex-col content-center items-center justify-center gap-x-3 transition-all"
-    :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
-  >
-    <div v-if="is_collapsed" class="font-semibold text-slate-7">
-      Lap {{ laps && laps.length ? laps.length : 1 }}
-    </div>
+  <div v-if="!reset_confirmation" class="flex h-full flex-grow flex-col justify-between gap-2">
     <div
-      class="grid grid-cols-5 items-center text-3xl text-[32px] font-bold transition-all"
-      :class="{ 'text-slate-6': !is_started, 'text-slate-8': is_started }"
+      class="flex h-full flex-grow flex-col content-center items-center justify-center gap-x-3 transition-all"
+      :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
     >
-      <div class="flex justify-center">{{ timer.split(':')[0] }}</div>
-      <div class="flex justify-center pb-2">:</div>
-      <div class="flex justify-center">{{ timer.split(':')[1] }}</div>
-      <div class="flex justify-center pb-2">:</div>
-      <div class="flex justify-center">{{ timer.split(':')[2] }}</div>
-    </div>
-    <div class="flex w-full items-center gap-3">
-      <AppButton
-        v-if="is_started || (!is_started && laps && laps.length === 0)"
-        :loading="lap_loading"
-        class="w-2/4 rounded-full"
-        color="prim"
-        :disabled="!is_started && sessionStore.session?.status !== 'ongoing'"
-        :class="{ 'opacity-50': !is_started }"
-        @click="$emit('record-lap')"
-      >
-        Lap
-      </AppButton>
-      <AppButton
-        v-if="!is_started && laps && laps.length > 0"
-        label="Reset"
-        class="w-2/4 rounded-full"
-        color="prim"
-        :disabled="sessionStore.session?.status !== 'ongoing'"
-        @click="$emit('reset-laps-confirm')"
-        >Reset</AppButton
-      >
-      <AppButton
-        class="w-2/4 rounded-full"
-        :class="{
-          'pointer-events-none': sessionStore.session?.status !== 'ongoing'
-        }"
-        :color="is_started ? 'tomato' : 'grass'"
-        :loading="update_loading"
-        @click="emit('toggle-timer')"
-      >
-        {{ is_started ? 'Stop' : 'Start' }}
-      </AppButton>
-    </div>
-    <div
-      v-if="laps.length > 0 && !is_collapsed"
-      class="mt-2 w-full overflow-scroll"
-      style="max-height: calc(100vh - 10rem); scrollbar-width: none"
-    >
+      <div v-if="is_collapsed" class="font-semibold text-slate-7">
+        Lap {{ laps && laps.length ? laps.length : 1 }}
+      </div>
       <div
-        v-for="lap in laps.slice().sort((a, b) => b.lapNumber - a.lapNumber)"
-        :key="lap.lapNumber + 1"
+        class="grid grid-cols-5 items-center text-3xl text-[32px] font-bold transition-all"
+        :class="{ 'text-slate-6': !is_started, 'text-slate-8': is_started }"
+      >
+        <div class="flex justify-center">{{ timer.split(':')[0] }}</div>
+        <div class="flex justify-center pb-2">:</div>
+        <div class="flex justify-center">{{ timer.split(':')[1] }}</div>
+        <div class="flex justify-center pb-2">:</div>
+        <div class="flex justify-center">{{ timer.split(':')[2] }}</div>
+      </div>
+      <div class="flex w-full items-center gap-3">
+        <AppButton
+          v-if="is_started || (!is_started && laps && laps.length === 0)"
+          :loading="lap_loading"
+          class="w-2/4 rounded-full"
+          color="prim"
+          :disabled="!is_started && sessionStore.session?.status !== 'ongoing'"
+          :class="{ 'opacity-50': !is_started }"
+          @click="$emit('record-lap')"
+        >
+          Lap
+        </AppButton>
+        <AppButton
+          v-if="!is_started && laps && laps.length > 0"
+          label="Reset"
+          class="w-2/4 rounded-full"
+          color="prim"
+          :disabled="sessionStore.session?.status !== 'ongoing'"
+          @click="$emit('reset-laps-confirm')"
+          >Reset</AppButton
+        >
+        <AppButton
+          class="w-2/4 rounded-full"
+          :class="{
+            'pointer-events-none': sessionStore.session?.status !== 'ongoing'
+          }"
+          :color="is_started ? 'tomato' : 'grass'"
+          :loading="update_loading"
+          @click="emit('toggle-timer')"
+        >
+          {{ is_started ? 'Stop' : 'Start' }}
+        </AppButton>
+      </div>
+      <div
+        v-if="laps.length > 0 && !is_collapsed"
+        class="mt-2 w-full overflow-scroll"
+        style="max-height: calc(100vh - 10rem); scrollbar-width: none"
       >
         <div
-          v-if="measurement.target?.success_metric === 'less than goal'"
-          class="flex justify-between border-b py-2 pb-2"
+          v-for="lap in laps.slice().sort((a, b) => b.lapNumber - a.lapNumber)"
+          :key="lap.lapNumber + 1"
         >
-          <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
-          <div :class="getTextColorClass(lap)" class="font-semibold">
-            {{ is_started && lap.lapNumber === laps.length - 1 ? current_lap_time : lap.time }}
+          <div
+            v-if="measurement.target?.success_metric === 'less than goal'"
+            class="flex justify-between border-b py-2 pb-2"
+          >
+            <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
+            <div :class="getTextColorClass(lap)" class="font-semibold">
+              {{ is_started && lap.lapNumber === laps.length - 1 ? current_lap_time : lap.time }}
+            </div>
           </div>
-        </div>
-        <div
-          class="flex justify-between border-b py-2 pb-2"
-          v-if="measurement.target?.success_metric === 'equal to or greater than goal'"
-        >
-          <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
-          <div :class="getTextColorClass(lap)" class="font-semibold">
-            {{ is_started && lap.lapNumber === laps.length - 1 ? current_lap_time : lap.time }}
+          <div
+            class="flex justify-between border-b py-2 pb-2"
+            v-if="measurement.target?.success_metric === 'equal to or greater than goal'"
+          >
+            <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
+            <div :class="getTextColorClass(lap)" class="font-semibold">
+              {{ is_started && lap.lapNumber === laps.length - 1 ? current_lap_time : lap.time }}
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div
-    v-if="!is_collapsed && !reset_confirmation"
-    class="shrink-0 text-center text-xs font-medium text-slate-7"
-  >
-    Goal: {{ measurement.target?.goal_time }}
+    <div
+      v-if="!is_collapsed && !reset_confirmation"
+      class="shrink-0 pb-3 text-center text-xs font-medium text-slate-7"
+    >
+      Goal: {{ measurement.target?.goal_time }}
+    </div>
   </div>
 
   <div
