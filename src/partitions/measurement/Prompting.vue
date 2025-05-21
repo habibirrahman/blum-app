@@ -190,91 +190,93 @@ const onChangeScore = async (prompt: any, score: number) => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow content-center items-center justify-center">
-    <div
-      class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
-      @scroll="onScroll"
-    >
+  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+    <div class="flex h-full flex-grow content-center items-center justify-center">
       <div
-        v-for="(promptBoxes, idx) in promptBoxesPages"
-        :key="`${measurement.id}-prompt-boxes-${idx + 1}`"
-        :id="`${measurement.id}-prompt-boxes-${idx + 1}`"
-        class="flex w-[calc(320px-32px)] shrink-0 snap-start justify-center"
+        class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+        @scroll="onScroll"
       >
         <div
-          class="flex w-[calc(240px+24px)] flex-wrap content-center items-start justify-center gap-x-3 gap-y-4"
-          :class="{ '-translate-y-1 scale-75': is_collapsed }"
+          v-for="(promptBoxes, idx) in promptBoxesPages"
+          :key="`${measurement.id}-prompt-boxes-${idx + 1}`"
+          :id="`${measurement.id}-prompt-boxes-${idx + 1}`"
+          class="flex w-[calc(320px-32px)] shrink-0 snap-start justify-center"
         >
-          <div v-for="prompt in promptBoxes" :key="prompt.id" class="space-y-1">
-            <div
-              class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] border text-4xl font-bold transition-all"
-              :class="{
-                'cursor-wait':
-                  (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
-                  (typeLoadingBox !== null && typeLoadingBox !== 1),
-                'pointer-events-none': sessionStore.session?.status !== 'ongoing'
-              }"
-              :style="{
-                backgroundColor: promptColors[prompt.color].primaryColor,
-                borderColor: promptColors[prompt.color].secondaryColor,
-                color: promptColors[prompt.color].textColor
-              }"
-              @click="onChangeScore(prompt, 1)"
-            >
-              <div class="absolute top-px text-xs font-semibold">{{ prompt.abbreviation }}</div>
-              <div v-if="prompt.score">{{ prompt.score }}</div>
-              <Icon v-else icon="stash:plus-solid" class="text-5xl" />
-            </div>
-            <div
-              class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white px-5"
-              :class="{
-                'cursor-wait':
-                  (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
-                  (typeLoadingBox !== null && typeLoadingBox !== -1),
-                'pointer-events-none': !prompt.score || sessionStore.session?.status !== 'ongoing'
-              }"
-              @click="onChangeScore(prompt, -1)"
-            >
+          <div
+            class="flex w-[calc(240px+24px)] flex-wrap content-center items-start justify-center gap-x-3 gap-y-4"
+            :class="{ '-translate-y-1 scale-75': is_collapsed }"
+          >
+            <div v-for="prompt in promptBoxes" :key="prompt.id" class="space-y-1">
               <div
-                class="h-1 w-6 shrink-0 rounded transition-all"
-                :class="{ 'bg-slate-5': !prompt.score, 'bg-slate-6': prompt.score }"
-              ></div>
+                class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] border text-4xl font-bold transition-all"
+                :class="{
+                  'cursor-wait':
+                    (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
+                    (typeLoadingBox !== null && typeLoadingBox !== 1),
+                  'pointer-events-none': sessionStore.session?.status !== 'ongoing'
+                }"
+                :style="{
+                  backgroundColor: promptColors[prompt.color].primaryColor,
+                  borderColor: promptColors[prompt.color].secondaryColor,
+                  color: promptColors[prompt.color].textColor
+                }"
+                @click="onChangeScore(prompt, 1)"
+              >
+                <div class="absolute top-px text-xs font-semibold">{{ prompt.abbreviation }}</div>
+                <div v-if="prompt.score">{{ prompt.score }}</div>
+                <Icon v-else icon="stash:plus-solid" class="text-5xl" />
+              </div>
+              <div
+                class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white px-5"
+                :class="{
+                  'cursor-wait':
+                    (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
+                    (typeLoadingBox !== null && typeLoadingBox !== -1),
+                  'pointer-events-none': !prompt.score || sessionStore.session?.status !== 'ongoing'
+                }"
+                @click="onChangeScore(prompt, -1)"
+              >
+                <div
+                  class="h-1 w-6 shrink-0 rounded transition-all"
+                  :class="{ 'bg-slate-5': !prompt.score, 'bg-slate-6': prompt.score }"
+                ></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="shrink-0 space-y-2" :class="{ '-translate-y-4': is_collapsed }">
-    <div class="flex h-2 items-center justify-center gap-2">
-      <div
-        v-for="n in pageCount"
-        :key="n"
-        :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-        class="h-2 w-2 rounded-full transition-all"
-      ></div>
-    </div>
-    <div v-if="!is_collapsed">
-      <div
-        v-if="measurement?.target?.prompting_format === 'classic'"
-        class="text-center text-xs font-medium text-slate-7"
-      >
-        Goal: {{ measurement.target?.goal }} attempt(s)
-        {{ measurement.target?.success_metric }} prompt
+    <div class="shrink-0 space-y-2 pb-3" :class="{ '-translate-y-4': is_collapsed }">
+      <div class="flex h-2 items-center justify-center gap-2">
+        <div
+          v-for="n in pageCount"
+          :key="n"
+          :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
+          class="h-2 w-2 rounded-full transition-all"
+        ></div>
       </div>
-      <div
-        v-if="measurement?.target?.prompting_format === 'custom'"
-        class="text-center text-xs font-medium text-slate-7"
-      >
-        <span v-if="measurement?.target?.success_metric === 'equal to or greater than goal'">
-          Goal: ≥ {{ `${measurement?.target?.goal}%` }}
-        </span>
-        <span v-if="measurement?.target?.success_metric === 'less than goal'">
-          Goal: {{ '<' }} {{ `${measurement?.target?.goal}%` }}
-        </span>
-        <span class="w-2 shrink-0"></span>
-        Score {{ `${currentScore}%` }}
+      <div v-if="!is_collapsed">
+        <div
+          v-if="measurement?.target?.prompting_format === 'classic'"
+          class="text-center text-xs font-medium text-slate-7"
+        >
+          Goal: {{ measurement.target?.goal }} attempt(s)
+          {{ measurement.target?.success_metric }} prompt
+        </div>
+        <div
+          v-if="measurement?.target?.prompting_format === 'custom'"
+          class="text-center text-xs font-medium text-slate-7"
+        >
+          <span v-if="measurement?.target?.success_metric === 'equal to or greater than goal'">
+            Goal: ≥ {{ `${measurement?.target?.goal}%` }}
+          </span>
+          <span v-if="measurement?.target?.success_metric === 'less than goal'">
+            Goal: {{ '<' }} {{ `${measurement?.target?.goal}%` }}
+          </span>
+          <span class="w-2 shrink-0"></span>
+          Score {{ `${currentScore}%` }}
+        </div>
       </div>
     </div>
   </div>

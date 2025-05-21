@@ -71,44 +71,49 @@ const onAddScore = async () => {
 </script>
 
 <template>
-  <div
-    class="flex h-full flex-grow flex-wrap content-center items-center gap-x-3 gap-y-4 transition-all"
-    :class="{ 'justify-center': !is_collapsed, 'justify-between': is_collapsed }"
-  >
-    <div v-if="is_collapsed"></div>
-    <div v-if="is_collapsed" class="flex flex-col items-center justify-between gap-2 text-slate-7">
-      <div class="text-[32px] font-bold">{{ totalScore }}</div>
-      <div class="text-xs">Total score</div>
-    </div>
+  <div class="flex h-full flex-grow flex-col justify-between gap-2">
     <div
-      class="flex shrink-0 items-center justify-center rounded-full bg-light-purple-5 transition-all"
-      :class="{
-        'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing',
-        'h-[200px] w-[200px]': !is_collapsed,
-        'h-[90px] w-[90px]': is_collapsed
-      }"
-      @click="onAddScore()"
+      class="flex h-full flex-grow flex-wrap content-center items-center gap-x-3 gap-y-4 transition-all"
+      :class="{ 'justify-center': !is_collapsed, 'justify-between': is_collapsed }"
     >
-      <div class="text-sm font-semibold text-white">Incident</div>
+      <div v-if="is_collapsed"></div>
+      <div
+        v-if="is_collapsed"
+        class="flex flex-col items-center justify-between gap-2 text-slate-7"
+      >
+        <div class="text-[32px] font-bold">{{ totalScore }}</div>
+        <div class="text-xs">Total score</div>
+      </div>
+      <div
+        class="flex shrink-0 items-center justify-center rounded-full bg-light-purple-5 transition-all"
+        :class="{
+          'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing',
+          'h-[200px] w-[200px]': !is_collapsed,
+          'h-[90px] w-[90px]': is_collapsed
+        }"
+        @click="onAddScore()"
+      >
+        <div class="text-sm font-semibold text-white">Incident</div>
+      </div>
     </div>
-  </div>
 
-  <div v-if="!is_collapsed" class="shrink-0 space-y-1 text-xs font-medium text-slate-7">
-    <div class="flex items-center justify-between">
-      <div>Interval</div>
-      <div>{{ currentInterval }} / {{ intervalRound }}</div>
-    </div>
-    <div class="flex items-center justify-between">
-      <div>Score in interval</div>
-      <div>{{ scoreInInterval }}</div>
-    </div>
-    <div class="flex items-center justify-between">
-      <div>Total score</div>
-      <div>{{ totalScore }}</div>
-    </div>
-    <div class="flex items-center justify-between">
-      <div>Percentage</div>
-      <div>{{ percentageScore }}%</div>
+    <div v-if="!is_collapsed" class="shrink-0 space-y-1 pb-3 text-xs font-medium text-slate-7">
+      <div class="flex items-center justify-between">
+        <div>Interval</div>
+        <div>{{ currentInterval }} / {{ intervalRound }}</div>
+      </div>
+      <div class="flex items-center justify-between">
+        <div>Score in interval</div>
+        <div>{{ scoreInInterval }}</div>
+      </div>
+      <div class="flex items-center justify-between">
+        <div>Total score</div>
+        <div>{{ totalScore }}</div>
+      </div>
+      <div class="flex items-center justify-between">
+        <div>Percentage</div>
+        <div>{{ percentageScore }}%</div>
+      </div>
     </div>
   </div>
 </template>

@@ -193,72 +193,74 @@ const onRemoveBox = async (box: PercentageBox) => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow content-center items-center justify-center">
-    <div
-      class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
-      @scroll="onScroll"
-    >
+  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+    <div class="flex h-full flex-grow content-center items-center justify-center">
       <div
-        v-for="(percentageBoxes, idx) in percentageBoxesPages"
-        :key="`${measurement.id}-percentage-boxes-${idx + 1}`"
-        :id="`${measurement.id}-percentage-boxes-${idx + 1}`"
-        class="flex w-[calc(320px-32px)] shrink-0 snap-start justify-center"
+        class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+        @scroll="onScroll"
       >
         <div
-          class="flex max-w-72 flex-wrap content-center items-start justify-center py-2 transition-all"
-          :class="{
-            'gap-x-4 gap-y-4': !is_collapsed,
-            'gap-x-2 gap-y-2': is_collapsed
-          }"
+          v-for="(percentageBoxes, idx) in percentageBoxesPages"
+          :key="`${measurement.id}-percentage-boxes-${idx + 1}`"
+          :id="`${measurement.id}-percentage-boxes-${idx + 1}`"
+          class="flex w-[calc(320px-32px)] shrink-0 snap-start justify-center"
         >
-          <div v-for="box in percentageBoxes" :key="box.key" class="relative">
-            <div
-              v-if="box.removeable"
-              class="absolute -right-1.5 -top-1.5 z-10 flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-tomato-7 text-white hover:bg-tomato-9"
-              @click="onRemoveBox(box)"
-            >
-              <Icon icon="ph:x" class="h-2 w-2 text-white" />
-            </div>
-            <div
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded border text-2xl transition-all"
-              :class="{
-                'pointer-events-none':
-                  (percentageLoadingBox && percentageLoadingBox !== box.key) ||
-                  sessionStore.session?.status !== 'ongoing',
-                'border-slate-5 bg-white': box.value === null,
-                'border-grass-7 bg-grass-1': box.value === true,
-                'border-tomato-7 bg-tomato-1': box.value === false,
-                'border-dashed border-slate-5 bg-slate-2': box.key === 'placeholder'
-              }"
-              @click="onChangePercentage(box)"
-            >
-              <Icon v-if="box.value === true" icon="ph:check" class="text-grass-7" />
-              <Icon v-if="box.value === false" icon="ph:x" class="text-tomato-7" />
+          <div
+            class="flex max-w-72 flex-wrap content-center items-start justify-center py-2 transition-all"
+            :class="{
+              'gap-x-4 gap-y-4': !is_collapsed,
+              'gap-x-2 gap-y-2': is_collapsed
+            }"
+          >
+            <div v-for="box in percentageBoxes" :key="box.key" class="relative">
+              <div
+                v-if="box.removeable"
+                class="absolute -right-1.5 -top-1.5 z-10 flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-tomato-7 text-white hover:bg-tomato-9"
+                @click="onRemoveBox(box)"
+              >
+                <Icon icon="ph:x" class="h-2 w-2 text-white" />
+              </div>
+              <div
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded border text-2xl transition-all"
+                :class="{
+                  'pointer-events-none':
+                    (percentageLoadingBox && percentageLoadingBox !== box.key) ||
+                    sessionStore.session?.status !== 'ongoing',
+                  'border-slate-5 bg-white': box.value === null,
+                  'border-grass-7 bg-grass-1': box.value === true,
+                  'border-tomato-7 bg-tomato-1': box.value === false,
+                  'border-dashed border-slate-5 bg-slate-2': box.key === 'placeholder'
+                }"
+                @click="onChangePercentage(box)"
+              >
+                <Icon v-if="box.value === true" icon="ph:check" class="text-grass-7" />
+                <Icon v-if="box.value === false" icon="ph:x" class="text-tomato-7" />
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="shrink-0 space-y-2" :class="{ '-translate-y-2': is_collapsed }">
-    <div class="flex h-2 items-center justify-center gap-2">
-      <div
-        v-for="n in pageCount"
-        :key="n"
-        :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-        class="h-2 w-2 rounded-full transition-all"
-      ></div>
-    </div>
-    <div v-if="!is_collapsed" class="z-10 text-center">
-      <div
-        class="flex items-center justify-center gap-2 text-center text-xs font-medium text-slate-7"
-      >
-        <div>Goal: {{ measurement.target?.goal }}%</div>
-        <div>Score: {{ percentageScore.toFixed(0) }}%</div>
+    <div class="shrink-0 space-y-2 pb-3" :class="{ '-translate-y-2': is_collapsed }">
+      <div class="flex h-2 items-center justify-center gap-2">
+        <div
+          v-for="n in pageCount"
+          :key="n"
+          :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
+          class="h-2 w-2 rounded-full transition-all"
+        ></div>
       </div>
-      <div class="text-center text-xs font-medium text-slate-7">
-        <div>Minimum {{ measurement.target?.number_of_trial }} trial(s)</div>
+      <div v-if="!is_collapsed" class="z-10 text-center">
+        <div
+          class="flex items-center justify-center gap-2 text-center text-xs font-medium text-slate-7"
+        >
+          <div>Goal: {{ measurement.target?.goal }}%</div>
+          <div>Score: {{ percentageScore.toFixed(0) }}%</div>
+        </div>
+        <div class="text-center text-xs font-medium text-slate-7">
+          <div>Minimum {{ measurement.target?.number_of_trial }} trial(s)</div>
+        </div>
       </div>
     </div>
   </div>
