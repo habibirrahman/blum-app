@@ -5,6 +5,8 @@ import { useAppStore, type NetworkStatus } from './stores/app.store'
 import { Icon } from '@iconify/vue'
 import { Network } from '@capacitor/network'
 import AppButton from './components/AppButton.vue'
+import { App } from '@capacitor/app'
+import { Device } from '@capacitor/device'
 
 const route = useRoute()
 const router = useRouter()
@@ -65,9 +67,33 @@ onBeforeMount(() => {
   loadingApp.value = true
   setupNetwork()
 })
-onMounted(() => {
+onMounted(async () => {
   fetchCurrentUser()
   Network.addListener('networkStatusChange', networkListener)
+
+  const deviceInfo = await Device.getInfo()
+  console.log('deviceInfo', deviceInfo)
+
+  if (deviceInfo.platform === 'android') {
+    console.log('Running on Android')
+  } else if (deviceInfo.platform === 'ios') {
+    console.log('Running on iOS')
+  } else {
+    console.log('Running on web')
+  }
+
+  const appInfo = await App.getInfo()
+  console.log('App Information:', appInfo)
+  /**
+  android\app\build.gradle
+  versionCode 13
+  versionName "1.2.1"
+  
+  iOS
+  ios\App\App.xcodeproj\project.pbxproj
+  CURRENT_PROJECT_VERSION 4
+  MARKETING_VERSION 1.2.1
+   */
 })
 onUnmounted(() => {
   Network.removeAllListeners()
