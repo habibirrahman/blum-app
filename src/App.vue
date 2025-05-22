@@ -74,6 +74,16 @@ onMounted(async () => {
   const deviceInfo = await Device.getInfo()
   console.log('deviceInfo', deviceInfo)
 
+  /**
+   * public API
+   * * get /api/v1/current_app_version
+   * {
+   *   data: [
+   *     { platform, build, version, is_current },
+   *     { platform, build, version, is_current },
+   *   ]
+   * }
+   */
   if (deviceInfo.platform === 'android') {
     console.log('Running on Android')
   } else if (deviceInfo.platform === 'ios') {
@@ -85,6 +95,10 @@ onMounted(async () => {
   const appInfo = await App.getInfo()
   console.log('App Information:', appInfo)
   /**
+   
+   * https://capacitorjs.com/docs/apis/app#appinfo
+  appInfo.build
+  
   android\app\build.gradle
   versionCode 13
   versionName "1.2.1"
