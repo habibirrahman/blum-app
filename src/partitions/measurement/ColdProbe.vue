@@ -121,9 +121,9 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-center">
+  <div class="flex flex-col justify-center flex-grow h-full">
     <div
-      class="flex h-full content-center items-center justify-center"
+      class="flex items-center content-center justify-center h-full"
       :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
     >
       <div class="">
@@ -134,10 +134,10 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
             :class="{ 'flex-row-reverse': is_collapsed, 'flex-col': !is_collapsed }"
           >
             <div
-              class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300"
+              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-all duration-300 border-2 rounded-full"
               :class="{
                 'border-dotted ': !loading.yes,
-                'border-lime-5 bg-lime-5': loading.yes,
+                'border-lime-5 bg-lime-5': loading.yes || singleVariableResult.yes,
                 'cursor-not-allowed': loading.yes && !loading.no,
                 'pointer-events-none': sessionStore.session?.status !== 'ongoing',
                 'cursor-pointer': !loading.yes && !loading.no
@@ -152,17 +152,17 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                     loading.yes
                       ? 'text-white'
                       : singleVariableResult.yes
-                        ? 'text-lime-5'
+                        ? 'text-white'
                         : 'text-slate-5'
                   "
                 />
               </div>
             </div>
             <div
-              class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300"
+              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-all duration-300 border-2 rounded-full"
               :class="{
                 'border-dotted': !loading.no,
-                'border-red-cherry bg-red-cherry': loading.no,
+                'border-red-cherry bg-red-cherry': loading.no || singleVariableResult.no,
                 'cursor-not-allowed': loading.no && !loading.yes,
                 'pointer-events-none': sessionStore.session?.status !== 'ongoing',
                 'cursor-pointer': !loading.no && !loading.yes
@@ -177,7 +177,7 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                     loading.no
                       ? 'text-white'
                       : singleVariableResult.no
-                        ? 'text-red-cherry'
+                        ? 'text-white'
                         : 'text-slate-5'
                   "
                 />
@@ -205,11 +205,12 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
               >
                 <!-- YES BUTTON -->
                 <div
-                  class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300"
+                  class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-all duration-300 border-2 rounded-full"
                   :class="{
                     'border-dotted': !loadingMultiple[variable?.id ?? ''],
                     'border-lime-5 bg-lime-5':
-                      loadingMultiple[variable.id ?? ''] &&
+                      (loadingMultiple[variable.id ?? ''] &&
+                        multipleVariableResult[variable.id ?? ''] === 'yes') ||
                       multipleVariableResult[variable.id ?? ''] === 'yes',
                     'cursor-not-allowed': loadingMultiple[variable.id ?? ''],
                     'pointer-events-none': sessionStore.session?.status !== 'ongoing',
@@ -229,7 +230,7 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                         multipleVariableResult[variable?.id ?? ''] === 'yes'
                           ? 'text-white'
                           : multipleVariableResult[variable?.id ?? ''] === 'yes'
-                            ? 'text-lime-5'
+                            ? 'text-white'
                             : 'text-slate-5'
                       "
                     />
@@ -238,11 +239,12 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
 
                 <!-- NO BUTTON -->
                 <div
-                  class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300"
+                  class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-all duration-300 border-2 rounded-full"
                   :class="{
                     'border-dotted': !loadingMultiple[variable?.id ?? ''],
                     'border-red-cherry bg-red-cherry':
-                      loadingMultiple[variable?.id ?? ''] &&
+                      (loadingMultiple[variable?.id ?? ''] &&
+                        multipleVariableResult[variable?.id ?? ''] === 'no') ||
                       multipleVariableResult[variable?.id ?? ''] === 'no',
                     'cursor-not-allowed': loadingMultiple[variable?.id ?? ''],
                     'pointer-events-none': sessionStore.session?.status !== 'ongoing',
@@ -262,7 +264,7 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
                         multipleVariableResult[variable?.id ?? ''] === 'no'
                           ? 'text-white'
                           : multipleVariableResult[variable?.id ?? ''] === 'no'
-                            ? 'text-red-cherry'
+                            ? 'text-white'
                             : 'text-slate-5'
                       "
                     />
