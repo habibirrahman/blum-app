@@ -5,12 +5,17 @@ import { useAppStore, type NetworkStatus } from './stores/app.store'
 import { Icon } from '@iconify/vue'
 import { Network } from '@capacitor/network'
 import AppButton from './components/AppButton.vue'
+import { App } from '@capacitor/app'
+import { Device } from '@capacitor/device'
+import axios from 'axios'
+import AppActionSheet from '@/components/AppActionSheet.vue'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 
 const loadingApp = ref<boolean>(true)
+const updateRequired = ref<boolean>(false)
 const routeName = computed<string>(() => route.name?.toString() || 'signin')
 const isShowRunningSession = computed<boolean>(
   () => appStore.running_sessions.length > 0 && routeName.value !== 'session-record'
@@ -25,6 +30,7 @@ const networkStatus: NetworkStatus = reactive({
   connected: false,
   connection_type: 'none'
 })
+
 watch(
   () => networkStatus.connected,
   () => {
@@ -61,14 +67,93 @@ async function setupNetwork() {
   networkStatus.connection_type = connectionType
 }
 
+// Function to compare version numbers
+function compareVersions(currentVersion: string, requiredVersion: string): number {
+  const current = currentVersion.split('.').map(Number)
+  const required = requiredVersion.split('.').map(Number)
+
+  for (let i = 0; i < Math.max(current.length, required.length); i++) {
+    const currentPart = current[i] || 0
+    const requiredPart = required[i] || 0
+
+    if (currentPart < requiredPart) return -1
+    if (currentPart > requiredPart) return 1
+  }
+  return 0
+}
+
+// Function to compare build numbers
+function compareBuildNumbers(
+  currentBuild: string | number,
+  requiredBuild: string | number
+): boolean {
+  const current = typeof currentBuild === 'string' ? parseInt(currentBuild) : currentBuild
+  const required = typeof requiredBuild === 'string' ? parseInt(requiredBuild) : requiredBuild
+  return current < required
+}
+
+// Function to check if update is required
+async function checkForUpdates() {
+  try {
+    const [deviceInfo, appInfo] = await Promise.all([Device.getInfo(), App.getInfo()])
+
+    // Fetch latest app version from API
+    const { data } = await axios.get('/api/v1/app_versions?current=true')
+
+    if (!data?.app_versions) {
+      return
+    }
+
+    // Find the version info for current platform
+    const platformVersionInfo = data.app_versions.find(
+      (item: any) => item.platform === deviceInfo.platform
+    )
+
+    if (!platformVersionInfo) {
+      return
+    }
+
+    // Check if current version is outdated
+    const isVersionOutdated = compareVersions(appInfo.version, platformVersionInfo.version) < 0
+    const isBuildOutdated = compareBuildNumbers(appInfo.build, platformVersionInfo.build)
+
+    // Update is required if either version or build is outdated
+    updateRequired.value = isVersionOutdated || isBuildOutdated
+  } catch (error) {
+    updateRequired.value = false
+  }
+}
+
+// Function to handle update action
+async function handleUpdateApp() {
+  try {
+    const deviceInfo = await Device.getInfo()
+
+    if (deviceInfo.platform === 'android') {
+      window.open('https://play.google.com/store/apps/details?id=id.simpul.blum', '_system')
+    } else if (deviceInfo.platform === 'ios') {
+      window.open('https://apps.apple.com/id/app/blum-aba/id6743465528?l=id', '_system')
+    } else {
+      window.location.reload()
+    }
+  } catch (error) {
+    window.location.reload()
+  }
+}
+
 onBeforeMount(() => {
   loadingApp.value = true
   setupNetwork()
 })
-onMounted(() => {
+
+onMounted(async () => {
   fetchCurrentUser()
   Network.addListener('networkStatusChange', networkListener)
+
+  // Check for updates after getting device info
+  await checkForUpdates()
 })
+
 onUnmounted(() => {
   Network.removeAllListeners()
 })
@@ -80,6 +165,7 @@ interface Nav {
   label: string
   is_active: boolean
 }
+
 const navigations = computed<Nav[]>(() => {
   return [
     {
@@ -210,4 +296,18 @@ const isHeightFull = computed<boolean>(
       </RouterLink>
     </nav>
   </footer>
+
+  <!-- Update Required Modal -->
+  <AppActionSheet :show="updateRequired">
+    <div class="space-y-5">
+      <div class="text-center text-2xl font-semibold text-slate-10">Update required</div>
+      <div class="text-center text-sm text-slate-8">
+        To continue using Blüm, please update to the latest version. We've made important
+        improvements to ensure everything runs smoothly.
+      </div>
+      <div class="flex flex-col gap-3">
+        <AppButton kind="plain" class="w-full" @click="handleUpdateApp"> Update Now </AppButton>
+      </div>
+    </div>
+  </AppActionSheet>
 </template>
