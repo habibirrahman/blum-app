@@ -357,7 +357,7 @@ const onToggleSaved = (saved: boolean) => {
 
 <template>
   <div
-    class="relative shrink-0 rounded transition-all"
+    class="relative transition-all rounded shrink-0"
     :class="{
       'h-[600px] w-[320px]': !is_collapsed,
       'h-[180px] w-full': is_collapsed
@@ -365,11 +365,11 @@ const onToggleSaved = (saved: boolean) => {
   >
     <div
       v-if="review_mode && measurement.is_fixed"
-      class="absolute -top-6 left-0 flex h-16 w-16 items-center justify-center rounded-full bg-white"
+      class="absolute left-0 flex items-center justify-center w-16 h-16 bg-white rounded-full -top-6"
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
-    <div class="flex h-full flex-col" :class="{ 'pointer-events-none': review_mode }">
+    <div class="flex flex-col h-full" :class="{ 'pointer-events-none': review_mode }">
       <div
         class="h-[6px] w-full shrink-0 rounded-t"
         :style="{ backgroundColor: measurement.target?.curriculum_color }"
@@ -377,23 +377,23 @@ const onToggleSaved = (saved: boolean) => {
       <div
         v-if="!is_collapsed"
         id="measurememt-header"
-        class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-4"
+        class="flex items-center justify-between w-full px-4 h-9 shrink-0 bg-prim-2"
       >
         <div
-          class="flex h-6 w-6 items-center justify-center rounded transition-all"
+          class="flex items-center justify-center w-6 h-6 transition-all rounded"
           :class="{ 'bg-white': display === 'description' }"
           @click="display = display === 'description' ? 'target' : 'description'"
         >
           <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
         </div>
         <div
-          class="relative flex h-6 w-6 items-center justify-center rounded transition-all"
+          class="relative flex items-center justify-center w-6 h-6 transition-all rounded"
           :class="{ 'bg-white': display === 'comment' }"
           @click="display = display === 'comment' ? 'target' : 'comment'"
         >
           <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
           <div
-            class="absolute right-px top-px h-2 w-2 rounded-full bg-light-purple-5 transition-all"
+            class="absolute w-2 h-2 transition-all rounded-full right-px top-px bg-light-purple-5"
             :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
           ></div>
         </div>
@@ -408,13 +408,13 @@ const onToggleSaved = (saved: boolean) => {
         </div>
       </div>
 
-      <div v-if="cardLoading" class="flex h-full flex-col items-center justify-center bg-white">
-        <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <div v-if="cardLoading" class="flex flex-col items-center justify-center h-full bg-white">
+        <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
       </div>
       <div
         v-else
         id="measurememt-body"
-        class="flex h-full flex-col rounded-b bg-white px-4 pb-3"
+        class="flex flex-col h-full px-4 pb-3 bg-white rounded-b"
         :class="[is_collapsed ? 'pt-3' : 'no-scrollbar overflow-y-auto']"
       >
         <div v-if="!is_collapsed" id="card-title" class="flex flex-col gap-1 py-3">
@@ -426,7 +426,7 @@ const onToggleSaved = (saved: boolean) => {
               {{ measurement.target?.curriculum_name }}
             </div>
             <div v-if="measurementType.includes('Probing')" class="shrink-0">
-              <div class="rounded-full bg-lime-2 px-2 text-sm font-semibold text-lime-7">
+              <div class="px-2 text-sm font-semibold rounded-full bg-lime-2 text-lime-7">
                 Probing
               </div>
             </div>
@@ -441,18 +441,18 @@ const onToggleSaved = (saved: boolean) => {
         <div v-if="display === 'target'" class="flex h-full gap-3">
           <div
             v-if="isDropped"
-            class="flex min-h-full flex-grow flex-col items-center justify-center gap-4"
+            class="flex flex-col items-center justify-center flex-grow min-h-full gap-4"
           >
-            <Icon icon="solar:clipboard-remove-bold" class="h-20 w-20 text-tulip-6" />
-            <div v-if="!is_collapsed" class="w-72 space-y-2">
-              <div class="text-center font-semibold">Entry not recorded</div>
-              <div class="text-center text-sm text-slate-8">
+            <Icon icon="solar:clipboard-remove-bold" class="w-20 h-20 text-tulip-6" />
+            <div v-if="!is_collapsed" class="space-y-2 w-72">
+              <div class="font-semibold text-center">Entry not recorded</div>
+              <div class="text-sm text-center text-slate-8">
                 This entry will not be saved when the Session ends. Toggle back to save this entry
                 recording.
               </div>
             </div>
           </div>
-          <div v-else :key="`measurement-card-${cardId}`" class="h-full w-full">
+          <div v-else :key="`measurement-card-${cardId}`" class="w-full h-full">
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
               :measurement="measurement"
@@ -536,7 +536,7 @@ const onToggleSaved = (saved: boolean) => {
           </div>
           <div
             v-if="is_collapsed"
-            class="flex w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
+            class="flex items-center justify-center w-8 rounded-full shrink-0 bg-slate-4"
             @click="emit('toggle-collapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
@@ -645,18 +645,18 @@ const onToggleSaved = (saved: boolean) => {
             <!-- sbt -->
             <div v-if="measurement.target?.type === 'Target::Sbt'">
               <!-- sbt taks -->
-              <div class="bordert-2 space-y-3 border-slate-4 py-3">
+              <div class="py-3 space-y-3 bordert-2 border-slate-4">
                 <div v-for="taskCode in target?.target_tasks" :key="taskCode.id" class="space-y-1">
                   <div class="text-sm font-semibold text-slate-8">
-                    {{ taskCode.code }} - {{ taskCode.code_definition }}
+                    {{ taskCode.code }} - {{ taskCode.title }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ taskCode.description }}
                   </div>
                 </div>
               </div>
               <!-- sbt problem behavior -->
-              <div class="bordert-2 space-y-3 border-slate-4 py-3">
+              <div class="py-3 space-y-3 bordert-2 border-slate-4">
                 <div
                   v-for="problemBehavior in target?.target_problem_behaviors"
                   :key="problemBehavior.id"
@@ -665,7 +665,7 @@ const onToggleSaved = (saved: boolean) => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>
@@ -673,7 +673,7 @@ const onToggleSaved = (saved: boolean) => {
             </div>
             <!-- end sbt -->
           </div>
-          <div class="sticky -bottom-3 z-10 w-full bg-white py-3">
+          <div class="sticky z-10 w-full py-3 bg-white -bottom-3">
             <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
           </div>
         </div>
@@ -683,7 +683,7 @@ const onToggleSaved = (saved: boolean) => {
         >
           <div
             v-if="sessionStore.session?.status !== 'ongoing'"
-            class="text-wrap pt-3 text-sm text-slate-8"
+            class="pt-3 text-sm text-wrap text-slate-8"
           >
             {{ measurement.comment || '-' }}
           </div>
@@ -693,9 +693,9 @@ const onToggleSaved = (saved: boolean) => {
             type="textarea"
             placeholder="Type your comment here..."
             v-model="commentInput"
-            class="mt-2 h-full"
+            class="h-full mt-2"
           />
-          <div class="sticky -bottom-3 z-10 w-full bg-white py-3">
+          <div class="sticky z-10 w-full py-3 bg-white -bottom-3">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"
