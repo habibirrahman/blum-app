@@ -18,6 +18,7 @@ import SkillBasedTreatment from './measurement/SkillBasedTreatment.vue'
 import { useToast } from 'vue-toastification'
 import TrialByTrial from './measurement/TrialByTrial.vue'
 import ColdProbe from './measurement/ColdProbe.vue'
+import TaskAnalysis from './measurement/TaskAnalysis.vue'
 
 const toast = useToast()
 const sessionStore = useSessionStore()
@@ -357,7 +358,7 @@ const onToggleSaved = (saved: boolean) => {
 
 <template>
   <div
-    class="relative transition-all rounded shrink-0"
+    class="relative shrink-0 rounded transition-all"
     :class="{
       'h-[600px] w-[320px]': !is_collapsed,
       'h-[180px] w-full': is_collapsed
@@ -365,11 +366,11 @@ const onToggleSaved = (saved: boolean) => {
   >
     <div
       v-if="review_mode && measurement.is_fixed"
-      class="absolute left-0 flex items-center justify-center w-16 h-16 bg-white rounded-full -top-6"
+      class="absolute -top-6 left-0 flex h-16 w-16 items-center justify-center rounded-full bg-white"
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
-    <div class="flex flex-col h-full" :class="{ 'pointer-events-none': review_mode }">
+    <div class="flex h-full flex-col" :class="{ 'pointer-events-none': review_mode }">
       <div
         class="h-[6px] w-full shrink-0 rounded-t"
         :style="{ backgroundColor: measurement.target?.curriculum_color }"
@@ -377,23 +378,23 @@ const onToggleSaved = (saved: boolean) => {
       <div
         v-if="!is_collapsed"
         id="measurememt-header"
-        class="flex items-center justify-between w-full px-4 h-9 shrink-0 bg-prim-2"
+        class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-4"
       >
         <div
-          class="flex items-center justify-center w-6 h-6 transition-all rounded"
+          class="flex h-6 w-6 items-center justify-center rounded transition-all"
           :class="{ 'bg-white': display === 'description' }"
           @click="display = display === 'description' ? 'target' : 'description'"
         >
           <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
         </div>
         <div
-          class="relative flex items-center justify-center w-6 h-6 transition-all rounded"
+          class="relative flex h-6 w-6 items-center justify-center rounded transition-all"
           :class="{ 'bg-white': display === 'comment' }"
           @click="display = display === 'comment' ? 'target' : 'comment'"
         >
           <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
           <div
-            class="absolute w-2 h-2 transition-all rounded-full right-px top-px bg-light-purple-5"
+            class="absolute right-px top-px h-2 w-2 rounded-full bg-light-purple-5 transition-all"
             :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
           ></div>
         </div>
@@ -408,51 +409,62 @@ const onToggleSaved = (saved: boolean) => {
         </div>
       </div>
 
-      <div v-if="cardLoading" class="flex flex-col items-center justify-center h-full bg-white">
-        <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <div v-if="cardLoading" class="flex h-full flex-col items-center justify-center bg-white">
+        <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
       </div>
       <div
         v-else
         id="measurememt-body"
-        class="flex flex-col h-full px-4 pb-3 bg-white rounded-b"
+        class="flex h-full flex-col gap-2 rounded-b bg-white px-4 pb-3"
         :class="[is_collapsed ? 'pt-3' : 'no-scrollbar overflow-y-auto']"
       >
-        <div v-if="!is_collapsed" id="card-title" class="flex flex-col gap-1 py-3">
-          <div
-            class="flex items-center gap-x-2"
-            :class="{ 'flex-wrap': display === 'target' || display === 'comment' }"
-          >
-            <div class="text-sm font-semibold text-slate-7">
-              {{ measurement.target?.curriculum_name }}
-            </div>
-            <div v-if="measurementType.includes('Probing')" class="shrink-0">
-              <div class="px-2 text-sm font-semibold rounded-full bg-lime-2 text-lime-7">
-                Probing
-              </div>
+        <div v-if="!is_collapsed" id="card-title" class="pt-3">
+          <div v-if="measurement.target?.is_group" class="flex items-center gap-2">
+            <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
+            <div
+              class="text-sm font-semibold text-slate-9"
+              :class="{ 'truncate ': display === 'target' || display === 'comment' }"
+            >
+              {{ measurement.target?.name }}
             </div>
           </div>
-          <div
-            class="text-sm font-semibold text-slate-9"
-            :class="{ 'truncate ': display === 'target' || display === 'comment' }"
-          >
-            {{ measurement.target?.name }}
+          <div v-else class="flex flex-col gap-1">
+            <div
+              class="flex items-center gap-x-2"
+              :class="{ 'flex-wrap': display === 'target' || display === 'comment' }"
+            >
+              <div class="text-sm font-semibold text-slate-7">
+                {{ measurement.target?.curriculum_name }}
+              </div>
+              <div v-if="measurementType.includes('Probing')" class="shrink-0">
+                <div class="rounded-full bg-lime-2 px-2 text-sm font-semibold text-lime-7">
+                  Probing
+                </div>
+              </div>
+            </div>
+            <div
+              class="text-sm font-semibold text-slate-9"
+              :class="{ 'truncate ': display === 'target' || display === 'comment' }"
+            >
+              {{ measurement.target?.name }}
+            </div>
           </div>
         </div>
         <div v-if="display === 'target'" class="flex h-full gap-3">
           <div
             v-if="isDropped"
-            class="flex flex-col items-center justify-center flex-grow min-h-full gap-4"
+            class="flex min-h-full flex-grow flex-col items-center justify-center gap-4"
           >
-            <Icon icon="solar:clipboard-remove-bold" class="w-20 h-20 text-tulip-6" />
-            <div v-if="!is_collapsed" class="space-y-2 w-72">
-              <div class="font-semibold text-center">Entry not recorded</div>
-              <div class="text-sm text-center text-slate-8">
+            <Icon icon="solar:clipboard-remove-bold" class="h-20 w-20 text-tulip-6" />
+            <div v-if="!is_collapsed" class="w-72 space-y-2">
+              <div class="text-center font-semibold">Entry not recorded</div>
+              <div class="text-center text-sm text-slate-8">
                 This entry will not be saved when the Session ends. Toggle back to save this entry
                 recording.
               </div>
             </div>
           </div>
-          <div v-else :key="`measurement-card-${cardId}`" class="w-full h-full">
+          <div v-else :key="`measurement-card-${cardId}`" class="h-full w-full">
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
               :measurement="measurement"
@@ -507,12 +519,21 @@ const onToggleSaved = (saved: boolean) => {
               @fetch-session="emit('fetch-session')"
             />
             <Prompting
-              v-if="measurementType.includes('Prompting') && target"
+              v-if="measurementType.includes('Prompting') && target && !target.is_group"
               :measurement="measurement"
               :measurement_results="measurement.results || {}"
               :target="target"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
+              @fetch-session="emit('fetch-session')"
+            />
+            <TaskAnalysis
+              v-if="measurementType.includes('Prompting') && target && target.is_group"
+              :measurement="measurement"
+              :measurement_results="measurement.results || {}"
+              :target="target"
+              :is_collapsed="is_collapsed"
+              @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
             />
             <SkillBasedTreatment
@@ -536,19 +557,22 @@ const onToggleSaved = (saved: boolean) => {
           </div>
           <div
             v-if="is_collapsed"
-            class="flex items-center justify-center w-8 rounded-full shrink-0 bg-slate-4"
+            class="flex w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
             @click="emit('toggle-collapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
           </div>
         </div>
-        <div
-          v-if="display === 'description'"
-          class="flex h-[calc(100%-44px)] flex-col justify-between"
-        >
+        <div v-if="display === 'description'" class="pb-16">
           <div class="flex flex-col gap-3">
             <!-- target information -->
-            <div class="space-y-0.5 text-wrap text-sm text-slate-8">
+            <div
+              v-if="measurement.target?.is_group"
+              class="space-y-0.5 text-wrap text-sm text-slate-8"
+            >
+              <div>Grouped targets - {{ getTargetType(measurement.target?.type) }}</div>
+            </div>
+            <div v-else class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div>{{ getTargetType(measurement.target?.type) }}</div>
               <div
                 v-if="
@@ -588,7 +612,23 @@ const onToggleSaved = (saved: boolean) => {
                 <div v-if="measurement.target?.prompting_format === 'custom'">
                   Success metric: {{ measurement.target?.success_metric }}
                 </div>
-                <div>
+                <div v-if="target?.is_group">
+                  Prompts used in this session:
+                  {{
+                    target?.prompts
+                      ?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+                      ?.map((prompt) => {
+                        if (target?.prompting_format === 'custom') {
+                          return `${prompt.name} (${prompt.score}%)`
+                        }
+                        const score =
+                          prompt.abbreviation === 'Id' && prompt.name === 'Independent' ? 100 : 0
+                        return `${prompt.name} (${score}%)`
+                      })
+                      ?.join(', ')
+                  }}
+                </div>
+                <div v-else>
                   Prompts used in this session:
                   {{
                     Object.keys(measurement.results || {})
@@ -645,18 +685,18 @@ const onToggleSaved = (saved: boolean) => {
             <!-- sbt -->
             <div v-if="measurement.target?.type === 'Target::Sbt'">
               <!-- sbt taks -->
-              <div class="py-3 space-y-3 bordert-2 border-slate-4">
+              <div class="space-y-3 border-t-2 border-slate-4 py-3">
                 <div v-for="taskCode in target?.target_tasks" :key="taskCode.id" class="space-y-1">
                   <div class="text-sm font-semibold text-slate-8">
                     {{ taskCode.code }} - {{ taskCode.title }}
                   </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
+                  <div class="whitespace-pre-line text-sm text-slate-8">
                     {{ taskCode.description }}
                   </div>
                 </div>
               </div>
               <!-- sbt problem behavior -->
-              <div class="py-3 space-y-3 bordert-2 border-slate-4">
+              <div class="space-y-3 border-t-2 border-slate-4 py-3">
                 <div
                   v-for="problemBehavior in target?.target_problem_behaviors"
                   :key="problemBehavior.id"
@@ -665,15 +705,49 @@ const onToggleSaved = (saved: boolean) => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
+                  <div class="whitespace-pre-line text-sm text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>
               </div>
             </div>
             <!-- end sbt -->
+            <!-- group targets -->
+            <div v-if="measurement.target?.is_group">
+              <!-- group targets members -->
+              <div class="space-y-3 border-t-2 border-slate-4 py-3">
+                <div
+                  v-for="member in measurement.used_targets"
+                  :key="member.target_id"
+                  class="space-y-1"
+                >
+                  <div class="text-sm font-semibold text-slate-8">
+                    {{ member.target_code }} - {{ member.target_name }}
+                  </div>
+                  <div class="whitespace-pre-line text-sm text-slate-8">
+                    {{ member.description }}
+                  </div>
+                </div>
+              </div>
+              <!-- group targets problem behavior -->
+              <div class="space-y-3 border-t-2 border-slate-4 py-3">
+                <div
+                  v-for="problemBehavior in target?.target_problem_behaviors"
+                  :key="problemBehavior.id"
+                  class="space-y-1"
+                >
+                  <div class="text-sm font-semibold text-slate-8">
+                    {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
+                  </div>
+                  <div class="whitespace-pre-line text-sm text-slate-8">
+                    {{ problemBehavior.description }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- end group targets -->
           </div>
-          <div class="sticky z-10 w-full py-3 bg-white -bottom-3">
+          <div class="absolute bottom-0 flex h-16 w-[calc(100%-2rem)] items-center bg-pure-white">
             <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
           </div>
         </div>
@@ -683,7 +757,7 @@ const onToggleSaved = (saved: boolean) => {
         >
           <div
             v-if="sessionStore.session?.status !== 'ongoing'"
-            class="pt-3 text-sm text-wrap text-slate-8"
+            class="text-wrap pt-3 text-sm text-slate-8"
           >
             {{ measurement.comment || '-' }}
           </div>
@@ -693,9 +767,9 @@ const onToggleSaved = (saved: boolean) => {
             type="textarea"
             placeholder="Type your comment here..."
             v-model="commentInput"
-            class="h-full mt-2"
+            class="mt-2 h-full"
           />
-          <div class="sticky z-10 w-full py-3 bg-white -bottom-3">
+          <div class="sticky -bottom-3 z-10 w-full bg-white py-3">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"
