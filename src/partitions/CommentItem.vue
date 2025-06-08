@@ -37,6 +37,8 @@ const bodyInput = ref<string>('')
 const antecedentInput = ref<string>('')
 const behaviorInput = ref<string>('')
 const consequenceInput = ref<string>('')
+const imagePreviewOpened = ref<boolean>(false)
+const currentImageIndex = ref<number>(0)
 watch(showEdit, (val) => {
   if (val) {
     typeInput.value = props.comment.type === 'Assessment::InSession' ? 'assessment' : 'general'
@@ -109,6 +111,10 @@ const onDelete = async () => {
   showRemove.value = false
   showAction.value = false
 }
+const showImage = (index: number) => {
+  currentImageIndex.value = index
+  imagePreviewOpened.value = true
+}
 </script>
 
 <template>
@@ -122,9 +128,9 @@ const onDelete = async () => {
       class="w-full space-y-2 rounded border border-prim-4 bg-white px-4 py-3"
       :class="{ 'pointer-events-none': !actionable }"
       :style="{ boxShadow: !showAction ? '4px 4px 0px 0px #D6C7E066' : '' }"
-      @click="showAction = !showAction"
+      @click.self="showAction = !showAction"
     >
-      <div class="flex items-center justify-between gap-4">
+      <div @click="showAction = !showAction" class="flex items-center justify-between gap-4">
         <div
           v-if="comment.user_name"
           class="flex h-5 items-center truncate rounded-full bg-lime-4 p-2"
@@ -141,39 +147,81 @@ const onDelete = async () => {
       </div>
       <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
       <div v-if="comment.type === 'Assessment::InSession'" class="space-y-2">
-        <div class="space-y-1">
-          <div class="text-sm text-slate-7">Antecedent</div>
-          <div
-            class="whitespace-pre-line text-sm text-slate-8"
-            :class="{ 'line-clamp-3': showAction }"
-            v-html="comment.antecedent || '-'"
-          ></div>
+        <div @click="showAction = !showAction" class="space-y-2">
+          <div class="space-y-1">
+            <div class="text-sm text-slate-7">Antecedent</div>
+            <div
+              class="whitespace-pre-line text-sm text-slate-8"
+              :class="{
+                'line-clamp-3': showAction && !comment.images,
+                'line-clamp-1': showAction && comment.images
+              }"
+              v-html="comment.antecedent || '-'"
+            ></div>
+          </div>
+          <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
+          <div class="space-y-1">
+            <div class="text-sm text-slate-7">Behavior</div>
+            <div
+              class="whitespace-pre-line text-sm text-slate-8"
+              :class="{
+                'line-clamp-3': showAction && !comment.images,
+                'line-clamp-1': showAction && comment.images
+              }"
+              v-html="comment.behavior || '-'"
+            ></div>
+          </div>
+          <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
+          <div class="space-y-1">
+            <div class="text-sm text-slate-7">Consequence</div>
+            <div
+              class="whitespace-pre-line text-sm text-slate-8"
+              :class="{
+                'line-clamp-3': showAction && !comment.images,
+                'line-clamp-1': showAction && comment.images
+              }"
+              v-html="comment.consequence || '-'"
+            ></div>
+          </div>
         </div>
-        <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
-        <div class="space-y-1">
-          <div class="text-sm text-slate-7">Behavior</div>
-          <div
-            class="whitespace-pre-line text-sm text-slate-8"
-            :class="{ 'line-clamp-3': showAction }"
-            v-html="comment.behavior || '-'"
-          ></div>
-        </div>
-        <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
-        <div class="space-y-1">
-          <div class="text-sm text-slate-7">Consequence</div>
-          <div
-            class="whitespace-pre-line text-sm text-slate-8"
-            :class="{ 'line-clamp-3': showAction }"
-            v-html="comment.consequence || '-'"
-          ></div>
+        <div v-if="comment.images" class="mt-2 flex gap-2">
+          <div v-for="(image, index) in comment.images" :key="image.id">
+            <img
+              :src="image.file_url"
+              :alt="image.file_name"
+              @click.stop="showImage(index)"
+              class="mb-2 cursor-pointer rounded-lg"
+              :class="{
+                'h-16 w-16 object-cover': comment.images.length > 0,
+                'h-20 w-20 object-cover': comment.images.length === 1 && showAction
+              }"
+            />
+          </div>
         </div>
       </div>
-      <div
-        v-else
-        class="whitespace-pre-line text-sm text-slate-8"
-        :class="{ ' line-clamp-[10]': showAction }"
-        v-html="comment.body || '-'"
-      ></div>
+      <div v-else class="flex flex-col">
+        <div
+          @click="showAction = !showAction"
+          class="whitespace-pre-line text-sm text-slate-8"
+          :class="{ ' line-clamp-[6]': showAction }"
+          v-html="comment.body || ''"
+        ></div>
+        <div v-if="comment.images" class="mt-2 flex gap-2">
+          <div v-for="(image, index) in comment.images" :key="image.id">
+            <img
+              :src="image.file_url"
+              :alt="image.file_name"
+              @click.stop="showImage(index)"
+              class="mb-2 cursor-pointer rounded-lg"
+              :class="{
+                'h-16 w-16 object-cover': comment.images.length > 1,
+                'h-80 w-80 object-cover': comment.images.length === 1 && !showAction,
+                'h-20 w-20 object-cover': comment.images.length === 1 && showAction
+              }"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -283,6 +331,77 @@ const onDelete = async () => {
         >
           Update
         </AppButton>
+      </div>
+    </div>
+  </TransitionRoot>
+  <TransitionRoot
+    :show="imagePreviewOpened && !showAction"
+    enter="transition-all duration-300 ease-out"
+    enter-from="opacity-0 scale-95"
+    enter-to="opacity-100 scale-100"
+    leave="transition-all duration-200 ease-in"
+    leave-from="opacity-100 scale-100"
+    leave-to="opacity-0 scale-95"
+    class="fixed -top-4 left-0 z-[1000] h-screen w-screen bg-[#1d2939]"
+  >
+    <div class="relative h-full w-full">
+      <div class="absolute top-4 z-20 flex w-full items-center justify-between gap-3 px-3 pt-safe">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+            @click="imagePreviewOpened = false"
+          >
+            <Icon icon="ph:x" class="text-xl text-slate-7" />
+          </div>
+          <div
+            v-if="comment.user_name"
+            class="flex h-5 items-center truncate rounded-full bg-lime-4 p-2"
+          >
+            <div class="truncate text-xs font-medium text-lime-9">{{ comment.user_name }}</div>
+          </div>
+        </div>
+        <div class="text-pure-white">
+          {{ displayDate({ date: comment?.images?.[currentImageIndex]?.created_at ?? '' }) }}
+        </div>
+      </div>
+
+      <!-- Image -->
+      <div class="flex h-full items-center justify-center">
+        <img
+          :src="comment?.images?.[currentImageIndex]?.file_url"
+          :alt="comment?.images?.[currentImageIndex]?.file_name"
+          class="max-h-[50vh] max-w-[100vw] object-contain"
+        />
+      </div>
+
+      <!-- Navigation arrows -->
+      <div
+        v-if="(comment?.images ?? []).length > 1"
+        class="absolute inset-y-0 left-0 right-0 flex items-center justify-between"
+      >
+        <!-- Left arrow -->
+        <div
+          class="ml-4 flex h-12 w-12 items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+          :class="{
+            'cursor-pointer': currentImageIndex > 0,
+            'opacity-50': currentImageIndex === 0
+          }"
+          @click="currentImageIndex > 0 && currentImageIndex--"
+        >
+          <Icon icon="ph:caret-left" class="text-2xl text-slate-7" />
+        </div>
+
+        <!-- Right arrow -->
+        <div
+          class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+          :class="{
+            'cursor-pointer': currentImageIndex < (comment?.images?.length ?? 0) - 1,
+            'opacity-50': currentImageIndex === (comment?.images?.length ?? 0) - 1
+          }"
+          @click="currentImageIndex < (comment?.images?.length ?? 0) - 1 && currentImageIndex++"
+        >
+          <Icon icon="ph:caret-right" class="text-2xl text-slate-7" />
+        </div>
       </div>
     </div>
   </TransitionRoot>

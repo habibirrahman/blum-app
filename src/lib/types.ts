@@ -151,6 +151,7 @@ export interface Comment {
   antecedent?: string
   behavior?: string
   consequence?: string
+  images?: ImageData[]
   type?: 'Assessment::InSession' // not
   client_id?: Client['id']
   session_id?: Session['id']
@@ -162,7 +163,16 @@ export interface Comment {
   created_at_string?: string
   updated_at_string?: string
 }
-
+interface ImageData {
+  id?: number
+  base64: string
+  file_name: string
+  created_at?: string
+  file_url?: string
+  size: number
+  width: number
+  height: number
+}
 export type MeasurementType =
   | 'Measurement::ColdProbe'
   | 'Measurement::Duration'

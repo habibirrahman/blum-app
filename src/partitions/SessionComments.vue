@@ -13,10 +13,27 @@ import CommentItem from './CommentItem.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import { getRandomString } from '@/lib/func'
 import moment from 'moment'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { Media } from '@capacitor-community/media'
+import { useToast } from 'vue-toastification'
 
+// ================================
+// STORES & COMPOSABLES
+// ================================
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
+const toast = useToast()
 
+// ================================
+// TYPES & PROPS
+// ================================
+interface ImageData {
+  base64: string
+  file_name: string
+  size: number
+  width: number
+  height: number
+}
 interface Props {
   show?: boolean
 }
@@ -29,9 +46,15 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<Emits>()
 
-const commentsLoading = ref<boolean>(false)
+type CommentType = 'general' | 'assessment'
 
-const filter = ref<SessionCommentFilter>('')
+// ================================
+// CONSTANTS
+// ================================
+const MAX_IMAGES = 4
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_DIMENSIONS = { width: 1920, height: 1080 }
+
 const filterOptions: { value: SessionCommentFilter; label: string }[] = [
   { value: '', label: 'All' },
   { value: 'general', label: 'General' },
@@ -40,7 +63,316 @@ const filterOptions: { value: SessionCommentFilter; label: string }[] = [
   { value: 'mine', label: 'Added by you' }
 ]
 
-async function fetchComments() {
+const typeInputOptions: { value: CommentType; label: string }[] = [
+  { value: 'general', label: 'General' },
+  { value: 'assessment', label: 'ABC data' }
+]
+
+// ================================
+// REACTIVE STATE
+// ================================
+// Comments
+const commentsLoading = ref<boolean>(false)
+const filter = ref<SessionCommentFilter>('')
+
+// Add New Comment Modal
+const showNew = ref<boolean>(false)
+const typeInput = ref<CommentType>('general')
+const bodyInput = ref<string>('')
+const antecedentInput = ref<string>('')
+const behaviorInput = ref<string>('')
+const consequenceInput = ref<string>('')
+const createLoading = ref<boolean>(false)
+
+// Image Management
+const selectedImages = ref<ImageData[]>([])
+const currentImageIndex = ref<number>(0)
+const libraryLoading = ref<boolean>(false)
+const imagePreviewOpened = ref<boolean>(false)
+
+// Camera
+const capturedImage = ref<string>('')
+const showPreview = ref<boolean>(false)
+const cameraLoading = ref<boolean>(false)
+
+// ================================
+// COMPUTED
+// ================================
+const isDisabledCreate = computed<boolean>(() => {
+  // Jika ada gambar, tidak perlu validasi input text
+  if (selectedImages.value.length > 0) {
+    return false
+  }
+
+  // Jika tidak ada gambar, validasi input text
+  if (typeInput.value === 'general') {
+    return !bodyInput.value.trim()
+  }
+
+  if (typeInput.value === 'assessment') {
+    return (
+      !antecedentInput.value.trim() && !behaviorInput.value.trim() && !consequenceInput.value.trim()
+    )
+  }
+
+  return false
+})
+
+// ================================
+// UTILITY FUNCTIONS
+// ================================
+const generateFilename = (prefix: string, extension: string): string => {
+  const timestamp = new Date().getTime()
+  return `${prefix}_${timestamp}.${extension}`
+}
+
+const getFileExtensionFromMimeType = (mimeType: string): string => {
+  const mimeMap: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/bmp': 'bmp'
+  }
+  return mimeMap[mimeType] || 'jpg'
+}
+
+const getMimeTypeFromDataUrl = (dataUrl: string): string => {
+  const match = dataUrl.match(/^data:([^;]+);/)
+  return match ? match[1] : 'image/jpeg'
+}
+
+// ================================
+// IMAGE UTILITIES
+// ================================
+const getImageSizeFromDataUrl = (
+  dataUrl: string
+): Promise<{ width: number; height: number; size: number }> => {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const base64Length = dataUrl.split(',')[1]?.length || 0
+      const sizeInBytes = (base64Length * 3) / 4
+      resolve({
+        width: img.width,
+        height: img.height,
+        size: sizeInBytes
+      })
+    }
+    img.src = dataUrl
+  })
+}
+const createImageData = async (dataUrl: string, originalPath?: string): Promise<ImageData> => {
+  const imageInfo = await getImageSizeFromDataUrl(dataUrl)
+  const mimeType = getMimeTypeFromDataUrl(dataUrl)
+  const extension = getFileExtensionFromMimeType(mimeType)
+
+  let filename: string
+
+  if (originalPath) {
+    const pathParts = originalPath.split('/')
+    const originalFilename = pathParts[pathParts.length - 1]
+
+    if (
+      originalFilename &&
+      (originalFilename.includes('.jpg') ||
+        originalFilename.includes('.jpeg') ||
+        originalFilename.includes('.png') ||
+        originalFilename.includes('.webp'))
+    ) {
+      filename = originalFilename
+    } else {
+      filename = generateFilename('gallery_image', extension)
+    }
+  } else {
+    filename = generateFilename('camera_capture', extension)
+  }
+
+  return {
+    base64: dataUrl,
+    file_name: filename,
+    size: imageInfo.size,
+    width: imageInfo.width,
+    height: imageInfo.height
+  }
+}
+// ================================
+// IMAGE MANAGEMENT FUNCTIONS
+// ================================
+const clearAllImages = () => {
+  selectedImages.value = []
+  currentImageIndex.value = 0
+}
+
+const removeSelectedImage = (index: number) => {
+  selectedImages.value.splice(index, 1)
+
+  if (currentImageIndex.value >= selectedImages.value.length) {
+    currentImageIndex.value = Math.max(0, selectedImages.value.length - 1)
+  }
+
+  if (selectedImages.value.length === 0) {
+    currentImageIndex.value = 0
+  }
+}
+
+// ================================
+// CAMERA FUNCTIONS
+// ================================
+const openCamera = async () => {
+  try {
+    cameraLoading.value = true
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.DataUrl,
+      source: CameraSource.Camera,
+      saveToGallery: false,
+      correctOrientation: true,
+      width: 1920,
+      height: 1080
+    })
+    if (image.dataUrl) {
+      capturedImage.value = image.dataUrl
+      showPreview.value = true
+    }
+  } catch (error) {
+    console.error('Error taking photo:', error)
+  } finally {
+    cameraLoading.value = false
+  }
+}
+
+const usePhoto = async () => {
+  if (capturedImage.value && selectedImages.value.length < MAX_IMAGES) {
+    try {
+      const imageData = await createImageData(capturedImage.value)
+      selectedImages.value.push(imageData)
+    } catch (error) {
+      console.error('Error processing captured photo:', error)
+      toast.error('Error processing photo')
+    }
+  }
+  capturedImage.value = ''
+  showPreview.value = false
+  showNew.value = true
+}
+
+const discardPhoto = () => {
+  capturedImage.value = ''
+  showPreview.value = false
+}
+
+// ================================
+// LIBRARY FUNCTIONS
+// ================================
+const openLibraryWithCamera = async () => {
+  try {
+    libraryLoading.value = true
+
+    const remainingSlots = MAX_IMAGES - selectedImages.value.length
+    if (remainingSlots <= 0) {
+      toast.warning(`You have already selected the maximum of ${MAX_IMAGES} photos`)
+      return
+    }
+
+    // Using Camera plugin for gallery access with limits
+    const images = await Camera.pickImages({
+      quality: 90,
+      limit: remainingSlots,
+      correctOrientation: true,
+      width: MAX_DIMENSIONS.width,
+      height: MAX_DIMENSIONS.height
+    })
+
+    if (images && images.photos && images.photos.length > 0) {
+      const processedImages: ImageData[] = []
+
+      for (const photo of images.photos) {
+        if (selectedImages.value.length + processedImages.length >= MAX_IMAGES) {
+          break
+        }
+
+        // Convert web path to base64 if needed
+        let base64Data = photo.webPath
+        if (!base64Data?.startsWith('data:')) {
+          try {
+            base64Data = await convertToBase64(photo.webPath)
+          } catch {
+            toast.warning('Failed to convert photo to base64, skipped')
+            continue
+          }
+        }
+
+        if (!base64Data) continue
+
+        const imageInfo = await getImageSizeFromDataUrl(base64Data)
+
+        if (imageInfo.size > MAX_FILE_SIZE) {
+          toast.warning(`Photo is too large, skipped`)
+          continue
+        }
+
+        // Pass the original filename from gallery if available
+        const imageData = await createImageData(base64Data, photo.path)
+        processedImages.push(imageData)
+      }
+
+      if (processedImages.length > 0) {
+        selectedImages.value.push(...processedImages)
+        currentImageIndex.value = selectedImages.value.length - processedImages.length
+      }
+    }
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'message' in error &&
+      typeof (error as { message?: unknown }).message === 'string'
+    ) {
+      const msg = (error as { message: string }).message
+      if (msg.includes('cancelled') || msg.includes('User cancelled')) {
+        return // User cancelled, don't show error
+      }
+    }
+    console.error('Error picking images:', error)
+    toast.error('Error selecting photos')
+  } finally {
+    libraryLoading.value = false
+  }
+}
+
+const openImagePreview = (index: number) => {
+  currentImageIndex.value = index
+  imagePreviewOpened.value = true
+}
+async function convertToBase64(url: string): Promise<string> {
+  const response = await fetch(url)
+  const blob = await response.blob()
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      if (reader.result && typeof reader.result === 'string') {
+        resolve(reader.result)
+      } else {
+        reject('Failed to convert to base64')
+      }
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+const openLibrary = async () => {
+  await openLibraryWithCamera()
+}
+
+// ================================
+// COMMENT FUNCTIONS
+// ================================
+const fetchComments = async () => {
   commentsLoading.value = true
   const id = sessionStore.session?.id
   const { success } = await sessionStore.getSessionComments({ id, filter: filter.value })
@@ -49,54 +381,13 @@ async function fetchComments() {
   document.getElementById('session-comments')?.scroll({ top: 0, behavior: 'smooth' })
 }
 
-watch(
-  () => props.show,
-  (val) => {
-    if (val) fetchComments()
-  }
-)
-watch(filter, () => {
-  fetchComments()
-})
+const resetCommentForm = () => {
+  bodyInput.value = ''
+  antecedentInput.value = ''
+  behaviorInput.value = ''
+  consequenceInput.value = ''
+}
 
-const showNew = ref<boolean>(false)
-type CommentType = 'general' | 'assessment'
-const typeInput = ref<CommentType>('general')
-const typeInputOptions: { value: CommentType; label: string }[] = [
-  { value: 'general', label: 'General' },
-  { value: 'assessment', label: 'ABC data' }
-]
-const bodyInput = ref<string>('')
-const antecedentInput = ref<string>('')
-const behaviorInput = ref<string>('')
-const consequenceInput = ref<string>('')
-watch(showNew, (val) => {
-  if (val) {
-    if (filter.value === 'assessment') typeInput.value = 'assessment'
-    else typeInput.value = 'general'
-    bodyInput.value = ''
-    antecedentInput.value = ''
-    behaviorInput.value = ''
-    consequenceInput.value = ''
-  } else {
-    if (filter.value === 'assessment' && typeInput.value === 'general') {
-      filter.value = ''
-    }
-    if (filter.value === 'general' && typeInput.value === 'assessment') {
-      filter.value = ''
-    }
-  }
-})
-const createLoading = ref<boolean>(false)
-const isDisabledCreate = computed<boolean>(() => {
-  if (typeInput.value === 'general') {
-    if (!bodyInput.value) return true
-  }
-  if (typeInput.value === 'assessment') {
-    if (!antecedentInput.value && !behaviorInput.value && !consequenceInput.value) return true
-  }
-  return false
-})
 const onCreate = async () => {
   const params: CreateSessionCommentParams = {
     client_id: sessionStore.session?.client_id,
@@ -127,17 +418,63 @@ const onCreate = async () => {
       session_id: sessionStore.session?.id,
       created_at: moment().format(),
       updated_at: moment().format()
-    }
+    },
+    images: selectedImages.value.map((img) => ({
+      base64: img.base64,
+      file_name: img.file_name,
+      size: img.size,
+      width: img.width,
+      height: img.height
+    }))
   }
+
   createLoading.value = true
   const { success } = await sessionStore.createSessionComment(params)
   createLoading.value = false
+
   if (!success) return
+
   showNew.value = false
+  resetCommentForm()
 }
+
+// ================================
+// WATCHERS
+// ================================
+watch(
+  () => props.show,
+  (val) => {
+    if (val) fetchComments()
+  }
+)
+
+watch(filter, () => {
+  fetchComments()
+})
+
+watch(showNew, (val) => {
+  if (val) {
+    if (filter.value === 'assessment') {
+      typeInput.value = 'assessment'
+    } else {
+      typeInput.value = 'general'
+    }
+    resetCommentForm()
+  } else {
+    // Reset filter if type doesn't match
+    if (filter.value === 'assessment' && typeInput.value === 'general') {
+      filter.value = ''
+    }
+    if (filter.value === 'general' && typeInput.value === 'assessment') {
+      filter.value = ''
+    }
+    clearAllImages()
+  }
+})
 </script>
 
 <template>
+  <!-- Main Comments Modal -->
   <TransitionRoot
     :show="show"
     enter="transition ease-in-out duration-300 transform"
@@ -149,19 +486,22 @@ const onCreate = async () => {
     id="session-comments"
     class="no-scrollbar fixed left-0 top-0 z-[20] h-screen w-screen overflow-y-auto bg-prim-3 p-safe"
   >
-    <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
-    <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
+    <!-- Header -->
+    <div class="fixed top-0 z-[999] w-screen bg-white pt-safe"></div>
+    <div class="fixed bottom-0 z-[999] w-screen bg-white pb-safe"></div>
 
     <div class="sticky top-0 z-[10] shrink-0">
       <div class="flex h-[52px] items-center gap-3 bg-white px-4">
         <div
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
+          class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-slate-2"
           @click="emit('close')"
         >
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </div>
-        <div class="text-2xl text-[22px] font-bold">Comments</div>
+        <div class="text-[22px] font-bold">Comments</div>
       </div>
+
+      <!-- Filter Options -->
       <div class="bg-prim-3 pl-4">
         <div
           class="flex h-12 snap-x snap-mandatory items-center gap-2 overflow-x-auto scroll-smooth pr-4"
@@ -183,6 +523,7 @@ const onCreate = async () => {
       </div>
     </div>
 
+    <!-- Comments List -->
     <div v-if="commentsLoading" class="space-y-4 px-4 pb-24 pt-4">
       <div
         v-for="n in 3"
@@ -190,12 +531,14 @@ const onCreate = async () => {
         class="h-32 w-full shrink-0 animate-pulse rounded bg-prim-1"
       ></div>
     </div>
+
     <div
       v-else-if="!sessionStore.session_comments.length"
       class="flex h-64 w-full items-center justify-center px-4 py-4 text-center text-sm text-light-purple-5"
     >
       Be the first to add a comment to this session.
     </div>
+
     <div v-else class="space-y-4 px-4 pb-24 pt-4">
       <CommentItem
         v-for="comment in sessionStore.session_comments"
@@ -209,21 +552,76 @@ const onCreate = async () => {
       />
     </div>
 
+    <!-- Floating Action Buttons -->
     <div
       v-if="sessionStore.session?.status === 'ongoing'"
-      class="fixed bottom-0 flex h-20 w-screen items-center justify-center transition-all p-safe"
+      class="fixed bottom-0 flex h-20 w-screen items-center justify-center gap-4 transition-all p-safe"
       :class="{ 'opacity-0': filter === 'target' }"
     >
       <div
-        class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full border-2 border-white bg-light-purple-5"
+        class="flex h-[60px] w-[60px] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-light-purple-5"
+        :style="{ boxShadow: '2px 2px 0px 0px #D6C7E066' }"
+        @click="openCamera"
+        :class="{ 'opacity-50': cameraLoading }"
+      >
+        <Icon v-if="!cameraLoading" icon="ph:camera" class="text-3xl text-white" />
+        <div
+          v-else
+          class="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent"
+        ></div>
+      </div>
+
+      <div
+        class="flex h-[60px] w-[60px] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-light-purple-5"
         :style="{ boxShadow: '2px 2px 0px 0px #D6C7E066' }"
         @click="showNew = true"
       >
-        <Icon icon="ph:plus" class="text-3xl text-white" />
+        <Icon icon="ph:chat-centered-text" class="text-3xl text-white" />
       </div>
     </div>
   </TransitionRoot>
 
+  <!-- Camera Preview Modal -->
+  <TransitionRoot
+    :show="showPreview"
+    enter="transition-all duration-300 ease-out"
+    enter-from="opacity-0 scale-95"
+    enter-to="opacity-100 scale-100"
+    leave="transition-all duration-200 ease-in"
+    leave-from="opacity-100 scale-100"
+    leave-to="opacity-0 scale-95"
+    class="fixed left-0 top-0 z-[22] h-screen w-screen bg-[#1d2939]"
+  >
+    <div class="relative h-full w-full">
+      <div class="flex h-full items-center justify-center">
+        <img
+          :src="capturedImage"
+          alt="Captured photo"
+          class="max-h-full max-w-full object-contain"
+        />
+      </div>
+
+      <div
+        class="absolute bottom-2 left-0 right-0 z-10 flex items-center justify-between bg-[#1d2939] p-6 pb-safe"
+      >
+        <AppButton @click="discardPhoto" color="gray" class="h-16 w-16 rounded-full">
+          <Icon icon="line-md:close" class="text-4xl" />
+        </AppButton>
+
+        <AppButton
+          :loading="cameraLoading"
+          :disabled="cameraLoading"
+          @click="usePhoto"
+          color="gray"
+          class="h-16 w-16 rounded-full"
+        >
+          <Icon icon="ph:check" class="text-4xl" />
+        </AppButton>
+      </div>
+    </div>
+  </TransitionRoot>
+
+  <!-- Add Comment Modal -->
   <TransitionRoot
     :show="showNew"
     enter="transition-all duration-300 ease-out"
@@ -237,16 +635,33 @@ const onCreate = async () => {
     <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
-    <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
-      <div
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
-        @click="showNew = false"
-      >
-        <Icon icon="ph:caret-left" class="text-slate-7" />
+    <div class="flex-colh-[52px] sticky top-0 z-[10] flex shrink-0 flex-col gap-3 bg-white px-4">
+      <div class="flex items-center gap-3">
+        <div
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
+          @click="showNew = false"
+        >
+          <Icon icon="ph:caret-left" class="text-slate-7" />
+        </div>
+        <div class="text-2xl text-[22px] font-bold">Add new comments</div>
       </div>
-      <div class="text-2xl text-[22px] font-bold">Add new comments</div>
+      <div class="mb-2 flex items-center gap-2">
+        <div
+          v-for="opt in typeInputOptions"
+          :key="opt.value"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+          :class="[
+            typeInput === opt.value
+              ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
+              : 'border-slate-4 bg-white'
+          ]"
+          @click="typeInput = opt.value"
+        >
+          {{ opt.label }}
+        </div>
+      </div>
     </div>
-    <div class="h-[calc(100vh-52px-64px)]">
+    <div class="h-[calc(100vh-52px-120px)] scroll-pb-32 overflow-y-scroll">
       <AppTextInput
         v-if="typeInput === 'general'"
         name="new-comment-body"
@@ -289,26 +704,116 @@ const onCreate = async () => {
       </div>
     </div>
     <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
-      <div class="flex h-16 grow items-center justify-between px-4">
-        <div class="flex items-center gap-2">
-          <div
-            v-for="opt in typeInputOptions"
-            :key="opt.value"
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
-            :class="[
-              typeInput === opt.value
-                ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
-                : 'border-slate-4 bg-white'
-            ]"
-            @click="typeInput = opt.value"
-          >
-            {{ opt.label }}
+      <div v-if="selectedImages.length > 0" class="px-4">
+        <div class="flex items-center gap-3">
+          <div v-for="(image, index) in selectedImages" :key="index" class="relative">
+            <div class="relative h-16 w-16 rounded-lg shadow-sm">
+              <img
+                @click="openImagePreview(index)"
+                :src="image.base64"
+                :alt="image.file_name"
+                class="h-full w-full rounded-lg object-cover"
+              />
+              <div
+                @click="removeSelectedImage(index)"
+                class="absolute -right-2 -top-2 z-50 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
+              >
+                <Icon icon="ph:x" class="text-xs" />
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+      <div class="flex h-16 grow items-center justify-between px-4">
+        <div
+          v-if="
+            !selectedImages.length ||
+            (selectedImages.length > 0 && selectedImages.length < MAX_IMAGES)
+          "
+          class="flex items-center"
+        >
+          <AppButton kind="plain" size="sm" class="hover:bg-slate-4" @click="openCamera">
+            <Icon icon="ph:camera" class="text-2xl text-slate-7" />
+          </AppButton>
+          <AppButton
+            kind="plain"
+            size="sm"
+            class="hover:bg-slate-4"
+            @click="openLibrary"
+            :disabled="libraryLoading"
+            :loading="libraryLoading"
+          >
+            <Icon icon="icons8:picture" class="text-2xl text-slate-7" />
+          </AppButton>
+        </div>
+        <div v-else class="text-sm text-slate-7">You can only add up to 4 pictures.</div>
         <AppButton :loading="createLoading" :disabled="isDisabledCreate" @click="onCreate">
           <div>Add</div>
           <Icon icon="ph:plus-bold" />
         </AppButton>
+      </div>
+    </div>
+  </TransitionRoot>
+
+  <!-- Image Preview Modal -->
+  <TransitionRoot
+    :show="imagePreviewOpened"
+    enter="transition-all duration-300 ease-out"
+    enter-from="opacity-0 scale-95"
+    enter-to="opacity-100 scale-100"
+    leave="transition-all duration-200 ease-in"
+    leave-from="opacity-100 scale-100"
+    leave-to="opacity-0 scale-95"
+    class="fixed left-0 top-0 z-[25] h-screen w-screen bg-[#1d2939]"
+  >
+    <div class="relative h-full w-full">
+      <!-- Close button -->
+      <div class="absolute left-4 top-4 z-20 pt-safe">
+        <div
+          class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+          @click="imagePreviewOpened = false"
+        >
+          <Icon icon="ph:x" class="text-xl text-slate-7" />
+        </div>
+      </div>
+
+      <!-- Image -->
+      <div class="flex h-full items-center justify-center">
+        <img
+          :src="selectedImages[currentImageIndex]?.base64"
+          :alt="selectedImages[currentImageIndex]?.file_name"
+          class="max-h-[50vh] max-w-[100vw] object-contain"
+        />
+      </div>
+
+      <!-- Navigation arrows -->
+      <div
+        v-if="selectedImages.length > 1"
+        class="absolute inset-y-0 left-0 right-0 flex items-center justify-between"
+      >
+        <!-- Left arrow -->
+        <div
+          class="ml-4 flex h-12 w-12 items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+          :class="{
+            'cursor-pointer': currentImageIndex > 0,
+            'opacity-50': currentImageIndex === 0
+          }"
+          @click="currentImageIndex > 0 && currentImageIndex--"
+        >
+          <Icon icon="ph:caret-left" class="text-2xl text-slate-7" />
+        </div>
+
+        <!-- Right arrow -->
+        <div
+          class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+          :class="{
+            'cursor-pointer': currentImageIndex < selectedImages.length - 1,
+            'opacity-50': currentImageIndex === selectedImages.length - 1
+          }"
+          @click="currentImageIndex < selectedImages.length - 1 && currentImageIndex++"
+        >
+          <Icon icon="ph:caret-right" class="text-2xl text-slate-7" />
+        </div>
       </div>
     </div>
   </TransitionRoot>
