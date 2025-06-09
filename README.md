@@ -4,7 +4,7 @@ This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+[VSCode](https://code.visualstudio.com/)
 
 ## Type Support for `.vue` Imports in TS
 
@@ -74,11 +74,13 @@ bunx cap run ios
 ### Build APK
 
 manual: update version code and version name
+
 ```sh
 bun run build
 ```
 
 Android
+
 ```sh
 bunx cap sync
 bunx cap copy android
@@ -86,6 +88,7 @@ bunx cap open android
 ```
 
 iOS
+
 ```sh
 bunx cap sync
 bunx cap copy ios
