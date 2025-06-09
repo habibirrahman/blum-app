@@ -407,6 +407,7 @@ const onEndSession = async () => {
     return
   }
   checkActionRecommendations()
+  duplicateImageCommentsToClientDocument()
 }
 
 const showActionRecommendations = ref<boolean>(false)
@@ -482,6 +483,40 @@ const handleCompletedColdProbe = ({
     if (!unCompletedColdProbeIds.value.includes(id)) {
       unCompletedColdProbeIds.value.push(id)
     }
+  }
+}
+const duplicateImageCommentsToClientDocument = async () => {
+  try {
+    const { success, data } = await sessionStore.getSessionComments({
+      id: sessionStore?.session?.id
+    })
+    if (!success || !data) return
+    const uniqueBlobIds = new Set()
+    data.forEach((comment: { images: any[] }) => {
+      if (comment.images.length) {
+        comment.images.forEach((image) => {
+          if (image.blob_id) {
+            uniqueBlobIds.add(image.blob_id)
+          }
+        })
+      }
+    })
+
+    if (uniqueBlobIds.size === 0) {
+      return
+    }
+    const documents = Array.from(uniqueBlobIds).map((blobId) => ({ blob_id: blobId }))
+
+    const payload = {
+      client_id: sessionStore?.session?.client_id,
+      documents,
+      session_id: sessionStore?.session?.id,
+      session_slug: sessionStore?.session?.slug
+    }
+
+    await sessionStore.duplicateImagesToClientDocument(payload)
+  } catch (error) {
+    console.log('🚀 ~ duplicateImageCommentsToClientDocument ~ error:', error)
   }
 }
 </script>

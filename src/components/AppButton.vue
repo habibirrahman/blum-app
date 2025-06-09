@@ -4,7 +4,7 @@ import { computed } from 'vue'
 interface Props {
   type?: 'button' | 'submit'
   kind?: 'primary' | 'outline' | 'plain'
-  color?: 'purple' | 'lime' | 'teal' | 'grass' | 'tomato' | 'prim' | 'tomato-7'
+  color?: 'purple' | 'lime' | 'teal' | 'grass' | 'tomato' | 'prim' | 'tomato-7' | 'gray'
   size?: 'sm' | 'base' | 'lg'
   disabled?: boolean
   loading?: boolean
@@ -36,7 +36,7 @@ const currentClass = computed<string>(() => {
 
 <template>
   <button
-    class="relative flex items-center justify-center gap-2 rounded border text-sm font-semibold transition-all duration-300"
+    class="relative flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-300 border rounded"
     :class="[
       size === 'sm' ? 'px-1.5 py-1' : size === 'lg' ? 'px-3 py-3' : 'px-2 py-2',
       isDisabled || isLoading ? 'pointer-events-none' : '',
@@ -96,6 +96,12 @@ const currentClass = computed<string>(() => {
   }
   &.app-button-disabled {
     @apply border-slate-4 bg-slate-4 text-slate-6;
+  }
+  &.app-button-gray {
+    @apply border-[#606974] bg-[#606974] text-white;
+    &.app-button-loading {
+      @apply border-slate-5 bg-slate-5;
+    }
   }
 }
 /*  */

@@ -12,12 +12,14 @@ interface SessionPendingProgress {
     | 'create_comment'
     | 'update_comment'
     | 'delete_comment'
+    | 'duplicate_images'
   params:
     | UpdateMeasurementParams
     | UpdateMeasurementResultsParams
     | CreateSessionCommentParams
     | UpdateSessionCommentParams
     | DeleteSessionCommentParams
+    | DuplicateImagesToClientDocumentParams
 }
 export interface SessionStateSchema {
   session: Session | null
@@ -62,6 +64,8 @@ export interface CreateSessionCommentParams {
     consequence: Comment['consequence']
     type: Comment['type']
   }
+  images?: Comment['images']
+
   data_result: Comment
 }
 export interface UpdateSessionCommentParams {
@@ -85,6 +89,13 @@ export interface DeleteSessionCommentParams {
   client_id?: Client['id']
   comment_id: Comment['id']
   type: 'general' | 'assessment'
+}
+
+export interface DuplicateImagesToClientDocumentParams {
+  client_id: Client['id']
+  documents: any[]
+  session_id: Session['id']
+  session_slug: Session['slug']
 }
 
 export const useSessionStore = defineStore('session', {
@@ -179,6 +190,12 @@ export const useSessionStore = defineStore('session', {
         if (p.name === 'delete_comment') {
           const { success } = await this.deleteSessionComment(
             p.params as DeleteSessionCommentParams
+          )
+          if (success) succeedIndexes.push(idx)
+        }
+        if (p.name === 'duplicate_images') {
+          const { success } = await this.duplicateImagesToClientDocument(
+            p.params as DuplicateImagesToClientDocumentParams
           )
           if (success) succeedIndexes.push(idx)
         }
@@ -461,21 +478,34 @@ export const useSessionStore = defineStore('session', {
       type,
       session_comment,
       assessment,
-      data_result
+      data_result,
+      images = []
     }: CreateSessionCommentParams) {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
         this.pending_progress.push({
           name: 'create_comment',
-          params: { client_id, session_id, type, session_comment, assessment, data_result }
+          params: { client_id, session_id, type, session_comment, assessment, data_result, images }
         })
         this.addSessionComment(data_result, false)
         return { success: true, data: data_result }
       }
 
       if (type === 'general') {
+        const payload = {
+          session_comment: {
+            user_id: session_comment?.user_id,
+            body: session_comment?.body,
+            images: images
+          }
+        }
+
         return axios
-          .post(`/api/v1/sessions/${session_id}/session_comments`, { session_comment })
+          .post(`/api/v1/sessions/${session_id}/session_comments`, payload, {
+            headers: {
+              'X-Platform': 'mobile'
+            }
+          })
           .then(async ({ data }) => {
             this.addSessionComment(data, true)
             return { success: true, data }
@@ -484,9 +514,23 @@ export const useSessionStore = defineStore('session', {
             return { success: false, data: null, message: response?.data?.error }
           })
       }
+
       if (type === 'assessment') {
         return axios
-          .post(`/api/v1/clients/${client_id}/assessments`, { assessment })
+          .post(
+            `/api/v1/clients/${client_id}/assessments`,
+            {
+              assessment: {
+                ...assessment,
+                images: images
+              }
+            },
+            {
+              headers: {
+                'X-Platform': 'mobile'
+              }
+            }
+          )
           .then(async ({ data }) => {
             this.addSessionComment(data, true)
             return { success: true, data }
@@ -495,6 +539,7 @@ export const useSessionStore = defineStore('session', {
             return { success: false, data: null, message: response?.data?.error }
           })
       }
+
       return { success: false, data: null }
     },
     async updateSessionComment({
@@ -557,6 +602,33 @@ export const useSessionStore = defineStore('session', {
           })
       }
       return { success: false, data: null }
+    },
+    async duplicateImagesToClientDocument({
+      documents,
+      client_id,
+      session_id,
+      session_slug
+    }: DuplicateImagesToClientDocumentParams) {
+      const { network_status } = useAppStore()
+      if (!network_status.connected) {
+        this.pending_progress.push({
+          name: 'duplicate_images',
+          params: { documents, client_id, session_id, session_slug }
+        })
+        return { success: true, data: null }
+      }
+      return axios
+        .post(`/api/v1/clients/${client_id}/duplicate_documents`, {
+          documents,
+          session_id,
+          session_slug
+        })
+        .then(async ({ data }) => {
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
     },
     async deleteSessionComment({ client_id, comment_id, type }: DeleteSessionCommentParams) {
       const { network_status } = useAppStore()
