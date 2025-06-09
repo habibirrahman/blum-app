@@ -206,7 +206,13 @@ const showImage = (index: number) => {
           :class="{ ' line-clamp-[6]': showAction }"
           v-html="comment.body || ''"
         ></div>
-        <div v-if="comment.images" class="mt-2 flex gap-2">
+        <div
+          v-if="comment.images"
+          class="mt-2 flex gap-2"
+          :class="{
+            'items-center justify-center': comment.images.length === 1
+          }"
+        >
           <div v-for="(image, index) in comment.images" :key="image.id">
             <img
               :src="image.file_url"
@@ -215,7 +221,7 @@ const showImage = (index: number) => {
               class="mb-2 cursor-pointer rounded-lg"
               :class="{
                 'h-16 w-16 object-cover': comment.images.length > 1,
-                'h-80 w-80 object-cover': comment.images.length === 1 && !showAction,
+                'h-76 w-76 object-cover': comment.images.length === 1 && !showAction,
                 'h-20 w-20 object-cover': comment.images.length === 1 && showAction
               }"
             />
