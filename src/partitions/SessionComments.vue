@@ -818,4 +818,21 @@ watch(showNew, (val) => {
       </div>
     </div>
   </TransitionRoot>
+
+  <TransitionRoot
+    :show="createLoading"
+    enter="transition-opacity ease-linear duration-300"
+    enter-from="opacity-0"
+    enter-to="opacity-100"
+    leave="transition-opacity ease-linear duration-300"
+    leave-from="opacity-100"
+    leave-to="opacity-0"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-white/75"
+  >
+    <div class="flex items-center justify-center">
+      <div
+        class="w-16 h-16 border-4 border-t-4 rounded-full animate-spin border-light-purple-5 border-t-transparent"
+      ></div>
+    </div>
+  </TransitionRoot>
 </template>
