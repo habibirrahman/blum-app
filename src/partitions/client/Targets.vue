@@ -133,6 +133,15 @@ const onOpenTarget = async (target: Target) => {
   }
   targetDetails.value = data
 }
+
+const isCloseGroup = ref<Target['id'][]>([])
+const onToggleGroup = (id: Target['id']) => {
+  if (isCloseGroup.value.includes(id)) {
+    isCloseGroup.value = isCloseGroup.value.filter((i) => i !== id)
+  } else {
+    isCloseGroup.value.push(id)
+  }
+}
 </script>
 
 <template>
@@ -229,12 +238,37 @@ const onOpenTarget = async (target: Target) => {
       </div>
     </div>
     <div>
-      <TargetItem
-        v-for="target in clientStore.targets"
-        :key="target.id"
-        :target="target"
-        @click="onOpenTarget(target)"
-      />
+      <div v-for="target in clientStore.targets" :key="target.id">
+        <div v-if="target.is_group">
+          <div
+            class="flex h-[52px] items-center justify-between border-l-[6px] border-prim-2 px-3"
+            @click="onToggleGroup(target.id)"
+          >
+            <div class="flex items-center gap-2">
+              <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
+              <div class="text-sm font-semibold text-slate-10">
+                {{ target.name }}
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="text-sm text-slate-8">{{ target.members?.length }} targets</div>
+              <div :class="[!isCloseGroup.includes(target.id) ? '' : 'rotate-180']">
+                <Icon icon="ph:caret-up-bold" class="h-5 w-5 text-slate-7" />
+              </div>
+            </div>
+          </div>
+          <div v-if="!isCloseGroup.includes(target.id)">
+            <TargetItem
+              v-for="member in target.members"
+              :key="member.id"
+              :target="member"
+              @click="onOpenTarget(member)"
+            />
+          </div>
+          <div class="h-4 w-full bg-slate-4"></div>
+        </div>
+        <TargetItem v-else :target="target" @click="onOpenTarget(target)" />
+      </div>
     </div>
     <AppPagination :page="page" :total_count="clientStore.targets_count" @change="page = $event" />
   </div>

@@ -289,8 +289,14 @@ const isAllMeasurementResultEmpty = computed<boolean>(() => {
       if (i.results['score'] > 0) isResultsEmpty = false
     }
     if (i.type === 'Measurement::Prompting') {
-      for (let key in i.results) {
-        if (i.results[key].score > 0) isResultsEmpty = false
+      if (i.target?.is_group) {
+        for (let key in i.results) {
+          if (i.results[key].prompt_id) isResultsEmpty = false
+        }
+      } else {
+        for (let key in i.results) {
+          if (i.results[key].score > 0) isResultsEmpty = false
+        }
       }
     }
     if (i.type === 'Measurement::Sbt') {
@@ -608,7 +614,7 @@ const duplicateImageCommentsToClientDocument = async () => {
       v-if="showReviewMode"
       class="flex w-full items-end justify-center bg-prim-3 px-4 pb-2 pt-4 text-center text-sm font-semibold text-light-purple-5"
     >
-      <div class="truncate">{{ sessionStore.session?.client?.name }}</div>
+      <div class="truncapy-3 space-y-3te">{{ sessionStore.session?.client?.name }}</div>
     </div>
     <div
       id="container-record-measurement"
