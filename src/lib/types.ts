@@ -201,6 +201,13 @@ export interface Measurement {
   target?: Target
   comment_user_id?: User['id']
   comment_user?: Comment
+  used_targets?: UsedTargetMeasurement[]
+}
+export interface UsedTargetMeasurement {
+  target_id?: Target['id']
+  description: Target['description']
+  target_code: Target['code_definition']
+  target_name: Target['name']
 }
 
 export type TargetType =
@@ -222,43 +229,59 @@ export interface Target {
   status?: TargetStatus
   prompting_format?: TargetPromptingFormat
   cold_probe_format?: TargetColdProbeFormat
+
   name?: string
   description?: string
+  goal_time?: string
+  success_metric?: string
+  type_name?: string
+  code_definition?: string
+  graph_color?: string
+
   goal?: number
   probing_goal?: number
   number_of_trial?: number
   probing_number_of_trial?: number
   interval?: number
   duration?: number
-  goal_time?: string
-  success_metric?: string
+  total_success?: number
+  consecutive_success?: number
+
   completed?: boolean
   probing_enable?: boolean
-  deleted_at?: string
+  is_group?: boolean
+  enable_problem_behavior?: boolean
+
   date_introduce?: string
   date_mastered?: string
+  created_at?: string
+  updated_at?: string
+  deleted_at?: string
+
   client_id?: Client['id']
   curriculum_id?: Curriculum['id']
   curriculum_color?: Curriculum['color']
   curriculum_name?: Curriculum['name']
-  targetable_id?: number // not
-  targetable_type?: string // not
+  targetable_id?: number
+  targetable_type?: 'Client' | 'Center'
   last_phase_line?: {
     label?: string
     color?: string
     description?: string
   }
   prompts?: Prompt[]
-  type_name?: string
-  total_success?: number
-  consecutive_success?: number
   target_tasks?: TargetTask[]
+  members?: Target[]
   target_problem_behaviors?: TargetProblemBehavior[]
   target_variables?: TargetVariable[]
+
+  group_id?: GroupTarget['id']
+  group?: GroupTarget
 }
 
 export interface Prompt {
   id?: number
+  prompt_parent_id?: number
   name?: string
   abbreviation?: string
   position?: number
@@ -267,12 +290,16 @@ export interface Prompt {
   score?: number
   is_used?: boolean
   is_default?: boolean
-  promptable_type?: string | 'Target'
+  prompting_format?: TargetPromptingFormat
   promptable_id?: number
-  target_id?: Target['id']
-  center_id?: number // not
+  promptable_type?: 'Target' | 'Center'
+  target_id?: Target['id'] // will be removed
+  center_id?: number // will be removed
+  created_at?: string
+  updated_at?: string
   deleted_at?: string
 }
+
 export interface TargetTask {
   id?: number
   code?: string
@@ -321,4 +348,9 @@ export interface ActionRecommendation {
   latest_session_by?: User
   target_id?: Target['id']
   target?: Target
+}
+
+export interface GroupTarget {
+  id?: number
+  name?: string
 }

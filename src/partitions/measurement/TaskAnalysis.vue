@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
-import type { Measurement, Prompt, Target, TargetProblemBehavior, TargetTask } from '@/lib/types'
+import type {
+  Measurement,
+  Prompt,
+  Target,
+  TargetProblemBehavior,
+  UsedTargetMeasurement
+} from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import AppButton from '@/components/AppButton.vue'
+import { promptColors } from '@/lib/data'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
@@ -24,8 +31,9 @@ const emit = defineEmits<Emits>()
 
 interface Trial {
   key: string | number
-  target_task_id?: TargetTask['id']
+  target_id?: Target['id']
   prompt_id?: Prompt['id']
+  prompt_parent_id?: Prompt['id'] | null
   target_problem_behavior_id?: TargetProblemBehavior['id'] | null
 }
 
@@ -38,18 +46,20 @@ const editDisplay = ref<'select-prompt' | 'select-next-task' | 'reselect-task'>(
 
 const activeTrial = ref<Trial>({
   key: 0,
-  target_task_id: 0,
+  target_id: 0,
   prompt_id: 0,
+  prompt_parent_id: null,
   target_problem_behavior_id: null
 })
 const editTrial = ref<Trial>({
   key: 0,
-  target_task_id: 0,
+  target_id: 0,
   prompt_id: 0,
+  prompt_parent_id: null,
   target_problem_behavior_id: null
 })
 
-const nextTask = ref<any>()
+const nextTarget = ref<any>()
 const deleteTrialKey = ref<null | Trial['key']>(null)
 
 const ratioScores = ref<any[]>([])
@@ -60,9 +70,9 @@ const isOpenTrialHistory = ref<boolean>(false)
 const isOpenEditTrial = ref<boolean>(false)
 
 // state prompts task_codes problem_behaviors from measurement.target
-const SBTPrompts = ref<Prompt[]>([])
-const SBTTaskCodes = ref<TargetTask[]>([])
-const SBTProblemBehaviors = ref<TargetProblemBehavior[]>([])
+const TAPrompts = ref<Prompt[]>([])
+const TAUsedTargets = ref<UsedTargetMeasurement[]>([])
+const TAProblemBehaviors = ref<TargetProblemBehavior[]>([])
 
 const currentDisplay = computed({
   // getter
@@ -106,12 +116,12 @@ const currentTrialData = computed(() => {
 
 const perPage = computed<number>(() => (props.is_collapsed ? 3 : 9))
 const pageCount = computed<number>(() => {
-  const prompts = [...SBTPrompts.value]
+  const prompts = [...TAPrompts.value]
   const boxes = prompts.length
   return Math.ceil(boxes / perPage.value)
 })
 const promptBoxesPages = computed<Prompt[][]>(() => {
-  const prompts = [...SBTPrompts.value]
+  const prompts = [...TAPrompts.value]
   const res = []
   for (let idx = 1; idx <= pageCount.value; idx++) {
     const start = (idx - 1) * perPage.value
@@ -132,7 +142,7 @@ watch(
   () => props.is_collapsed,
   () => {
     setTimeout(() => {
-      const el = `${props.measurement.id}-sbt-prompt-boxes-${1}`
+      const el = `${props.measurement.id}-ta-prompt-boxes-${1}`
       const boxes = document.getElementById(el)
       boxes?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
     }, 300)
@@ -155,12 +165,29 @@ watch(
 )
 
 onMounted(() => {
-  const prompts = props.target?.prompts || []
-  const tasks = props.target?.target_tasks || []
+  const prompts = (props.target?.prompts || [])
+    .map((i) => {
+      if (props.target.prompting_format === 'classic') {
+        const score = i.abbreviation === 'Id' ? 100 : 0
+        return { ...i, score }
+      }
+      return i
+    })
+    .sort((a, b) => (a?.position || 0) - (b?.position || 0))
+    .sort((a, b) => {
+      if (a.is_default && a.abbreviation === 'Id') return -1
+      if (b.is_default && b.abbreviation === 'Id') return 1
+
+      if (a.is_default && a.abbreviation === 'Ic') return 1
+      if (b.is_default && b.abbreviation === 'Ic') return -1
+      return (b?.score || 0) - (a?.score || 0)
+    })
+  const usedTargets = props.measurement?.used_targets || []
   const problems = props.target?.target_problem_behaviors || []
-  SBTPrompts.value = prompts.sort((a, b) => (b?.score || 0) - (a?.score || 0))
-  SBTTaskCodes.value = tasks.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-  SBTProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+
+  TAPrompts.value = prompts || []
+  TAUsedTargets.value = usedTargets || []
+  TAProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
   resultsState.value = props.measurement_results
 
   generateRatioScores()
@@ -177,23 +204,25 @@ onMounted(() => {
     if (!lastTrial.prompt_id) {
       currentTrial.value = lastTrial
     } else {
-      const index = SBTTaskCodes.value.findIndex((i) => i.id === lastTrial.target_task_id)
-      let nextTaskId: number | undefined = 0
-      if (index > -1 && index + 1 <= SBTTaskCodes.value.length - 1) {
-        nextTaskId = SBTTaskCodes.value[index + 1].id
-      } else if (SBTTaskCodes.value.length) {
-        nextTaskId = SBTTaskCodes.value[0].id
+      const index = TAUsedTargets.value.findIndex((i) => i.target_id === lastTrial.target_id)
+      let nextTargetId: number | undefined = 0
+      if (index > -1 && index + 1 <= TAUsedTargets.value.length - 1) {
+        nextTargetId = TAUsedTargets.value[index + 1].target_id
+      } else if (TAUsedTargets.value.length) {
+        nextTargetId = TAUsedTargets.value[0].target_id
       }
       const newTrial: Trial = {
         key: Number(lastTrial.key) + 1,
-        target_task_id: nextTaskId,
+        target_id: nextTargetId,
         prompt_id: 0,
+        prompt_parent_id: null,
         target_problem_behavior_id: null // optional
       }
       resultsState.value[newTrial.key] = {
         key: newTrial.key,
-        target_task_id: newTrial.target_task_id,
+        target_id: newTrial.target_id,
         prompt_id: newTrial.prompt_id,
+        prompt_parent_id: newTrial.prompt_parent_id,
         target_problem_behavior_id: newTrial.target_problem_behavior_id // optional
       }
       currentTrial.value = newTrial
@@ -201,17 +230,19 @@ onMounted(() => {
   } else {
     const newTrial: Trial = {
       key: 1,
-      target_task_id: 0,
+      target_id: 0,
       prompt_id: 0,
+      prompt_parent_id: null,
       target_problem_behavior_id: null // optional
     }
-    if (SBTTaskCodes.value.length) {
-      newTrial.target_task_id = SBTTaskCodes.value[0].id
+    if (TAUsedTargets.value.length) {
+      newTrial.target_id = TAUsedTargets.value[0].target_id
     }
     resultsState.value[newTrial.key] = {
       key: newTrial.key,
-      target_task_id: newTrial.target_task_id,
+      target_id: newTrial.target_id,
       prompt_id: newTrial.prompt_id,
+      prompt_parent_id: newTrial.prompt_parent_id,
       target_problem_behavior_id: newTrial.target_problem_behavior_id // optional
     }
     currentTrial.value = newTrial
@@ -224,40 +255,44 @@ const onScroll = (e: any) => {
   const current = Math.floor(scrollLeft / offsetWidth) + 1
   page.value = current
 }
-const getCode = (id: number, data: 'task_code' | 'prompt' | 'problem_behavior') => {
-  if (data === 'task_code') {
-    const found = SBTTaskCodes.value.find((i) => i.id === id)
-    return found ? found.code : ''
+const getColor = (id: number): string => {
+  const found = TAPrompts.value.find((i) => i.id === id)
+  return found ? found.color || '' : ''
+}
+const getCode = (id: number, data: 'target' | 'prompt' | 'problem_behavior') => {
+  if (data === 'target') {
+    const found = TAUsedTargets.value.find((i) => i.target_id === id)
+    return found ? found.target_code : ''
   }
   if (data === 'prompt') {
-    const found = SBTPrompts.value.find((i) => i.id === id)
+    const found = TAPrompts.value.find((i) => i.id === id)
     return found ? found.abbreviation : ''
   }
   if (data === 'problem_behavior') {
-    const found = SBTProblemBehaviors.value.find((i) => i.id === id)
+    const found = TAProblemBehaviors.value.find((i) => i.id === id)
     return found ? found.code : ''
   }
   return '-'
 }
 const getTrial = (trial: Trial) => {
-  const defaultTaskCode = SBTTaskCodes.value.length ? SBTTaskCodes.value[0] : { code: '' }
-  const taskCode = SBTTaskCodes.value.find((i) => i.id === trial.target_task_id) || defaultTaskCode
-  const prompt = SBTPrompts.value.find((i) => i.id === trial.prompt_id) || {
+  const defaultTarget = TAUsedTargets.value.length ? TAUsedTargets.value[0] : { target_code: '' }
+  const target = TAUsedTargets.value.find((i) => i.target_id === trial.target_id) || defaultTarget
+  const prompt = TAPrompts.value.find((i) => i.id === trial.prompt_id) || {
     name: '',
     score: ''
   }
-  const problemBehavior = SBTProblemBehaviors.value.find(
+  const problemBehavior = TAProblemBehaviors.value.find(
     (i) => i.id === trial.target_problem_behavior_id
   ) || { code: 'R', code_definition: '' }
 
   let average = 0
-  const ratioScore = ratioScores.value.find((i) => i.id === trial.target_task_id)
+  const ratioScore = ratioScores.value.find((i) => i.target_id === trial.target_id)
   if (ratioScore) {
     average = ratioScore.average
   }
   return {
     ...trial,
-    task_code: taskCode,
+    target: target,
     prompt,
     problem_behavior: problemBehavior || { code: 'R', code_definition: '' },
     average
@@ -276,11 +311,11 @@ const generateRatioScores = () => {
     key
   }))
 
-  const taskCodes = [...SBTTaskCodes.value].map((i) => {
-    const ratios = results.filter((r) => r.target_task_id === i.id)
+  const targets = [...TAUsedTargets.value].map((i) => {
+    const ratios = results.filter((r) => r.target_id === i.target_id)
     const listOfScore: number[] = ratios
       .map((r) => {
-        const prompt = SBTPrompts.value.find((p) => p.id === r.prompt_id)
+        const prompt = TAPrompts.value.find((p) => p.id === r.prompt_id)
         return prompt ? prompt?.score || 0 : -1
       })
       .filter((r) => r !== -1)
@@ -291,7 +326,7 @@ const generateRatioScores = () => {
     return { ...i, sum, average, count: listOfScore.length, ratios }
   })
 
-  const assignedMaxRatio = taskCodes.map((i) => {
+  const assignedMaxRatio = targets.map((i) => {
     return { ...i, max_ratio: maxRatio }
   })
   ratioScores.value = [...assignedMaxRatio]
@@ -316,14 +351,16 @@ const onCloseTrialHistory = () => {
     const newKey = Number(results.length) + 1
     const newTrial: Trial = {
       key: newKey,
-      target_task_id: nextTask.value?.id,
+      target_id: nextTarget.value?.target_id,
       prompt_id: 0,
+      prompt_parent_id: null,
       target_problem_behavior_id: null // optional
     }
     resultsState.value[newTrial.key] = {
       key: newTrial.key,
-      target_task_id: newTrial.target_task_id,
+      target_id: newTrial.target_id,
       prompt_id: newTrial.prompt_id,
+      prompt_parent_id: newTrial.prompt_parent_id,
       target_problem_behavior_id: newTrial.target_problem_behavior_id // optional
     }
   }
@@ -344,7 +381,7 @@ const onSaveCurrentTrial = async () => {
   }
 
   results = results
-    .filter((i) => i.prompt_id && i.target_task_id)
+    .filter((i) => i.prompt_id && i.target_id)
     .map((i, idx) => ({ ...i, key: idx + 1 }))
 
   const params: UpdateMeasurementResultsParams = {
@@ -376,7 +413,8 @@ const onChoosePrompt = async (prompt: Prompt) => {
   if (sessionStore.session?.status !== 'ongoing') return
   const newTrial: Trial = {
     ...currentTrial.value,
-    prompt_id: prompt.id
+    prompt_id: prompt.id,
+    prompt_parent_id: prompt.prompt_parent_id
   }
 
   // choose new prompt value
@@ -390,11 +428,11 @@ const onChoosePrompt = async (prompt: Prompt) => {
 
   await onSaveCurrentTrial()
 
-  const index = ratioScores.value.findIndex((i) => i.id === newTrial.target_task_id)
+  const index = ratioScores.value.findIndex((i) => i.target_id === newTrial.target_id)
   if (index > -1 && index + 1 <= ratioScores.value.length - 1) {
-    nextTask.value = ratioScores.value[index + 1]
+    nextTarget.value = ratioScores.value[index + 1]
   } else {
-    nextTask.value = ratioScores.value[0]
+    nextTarget.value = ratioScores.value[0]
   }
   currentDisplay.value = 'select-next-task'
 }
@@ -429,8 +467,9 @@ const onUndoTrial = () => {
 
   let newTrial: Trial = {
     key: 1,
-    target_task_id: 0,
+    target_id: 0,
     prompt_id: 0,
+    prompt_parent_id: null,
     target_problem_behavior_id: null // optional
   }
   if (results.length) {
@@ -444,8 +483,8 @@ const onUndoTrial = () => {
   currentTrial.value = newTrial
 
   // change next task
-  const index = ratioScores.value.findIndex((i) => i.id === newTrial.target_task_id)
-  nextTask.value = ratioScores.value[index]
+  const index = ratioScores.value.findIndex((i) => i.target_id === newTrial.target_id)
+  nextTarget.value = ratioScores.value[index]
   currentDisplay.value = 'reselect-task'
 }
 const onTakeNextTrial = (payload: { isNew: boolean }) => {
@@ -453,19 +492,21 @@ const onTakeNextTrial = (payload: { isNew: boolean }) => {
   const newKey = payload.isNew ? Number(currentTrial.value.key) + 1 : currentTrial.value.key
   const newTrial: Trial = {
     key: newKey,
-    target_task_id: nextTask.value?.id,
+    target_id: nextTarget.value?.target_id,
     prompt_id: 0,
+    prompt_parent_id: null,
     target_problem_behavior_id: null // optional
   }
   resultsState.value[newTrial.key] = {
     key: newTrial.key,
-    target_task_id: newTrial.target_task_id,
+    target_id: newTrial.target_id,
     prompt_id: newTrial.prompt_id,
+    prompt_parent_id: newTrial.prompt_parent_id,
     target_problem_behavior_id: newTrial.target_problem_behavior_id // optional
   }
   currentDisplay.value = 'select-prompt'
   currentTrial.value = newTrial
-  nextTask.value = {}
+  nextTarget.value = {}
   generateRatioScores()
 }
 
@@ -500,7 +541,7 @@ const onDeleteTrial = async () => {
 
   results = results
     .filter((i) => Number(i.key) !== Number(key))
-    .filter((i) => i.prompt_id && i.target_task_id)
+    .filter((i) => i.prompt_id && i.target_id)
     .map((i, idx) => ({ ...i, key: idx + 1 }))
 
   const params: UpdateMeasurementResultsParams = {
@@ -538,27 +579,27 @@ const onSaveEditTrial = async () => {
     <!-- ratio boxes -->
     <div
       v-if="!is_collapsed"
-      :id="`sbt-ratio-${measurement.id}-${JSON.stringify(currentTrial)}`"
+      :id="`ta-ratio-${measurement.id}-${JSON.stringify(currentTrial)}`"
       class="flex flex-wrap items-center justify-center gap-1 pb-2"
     >
       <div
-        v-for="taskCode in ratioScores"
-        :key="taskCode.id"
+        v-for="target in ratioScores"
+        :key="target.target_id"
         class="relative flex h-10 w-10 flex-col-reverse items-center overflow-hidden rounded border transition-all duration-300"
         :class="{
           'border-slate-2 bg-slate-2':
-            taskCode.count <= 0 && taskCode.id !== currentTrial.target_task_id,
-          'border-teal-1 bg-teal-1':
-            taskCode.count >= 1 && taskCode.id !== currentTrial.target_task_id,
-          'border-teal-7 bg-teal-1': taskCode.id === currentTrial.target_task_id
+            target.count <= 0 && target.target_id !== currentTrial.target_id,
+          'border-prim-2 bg-prim-2':
+            target.count >= 1 && target.target_id !== currentTrial.target_id,
+          'border-light-purple-4 bg-prim-2': target.target_id === currentTrial.target_id
         }"
       >
-        <div v-for="(ratio, idx) in taskCode.ratios" :key="idx">
+        <div v-for="(ratio, idx) in target.ratios" :key="idx">
           <div
             v-if="ratio.prompt_id"
-            class="relative w-10 bg-teal-3"
+            class="relative w-10 bg-prim-4"
             :style="{
-              height: 2.5 / taskCode.max_ratio + 'rem'
+              height: 2.5 / target.max_ratio + 'rem'
             }"
           >
             <div
@@ -571,11 +612,11 @@ const onSaveEditTrial = async () => {
         <div
           class="absolute left-0 top-1/2 w-full -translate-y-1/2 text-center text-[10px] font-bold"
           :class="{
-            'text-slate-6': taskCode.count === 0,
-            'text-teal-7': taskCode.count > 0 || taskCode.id === currentTrial.target_task_id
+            'text-slate-6': target.count === 0,
+            'text-dark-purple-1': target.count > 0 || target.target_id === currentTrial.target_id
           }"
         >
-          {{ isOpenTrialHistory ? `${taskCode.average}%` : taskCode.code }}
+          {{ isOpenTrialHistory ? `${target.average}%` : target.target_code }}
         </div>
       </div>
     </div>
@@ -592,19 +633,18 @@ const onSaveEditTrial = async () => {
       >
         <div class="flex items-center gap-1">
           <div class="text-sm text-slate-7">Current</div>
-          <div class="text-sm font-semibold text-teal-8">
-            {{ currentTrialData.task_code.code }}
+          <div class="text-sm font-semibold text-light-purple-5">
+            {{ currentTrialData.target.target_code }}
           </div>
           <div
             v-if="currentDisplay === 'select-next-task' && !isOpenEditTrial"
-            class="text-sm font-semibold text-teal-8"
+            class="text-sm font-semibold text-light-purple-5"
           >
             | {{ currentTrialData.average }}%
           </div>
           <AppButton
             v-if="currentDisplay === 'select-prompt' && !isOpenEditTrial"
             kind="plain"
-            color="teal"
             size="sm"
             class="ml-2"
             @click="onUndoTrial"
@@ -614,7 +654,7 @@ const onSaveEditTrial = async () => {
         </div>
         <div class="flex items-center gap-1">
           <div class="text-sm text-slate-7">Trial</div>
-          <div class="text-sm font-semibold text-teal-8">
+          <div class="text-sm font-semibold text-light-purple-5">
             {{ currentTrial.key }}
           </div>
         </div>
@@ -627,15 +667,15 @@ const onSaveEditTrial = async () => {
           class="flex h-full flex-col content-center items-center justify-center gap-2"
         >
           <div
-            :id="`sbt-scroll-${measurement.id}`"
+            :id="`ta-scroll-${measurement.id}`"
             class="scrolling-touch flex w-full max-w-72 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
             dir="ltr"
             @scroll="onScroll"
           >
             <div
               v-for="(promptBoxes, idx) in promptBoxesPages"
-              :key="`${measurement.id}-sbt-prompt-boxes-${idx + 1}`"
-              :id="`${measurement.id}-sbt-prompt-boxes-${idx + 1}`"
+              :key="`${measurement.id}-ta-prompt-boxes-${idx + 1}`"
+              :id="`${measurement.id}-ta-prompt-boxes-${idx + 1}`"
               class="flex w-full shrink-0 snap-center justify-center"
             >
               <div
@@ -644,20 +684,20 @@ const onSaveEditTrial = async () => {
               >
                 <div v-for="(prompt, promptIdx) in promptBoxes" :key="promptIdx">
                   <div
-                    class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-95"
+                    class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl border transition-all duration-300 hover:brightness-95"
                     :class="{
-                      'brightness-75': submitLoading,
-                      'bg-teal-7': prompt.id === currentTrial.prompt_id,
-                      'bg-teal-1': prompt.id !== currentTrial.prompt_id
+                      'brightness-75 ': prompt.id === currentTrial.prompt_id,
+                      'border ': prompt.id !== currentTrial.prompt_id
+                    }"
+                    :style="{
+                      backgroundColor: promptColors[prompt.color || '']?.primaryColor,
+                      borderColor: promptColors[prompt.color || '']?.secondaryColor
                     }"
                     @click="onChoosePrompt(prompt)"
                   >
                     <div
                       class="text-[2rem] font-bold"
-                      :class="{
-                        'text-white': prompt.id === currentTrial.prompt_id,
-                        'text-teal-7': prompt.id !== currentTrial.prompt_id
-                      }"
+                      :style="{ color: promptColors[prompt.color || '']?.textColor }"
                     >
                       {{ prompt.abbreviation }}
                     </div>
@@ -689,7 +729,7 @@ const onSaveEditTrial = async () => {
           }"
         >
           <div class="flex flex-col items-center gap-1 px-2">
-            <div v-if="!is_collapsed" class="text-center text-sm text-slate-8">Select a task</div>
+            <div v-if="!is_collapsed" class="text-center text-sm text-slate-8">Select a target</div>
             <div
               :class="{
                 'scrollbar-lg max-w-[calc(100vw-6rem)] overflow-x-auto pb-2': is_collapsed
@@ -700,15 +740,14 @@ const onSaveEditTrial = async () => {
                 :class="{ 'flex-wrap justify-center': !is_collapsed }"
               >
                 <AppButton
-                  v-for="taskCode in ratioScores"
-                  :key="taskCode.id"
-                  color="teal"
-                  :kind="taskCode.id === nextTask?.id ? 'primary' : 'outline'"
+                  v-for="target in ratioScores"
+                  :key="target.target_id"
+                  :kind="target.target_id === nextTarget?.target_id ? 'primary' : 'outline'"
                   size="sm"
                   class="shrink-0"
-                  @click="nextTask = taskCode"
+                  @click="nextTarget = target"
                 >
-                  {{ taskCode.code }} | {{ taskCode.count + 1 }}
+                  {{ target.target_code }} | {{ target.count + 1 }}
                 </AppButton>
               </div>
             </div>
@@ -736,7 +775,7 @@ const onSaveEditTrial = async () => {
               {{ currentTrialData.prompt.name }}
             </span>
             <span
-              class="text-teal-7"
+              class="text-light-purple-4"
               :class="{
                 'text-5xl font-bold': !is_collapsed,
                 'text-sm font-semibold': is_collapsed
@@ -765,15 +804,14 @@ const onSaveEditTrial = async () => {
                 :class="{ 'flex-wrap justify-center': !is_collapsed }"
               >
                 <AppButton
-                  v-for="taskCode in ratioScores"
-                  :key="taskCode.id"
-                  color="teal"
-                  :kind="taskCode.id === nextTask?.id ? 'primary' : 'outline'"
+                  v-for="target in ratioScores"
+                  :key="target.target_id"
+                  :kind="target.target_id === nextTarget?.target_id ? 'primary' : 'outline'"
                   size="sm"
                   class="shrink-0"
-                  @click="nextTask = taskCode"
+                  @click="nextTarget = target"
                 >
-                  {{ taskCode.code }} | {{ taskCode.count + 1 }}
+                  {{ target.target_code }} | {{ target.count + 1 }}
                 </AppButton>
               </div>
             </div>
@@ -793,7 +831,7 @@ const onSaveEditTrial = async () => {
           class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
           :class="{ '-translate-y-1 scale-75': is_collapsed }"
         >
-          <div v-for="(problemBehavior, idx) in SBTProblemBehaviors" :key="idx">
+          <div v-for="(problemBehavior, idx) in TAProblemBehaviors" :key="idx">
             <div
               class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-90"
               :class="{
@@ -832,7 +870,7 @@ const onSaveEditTrial = async () => {
           <div class="flex items-center gap-2">
             <div class="w-6 shrink-0 text-sm text-slate-8">{{ key }}.</div>
             <div class="tex-sm font-semibold text-slate-7">
-              {{ getCode(resultsState[key].target_task_id, 'task_code') }}
+              {{ getCode(resultsState[key].target_id, 'target') }}
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -844,8 +882,15 @@ const onSaveEditTrial = async () => {
                 {{ getCode(resultsState[key].target_problem_behavior_id, 'problem_behavior') }}
               </span>
             </div>
-            <div class="flex h-6 w-6 items-center justify-center rounded bg-teal-7">
-              <span class="text-sm font-semibold text-white">
+            <div
+              class="flex h-6 w-6 items-center justify-center rounded"
+              :style="{
+                backgroundColor: promptColors[getColor(resultsState[key].prompt_id)].primaryColor,
+                borderColor: promptColors[getColor(resultsState[key].prompt_id)].secondaryColor,
+                color: promptColors[getColor(resultsState[key].prompt_id)].textColor
+              }"
+            >
+              <span class="text-sm font-semibold">
                 {{ getCode(resultsState[key].prompt_id, 'prompt') }}
               </span>
             </div>
@@ -907,19 +952,20 @@ const onSaveEditTrial = async () => {
         </AppButton>
       </div>
       <div
-        v-else-if="nextTask?.code && currentDisplay === 'reselect-task' && !isOpenEditTrial"
+        v-else-if="
+          nextTarget?.target_code && currentDisplay === 'reselect-task' && !isOpenEditTrial
+        "
         class="flex-grow"
       >
         <AppButton
-          color="teal"
           class="w-full"
           :loading="submitLoading"
           @click="onTakeNextTrial({ isNew: false })"
         >
           <span v-if="Object.keys(resultsState).length > 1 || currentTrial.prompt_id">
-            Next: {{ nextTask?.code }} | {{ nextTask?.count + 1 }}
+            Next: {{ nextTarget?.target_code }} | {{ nextTarget?.count + 1 }}
           </span>
-          <span v-else> Start trial: {{ nextTask?.code }} </span>
+          <span v-else> Start trial: {{ nextTarget?.target_code }} </span>
         </AppButton>
       </div>
       <div v-else class="flex w-full shrink-0 items-center justify-between gap-3">
@@ -941,20 +987,21 @@ const onSaveEditTrial = async () => {
         </AppButton>
 
         <div
-          v-if="nextTask?.code && currentDisplay === 'select-next-task' && !isOpenEditTrial"
+          v-if="
+            nextTarget?.target_code && currentDisplay === 'select-next-task' && !isOpenEditTrial
+          "
           class="flex-grow"
         >
           <AppButton
-            color="teal"
             class="w-full"
             :loading="submitLoading"
             @click="onTakeNextTrial({ isNew: true })"
           >
-            Next: {{ nextTask?.code }} | {{ nextTask?.count + 1 }}
+            Next: {{ nextTarget?.target_code }} | {{ nextTarget?.count + 1 }}
           </AppButton>
         </div>
         <div v-if="isOpenEditTrial" class="flex-grow">
-          <AppButton color="teal" class="w-full" :loading="submitLoading" @click="onSaveEditTrial">
+          <AppButton class="w-full" :loading="submitLoading" @click="onSaveEditTrial">
             Update
           </AppButton>
         </div>
