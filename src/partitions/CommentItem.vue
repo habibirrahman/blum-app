@@ -190,7 +190,7 @@ const showImage = (index: number) => {
               :src="image.file_url"
               :alt="image.file_name"
               @click.stop="showImage(index)"
-              class="mb-2 rounded-lg cursor-pointer"
+              class="mb-2 rounded-lg cursor-pointer pointer-events-auto"
               :class="{
                 'h-16 w-16 object-cover': comment.images.length > 0,
                 'h-20 w-20 object-cover': comment.images.length === 1 && showAction
@@ -218,7 +218,7 @@ const showImage = (index: number) => {
               :src="image.file_url"
               :alt="image.file_name"
               @click.stop="showImage(index)"
-              class="mb-2 rounded-lg cursor-pointer"
+              class="mb-2 rounded-lg cursor-pointer pointer-events-auto"
               :class="{
                 'h-16 w-16 object-cover': comment.images.length > 1,
                 'h-76 w-76 object-cover': comment.images.length === 1 && !showAction,
