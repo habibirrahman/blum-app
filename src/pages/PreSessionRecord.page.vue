@@ -132,7 +132,7 @@ const onStartSession = () => {
 </script>
 
 <template>
-  <div class="sticky top-0 z-[10] bg-white">
+  <div class="sticky top-0 z-10 bg-white">
     <div class="flex items-center justify-between gap-4 px-4 py-3">
       <div class="flex items-center gap-3 truncate">
         <RouterLink :to="redirect" class="flex h-8 w-8 shrink-0 items-center justify-center">
