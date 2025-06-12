@@ -170,8 +170,11 @@ const getImageSizeFromDataUrl = (
   return new Promise((resolve) => {
     const img = new Image()
     img.onload = () => {
-      const base64Length = dataUrl.split(',')[1]?.length || 0
-      const sizeInBytes = (base64Length * 3) / 4
+      // More accurate size calculation
+      const base64String = dataUrl.split(',')[1] || ''
+      const padding = (base64String.match(/=/g) || []).length
+      const sizeInBytes = (base64String.length * 3) / 4 - padding
+
       resolve({
         width: img.width,
         height: img.height,
@@ -181,6 +184,22 @@ const getImageSizeFromDataUrl = (
     img.src = dataUrl
   })
 }
+const validateImageSize = (imageSize: number): boolean => {
+  return imageSize <= MAX_FILE_SIZE
+}
+
+const validateAndShowImageError = (imageSize: number, filename?: string): boolean => {
+  if (!validateImageSize(imageSize)) {
+    const sizeMB = (imageSize / (1024 * 1024)).toFixed(1)
+    const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
+    toast.warning(
+      `${filename ? filename + ' is' : 'Image is'} too large (${sizeMB}MB). Maximum size is ${maxSizeMB}MB.`
+    )
+    return false
+  }
+  return true
+}
+
 const createImageData = async (dataUrl: string, originalPath?: string): Promise<ImageData> => {
   const imageInfo = await getImageSizeFromDataUrl(dataUrl)
   const mimeType = getMimeTypeFromDataUrl(dataUrl)
@@ -334,13 +353,25 @@ const openCamera = async () => {
       height: 1080,
       presentationStyle: 'fullscreen'
     })
+
     if (image.dataUrl) {
       capturedImage.value = image.dataUrl
       showPreview.value = true
     }
-  } catch (error) {
-    console.error('Error taking photo:', error)
-    toast.error('Error taking photo')
+  } catch (error: any) {
+    // Check apakah error karena user cancel
+    const errorMessage = error?.message || error?.toString() || ''
+    const isCancelled =
+      errorMessage.includes('cancelled') ||
+      errorMessage.includes('canceled') ||
+      errorMessage.includes('User cancelled') ||
+      errorMessage.includes('User canceled') ||
+      errorMessage.includes('User did not select')
+
+    if (!isCancelled) {
+      console.error('Error taking photo:', error)
+      toast.error('Error taking photo')
+    }
   } finally {
     cameraLoading.value = false
   }
@@ -350,6 +381,17 @@ const usePhoto = async () => {
   if (capturedImage.value && selectedImages.value.length < MAX_IMAGES) {
     try {
       const imageData = await createImageData(capturedImage.value)
+
+      // Tambah validasi ukuran untuk foto dari camera
+      if (imageData.size > MAX_FILE_SIZE) {
+        const sizeMB = (imageData.size / (1024 * 1024)).toFixed(1)
+        const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
+        toast.warning(`Image is too large (${sizeMB}MB). Maximum size is ${maxSizeMB}MB.`)
+        capturedImage.value = ''
+        showPreview.value = false
+        return
+      }
+
       selectedImages.value.push(imageData)
     } catch (error) {
       console.error('Error processing captured photo:', error)
@@ -385,7 +427,6 @@ const openLibraryWithCamera = async () => {
       return
     }
 
-    // Using Camera plugin for gallery access with limits
     const images = await Camera.pickImages({
       quality: 90,
       limit: remainingSlots,
@@ -396,19 +437,20 @@ const openLibraryWithCamera = async () => {
 
     if (images && images.photos && images.photos.length > 0) {
       const processedImages: ImageData[] = []
+      let skippedCount = 0
 
       for (const photo of images.photos) {
         if (selectedImages.value.length + processedImages.length >= MAX_IMAGES) {
           break
         }
 
-        // Convert web path to base64 if needed
         let base64Data = photo.webPath
         if (!base64Data?.startsWith('data:')) {
           try {
             base64Data = await convertToBase64(photo.webPath)
           } catch {
             toast.warning('Failed to convert photo to base64, skipped')
+            skippedCount++
             continue
           }
         }
@@ -417,12 +459,12 @@ const openLibraryWithCamera = async () => {
 
         const imageInfo = await getImageSizeFromDataUrl(base64Data)
 
-        if (imageInfo.size > MAX_FILE_SIZE) {
-          toast.warning(`Photo is too large, skipped`)
+        // Updated validation with better error message
+        if (!validateAndShowImageError(imageInfo.size, photo.path?.split('/').pop())) {
+          skippedCount++
           continue
         }
 
-        // Pass the original filename from gallery if available
         const imageData = await createImageData(base64Data, photo.path)
         processedImages.push(imageData)
       }
