@@ -55,7 +55,6 @@ type CommentType = 'general' | 'assessment'
 // ================================
 const MAX_IMAGES = 4
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-const MAX_DIMENSIONS = { width: 1920, height: 1080 }
 
 const filterOptions: { value: SessionCommentFilter; label: string }[] = [
   { value: '', label: 'All' },
@@ -192,7 +191,7 @@ const validateAndShowImageError = (imageSize: number, filename?: string): boolea
   if (!validateImageSize(imageSize)) {
     const sizeMB = (imageSize / (1024 * 1024)).toFixed(1)
     const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
-    toast.warning(
+    toast.error(
       `${filename ? filename + ' is' : 'Image is'} too large (${sizeMB}MB). Maximum size is ${maxSizeMB}MB.`
     )
     return false
@@ -343,18 +342,24 @@ const openCamera = async () => {
   try {
     cameraLoading.value = true
     const image = await Camera.getPhoto({
-      quality: 90,
+      quality: 100,
       allowEditing: false,
       resultType: CameraResultType.DataUrl,
       source: CameraSource.Camera,
-      saveToGallery: false,
+      saveToGallery: true,
       correctOrientation: true,
-      width: 1920,
-      height: 1080,
       presentationStyle: 'fullscreen'
     })
 
     if (image.dataUrl) {
+      const imageInfo = await getImageSizeFromDataUrl(image.dataUrl)
+
+      if (imageInfo.size > MAX_FILE_SIZE) {
+        const sizeMB = (imageInfo.size / (1024 * 1024)).toFixed(1)
+        const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
+        toast.warning(`Photo is too large (${sizeMB}MB). Maximum size is ${maxSizeMB}MB.`)
+        return
+      }
       capturedImage.value = image.dataUrl
       showPreview.value = true
     }
@@ -429,16 +434,13 @@ const openLibraryWithCamera = async () => {
 
     const images = await Camera.pickImages({
       quality: 90,
+      width: 1024,
       limit: remainingSlots,
-      correctOrientation: true,
-      width: MAX_DIMENSIONS.width,
-      height: MAX_DIMENSIONS.height
+      correctOrientation: true
     })
 
     if (images && images.photos && images.photos.length > 0) {
       const processedImages: ImageData[] = []
-      let skippedCount = 0
-
       for (const photo of images.photos) {
         if (selectedImages.value.length + processedImages.length >= MAX_IMAGES) {
           break
@@ -450,7 +452,6 @@ const openLibraryWithCamera = async () => {
             base64Data = await convertToBase64(photo.webPath)
           } catch {
             toast.warning('Failed to convert photo to base64, skipped')
-            skippedCount++
             continue
           }
         }
@@ -459,9 +460,7 @@ const openLibraryWithCamera = async () => {
 
         const imageInfo = await getImageSizeFromDataUrl(base64Data)
 
-        // Updated validation with better error message
         if (!validateAndShowImageError(imageInfo.size, photo.path?.split('/').pop())) {
-          skippedCount++
           continue
         }
 
@@ -500,7 +499,10 @@ const openImagePreview = (index: number) => {
 async function convertToBase64(url: string): Promise<string> {
   const response = await fetch(url)
   const blob = await response.blob()
-
+  if (blob.size > MAX_FILE_SIZE) {
+    toast.error('Image is too large. Maximum size is 5MB.')
+    return ''
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onloadend = () => {
@@ -648,7 +650,7 @@ onMounted(async () => {
     <div class="sticky top-0 z-[10] shrink-0">
       <div class="flex h-[52px] items-center gap-3 bg-white px-4">
         <div
-          class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-slate-2"
+          class="flex items-center justify-center w-8 h-8 rounded-full cursor-pointer shrink-0 bg-slate-2"
           @click="emit('close')"
         >
           <Icon icon="ph:caret-left" class="text-slate-7" />
@@ -657,14 +659,14 @@ onMounted(async () => {
       </div>
 
       <!-- Filter Options -->
-      <div class="bg-prim-3 pl-4">
+      <div class="pl-4 bg-prim-3">
         <div
-          class="flex h-12 snap-x snap-mandatory items-center gap-2 overflow-x-auto scroll-smooth pr-4"
+          class="flex items-center h-12 gap-2 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth"
         >
           <div
             v-for="opt in filterOptions"
             :key="opt.value"
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+            class="flex items-center h-8 px-3 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
             :class="[
               filter === opt.value
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -679,22 +681,22 @@ onMounted(async () => {
     </div>
 
     <!-- Comments List -->
-    <div v-if="commentsLoading" class="space-y-4 px-4 pb-24 pt-4">
+    <div v-if="commentsLoading" class="px-4 pt-4 pb-24 space-y-4">
       <div
         v-for="n in 3"
         :key="n"
-        class="h-32 w-full shrink-0 animate-pulse rounded bg-prim-1"
+        class="w-full h-32 rounded shrink-0 animate-pulse bg-prim-1"
       ></div>
     </div>
 
     <div
       v-else-if="!sessionStore.session_comments.length"
-      class="flex h-64 w-full items-center justify-center px-4 py-4 text-center text-sm text-light-purple-5"
+      class="flex items-center justify-center w-full h-64 px-4 py-4 text-sm text-center text-light-purple-5"
     >
       Be the first to add a comment to this session.
     </div>
 
-    <div v-else class="space-y-4 px-4 pb-24 pt-4">
+    <div v-else class="px-4 pt-4 pb-24 space-y-4">
       <CommentItem
         v-for="comment in sessionStore.session_comments"
         :key="comment.id"
@@ -710,7 +712,7 @@ onMounted(async () => {
     <!-- Floating Action Buttons -->
     <div
       v-if="sessionStore.session?.status === 'ongoing'"
-      class="fixed bottom-0 flex h-20 w-screen items-center justify-center gap-4 transition-all p-safe"
+      class="fixed bottom-0 flex items-center justify-center w-screen h-20 gap-4 transition-all p-safe"
       :class="{ 'opacity-0': filter === 'target' }"
       :style="bottomContainerStyle"
     >
@@ -723,7 +725,7 @@ onMounted(async () => {
         <Icon v-if="!cameraLoading" icon="ph:camera" class="text-3xl text-white" />
         <div
           v-else
-          class="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent"
+          class="w-6 h-6 border-2 border-white rounded-full animate-spin border-t-transparent"
         ></div>
       </div>
 
@@ -748,19 +750,19 @@ onMounted(async () => {
     leave-to="opacity-0 scale-95"
     class="fixed left-0 top-0 z-[22] h-screen w-screen bg-[#1d2939]"
   >
-    <div class="relative h-full w-full">
-      <div class="flex h-full items-center justify-center">
+    <div class="relative w-full h-full">
+      <div class="flex items-center justify-center h-full">
         <img
           :src="capturedImage"
           alt="Captured photo"
-          class="max-h-full max-w-full object-contain"
+          class="object-contain max-w-full max-h-full"
         />
       </div>
 
       <div
         class="absolute bottom-2 left-0 right-0 z-10 flex items-center justify-between bg-[#1d2939] p-6 pb-safe"
       >
-        <AppButton @click="discardPhoto" color="gray" class="h-16 w-16 rounded-full">
+        <AppButton @click="discardPhoto" color="gray" class="w-16 h-16 rounded-full">
           <Icon icon="line-md:close" class="text-4xl" />
         </AppButton>
 
@@ -769,7 +771,7 @@ onMounted(async () => {
           :disabled="cameraLoading"
           @click="usePhoto"
           color="gray"
-          class="h-16 w-16 rounded-full"
+          class="w-16 h-16 rounded-full"
         >
           <Icon icon="ph:check" class="text-4xl" />
         </AppButton>
@@ -794,18 +796,18 @@ onMounted(async () => {
     <div class="flex-colh-[52px] sticky top-0 z-[10] flex shrink-0 flex-col gap-3 bg-white px-4">
       <div class="flex items-center gap-3">
         <div
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
+          class="flex items-center justify-center w-8 h-8 rounded-full shrink-0 bg-slate-2"
           @click="showNew = false"
         >
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </div>
         <div class="text-2xl text-[22px] font-bold">Add new comments</div>
       </div>
-      <div class="mb-2 flex items-center gap-2">
+      <div class="flex items-center gap-2 mb-2">
         <div
           v-for="opt in typeInputOptions"
           :key="opt.value"
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+          class="flex items-center h-8 px-3 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
           :class="[
             typeInput === opt.value
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -863,16 +865,16 @@ onMounted(async () => {
       <div v-if="selectedImages.length > 0" class="px-4">
         <div class="flex items-center gap-3">
           <div v-for="(image, index) in selectedImages" :key="index" class="relative">
-            <div class="relative h-16 w-16 rounded-lg shadow-sm">
+            <div class="relative w-16 h-16 rounded-lg shadow-sm">
               <img
                 @click="openImagePreview(index)"
                 :src="image.base64"
                 :alt="image.file_name"
-                class="h-full w-full rounded-lg object-cover"
+                class="object-cover w-full h-full rounded-lg"
               />
               <div
                 @click="removeSelectedImage(index)"
-                class="absolute -right-2 -top-2 z-50 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
+                class="absolute z-50 flex items-center justify-center w-5 h-5 text-white bg-red-500 rounded-full -right-2 -top-2"
               >
                 <Icon icon="ph:x" class="text-xs" />
               </div>
@@ -880,7 +882,7 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-      <div class="flex h-16 grow items-center justify-between px-4">
+      <div class="flex items-center justify-between h-16 px-4 grow">
         <div
           v-if="
             !selectedImages.length ||
@@ -922,11 +924,11 @@ onMounted(async () => {
     leave-to="opacity-0 scale-95"
     class="fixed left-0 top-0 z-[25] h-screen w-screen bg-[#1d2939]"
   >
-    <div class="relative h-full w-full">
+    <div class="relative w-full h-full">
       <!-- Close button -->
-      <div class="absolute left-4 top-4 z-20 pt-safe">
+      <div class="absolute z-20 left-4 top-4 pt-safe">
         <div
-          class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+          class="flex items-center justify-center w-10 h-10 rounded-full cursor-pointer bg-pure-white backdrop-blur-sm"
           @click="imagePreviewOpened = false"
         >
           <Icon icon="ph:x" class="text-xl text-slate-7" />
@@ -934,7 +936,7 @@ onMounted(async () => {
       </div>
 
       <!-- Image -->
-      <div class="flex h-full items-center justify-center">
+      <div class="flex items-center justify-center h-full">
         <img
           :src="selectedImages[currentImageIndex]?.base64"
           :alt="selectedImages[currentImageIndex]?.file_name"
@@ -949,7 +951,7 @@ onMounted(async () => {
       >
         <!-- Left arrow -->
         <div
-          class="ml-4 flex h-12 w-12 items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+          class="flex items-center justify-center w-12 h-12 ml-4 rounded-full bg-pure-white backdrop-blur-sm"
           :class="{
             'cursor-pointer': currentImageIndex > 0,
             'opacity-50': currentImageIndex === 0
@@ -961,7 +963,7 @@ onMounted(async () => {
 
         <!-- Right arrow -->
         <div
-          class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+          class="flex items-center justify-center w-12 h-12 mr-4 rounded-full bg-pure-white backdrop-blur-sm"
           :class="{
             'cursor-pointer': currentImageIndex < selectedImages.length - 1,
             'opacity-50': currentImageIndex === selectedImages.length - 1
@@ -986,15 +988,15 @@ onMounted(async () => {
   >
     <div class="flex items-center justify-center">
       <div
-        class="h-16 w-16 animate-spin rounded-full border-4 border-t-4 border-light-purple-5 border-t-transparent"
+        class="w-16 h-16 border-4 border-t-4 rounded-full animate-spin border-light-purple-5 border-t-transparent"
       ></div>
     </div>
   </TransitionRoot>
 
   <AppActionSheet :show="showPermissionModal" @close="closePermissionModal">
     <!-- Icon -->
-    <div class="mb-4 flex justify-center">
-      <div class="flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
+    <div class="flex justify-center mb-4">
+      <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-50">
         <Icon
           :icon="permissionType === 'camera' ? 'ph:camera-slash' : 'uil:image-slash'"
           class="text-3xl text-red-500"
@@ -1003,12 +1005,12 @@ onMounted(async () => {
     </div>
 
     <!-- Title -->
-    <div class="mb-2 text-center text-lg font-semibold text-slate-800">
+    <div class="mb-2 text-lg font-semibold text-center text-slate-800">
       {{ permissionType === 'camera' ? 'Camera Access Required' : 'Gallery Access Required' }}
     </div>
 
     <!-- Message -->
-    <div class="mb-6 text-center text-sm text-slate-600">
+    <div class="mb-6 text-sm text-center text-slate-600">
       {{ permissionMessage }}
     </div>
 
