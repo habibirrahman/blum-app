@@ -654,7 +654,7 @@ watch(showNew, (val) => {
       :class="{ 'opacity-0': filter === 'target' }"
       :style="{
         paddingTop: '16px',
-        paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
+        paddingBottom: 'max(40px, env(safe-area-inset-bottom))',
         minHeight: '88px'
       }"
     >
@@ -940,7 +940,7 @@ watch(showNew, (val) => {
     <div class="flex justify-center mb-4">
       <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-50">
         <Icon
-          :icon="permissionType === 'camera' ? 'ph:camera-slash' : 'ph:image-slash'"
+          :icon="permissionType === 'camera' ? 'ph:camera-slash' : 'uil:image-slash'"
           class="text-3xl text-red-500"
         />
       </div>
