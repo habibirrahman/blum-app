@@ -16,6 +16,7 @@ import moment from 'moment'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { Media } from '@capacitor-community/media'
 import { useToast } from 'vue-toastification'
+import AppActionSheet from '@/components/AppActionSheet.vue'
 
 // ================================
 // STORES & COMPOSABLES
@@ -71,6 +72,10 @@ const typeInputOptions: { value: CommentType; label: string }[] = [
 // ================================
 // REACTIVE STATE
 // ================================
+const showPermissionModal = ref<boolean>(false)
+const permissionType = ref<'camera' | 'gallery'>('camera')
+const permissionMessage = ref<string>('')
+
 // Comments
 const commentsLoading = ref<boolean>(false)
 const filter = ref<SessionCommentFilter>('')
@@ -205,6 +210,82 @@ const clearAllImages = () => {
   currentImageIndex.value = 0
 }
 
+const checkCameraPermission = async (): Promise<boolean> => {
+  try {
+    const permission = await Camera.checkPermissions()
+
+    if (permission.camera === 'granted') {
+      return true
+    }
+
+    if (permission.camera === 'denied') {
+      // Permission sudah di-deny sebelumnya
+      showPermissionDeniedModal('camera')
+      return false
+    }
+
+    // Request permission jika belum pernah diminta
+    const requestResult = await Camera.requestPermissions({ permissions: ['camera'] })
+
+    if (requestResult.camera === 'granted') {
+      return true
+    } else {
+      showPermissionDeniedModal('camera')
+      return false
+    }
+  } catch (error) {
+    console.error('Error checking camera permission:', error)
+    showPermissionDeniedModal('camera')
+    return false
+  }
+}
+const checkGalleryPermission = async (): Promise<boolean> => {
+  try {
+    const permission = await Camera.checkPermissions()
+
+    if (permission.photos === 'granted') {
+      return true
+    }
+
+    if (permission.photos === 'denied') {
+      // Permission sudah di-deny sebelumnya
+      showPermissionDeniedModal('gallery')
+      return false
+    }
+
+    // Request permission jika belum pernah diminta
+    const requestResult = await Camera.requestPermissions({ permissions: ['photos'] })
+
+    if (requestResult.photos === 'granted') {
+      return true
+    } else {
+      showPermissionDeniedModal('gallery')
+      return false
+    }
+  } catch (error) {
+    console.error('Error checking gallery permission:', error)
+    showPermissionDeniedModal('gallery')
+    return false
+  }
+}
+
+const showPermissionDeniedModal = (type: 'camera' | 'gallery') => {
+  permissionType.value = type
+
+  if (type === 'camera') {
+    permissionMessage.value = 'To take photos, please allow camera access in your browser settings.'
+  } else {
+    permissionMessage.value =
+      'To select photos, please allow gallery access in your browser settings.'
+  }
+
+  showPermissionModal.value = true
+}
+
+const closePermissionModal = () => {
+  showPermissionModal.value = false
+}
+
 const removeSelectedImage = (index: number) => {
   selectedImages.value.splice(index, 1)
 
@@ -221,6 +302,12 @@ const removeSelectedImage = (index: number) => {
 // CAMERA FUNCTIONS
 // ================================
 const openCamera = async () => {
+  // Check permission dulu
+  const hasPermission = await checkCameraPermission()
+  if (!hasPermission) {
+    return
+  }
+
   try {
     cameraLoading.value = true
     const image = await Camera.getPhoto({
@@ -240,6 +327,7 @@ const openCamera = async () => {
     }
   } catch (error) {
     console.error('Error taking photo:', error)
+    toast.error('Error taking photo')
   } finally {
     cameraLoading.value = false
   }
@@ -269,6 +357,12 @@ const discardPhoto = () => {
 // LIBRARY FUNCTIONS
 // ================================
 const openLibraryWithCamera = async () => {
+  // Check permission dulu
+  const hasPermission = await checkGalleryPermission()
+  if (!hasPermission) {
+    return
+  }
+
   try {
     libraryLoading.value = true
 
@@ -558,6 +652,11 @@ watch(showNew, (val) => {
       v-if="sessionStore.session?.status === 'ongoing'"
       class="fixed bottom-0 flex items-center justify-center w-screen h-20 gap-4 transition-all p-safe"
       :class="{ 'opacity-0': filter === 'target' }"
+      :style="{
+        paddingTop: '16px',
+        paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
+        minHeight: '88px'
+      }"
     >
       <div
         class="flex h-[60px] w-[60px] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-light-purple-5"
@@ -835,4 +934,31 @@ watch(showNew, (val) => {
       ></div>
     </div>
   </TransitionRoot>
+
+  <AppActionSheet :show="showPermissionModal" @close="closePermissionModal">
+    <!-- Icon -->
+    <div class="flex justify-center mb-4">
+      <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-50">
+        <Icon
+          :icon="permissionType === 'camera' ? 'ph:camera-slash' : 'ph:image-slash'"
+          class="text-3xl text-red-500"
+        />
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="mb-2 text-lg font-semibold text-center text-slate-800">
+      {{ permissionType === 'camera' ? 'Camera Access Required' : 'Gallery Access Required' }}
+    </div>
+
+    <!-- Message -->
+    <div class="mb-6 text-sm text-center text-slate-600">
+      {{ permissionMessage }}
+    </div>
+
+    <!-- Button -->
+    <div class="flex justify-center">
+      <AppButton @click="closePermissionModal" class="px-8 py-2"> Okay </AppButton>
+    </div>
+  </AppActionSheet>
 </template>

@@ -10,11 +10,15 @@
   #root {
     height: -webkit-fill-available;
   }
+  html {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
 
   #app {
     font-style: normal;
     margin: 0;
-    @apply no-scrollbar h-screen w-screen overflow-y-auto bg-white font-sans text-slate-10 p-safe;
+    @apply w-screen h-screen overflow-y-auto font-sans bg-white no-scrollbar text-slate-10 p-safe;
   }
 
   svg {
