@@ -523,6 +523,15 @@ const onDeleteTrial = async () => {
   isSaved.value = true
   resultsState.value = data.results
   deleteTrialKey.value = null
+
+  // return the key value
+  const newKey = Number(Object.keys(data.results).length) + 1
+  currentTrial.value = {
+    key: newKey,
+    target_task_id: currentTrial.value.target_task_id,
+    prompt_id: currentTrial.value.prompt_id,
+    target_problem_behavior_id: currentTrial.value.target_problem_behavior_id
+  }
 }
 
 const onSaveEditTrial = async () => {
@@ -534,7 +543,7 @@ const onSaveEditTrial = async () => {
 </script>
 
 <template>
-  <div class="flex min-h-full flex-grow flex-col gap-2 pb-16">
+  <div class="flex flex-col flex-grow min-h-full gap-2 pb-16">
     <!-- ratio boxes -->
     <div
       v-if="!is_collapsed"
@@ -544,7 +553,7 @@ const onSaveEditTrial = async () => {
       <div
         v-for="taskCode in ratioScores"
         :key="taskCode.id"
-        class="relative flex h-10 w-10 flex-col-reverse items-center overflow-hidden rounded border transition-all duration-300"
+        class="relative flex flex-col-reverse items-center w-10 h-10 overflow-hidden transition-all duration-300 border rounded"
         :class="{
           'border-slate-2 bg-slate-2':
             taskCode.count <= 0 && taskCode.id !== currentTrial.target_task_id,
@@ -563,7 +572,7 @@ const onSaveEditTrial = async () => {
           >
             <div
               v-if="ratio.target_problem_behavior_id"
-              class="absolute right-0 top-0 z-10 h-full bg-tomato-6"
+              class="absolute top-0 right-0 z-10 h-full bg-tomato-6"
               :style="{ width: '0.3125rem' }"
             ></div>
           </div>
@@ -581,10 +590,10 @@ const onSaveEditTrial = async () => {
     </div>
 
     <!-- select a value for new or edit trial -->
-    <div v-if="!isOpenTrialHistory || isOpenEditTrial" class="flex flex-grow flex-col">
+    <div v-if="!isOpenTrialHistory || isOpenEditTrial" class="flex flex-col flex-grow">
       <!-- header information for active trial -->
       <div
-        class="flex shrink-0 items-center justify-between"
+        class="flex items-center justify-between shrink-0"
         :class="{
           'h-8': !is_collapsed,
           'h-6': is_collapsed
@@ -620,15 +629,15 @@ const onSaveEditTrial = async () => {
         </div>
       </div>
 
-      <div v-if="!isOpenProblemBehavior" class="flex flex-grow flex-col justify-center">
+      <div v-if="!isOpenProblemBehavior" class="flex flex-col justify-center flex-grow">
         <!-- select a prompt -->
         <div
           v-if="currentDisplay === 'select-prompt'"
-          class="flex h-full flex-col content-center items-center justify-center gap-2"
+          class="flex flex-col items-center content-center justify-center h-full gap-2"
         >
           <div
             :id="`sbt-scroll-${measurement.id}`"
-            class="scrolling-touch flex w-full max-w-72 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+            class="flex w-full gap-4 pb-4 overflow-x-auto scrolling-touch max-w-72 snap-x snap-mandatory scroll-smooth"
             dir="ltr"
             @scroll="onScroll"
           >
@@ -636,10 +645,10 @@ const onSaveEditTrial = async () => {
               v-for="(promptBoxes, idx) in promptBoxesPages"
               :key="`${measurement.id}-sbt-prompt-boxes-${idx + 1}`"
               :id="`${measurement.id}-sbt-prompt-boxes-${idx + 1}`"
-              class="flex w-full shrink-0 snap-center justify-center"
+              class="flex justify-center w-full shrink-0 snap-center"
             >
               <div
-                class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
+                class="flex flex-wrap items-start content-center justify-center w-full gap-x-2 gap-y-3"
                 :class="{ '-translate-y-1 scale-75': is_collapsed }"
               >
                 <div v-for="(prompt, promptIdx) in promptBoxes" :key="promptIdx">
@@ -666,7 +675,7 @@ const onSaveEditTrial = async () => {
               </div>
             </div>
           </div>
-          <div v-if="pageCount > 1" class="flex h-3 items-center justify-center gap-2">
+          <div v-if="pageCount > 1" class="flex items-center justify-center h-3 gap-2">
             <div
               v-for="(n, idx) in pageCount"
               :key="idx"
@@ -674,7 +683,7 @@ const onSaveEditTrial = async () => {
                 'bg-slate-7': n === page,
                 'bg-slate-4': n !== page
               }"
-              class="h-3 w-3 rounded-full transition-all duration-300"
+              class="w-3 h-3 transition-all duration-300 rounded-full"
             ></div>
           </div>
         </div>
@@ -682,14 +691,14 @@ const onSaveEditTrial = async () => {
         <!-- reselect task -->
         <div
           v-if="currentDisplay === 'reselect-task'"
-          class="flex flex-grow flex-col content-center items-center justify-center"
+          class="flex flex-col items-center content-center justify-center flex-grow"
           :class="{
             'gap-4': !is_collapsed,
             'gap-2': is_collapsed
           }"
         >
           <div class="flex flex-col items-center gap-1 px-2">
-            <div v-if="!is_collapsed" class="text-center text-sm text-slate-8">Select a task</div>
+            <div v-if="!is_collapsed" class="text-sm text-center text-slate-8">Select a task</div>
             <div
               :class="{
                 'scrollbar-lg max-w-[calc(100vw-6rem)] overflow-x-auto pb-2': is_collapsed
@@ -718,7 +727,7 @@ const onSaveEditTrial = async () => {
         <!-- select a next task -->
         <div
           v-if="currentDisplay === 'select-next-task'"
-          class="flex flex-grow flex-col content-center items-center justify-center"
+          class="flex flex-col items-center content-center justify-center flex-grow"
           :class="{
             'gap-4': !is_collapsed,
             'gap-2': is_collapsed
@@ -754,7 +763,7 @@ const onSaveEditTrial = async () => {
             </AppButton>
           </div>
           <div class="flex flex-col items-center gap-1 px-2">
-            <div v-if="!is_collapsed" class="text-center text-sm text-slate-8">Next</div>
+            <div v-if="!is_collapsed" class="text-sm text-center text-slate-8">Next</div>
             <div
               :class="{
                 'scrollbar-lg max-w-[calc(100vw-6rem)] overflow-x-auto pb-2': is_collapsed
@@ -784,18 +793,18 @@ const onSaveEditTrial = async () => {
       <!-- select a problem behavior -->
       <div
         v-if="isOpenProblemBehavior"
-        class="flex w-full flex-grow flex-col content-center items-center justify-center"
+        class="flex flex-col items-center content-center justify-center flex-grow w-full"
         :class="{
           'gap-2': !is_collapsed
         }"
       >
         <div
-          class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
+          class="flex flex-wrap items-start content-center justify-center w-full gap-x-2 gap-y-3"
           :class="{ '-translate-y-1 scale-75': is_collapsed }"
         >
           <div v-for="(problemBehavior, idx) in SBTProblemBehaviors" :key="idx">
             <div
-              class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-90"
+              class="relative flex items-center justify-center transition-all duration-300 cursor-pointer shrink-0 rounded-3xl hover:brightness-90"
               :class="{
                 'h-[72px] w-[72px]': !is_collapsed,
                 'h-[64px] w-[64px]': is_collapsed,
@@ -827,24 +836,24 @@ const onSaveEditTrial = async () => {
       <div v-for="key in Object.keys(resultsState)" :key="key">
         <div
           v-if="resultsState[key].prompt_id"
-          class="flex items-center justify-between border-b border-slate-3 px-2 py-3"
+          class="flex items-center justify-between px-2 py-3 border-b border-slate-3"
         >
           <div class="flex items-center gap-2">
-            <div class="w-6 shrink-0 text-sm text-slate-8">{{ key }}.</div>
-            <div class="tex-sm font-semibold text-slate-7">
+            <div class="w-6 text-sm shrink-0 text-slate-8">{{ key }}.</div>
+            <div class="font-semibold tex-sm text-slate-7">
               {{ getCode(resultsState[key].target_task_id, 'task_code') }}
             </div>
           </div>
           <div class="flex items-center gap-2">
             <div
               v-if="resultsState[key].target_problem_behavior_id"
-              class="flex h-6 w-6 items-center justify-center rounded bg-tomato-7"
+              class="flex items-center justify-center w-6 h-6 rounded bg-tomato-7"
             >
               <span class="text-sm font-semibold text-white">
                 {{ getCode(resultsState[key].target_problem_behavior_id, 'problem_behavior') }}
               </span>
             </div>
-            <div class="flex h-6 w-6 items-center justify-center rounded bg-teal-7">
+            <div class="flex items-center justify-center w-6 h-6 rounded bg-teal-7">
               <span class="text-sm font-semibold text-white">
                 {{ getCode(resultsState[key].prompt_id, 'prompt') }}
               </span>
@@ -873,7 +882,7 @@ const onSaveEditTrial = async () => {
         </div>
         <div
           v-else-if="Object.keys(resultsState).length === 1"
-          class="py-4 text-center text-sm text-slate-8"
+          class="py-4 text-sm text-center text-slate-8"
         >
           No result recorded yet.
         </div>
@@ -922,7 +931,7 @@ const onSaveEditTrial = async () => {
           <span v-else> Start trial: {{ nextTask?.code }} </span>
         </AppButton>
       </div>
-      <div v-else class="flex w-full shrink-0 items-center justify-between gap-3">
+      <div v-else class="flex items-center justify-between w-full gap-3 shrink-0">
         <AppButton
           v-if="!isOpenEditTrial && !is_collapsed"
           kind="outline"
@@ -963,7 +972,7 @@ const onSaveEditTrial = async () => {
             target.enable_problem_behavior &&
             (Object.keys(resultsState).length > 1 || currentTrial.prompt_id)
           "
-          class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-all duration-300 hover:brightness-90"
+          class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded cursor-pointer hover:brightness-90"
           :class="{
             'bg-tomato-2': !currentTrial.target_problem_behavior_id,
             'bg-tomato-7': currentTrial.target_problem_behavior_id
