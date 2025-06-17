@@ -304,27 +304,30 @@ const onCloseTrialHistory = () => {
   isOpenTrialHistory.value = false
   deleteTrialKey.value = null
 
-  const results = Object.keys(resultsState.value).map((key) => ({
-    ...resultsState.value[key],
-    key
-  }))
-
-  const index = results.findIndex((i) => Number(i.key) === Number(currentTrial.value.key))
-  if (index > -1) {
-    currentTrial.value = results[index]
-  } else {
-    const newKey = Number(results.length) + 1
-    const newTrial: Trial = {
+  setTheLastTrial()
+}
+const setTheLastTrial = () => {
+  // return the key value
+  const data = resultsState.value
+  if (activeDisplay.value === 'select-prompt') {
+    // set new last key
+    const newKey = Number(Object.keys(data).length) + 1
+    currentTrial.value = {
       key: newKey,
-      target_task_id: nextTask.value?.id,
-      prompt_id: 0,
-      target_problem_behavior_id: null // optional
+      target_task_id: currentTrial.value.target_task_id,
+      prompt_id: currentTrial.value.prompt_id,
+      target_problem_behavior_id: currentTrial.value.target_problem_behavior_id
     }
-    resultsState.value[newTrial.key] = {
-      key: newTrial.key,
-      target_task_id: newTrial.target_task_id,
-      prompt_id: newTrial.prompt_id,
-      target_problem_behavior_id: newTrial.target_problem_behavior_id // optional
+  }
+  if (activeDisplay.value === 'select-next-task') {
+    // set last result as current
+    const results = Object.keys(data).map((key) => ({ ...data[key], key }))
+
+    const index = results.findIndex((i) => Number(i.key) === Number(currentTrial.value.key))
+    if (index > -1) {
+      currentTrial.value = results[index]
+    } else {
+      currentTrial.value = results[results.length - 1]
     }
   }
 }
@@ -523,15 +526,6 @@ const onDeleteTrial = async () => {
   isSaved.value = true
   resultsState.value = data.results
   deleteTrialKey.value = null
-
-  // return the key value
-  const newKey = Number(Object.keys(data.results).length) + 1
-  currentTrial.value = {
-    key: newKey,
-    target_task_id: currentTrial.value.target_task_id,
-    prompt_id: currentTrial.value.prompt_id,
-    target_problem_behavior_id: currentTrial.value.target_problem_behavior_id
-  }
 }
 
 const onSaveEditTrial = async () => {
@@ -872,7 +866,7 @@ const onSaveEditTrial = async () => {
             >
               <Icon icon="ph:pencil-simple" class="text-slate-8" @click="onOpenEditTrial(key)" />
               <Icon
-                v-if="Object.keys(resultsState).length > 1"
+                v-if="Object.values(resultsState).filter((i: any) => i.target_task_id).length > 1"
                 icon="ph:trash"
                 class="text-tomato-7"
                 @click="deleteTrialKey = key"
@@ -880,12 +874,12 @@ const onSaveEditTrial = async () => {
             </div>
           </div>
         </div>
-        <div
-          v-else-if="Object.keys(resultsState).length === 1"
-          class="py-4 text-sm text-center text-slate-8"
-        >
-          No result recorded yet.
-        </div>
+      </div>
+      <div
+        v-if="Object.values(resultsState).filter((i: any) => i.prompt_id).length === 0"
+        class="py-4 text-sm text-center text-slate-8"
+      >
+        No result recorded yet.
       </div>
     </div>
 
