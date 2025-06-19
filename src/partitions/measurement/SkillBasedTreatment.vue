@@ -605,7 +605,12 @@ const onSaveEditTrial = async () => {
             | {{ currentTrialData.average }}%
           </div>
           <AppButton
-            v-if="currentDisplay === 'select-prompt' && !isOpenEditTrial"
+            v-if="
+              currentDisplay === 'select-prompt' &&
+              !currentTrial.prompt_id &&
+              !isOpenEditTrial &&
+              sessionStore.session?.status === 'ongoing'
+            "
             kind="plain"
             color="teal"
             size="sm"
