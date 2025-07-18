@@ -229,7 +229,8 @@ const onFocusMeasurement = (val: Measurement) => {
     } else {
       setTimeout(() => {
         if (isFirst) {
-          document.getElementById(`app`)?.scrollTo({ top: 112, behavior: 'smooth' })
+          const app = document.getElementById(`app`)
+          app?.scrollTo({ top: 112, behavior: 'smooth' })
         } else {
           const record = document.getElementById(`measurement-record-${val.id}`)
           record?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
