@@ -227,10 +227,13 @@ const onFocusMeasurement = (val: Measurement) => {
     if (val.is_fixed) {
       isMeasurementCollapsed.value = false
     } else {
-      const pos = isFirst ? 'start' : 'center'
       setTimeout(() => {
-        const record = document.getElementById(`measurement-record-${val.id}`)
-        record?.scrollIntoView({ behavior: 'smooth', block: pos, inline: pos })
+        if (isFirst) {
+          document.getElementById(`app`)?.scrollTo({ top: 112, behavior: 'smooth' })
+        } else {
+          const record = document.getElementById(`measurement-record-${val.id}`)
+          record?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+        }
       }, timer + timer)
       setTimeout(() => {
         const menu = document.getElementById(`measurement-nav-${val.id}`)
