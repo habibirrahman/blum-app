@@ -118,7 +118,7 @@ export const useAppStore = defineStore('app', {
       }
 
       return axios
-        .get(`/api/v1/current_user/running_sessions`)
+        .get(`/api/v1/current_user/running_sessions?outcome=targets`)
         .then(async ({ data }) => {
           this.running_sessions = data
           this.syncAppStore()

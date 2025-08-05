@@ -334,7 +334,7 @@ export const useSessionStore = defineStore('session', {
       }
 
       return axios
-        .get(`/api/v1/sessions/draft_sessions${params}`)
+        .get(`/api/v1/sessions/draft_sessions${params}&outcome=targets`)
         .then(async ({ data }) => {
           this.sessions = data.sessions
           this.sessions_count = data.total_count
@@ -356,7 +356,7 @@ export const useSessionStore = defineStore('session', {
 
       return axios
         .get(
-          '/api/v1/sessions/draft_sessions?upcoming=daily&sort=earliest_schedule&page=1&per_page=5'
+          '/api/v1/sessions/draft_sessions?upcoming=daily&sort=earliest_schedule&page=1&per_page=5&outcome=targets'
         )
         .then(async ({ data }) => {
           this.upcoming_sessions = data.sessions
@@ -398,7 +398,7 @@ export const useSessionStore = defineStore('session', {
       this.session_recommendations = []
       return axios
         .get(
-          `/api/v1/clients/${this.session?.client_id}/action_recommendations??page=1&per_page=999&session_id=${this.session?.id}`
+          `/api/v1/clients/${this.session?.client_id}/action_recommendations?page=1&per_page=999&session_id=${this.session?.id}`
         )
         .then(async ({ data }) => {
           this.session_recommendations = data.action_recommendations
@@ -657,7 +657,7 @@ export const useSessionStore = defineStore('session', {
       if (type === 'general') {
         return axios
           .delete(`/api/v1/session_comments/${comment_id}`)
-          .then(async ({ data }) => {
+          .then(async () => {
             this.removeSessionComment(comment_id)
             return { success: true }
           })
@@ -668,7 +668,7 @@ export const useSessionStore = defineStore('session', {
       if (type === 'assessment') {
         return axios
           .delete(`/api/v1/clients/${client_id}/assessments/${comment_id}`)
-          .then(async ({ data }) => {
+          .then(async () => {
             this.removeSessionComment(comment_id)
             return { success: true }
           })

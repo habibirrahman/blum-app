@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import type { Branch, ClientStatus } from '@/lib/types'
@@ -12,8 +11,6 @@ import AppPagination from '@/components/AppPagination.vue'
 import ClientItem from '@/partitions/ClientItem.vue'
 import ClientItemLoader from '@/components/skeletons/ClientItemLoader.vue'
 
-const route = useRoute()
-const router = useRouter()
 const appStore = useAppStore()
 const clientStore = useClientStore()
 
@@ -167,13 +164,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-3 pt-3 transition-all">
+  <div class="pt-3 space-y-3 transition-all">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Clients</div>
-      <div v-if="clientsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
+      <div v-if="clientsLoading" class="w-6 h-6 rounded shrink-0 animate-pulse bg-slate-3"></div>
       <div
         v-else
-        class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
+        class="flex items-center justify-center h-6 px-1 text-xs font-semibold text-white rounded min-w-6 bg-light-purple-5"
       >
         {{ clientStore.clients_count }}
       </div>
@@ -192,15 +189,15 @@ onMounted(() => {
     <div class="pl-4">
       <div
         id="filter-menu"
-        class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4"
+        class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth"
       >
         <div
           v-if="appStore.account?.center_enable_branch && branchLoading"
-          class="h-8 w-32 shrink-0 animate-pulse rounded-full bg-slate-3"
+          class="w-32 h-8 rounded-full shrink-0 animate-pulse bg-slate-3"
         ></div>
         <div
           v-else-if="appStore.account?.center_enable_branch"
-          class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center gap-1 truncate rounded-full border px-4 text-xs font-medium transition-all"
+          class="flex items-center h-8 gap-1 px-4 text-xs font-medium truncate transition-all border rounded-full cursor-pointer max-w-32 shrink-0 snap-start"
           :class="[
             branches.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -210,7 +207,7 @@ onMounted(() => {
         >
           <span
             v-if="branches.length > 1"
-            class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+            class="flex items-center justify-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
           >
             {{ branches.length }}
           </span>
@@ -222,7 +219,7 @@ onMounted(() => {
         </div>
 
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
           :class="[
             statuses.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -232,7 +229,7 @@ onMounted(() => {
         >
           <span
             v-if="statuses.length > 1"
-            class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+            class="flex items-center justify-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
           >
             {{ statuses.length }}
           </span>
@@ -244,7 +241,7 @@ onMounted(() => {
         </div>
 
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
+          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all bg-white border rounded-full cursor-pointer shrink-0 snap-start border-slate-4"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />
@@ -257,7 +254,7 @@ onMounted(() => {
 
   <div v-if="clientsLoading">
     <div class="px-4 pt-2">
-      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
     </div>
     <div class="px-4">
       <ClientItemLoader v-for="n in perPage" :key="n" />
@@ -265,15 +262,15 @@ onMounted(() => {
   </div>
   <div
     v-else-if="!clientStore.clients_count"
-    class="flex h-64 w-full items-center justify-center px-4"
+    class="flex items-center justify-center w-full h-64 px-4"
   >
-    <div v-if="query" class="text-center text-sm text-slate-8">
+    <div v-if="query" class="text-sm text-center text-slate-8">
       Sorry, no clients match your search. Try using a different client name.
     </div>
-    <div v-else-if="branches.length || statuses.length" class="text-center text-sm text-slate-8">
+    <div v-else-if="branches.length || statuses.length" class="text-sm text-center text-slate-8">
       Oops! No clients fit your filter criteria. Try changing the filter to find more results!
     </div>
-    <div v-else class="text-center text-sm text-slate-8">
+    <div v-else class="text-sm text-center text-slate-8">
       It looks like you don't have any clients yet. They'll be added here when you're assigned to
       them.
     </div>
@@ -302,7 +299,7 @@ onMounted(() => {
 
   <AppActionSheet :show="showBranch" @close="showBranch = false">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold">Branches</div>
         <div class="cursor-pointer" @click="showBranch = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -312,9 +309,9 @@ onMounted(() => {
         <div
           v-for="opt in branchOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
+          class="flex items-center justify-between w-full gap-4 border-b h-14 border-slate-3"
         >
-          <label :for="`branch_filter_${opt.value}`" class="w-full truncate text-sm">
+          <label :for="`branch_filter_${opt.value}`" class="w-full text-sm truncate">
             {{ opt.label }}
           </label>
           <input
@@ -323,7 +320,7 @@ onMounted(() => {
             :id="`branch_filter_${opt.value}`"
             :checked="selectBranches.includes(opt.value)"
             :value="opt.value"
-            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="onCheckBranch(opt.value)"
           />
         </div>
@@ -337,7 +334,7 @@ onMounted(() => {
 
   <AppActionSheet :show="showStatus" @close="showStatus = false">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold">Statuses</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -347,9 +344,9 @@ onMounted(() => {
         <div
           v-for="opt in statusOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
+          class="flex items-center justify-between w-full gap-4 border-b h-14 border-slate-3"
         >
-          <label :for="`status_filter_${opt.value}`" class="w-full truncate text-sm">
+          <label :for="`status_filter_${opt.value}`" class="w-full text-sm truncate">
             {{ opt.label }}
           </label>
           <input
@@ -358,7 +355,7 @@ onMounted(() => {
             :id="`status_filter_${opt.value}`"
             :checked="selectStatuses.includes(opt.value)"
             :value="opt.value"
-            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="onCheckStatus(opt.value)"
           />
         </div>
@@ -372,7 +369,7 @@ onMounted(() => {
 
   <AppActionSheet :show="showSort" @close="showSort = false">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -382,9 +379,9 @@ onMounted(() => {
         <div
           v-for="opt in sortOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
+          class="flex items-center justify-between w-full gap-4 border-b h-14 border-slate-3"
         >
-          <label :for="`sort_by_${opt.value}`" class="w-full truncate text-sm">
+          <label :for="`sort_by_${opt.value}`" class="w-full text-sm truncate">
             {{ opt.label }}
           </label>
           <input
@@ -393,7 +390,7 @@ onMounted(() => {
             :id="`sort_by_${opt.value}`"
             :checked="selectSort === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="selectSort = opt.value"
           />
         </div>

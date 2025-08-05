@@ -107,7 +107,10 @@ const clientTags = computed<ClientTag[]>(() => {
     </div>
     <div class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
       <div class="text-xs text-slate-8">Assigned therapist</div>
-      <div v-if="clientStore.client?.accesses?.length" class="flex flex-wrap items-center gap-1">
+      <div v-if="!clientStore.client?.accesses || !clientStore.client?.accesses?.length">
+        <div class="flex items-center h-5 text-sm font-medium text-grass-8">-</div>
+      </div>
+      <div v-else class="flex flex-wrap items-center gap-1">
         <div
           v-for="access in clientStore.client?.accesses"
           :key="access.id"

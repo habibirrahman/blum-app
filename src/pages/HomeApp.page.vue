@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { TransitionRoot } from '@headlessui/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useSessionStore } from '@/stores/session.store'
@@ -15,7 +15,6 @@ import SessionItem from '@/partitions/SessionItem.vue'
 import moment from 'moment'
 import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
 
-const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
@@ -179,15 +178,15 @@ const onOpenSession = (session: Session) => {
 
 <template>
   <div
-    class="space-y-3 pt-3 transition-all"
+    class="pt-3 space-y-3 transition-all"
     :class="{ 'bg-chestnut-1': sessionStore.upcoming_sessions_count }"
   >
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Draft Sessions</div>
-      <div v-if="sessionsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
+      <div v-if="sessionsLoading" class="w-6 h-6 rounded shrink-0 animate-pulse bg-slate-3"></div>
       <div
         v-else
-        class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
+        class="flex items-center justify-center h-6 px-1 text-xs font-semibold text-white rounded min-w-6 bg-light-purple-5"
       >
         {{ sessionStore.sessions_count }}
       </div>
@@ -199,7 +198,7 @@ const onOpenSession = (session: Session) => {
         </div>
         <div
           v-if="sessionStore.upcoming_sessions_count > sessionStore.upcoming_sessions.length"
-          class="h-1 w-1 shrink-0 rounded bg-light-purple-4"
+          class="w-1 h-1 rounded shrink-0 bg-light-purple-4"
         ></div>
         <div
           v-if="sessionStore.upcoming_sessions_count > sessionStore.upcoming_sessions.length"
@@ -210,7 +209,7 @@ const onOpenSession = (session: Session) => {
         </div>
       </div>
       <div class="pl-4">
-        <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+        <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
           <RouterLink
             v-for="session in sessionStore.upcoming_sessions"
             :key="session.id"
@@ -237,11 +236,11 @@ const onOpenSession = (session: Session) => {
       />
     </div>
     <div class="pl-4">
-      <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+      <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
         <div
           v-for="opt in dateOptions"
           :key="opt.value"
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+          class="flex items-center h-8 px-3 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
           :class="[
             date === opt.value
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -252,7 +251,7 @@ const onOpenSession = (session: Session) => {
           {{ opt.label }}
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
           :class="[
             status
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -264,7 +263,7 @@ const onOpenSession = (session: Session) => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
+          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all bg-white border rounded-full cursor-pointer shrink-0 snap-start border-slate-4"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />
@@ -277,7 +276,7 @@ const onOpenSession = (session: Session) => {
 
   <div v-if="sessionsLoading">
     <div class="px-4 pt-2">
-      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
     </div>
     <div class="px-4">
       <SessionItemLoader v-for="n in perPage" :key="n" />
@@ -285,13 +284,13 @@ const onOpenSession = (session: Session) => {
   </div>
   <div
     v-else-if="!sessionStore.sessions_count"
-    class="flex h-64 w-full items-center justify-center px-4"
+    class="flex items-center justify-center w-full h-64 px-4"
   >
-    <div v-if="date" class="text-center text-sm text-slate-8">
+    <div v-if="date" class="text-sm text-center text-slate-8">
       No draft sessions scheduled for
       {{ date === 'days' ? 'today' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
     </div>
-    <div v-else class="text-center text-sm text-slate-8">
+    <div v-else class="text-sm text-center text-slate-8">
       Oops! No draft sessions fit your filter criteria. Try changing the filter to find more
       results!
     </div>
@@ -326,7 +325,7 @@ const onOpenSession = (session: Session) => {
 
   <AppActionSheet :show="showStatus" @close="showStatus = false">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold">Statuses</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -336,7 +335,7 @@ const onOpenSession = (session: Session) => {
         <div
           v-for="opt in statusOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
         >
           <label :for="`status_filter_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
           <input
@@ -345,7 +344,7 @@ const onOpenSession = (session: Session) => {
             :id="`status_filter_${opt.value}`"
             :checked="selectStatus === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="selectStatus = opt.value"
           />
         </div>
@@ -359,7 +358,7 @@ const onOpenSession = (session: Session) => {
 
   <AppActionSheet :show="showSort" @close="showSort = false">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -369,7 +368,7 @@ const onOpenSession = (session: Session) => {
         <div
           v-for="opt in sortOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
         >
           <label :for="`sort_by_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
           <input
@@ -378,7 +377,7 @@ const onOpenSession = (session: Session) => {
             :id="`sort_by_${opt.value}`"
             :checked="selectSort === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="selectSort = opt.value"
           />
         </div>
@@ -414,7 +413,7 @@ const onOpenSession = (session: Session) => {
           </div>
         </div>
         <div class="text-sm text-light-purple-4">Session ID {{ sessionToJoin?.id }}</div>
-        <div class="text-center text-xl font-semibold text-dark-purple-1">
+        <div class="text-xl font-semibold text-center text-dark-purple-1">
           Session in progress for {{ sessionToJoin?.client?.name }}
         </div>
         <div class="flex flex-col items-center gap-4 text-sm text-light-purple-5">

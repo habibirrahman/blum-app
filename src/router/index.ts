@@ -6,12 +6,12 @@ const router = createRouter({
     {
       path: '/',
       name: 'signin',
-      component: () => import('../pages/Signin.page.vue')
+      component: () => import('../pages/SigninApp.page.vue')
     },
     {
       path: '/home',
       name: 'home',
-      component: () => import('../pages/Home.page.vue')
+      component: () => import('../pages/HomeApp.page.vue')
     },
     {
       path: '/pre-session-record/:slug',
@@ -26,25 +26,17 @@ const router = createRouter({
     {
       path: '/client',
       name: 'clients',
-      component: () => import('../pages/Clients.page.vue')
+      component: () => import('../pages/ClientList.page.vue')
     },
     {
       path: '/client/:id/:tab',
       name: 'client',
-      component: () => import('../pages/Client.page.vue')
+      component: () => import('../pages/ClientDetails.page.vue')
     },
     {
       path: '/profile',
       name: 'profile',
-      component: () => import('../pages/Profile.page.vue')
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../pages/About.page.vue')
+      component: () => import('../pages/ProfileApp.page.vue')
     }
   ]
 })

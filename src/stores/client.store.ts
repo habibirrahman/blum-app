@@ -4,7 +4,6 @@ import type { Client, Session, Target } from '@/lib/types'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getClientStorage, setClientStorage } from '@/plugins/preferences.plugin'
 import { onlyUniqueId } from '@/lib/func'
-import moment from 'moment'
 
 export interface ClientStateSchema {
   client: Client | null
@@ -135,7 +134,7 @@ export const useClientStore = defineStore('client', {
 
       return axios
         .get(
-          `/api/v1/sessions/draft_sessions?client_id=${id}&upcoming=weekly&sort=earliest_schedule&page=1&per_page=5`
+          `/api/v1/sessions/draft_sessions?client_id=${id}&upcoming=weekly&sort=earliest_schedule&page=1&per_page=5&outcome=targets`
         )
         .then(async ({ data }) => {
           this.upcoming_sessions = data.sessions
@@ -172,7 +171,7 @@ export const useClientStore = defineStore('client', {
       }
 
       return axios
-        .get(`/api/v1/clients/${id}/sessions${params}`)
+        .get(`/api/v1/clients/${id}/sessions${params}&outcome=targets`)
         .then(async ({ data }) => {
           this.draft_sessions = data.sessions
           this.draft_sessions_count = data.total_count
@@ -208,7 +207,7 @@ export const useClientStore = defineStore('client', {
       }
 
       return axios
-        .get(`/api/v1/clients/${id}/sessions${params}&status=completed,cancelled`)
+        .get(`/api/v1/clients/${id}/sessions${params}&status=completed,cancelled&outcome=targets`)
         .then(async ({ data }) => {
           this.past_sessions = data.sessions
           this.past_sessions_count = data.total_count
