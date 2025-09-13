@@ -201,12 +201,16 @@ const isHeightFull = computed<boolean>(
   <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
   <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
-  <div v-if="loadingApp" class="grid h-full w-full place-items-center">
-    <div class="flex animate-pulse items-center font-logo text-4xl font-bold text-light-purple-5">
+  <div v-if="loadingApp" class="grid w-full h-full tracking-wide font-blum place-items-center">
+    <div class="flex items-center text-4xl font-bold animate-pulse font-logo text-light-purple-5">
       Blüm
     </div>
   </div>
-  <div v-else :class="{ 'pb-14': isUseNav, 'h-full': isHeightFull }">
+  <div
+    v-else
+    class="tracking-wide font-blum"
+    :class="{ 'pb-14': isUseNav, 'h-full': isHeightFull }"
+  >
     <div
       v-if="routeName !== 'session-record'"
       class="sticky left-0 top-0 z-[999] flex w-full items-center justify-center bg-rose-3 text-sm font-medium text-rose-7 transition-all"
@@ -217,7 +221,7 @@ const isHeightFull = computed<boolean>(
 
     <div
       v-if="isShowRunningSession"
-      class="flex h-full w-full items-center justify-center bg-white"
+      class="flex items-center justify-center w-full h-full bg-white"
     >
       <div
         class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
@@ -229,10 +233,10 @@ const isHeightFull = computed<boolean>(
               {{ appStore.running_sessions[0].client?.name?.charAt(0) }}
             </div>
           </div>
-          <div class="text-center text-xl font-semibold text-dark-purple-1">
+          <div class="text-xl font-semibold text-center text-dark-purple-1">
             You've started {{ appStore.running_sessions.length }} session(s) on the web:
           </div>
-          <div class="flex w-full flex-col items-center gap-2">
+          <div class="flex flex-col items-center w-full gap-2">
             <div
               v-for="session in appStore.running_sessions"
               :key="session.id"
@@ -243,7 +247,7 @@ const isHeightFull = computed<boolean>(
           </div>
           <div
             v-if="appStore.running_sessions.length > 1"
-            class="text-center text-sm text-light-purple-4"
+            class="text-sm text-center text-light-purple-4"
           >
             You'll automatically join the earliest session (Session ID
             {{ appStore.running_sessions[0].id }}), then proceed to the other.
@@ -272,23 +276,23 @@ const isHeightFull = computed<boolean>(
 
   <footer
     v-if="!loadingApp && isUseNav"
-    class="fixed bottom-0 z-[100] flex w-screen bg-white px-safe pb-safe"
+    class="font-blum fixed bottom-0 z-[100] flex w-screen bg-white tracking-wide px-safe pb-safe"
   >
     <nav
-      class="grid h-14 w-full items-center"
+      class="grid items-center w-full h-14"
       :style="{ gridTemplateColumns: `repeat(${navigations.length}, minmax(0, 1fr))` }"
     >
       <RouterLink
         v-for="nav in navigations"
         :key="nav.route_name"
         :to="{ name: nav.route_name }"
-        class="flex h-full w-full flex-col items-center justify-center gap-1 transition-all"
+        class="flex flex-col items-center justify-center w-full h-full gap-1 transition-all"
         :class="{ 'bg-prim-1': nav.is_active }"
       >
         <Icon v-if="nav.is_active" :icon="nav.active_icon" class="text-xl text-light-purple-5" />
         <Icon v-else :icon="nav.icon" class="text-xl text-slate-7" />
         <div
-          class="w-full truncate px-3 text-center text-xs transition-all"
+          class="w-full px-3 text-xs text-center truncate transition-all"
           :class="{ 'text-light-purple-5': nav.is_active, 'text-slate-7': !nav.is_active }"
         >
           {{ nav.label }}
@@ -299,9 +303,9 @@ const isHeightFull = computed<boolean>(
 
   <!-- Update Required Modal -->
   <AppActionSheet :show="updateRequired">
-    <div class="space-y-5">
-      <div class="text-center text-2xl font-semibold text-slate-10">Update required</div>
-      <div class="text-center text-sm text-slate-8">
+    <div class="space-y-5 tracking-wide font-blum">
+      <div class="text-2xl font-semibold text-center text-slate-10">Update required</div>
+      <div class="text-sm text-center text-slate-8">
         To continue using Blüm, please update to the latest version. We've made important
         improvements to ensure everything runs smoothly.
       </div>

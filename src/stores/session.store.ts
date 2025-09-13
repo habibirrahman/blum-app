@@ -301,24 +301,13 @@ export const useSessionStore = defineStore('session', {
       return axios
         .get(`/api/v1/sessions/${id}/measurements`)
         .then(async ({ data }) => {
-          const arr: Measurement[] = []
-          for (let idx = 0; idx < data.length; idx++) {
-            const measurement = data[idx]
-            const isnNeedGetTarget =
-              data[idx].type === 'Measurement::Sbt' || data[idx].type === 'Measurement::Prompting'
-            if (isnNeedGetTarget) {
-              const { data: target } = await axios.get(`/api/v1/targets/${data[idx].target_id}`)
-              if (target) measurement.target = target
-            }
-            arr.push(measurement)
-          }
-          this.session_measurements = arr
+          this.session_measurements = data
           const session: Session = {
             ...this.session,
-            measurements: [...arr, ...(this.session?.measurements || [])].filter(onlyUniqueId)
+            measurements: [...data, ...(this.session?.measurements || [])].filter(onlyUniqueId)
           }
           this.setSession(session)
-          return { success: true, arr }
+          return { success: true, data }
         })
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }

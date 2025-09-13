@@ -13,7 +13,6 @@ import PartialIntervalRecording from './measurement/PartialIntervalRecording.vue
 import DurationLatency from './measurement/DurationLatency.vue'
 import Percentage from './measurement/Percentage.vue'
 import Probing from './measurement/Probing.vue'
-import { useClientStore } from '@/stores/client.store'
 import SkillBasedTreatment from './measurement/SkillBasedTreatment.vue'
 import { useToast } from 'vue-toastification'
 import TrialByTrial from './measurement/TrialByTrial.vue'
@@ -22,7 +21,6 @@ import TaskAnalysis from './measurement/TaskAnalysis.vue'
 
 const toast = useToast()
 const sessionStore = useSessionStore()
-const clientStore = useClientStore()
 
 interface Props {
   measurement: Measurement
@@ -77,15 +75,7 @@ onMounted(async () => {
     }
   }
 
-  if (
-    props.measurement.type === 'Measurement::Probing' ||
-    props.measurement.type === 'Measurement::Prompting' ||
-    props.measurement.type === 'Measurement::Sbt' ||
-    props.measurement.type === 'Measurement::ColdProbe'
-  ) {
-    const { data } = await clientStore.getTarget({ id: props.measurement.target_id, plain: true })
-    target.value = data || {}
-  }
+  target.value = props.measurement.target
 
   isDropped.value = props.measurement.is_dropped || false
   cardLoading.value = false
@@ -586,9 +576,20 @@ const onToggleSaved = (saved: boolean) => {
                 <div>Goal time: {{ measurement.target.goal_time }}</div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
               </div>
-              <div v-if="measurement.target?.type === 'Target::Percentage'" class="space-y-0.5">
+              <div
+                v-if="
+                  measurement.target?.type === 'Target::Percentage' ||
+                  measurement.target?.type === 'Target::TrialByTrial'
+                "
+                class="space-y-0.5"
+              >
                 <div>Goal: {{ measurement.target.goal }}%</div>
-                <div>Number of trials: {{ measurement.target.number_of_trial }} trial(s)</div>
+                <div v-if="measurement.target?.type === 'Target::Percentage'">
+                  Number of trials: {{ measurement.target.number_of_trial }} trial(s)
+                </div>
+                <div v-if="measurement.target?.type === 'Target::TrialByTrial'">
+                  Minimum number of trials: {{ measurement.target.number_of_trial }} trial(s)
+                </div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
               </div>
               <div v-if="measurement.target?.type === 'Target::Pir'" class="space-y-0.5">

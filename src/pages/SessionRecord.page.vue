@@ -534,7 +534,7 @@ const duplicateImageCommentsToClientDocument = async () => {
 </script>
 
 <template>
-  <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
+  <div class="sticky top-0 z-[100] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
     <div class="flex items-center gap-2">
       <div
         class="flex items-center justify-center w-8 h-8 text-xs font-semibold transition-all border rounded shrink-0"

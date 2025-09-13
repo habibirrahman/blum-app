@@ -1,13 +1,12 @@
+/* eslint-disable no-undef */
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx,vue}'],
   theme: {
-    fontFamily: {
-      sans: ['"Inter"', 'sans-serif']
-    },
     extend: {
       fontFamily: {
-        logo: ['"Quicksand"', 'sans-serif']
+        logo: ['"Quicksand"', 'sans-serif'],
+        blum: ['"Inter"', 'sans-serif']
       },
       colors: {
         'light-purple': {

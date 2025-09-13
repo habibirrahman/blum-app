@@ -662,7 +662,12 @@ const onSaveEditTrial = async () => {
         <div class="flex items-center gap-1">
           <div class="text-sm text-slate-7">Trial</div>
           <div class="text-sm font-semibold text-light-purple-5">
-            {{ currentTrial.key }}
+            <span v-if="sessionStore.session?.status === 'completed'">
+              {{ Math.max(0, Object.keys(resultsState).length - 1) }}
+            </span>
+            <span v-else>
+              {{ currentTrial.key }}
+            </span>
           </div>
         </div>
       </div>
