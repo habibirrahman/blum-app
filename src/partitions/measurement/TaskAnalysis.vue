@@ -346,7 +346,8 @@ const setTheLastTrial = () => {
   const data = resultsState.value
   if (activeDisplay.value === 'select-prompt') {
     // set new last key
-    const newKey = Number(Object.keys(data).length) + 1
+    const filtered = Object.values(data).filter((i: any) => i.prompt_id && i.target_id)
+    const newKey = filtered.length + 1
     currentTrial.value = {
       key: newKey,
       target_id: currentTrial.value.target_id,
