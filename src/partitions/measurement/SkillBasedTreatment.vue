@@ -392,7 +392,8 @@ const onChoosePrompt = async (prompt: Prompt) => {
     return
   }
 
-  await onSaveCurrentTrial()
+  const { success } = await onSaveCurrentTrial()
+  if (!success) return
 
   const index = ratioScores.value.findIndex((i) => i.id === newTrial.target_task_id)
   if (index > -1 && index + 1 <= ratioScores.value.length - 1) {
@@ -422,7 +423,8 @@ const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) =
     return
   }
 
-  await onSaveCurrentTrial()
+  const { success } = await onSaveCurrentTrial()
+  if (!success) return
 }
 const onUndoTrial = () => {
   if (sessionStore.session?.status !== 'ongoing') return

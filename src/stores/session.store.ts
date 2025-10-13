@@ -442,8 +442,9 @@ export const useSessionStore = defineStore('session', {
           this.setSessionMeasurement(data)
           return { success: true, data, message: '' }
         })
-        .catch(({ response }) => {
-          const message = getErrorMessage(response?.data?.error)
+        .catch((error) => {
+          console.log(error)
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
           return { success: false, data: null, message }
         })
     },
@@ -458,8 +459,9 @@ export const useSessionStore = defineStore('session', {
           this.setSessionMeasurement(data)
           return { success: true, data, message: '' }
         })
-        .catch(({ response }) => {
-          const message = getErrorMessage(response?.data?.error)
+        .catch((error) => {
+          console.log(error)
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
           return { success: false, data: null, message }
         })
     },

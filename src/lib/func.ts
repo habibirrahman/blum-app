@@ -98,7 +98,6 @@ export const getErrorMessage = (value: any = '') => {
     }
     return result
   }
-  console.log('asd', typeof value)
   return typeof value === 'object' ? concatObjectKeyValue(value).join(', ') : value
 }
 

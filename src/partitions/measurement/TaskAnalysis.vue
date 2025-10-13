@@ -400,6 +400,7 @@ const onSaveCurrentTrial = async () => {
   submitLoading.value = true
   const { success, message, data } = await sessionStore.updateMeasurementResults(params)
   submitLoading.value = false
+  console.log(success, message, data)
   if (!success) {
     emit('fetch-session')
     toast.error(message)
@@ -407,8 +408,8 @@ const onSaveCurrentTrial = async () => {
   }
 
   // complete saved
-  isSaved.value = true
-  resultsState.value = data.results
+  // isSaved.value = true
+  // resultsState.value = data.results
   return { success: true }
 }
 
@@ -429,7 +430,8 @@ const onChoosePrompt = async (prompt: Prompt) => {
     return
   }
 
-  await onSaveCurrentTrial()
+  const { success } = await onSaveCurrentTrial()
+  if (!success) return
 
   const index = ratioScores.value.findIndex((i) => i.target_id === newTrial.target_id)
   if (index > -1 && index + 1 <= ratioScores.value.length - 1) {
@@ -459,7 +461,8 @@ const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) =
     return
   }
 
-  await onSaveCurrentTrial()
+  const { success } = await onSaveCurrentTrial()
+  if (!success) return
 }
 const onUndoTrial = () => {
   if (sessionStore.session?.status !== 'ongoing') return
