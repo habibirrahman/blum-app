@@ -414,10 +414,12 @@ export const useSessionStore = defineStore('session', {
         .patch(`/api/v1/measurements/${id}`, { measurement })
         .then(async ({ data }) => {
           this.setSessionMeasurement(data)
-          return { success: true, data }
+          return { success: true, data, message: '' }
         })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
+        .catch((error) => {
+          console.log(error)
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
         })
     },
     async updateMeasurementResults({

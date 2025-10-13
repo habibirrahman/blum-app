@@ -114,9 +114,12 @@ const onDrop = async (bool: boolean) => {
     data_result: { ...props.measurement, is_dropped: !bool }
   }
   isDropLoading.value = true
-  const { success, data } = await sessionStore.updateMeasurement(params)
+  const { success, message, data } = await sessionStore.updateMeasurement(params)
   isDropLoading.value = false
-  if (!success) return
+  if (!success) {
+    toast.error(message)
+    return
+  }
   isDropped.value = data.is_dropped
   if (data.is_dropped && props.is_running) {
     emit('toggle-running')
@@ -150,9 +153,12 @@ const onSaveComment = async () => {
     data_result: { ...props.measurement, comment: commentInput.value }
   }
   commentLoading.value = true
-  const { success } = await sessionStore.updateMeasurement(params)
+  const { success, message } = await sessionStore.updateMeasurement(params)
   commentLoading.value = false
-  if (!success) return
+  if (!success) {
+    toast.error(message)
+    return
+  }
   display.value = 'target'
 }
 

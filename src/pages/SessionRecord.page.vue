@@ -394,7 +394,11 @@ const onTrunOffAllAndEndSession = async () => {
         measurement: { is_dropped: true },
         data_result: { ...measurement, is_dropped: true }
       }
-      await sessionStore.updateMeasurement(params)
+      const { success, message } = await sessionStore.updateMeasurement(params)
+      if (!success) {
+        toast.error(message)
+        return
+      }
     }
   }
   endSessionStatus.value = 'normal'
