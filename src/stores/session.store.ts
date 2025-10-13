@@ -244,7 +244,7 @@ export const useSessionStore = defineStore('session', {
 
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        return { success: true, data: this.session }
+        // return { success: true, data: this.session }
       }
 
       return axios
@@ -270,7 +270,7 @@ export const useSessionStore = defineStore('session', {
 
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        return { success: true, data: this.session_comments }
+        // return { success: true, data: this.session_comments }
       }
 
       const params = filter ? `?filter_by=${filter}` : ''
@@ -295,7 +295,7 @@ export const useSessionStore = defineStore('session', {
 
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        return { success: true, data: this.session_measurements }
+        // return { success: true, data: this.session_measurements }
       }
 
       return axios
@@ -316,10 +316,10 @@ export const useSessionStore = defineStore('session', {
     async getSessions({ params }: { params?: string }) {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        return {
-          success: true,
-          data: { sessions: this.sessions, total_count: this.sessions_count }
-        }
+        // return {
+        //   success: true,
+        //   data: { sessions: this.sessions, total_count: this.sessions_count }
+        // }
       }
 
       return axios
@@ -337,10 +337,10 @@ export const useSessionStore = defineStore('session', {
     async getUpcomingSessions() {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        return {
-          success: true,
-          data: { sessions: this.upcoming_sessions, total_count: this.upcoming_sessions_count }
-        }
+        // return {
+        //   success: true,
+        //   data: { sessions: this.upcoming_sessions, total_count: this.upcoming_sessions_count }
+        // }
       }
 
       return axios
@@ -401,12 +401,13 @@ export const useSessionStore = defineStore('session', {
     async updateMeasurement({ id, measurement, data_result }: UpdateMeasurementParams) {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        this.pending_progress.push({
-          name: 'update_measurement',
-          params: { id, measurement, data_result }
-        })
-        this.setSessionMeasurement(data_result)
-        return { success: true, data: data_result }
+        // this.pending_progress.push({
+        //   name: 'update_measurement',
+        //   params: { id, measurement, data_result }
+        // })
+        // this.setSessionMeasurement(data_result)
+        // return { success: true, data: data_result }
+        console.log(data_result)
       }
 
       return axios
@@ -426,12 +427,13 @@ export const useSessionStore = defineStore('session', {
     }: UpdateMeasurementResultsParams): Promise<ResponseSchema> {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        this.pending_progress.push({
-          name: 'update_measurment_result',
-          params: { id, results, data_result }
-        })
-        this.setSessionMeasurement(data_result)
-        return { success: true, data: data_result, message: '' }
+        // this.pending_progress.push({
+        //   name: 'update_measurment_result',
+        //   params: { id, results, data_result }
+        // })
+        // this.setSessionMeasurement(data_result)
+        // return { success: true, data: data_result, message: '' }
+        console.log(data_result)
       }
 
       return axios
@@ -472,12 +474,13 @@ export const useSessionStore = defineStore('session', {
     }: CreateSessionCommentParams) {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        this.pending_progress.push({
-          name: 'create_comment',
-          params: { client_id, session_id, type, session_comment, assessment, data_result, images }
-        })
-        this.addSessionComment(data_result, false)
-        return { success: true, data: data_result }
+        // this.pending_progress.push({
+        //   name: 'create_comment',
+        //   params: { client_id, session_id, type, session_comment, assessment, data_result, images }
+        // })
+        // this.addSessionComment(data_result, false)
+        // return { success: true, data: data_result }
+        console.log(data_result)
       }
 
       if (type === 'general') {
@@ -541,26 +544,27 @@ export const useSessionStore = defineStore('session', {
     }: UpdateSessionCommentParams) {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        if (typeof comment_id === 'number') {
-          this.pending_progress.push({
-            name: 'update_comment',
-            params: { client_id, comment_id, type, session_comment, assessment, data_result }
-          })
-        } else {
-          type CreateParams = CreateSessionCommentParams
-          const idx = this.pending_progress.findIndex((i) => {
-            return (i.params as CreateParams).data_result.id === comment_id
-          })
-          if (idx > -1) {
-            const newParams = { ...(this.pending_progress[idx].params as CreateParams) }
-            newParams.session_comment = session_comment as CreateParams['session_comment']
-            newParams.assessment = assessment as CreateParams['assessment']
-            newParams.data_result = data_result as CreateParams['data_result']
-            this.pending_progress[idx].params = newParams
-          }
-        }
-        this.setSessionComment(data_result)
-        return { success: true, data: data_result }
+        // if (typeof comment_id === 'number') {
+        //   this.pending_progress.push({
+        //     name: 'update_comment',
+        //     params: { client_id, comment_id, type, session_comment, assessment, data_result }
+        //   })
+        // } else {
+        //   type CreateParams = CreateSessionCommentParams
+        //   const idx = this.pending_progress.findIndex((i) => {
+        //     return (i.params as CreateParams).data_result.id === comment_id
+        //   })
+        //   if (idx > -1) {
+        //     const newParams = { ...(this.pending_progress[idx].params as CreateParams) }
+        //     newParams.session_comment = session_comment as CreateParams['session_comment']
+        //     newParams.assessment = assessment as CreateParams['assessment']
+        //     newParams.data_result = data_result as CreateParams['data_result']
+        //     this.pending_progress[idx].params = newParams
+        //   }
+        // }
+        // this.setSessionComment(data_result)
+        // return { success: true, data: data_result }
+        console.log(data_result)
       }
 
       if (typeof comment_id === 'string') {
@@ -600,12 +604,13 @@ export const useSessionStore = defineStore('session', {
     }: DuplicateImagesToClientDocumentParams) {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        this.pending_progress.push({
-          name: 'duplicate_images',
-          params: { documents, client_id, session_id, session_slug }
-        })
-        return { success: true, data: null }
+        // this.pending_progress.push({
+        //   name: 'duplicate_images',
+        //   params: { documents, client_id, session_id, session_slug }
+        // })
+        // return { success: true, data: null }
       }
+
       return axios
         .post(`/api/v1/clients/${client_id}/duplicate_documents`, {
           documents,
@@ -622,20 +627,20 @@ export const useSessionStore = defineStore('session', {
     async deleteSessionComment({ client_id, comment_id, type }: DeleteSessionCommentParams) {
       const { network_status } = useAppStore()
       if (!network_status.connected) {
-        if (typeof comment_id === 'number') {
-          this.pending_progress.push({
-            name: 'delete_comment',
-            params: { client_id, comment_id, type }
-          })
-        } else {
-          this.pending_progress = [
-            ...this.pending_progress.filter((i) => {
-              return (i.params as CreateSessionCommentParams).data_result.id !== comment_id
-            })
-          ]
-        }
-        this.removeSessionComment(comment_id)
-        return { success: true }
+        // if (typeof comment_id === 'number') {
+        //   this.pending_progress.push({
+        //     name: 'delete_comment',
+        //     params: { client_id, comment_id, type }
+        //   })
+        // } else {
+        //   this.pending_progress = [
+        //     ...this.pending_progress.filter((i) => {
+        //       return (i.params as CreateSessionCommentParams).data_result.id !== comment_id
+        //     })
+        //   ]
+        // }
+        // this.removeSessionComment(comment_id)
+        // return { success: true }
       }
 
       if (typeof comment_id === 'string') {
