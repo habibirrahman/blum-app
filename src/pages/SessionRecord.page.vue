@@ -429,17 +429,20 @@ const onEndSession = async () => {
       return { id: i.id, results: i.results }
     })
   }
-  const { success: s1 } = await sessionStore.resolveAllMeasurements(payload)
+  const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements(payload)
   if (!s1) {
     endSessionLoading.value = false
+    toast.error(m1)
     return
   }
 
-  const { success: s2 } = await sessionStore.endSession()
+  const { success: s2, message: m2 } = await sessionStore.endSession()
   if (!s2) {
     endSessionLoading.value = false
+    toast.error(m2)
     return
   }
+
   checkActionRecommendations()
   duplicateImageCommentsToClientDocument()
 }

@@ -393,7 +393,7 @@ export const useSessionStore = defineStore('session', {
           // this.pending_progress = []
 
           this.syncSessionStore()
-          return { success: true, data }
+          return { success: true, data, message: '' }
         })
         .catch((error) => {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
@@ -409,7 +409,7 @@ export const useSessionStore = defineStore('session', {
           await getRunningSessions()
           this.session = data
           this.syncSessionStore()
-          return { success: true, data }
+          return { success: true, data, message: '' }
         })
         .catch((error) => {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
