@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
+import {
+  useSessionStore,
+  type ResolveAllMeasurementsParams,
+  type UpdateMeasurementParams
+} from '@/stores/session.store'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
@@ -417,8 +421,22 @@ const onKeepActiveAndEndSession = () => {
 }
 const onEndSession = async () => {
   endSessionLoading.value = true
-  const { success } = await sessionStore.endSession()
-  if (!success) {
+
+  const measurements = sessionStore.session?.measurements || []
+
+  const payload: ResolveAllMeasurementsParams = {
+    params: measurements?.map((i) => {
+      return { id: i.id, results: i.results }
+    })
+  }
+  const { success: s1 } = await sessionStore.resolveAllMeasurements(payload)
+  if (!s1) {
+    endSessionLoading.value = false
+    return
+  }
+
+  const { success: s2 } = await sessionStore.endSession()
+  if (!s2) {
     endSessionLoading.value = false
     return
   }

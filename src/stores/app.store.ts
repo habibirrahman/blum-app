@@ -112,8 +112,7 @@ export const useAppStore = defineStore('app', {
       return { success: true }
     },
     async getRunningSessions(): Promise<ResponseSchema> {
-      const { network_status } = useAppStore()
-      if (!network_status.connected) {
+      if (!this.network_status.connected) {
         // return { success: true, data: this.running_sessions }
       }
 
@@ -133,8 +132,7 @@ export const useAppStore = defineStore('app', {
         this.branches = []
         return { success: true, data: [] }
       }
-      const { network_status } = useAppStore()
-      if (!network_status.connected) {
+      if (!this.network_status.connected) {
         // return { success: true, data: this.branches }
       }
 
