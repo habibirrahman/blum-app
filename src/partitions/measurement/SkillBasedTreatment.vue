@@ -348,7 +348,7 @@ const onSaveCurrentTrial = async () => {
   }
 
   results = results
-    .filter((i) => i.prompt_id && i.target_task_id)
+    .filter((i) => Number(i.prompt_id) && Number(i.target_task_id))
     .map((i, idx) => ({ ...i, key: idx + 1 }))
 
   const params: UpdateMeasurementResultsParams = {
@@ -506,7 +506,7 @@ const onDeleteTrial = async () => {
 
   results = results
     .filter((i) => Number(i.key) !== Number(key))
-    .filter((i) => i.prompt_id && i.target_task_id)
+    .filter((i) => Number(i.prompt_id) && Number(i.target_task_id))
     .map((i, idx) => ({ ...i, key: idx + 1 }))
 
   const params: UpdateMeasurementResultsParams = {
