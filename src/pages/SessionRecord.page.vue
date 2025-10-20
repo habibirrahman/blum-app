@@ -423,12 +423,28 @@ const onEndSession = async () => {
   endSessionLoading.value = true
 
   const measurements = sessionStore.session_measurements || []
-
   const payload: ResolveAllMeasurementsParams = {
     params: measurements?.map((i) => {
-      return { id: i.id, results: i.results }
+      let results: Measurement['results'] = {}
+
+      if (i.type === 'Measurement::Sbt') {
+        const res = Object.values(i.results).filter(
+          (i: any) => Number(i.prompt_id) && Number(i.target_task_id)
+        )
+        results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
+      } else if (i.type === 'Measurement::Prompting' && i.target?.is_group) {
+        const res = Object.values(i.results).filter(
+          (i: any) => Number(i.prompt_id) && Number(i.target_id)
+        )
+        results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
+      } else {
+        results = i.results
+      }
+
+      return { id: i.id, results }
     })
   }
+
   const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements(payload)
   if (!s1) {
     endSessionLoading.value = false
