@@ -422,7 +422,7 @@ const onKeepActiveAndEndSession = () => {
 const onEndSession = async () => {
   endSessionLoading.value = true
 
-  const measurements = sessionStore.session?.measurements || []
+  const measurements = sessionStore.session_measurements || []
 
   const payload: ResolveAllMeasurementsParams = {
     params: measurements?.map((i) => {
