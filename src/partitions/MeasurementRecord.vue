@@ -258,7 +258,6 @@ const onToggleTimer = async () => {
       }
     }
 
-    console.log('onToggleTimer')
     updateLoading.value = true
     const { success, data, message } = await sessionStore.updateMeasurementResults(params)
     updateLoading.value = false
@@ -305,10 +304,15 @@ const onRecordLap = async () => {
   const params = {
     id: props.measurement.id,
     results: formattedResults,
-    data_result: { ...props.measurement, results: formattedResults }
+    data_result: {
+      ...props.measurement,
+      results: Object.fromEntries(
+        laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
+      )
+    }
   }
 
-  const { success } = await sessionStore.updateMeasurementResults(params)
+  const { success, data } = await sessionStore.updateMeasurementResults(params)
 
   if (!success) {
     laps.value.pop()
@@ -319,6 +323,7 @@ const onRecordLap = async () => {
   }
 
   // Mulai timer lagi
+  generateLaps(data.results)
   startTimerAfterLap()
   lapLoading.value = false
 }
@@ -351,14 +356,20 @@ const onResetLaps = async () => {
     const params = {
       id: props.measurement.id,
       results: { 0: '00:00:00' },
-      data_result: { ...props.measurement, results: { 0: '00:00:00' } }
+      data_result: {
+        ...props.measurement,
+        results: {
+          0: { string: '00:00:00', seconds: 0 }
+        }
+      }
     }
 
-    const { success } = await sessionStore.updateMeasurementResults(params)
+    const { success, data } = await sessionStore.updateMeasurementResults(params)
 
     if (!success) {
       return
     }
+    generateLaps(data.results)
   }
   resetConfirmation.value = false
 }

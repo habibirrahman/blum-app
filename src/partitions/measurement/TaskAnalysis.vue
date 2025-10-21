@@ -398,9 +398,9 @@ const onSaveCurrentTrial = async () => {
   }
 
   submitLoading.value = true
-  const { success, message, data } = await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(params)
   submitLoading.value = false
-  console.log(success, message, data)
+
   if (!success) {
     emit('fetch-session')
     toast.error(message)

@@ -387,8 +387,6 @@ export const useSessionStore = defineStore('session', {
       return axios
         .patch(`/api/v1/measurements/resolve_all`, params)
         .then(async ({ data }) => {
-          console.log('resolve_all', data)
-
           // reset offline mode data
           // this.pending_progress = []
 
@@ -460,8 +458,6 @@ export const useSessionStore = defineStore('session', {
       results,
       data_result
     }: UpdateMeasurementResultsParams): Promise<ResponseSchema> {
-      console.log('updateMeasurementResults', id)
-
       const app = useAppStore()
       if (!app.network_status.connected) {
         const key = `update_measurement_${data_result.id}`
@@ -478,12 +474,9 @@ export const useSessionStore = defineStore('session', {
         return { success: true, data: data_result, message: '' }
       }
 
-      console.log('update results', results)
-      console.log('update data_result', data_result)
       return axios
         .patch(`/api/v1/measurements/${id}/update_results`, { results })
         .then(async ({ data }) => {
-          console.log('update results', data.results)
           this.setSessionMeasurement(data)
           return { success: true, data, message: '' }
         })
