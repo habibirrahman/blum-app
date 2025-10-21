@@ -59,21 +59,25 @@ const onAddScore = async () => {
     results: interval,
     data_result: { ...props.measurement }
   }
+
   params.data_result.results[interval] = props.measurement.results[interval] + 1
+
   scoreLoading.value = true
   const { success, message } = await sessionStore.updateMeasurementResults(params)
   scoreLoading.value = false
+
   if (!success) {
     emit('fetch-session')
     toast.error(message)
+    return
   }
 }
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+  <div class="flex flex-col justify-between flex-grow h-full gap-2">
     <div
-      class="flex h-full flex-grow flex-wrap content-center items-center gap-x-3 gap-y-4 transition-all"
+      class="flex flex-wrap items-center content-center flex-grow h-full transition-all gap-x-3 gap-y-4"
       :class="{ 'justify-center': !is_collapsed, 'justify-between': is_collapsed }"
     >
       <div v-if="is_collapsed"></div>
@@ -85,7 +89,7 @@ const onAddScore = async () => {
         <div class="text-xs">Total score</div>
       </div>
       <div
-        class="flex shrink-0 items-center justify-center rounded-full bg-light-purple-5 transition-all"
+        class="flex items-center justify-center transition-all rounded-full shrink-0 bg-light-purple-5"
         :class="{
           'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing',
           'h-[200px] w-[200px]': !is_collapsed,
@@ -97,7 +101,7 @@ const onAddScore = async () => {
       </div>
     </div>
 
-    <div v-if="!is_collapsed" class="shrink-0 space-y-1 pb-3 text-xs font-medium text-slate-7">
+    <div v-if="!is_collapsed" class="pb-3 space-y-1 text-xs font-medium shrink-0 text-slate-7">
       <div class="flex items-center justify-between">
         <div>Interval</div>
         <div>{{ currentInterval }} / {{ intervalRound }}</div>

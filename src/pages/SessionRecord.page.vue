@@ -43,7 +43,7 @@ async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false
 async function fetchSession(
   { first, is_swiped }: FetchSessionProps = { first: false, is_swiped: false }
 ) {
-  const slug = route.params.slug.toString()
+  const slug = route.params?.slug as string
   const { success, data } = await sessionStore.getSession({ slug })
   const session = data as Session
   await sessionStore.getSessionComments({ id: session.id, filter: '' })
@@ -76,6 +76,11 @@ async function fetchSession(
     counter.value = recordingTime
     app?.removeEventListener('scroll', scrollListener)
   }
+
+  // reset all state
+  runningDurationIds.value = []
+  unsavedSbtIds.value = []
+  unCompletedColdProbeIds.value = []
 }
 
 const showOffline = ref<boolean>(false)
@@ -352,9 +357,9 @@ const openEndSession = () => {
   const unsavedSbt = unsavedSbtIds.value.length
   const unCompletedColdProbe = unCompletedColdProbeIds.value.length
   if (
-    runningDuration ||
     isNotCompletedProbes ||
     isNotSavedProbing ||
+    runningDuration ||
     unsavedSbt ||
     unCompletedColdProbe
   ) {
@@ -438,10 +443,10 @@ const onEndSession = async () => {
         )
         results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
       } else {
-        results = i.results
+        results = { ...i.results }
       }
 
-      return { id: i.id, results }
+      return { id: i.id, results, type: i.type }
     })
   }
 

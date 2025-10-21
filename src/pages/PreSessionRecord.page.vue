@@ -38,7 +38,7 @@ async function fetchComments() {
   }, 100)
 }
 async function fetchSession() {
-  const slug = route.params.slug.toString()
+  const slug = route.params?.slug as string
   sessionLoading.value = true
   commentsLoading.value = true
   const { success } = await sessionStore.getSession({ slug })

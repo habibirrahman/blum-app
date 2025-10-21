@@ -142,18 +142,18 @@ watch(
   }
 )
 
-const onSaveScore = debounce(async function (prompt: any, score: number) {
+const onSaveScore = debounce(async function (key: number | string, prompt: any, score: number) {
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     results: {},
     data_result: { ...props.measurement, results: results.value }
   }
 
-  params.results[prompt.key] = score
-  params.data_result.results[prompt.key] = { ...prompt, score: prompt.score + score }
+  params.results[key] = score
+  params.data_result.results[key] = { ...prompt, score: prompt.score + score }
 
-  // scoreLoadingBox.value = prompt.key
-  // typeLoadingBox.value = prompt.score
+  scoreLoadingBox.value = key
+  typeLoadingBox.value = prompt.score
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   scoreLoadingBox.value = null
   typeLoadingBox.value = null
@@ -161,6 +161,7 @@ const onSaveScore = debounce(async function (prompt: any, score: number) {
     results.value = { ...props.measurement_results }
     emit('fetch-session')
     toast.error(message)
+    return
   }
 
   results.value = { ...data.results }
@@ -185,13 +186,13 @@ const onChangeScore = async (prompt: any, score: number) => {
   const gapScore = newScore - props.measurement_results[prompt.key].score
   scoreLoadingBox.value = prompt.key
   typeLoadingBox.value = score
-  onSaveScore(prompt, gapScore)
+  onSaveScore(prompt.key, props.measurement_results[prompt.key], gapScore)
 }
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
-    <div class="flex h-full flex-grow content-center items-center justify-center">
+  <div class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div class="flex items-center content-center justify-center flex-grow h-full">
       <div
         class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
         @scroll="onScroll"
@@ -222,12 +223,12 @@ const onChangeScore = async (prompt: any, score: number) => {
                 }"
                 @click="onChangeScore(prompt, 1)"
               >
-                <div class="absolute top-px text-xs font-semibold">{{ prompt.abbreviation }}</div>
+                <div class="absolute text-xs font-semibold top-px">{{ prompt.abbreviation }}</div>
                 <div v-if="prompt.score">{{ prompt.score }}</div>
                 <Icon v-else icon="stash:plus-solid" class="text-5xl" />
               </div>
               <div
-                class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white px-5"
+                class="flex items-center justify-center h-5 px-5 border rounded border-slate-5 bg-pure-white"
                 :class="{
                   'cursor-wait':
                     (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
@@ -237,7 +238,7 @@ const onChangeScore = async (prompt: any, score: number) => {
                 @click="onChangeScore(prompt, -1)"
               >
                 <div
-                  class="h-1 w-6 shrink-0 rounded transition-all"
+                  class="w-6 h-1 transition-all rounded shrink-0"
                   :class="{ 'bg-slate-5': !prompt.score, 'bg-slate-6': prompt.score }"
                 ></div>
               </div>
@@ -247,26 +248,26 @@ const onChangeScore = async (prompt: any, score: number) => {
       </div>
     </div>
 
-    <div class="shrink-0 space-y-2 pb-3" :class="{ '-translate-y-4': is_collapsed }">
-      <div class="flex h-2 items-center justify-center gap-2">
+    <div class="pb-3 space-y-2 shrink-0" :class="{ '-translate-y-4': is_collapsed }">
+      <div class="flex items-center justify-center h-2 gap-2">
         <div
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="h-2 w-2 rounded-full transition-all"
+          class="w-2 h-2 transition-all rounded-full"
         ></div>
       </div>
       <div v-if="!is_collapsed">
         <div
           v-if="measurement?.target?.prompting_format === 'classic'"
-          class="text-center text-xs font-medium text-slate-7"
+          class="text-xs font-medium text-center text-slate-7"
         >
           Goal: {{ measurement.target?.goal }} attempt(s)
           {{ measurement.target?.success_metric }} prompt
         </div>
         <div
           v-if="measurement?.target?.prompting_format === 'custom'"
-          class="text-center text-xs font-medium text-slate-7"
+          class="text-xs font-medium text-center text-slate-7"
         >
           <span v-if="measurement?.target?.success_metric === 'equal to or greater than goal'">
             Goal: ≥ {{ `${measurement?.target?.goal}%` }}

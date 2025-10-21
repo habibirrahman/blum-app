@@ -3,7 +3,9 @@ import { useSessionStore } from '@/stores/session.store'
 import type { Measurement, Target } from '@/lib/types'
 import { computed, onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue/dist/iconify.js'
+import { useToast } from 'vue-toastification'
 
+const toast = useToast()
 const sessionStore = useSessionStore()
 
 interface Props {
@@ -108,7 +110,12 @@ const saveMultipleVariableResult = async (id: number, value: 'yes' | 'no') => {
     data_result: { ...props.measurement, results: allResults.value }
   }
 
-  await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(params)
+  if (!success) {
+    emit('fetch-session')
+    toast.error(message)
+    return
+  }
 }
 const onSaveColdProbe = async (value: 'yes' | 'no') => {
   const params = {
@@ -116,7 +123,12 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
     results: { score: value === 'yes' ? '100' : '0' },
     data_result: { ...props.measurement, results: { score: value === 'yes' ? '100' : '0' } }
   }
-  await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(params)
+  if (!success) {
+    emit('fetch-session')
+    toast.error(message)
+    return
+  }
 }
 </script>
 

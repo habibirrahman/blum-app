@@ -6,9 +6,11 @@ import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import { debounce } from '@/lib/func'
+import { useAppStore } from '@/stores/app.store'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
+const app = useAppStore()
 
 interface Props {
   measurement: Measurement
@@ -154,10 +156,12 @@ const onAddBox = async () => {
     data_result: { ...props.measurement, results: results.value }
   }
   params.results[boxes.length] = null
+  params.data_result.results[boxes.length] = null
 
   percentageLoadingBox.value = 'add-box'
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   percentageLoadingBox.value = null
+
   if (!success) {
     results.value = { ...props.measurement.results }
     emit('fetch-session')
@@ -193,8 +197,8 @@ const onRemoveBox = async (box: PercentageBox) => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
-    <div class="flex h-full flex-grow content-center items-center justify-center">
+  <div class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div class="flex items-center content-center justify-center flex-grow h-full">
       <div
         class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
         @scroll="onScroll"
@@ -206,7 +210,7 @@ const onRemoveBox = async (box: PercentageBox) => {
           class="flex w-[calc(320px-32px)] shrink-0 snap-start justify-center"
         >
           <div
-            class="flex max-w-72 flex-wrap content-center items-start justify-center py-2 transition-all"
+            class="flex flex-wrap items-start content-center justify-center py-2 transition-all max-w-72"
             :class="{
               'gap-x-4 gap-y-4': !is_collapsed,
               'gap-x-2 gap-y-2': is_collapsed
@@ -216,12 +220,13 @@ const onRemoveBox = async (box: PercentageBox) => {
               <div
                 v-if="box.removeable"
                 class="absolute -right-1.5 -top-1.5 z-10 flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-tomato-7 text-white hover:bg-tomato-9"
+                :class="{ 'pointer-events-none opacity-50': !app.network_status.connected }"
                 @click="onRemoveBox(box)"
               >
-                <Icon icon="ph:x" class="h-2 w-2 text-white" />
+                <Icon icon="ph:x" class="w-2 h-2 text-white" />
               </div>
               <div
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded border text-2xl transition-all"
+                class="flex items-center justify-center w-10 h-10 text-2xl transition-all border rounded shrink-0"
                 :class="{
                   'pointer-events-none':
                     (percentageLoadingBox && percentageLoadingBox !== box.key) ||
@@ -242,23 +247,23 @@ const onRemoveBox = async (box: PercentageBox) => {
       </div>
     </div>
 
-    <div class="shrink-0 space-y-2 pb-3" :class="{ '-translate-y-2': is_collapsed }">
-      <div class="flex h-2 items-center justify-center gap-2">
+    <div class="pb-3 space-y-2 shrink-0" :class="{ '-translate-y-2': is_collapsed }">
+      <div class="flex items-center justify-center h-2 gap-2">
         <div
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="h-2 w-2 rounded-full transition-all"
+          class="w-2 h-2 transition-all rounded-full"
         ></div>
       </div>
       <div v-if="!is_collapsed" class="z-10 text-center">
         <div
-          class="flex items-center justify-center gap-2 text-center text-xs font-medium text-slate-7"
+          class="flex items-center justify-center gap-2 text-xs font-medium text-center text-slate-7"
         >
           <div>Goal: {{ measurement.target?.goal }}%</div>
           <div>Score: {{ percentageScore.toFixed(0) }}%</div>
         </div>
-        <div class="text-center text-xs font-medium text-slate-7">
+        <div class="text-xs font-medium text-center text-slate-7">
           <div>Minimum {{ measurement.target?.number_of_trial }} trial(s)</div>
         </div>
       </div>

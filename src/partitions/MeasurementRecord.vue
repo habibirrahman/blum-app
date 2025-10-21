@@ -48,31 +48,7 @@ onMounted(async () => {
     props.measurement.type === 'Measurement::Duration' ||
     props.measurement.type === 'Measurement::Latency'
   ) {
-    laps.value = []
-    Object.keys(props.measurement.results).forEach((lapIndex) => {
-      const lap = props.measurement.results[lapIndex]
-      if (parseInt(lapIndex) !== 0 || (lap.string !== '00:00:00' && lap.seconds !== 0)) {
-        laps.value.push({
-          lapNumber: parseInt(lapIndex),
-          time: lap.string,
-          seconds: lap.seconds
-        })
-      }
-    })
-
-    let totalSeconds = 0
-    if (laps.value.length > 0) {
-      laps.value.forEach((lap) => {
-        const [h, m, s] = lap.time.split(':').map(Number)
-        totalSeconds += h * 3600 + m * 60 + s
-      })
-      const seconds = String(totalSeconds % 60).padStart(2, '0')
-      const minutes = String(Math.floor((totalSeconds / 60) % 60)).padStart(2, '0')
-      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
-
-      lastTimer.value = `${hours}:${minutes}:${seconds}`
-      lastLapTime.value = laps.value[laps.value.length - 1].time
-    }
+    generateLaps(props.measurement.results)
   }
 
   target.value = props.measurement.target
@@ -206,6 +182,38 @@ const currentLapTime = computed<string>(() => {
   return `${hours}:${minutes}:${seconds}`
 })
 
+const generateLaps = (results: Measurement['results']) => {
+  laps.value = []
+  lastLapTime.value = null
+  lastTimer.value = null
+  lapTimer.value = 0
+  durationCounter.value = 0
+
+  Object.keys(results).forEach((lapIndex) => {
+    const lap = results[lapIndex]
+    if (parseInt(lapIndex) !== 0 || (lap.string !== '00:00:00' && lap.seconds !== 0)) {
+      laps.value.push({
+        lapNumber: parseInt(lapIndex),
+        time: lap.string,
+        seconds: lap.seconds
+      })
+    }
+  })
+
+  let totalSeconds = 0
+  if (laps.value.length > 0) {
+    laps.value.forEach((lap) => {
+      const [h, m, s] = lap.time.split(':').map(Number)
+      totalSeconds += h * 3600 + m * 60 + s
+    })
+    const seconds = String(totalSeconds % 60).padStart(2, '0')
+    const minutes = String(Math.floor((totalSeconds / 60) % 60)).padStart(2, '0')
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
+
+    lastTimer.value = `${hours}:${minutes}:${seconds}`
+    lastLapTime.value = laps.value[laps.value.length - 1].time
+  }
+}
 const onStartDurationTimer = () => {
   durationInterval.value = setInterval(() => {
     durationCounter.value++
@@ -242,17 +250,27 @@ const onToggleTimer = async () => {
     const params = {
       id: props.measurement.id,
       results: formattedResults,
-      data_result: { ...props.measurement, results: formattedResults }
+      data_result: {
+        ...props.measurement,
+        results: Object.fromEntries(
+          laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
+        )
+      }
     }
+
+    console.log('onToggleTimer')
     updateLoading.value = true
-    const { success, message } = await sessionStore.updateMeasurementResults(params)
+    const { success, data, message } = await sessionStore.updateMeasurementResults(params)
     updateLoading.value = false
+
     if (!success) {
       resumeTimerFromString(capturedDurationTime, capturedLapTime)
       emit('fetch-session')
       toast.error(message)
       return
     }
+
+    generateLaps(data.results)
     isStarted.value = false
     emit('toggle-running')
   }
