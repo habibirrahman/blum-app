@@ -541,7 +541,6 @@ const onSaveEditTrial = async () => {
 
 <template>
   <div class="flex flex-col flex-grow min-h-full gap-2 pb-16">
-    {{ isSaved }}
     <!-- ratio boxes -->
     <div
       v-if="!is_collapsed"
