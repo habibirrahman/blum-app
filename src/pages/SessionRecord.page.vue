@@ -433,20 +433,29 @@ const onEndSession = async () => {
       let results: Measurement['results'] = {}
 
       if (i.type === 'Measurement::Sbt') {
+        // handle SBT results
+
         const res = Object.values(i.results).filter(
           (i: any) => Number(i.prompt_id) && Number(i.target_task_id)
         )
         results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
+
+        // end handle SBT results
       } else if (i.type === 'Measurement::Prompting' && i.target?.is_group) {
+        // handle TA results
+
         const res = Object.values(i.results).filter(
           (i: any) => Number(i.prompt_id) && Number(i.target_id)
         )
         results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
+
+        // end handle TA results
       } else {
+        // other
         results = { ...i.results }
       }
 
-      return { id: i.id, results, type: i.type }
+      return { id: i.id, results }
     })
   }
 

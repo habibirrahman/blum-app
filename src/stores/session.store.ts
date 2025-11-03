@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
-import { getSessionStorage, setSessionStorage } from '@/plugins/preferences.plugin'
+import axios, { isAxiosError } from 'axios'
+import { getStorage, setStorage } from '@/plugins/preferences.plugin'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getErrorMessage, getRandomString, onlyUniqueId } from '@/lib/func'
 import type { Session, Comment, Measurement, User, Client, ActionRecommendation } from '@/lib/types'
@@ -50,8 +50,9 @@ export interface ResolveAllMeasurementsParams {
 }
 export interface UpdateMeasurementResultsParams {
   id: Measurement['id']
-  results: Measurement['results']
+  measurement: Measurement
   data_result: Measurement
+  last_data: Measurement
 }
 export interface UpdateMeasurementMarkProbingParams {
   id: Measurement['id']
@@ -135,11 +136,41 @@ export const useSessionStore = defineStore('session', {
       this.syncSessionStore()
     },
     async generateSessionStore(): Promise<ResponseSchema> {
-      return getSessionStorage().then(({ success, data }) => {
-        if (!success) {
-          return { success: false, data: null }
+      try {
+        const arr = [
+          { key: 'session.session-store' },
+          { key: 'session_comments.session-store' },
+          { key: 'session_measurements.session-store' },
+          { key: 'session_recommendations.session-store' },
+          { key: 'upcoming_sessions.session-store' },
+          { key: 'upcoming_sessions_count.session-store' },
+          { key: 'sessions.session-store' },
+          { key: 'sessions_count.session-store' },
+          { key: 'pending_progress.session-store' }
+        ]
+        const ses = await getStorage(arr[0].key)
+        const sesCom = await getStorage(arr[1].key)
+        const sesMea = await getStorage(arr[2].key)
+        const sesRec = await getStorage(arr[3].key)
+        const upcSes = await getStorage(arr[4].key)
+        const upcSesCou = await getStorage(arr[5].key)
+        const sess = await getStorage(arr[6].key)
+        const sessCou = await getStorage(arr[7].key)
+        const penPro = await getStorage(arr[8].key)
+
+        const storage: SessionStateSchema = {
+          session: ses.data,
+          session_comments: sesCom.data || [],
+          session_measurements: sesMea.data || [],
+          session_recommendations: sesRec.data || [],
+          upcoming_sessions: upcSes.data || [],
+          upcoming_sessions_count: upcSesCou.data || 0,
+          sessions: sess.data || [],
+          sessions_count: sessCou.data || 0,
+          // to handle offline mode in 1 active session
+          pending_progress: penPro.data || []
         }
-        const storage = data as SessionStateSchema
+
         this.session = storage?.session || null
         this.session_comments = storage?.session_comments || []
         this.session_measurements = storage?.session_measurements || []
@@ -149,23 +180,44 @@ export const useSessionStore = defineStore('session', {
         this.sessions = storage?.sessions || []
         this.sessions_count = storage?.sessions_count || 0
         this.pending_progress = storage?.pending_progress || []
-        return { success: true, data }
-      })
+
+        return { success: true, data: storage }
+      } catch (error) {
+        console.error(error)
+        return { success: false, data: null }
+      }
     },
     async syncSessionStore(): Promise<ResponseSchema> {
-      const data: SessionStateSchema = {
-        session: this.session,
-        session_comments: this.session_comments,
-        session_measurements: this.session_measurements,
-        session_recommendations: [],
-        upcoming_sessions: this.upcoming_sessions,
-        upcoming_sessions_count: this.upcoming_sessions_count,
-        sessions: this.sessions,
-        sessions_count: this.sessions_count,
-        pending_progress: this.pending_progress
+      try {
+        const arr = [
+          { key: 'session.session-store', value: JSON.stringify(this.session) },
+          { key: 'session_comments.session-store', value: JSON.stringify(this.session_comments) },
+          {
+            key: 'session_measurements.session-store',
+            value: JSON.stringify(this.session_measurements)
+          },
+          { key: 'session_recommendations.session-store', value: JSON.stringify([]) },
+          { key: 'upcoming_sessions.session-store', value: JSON.stringify(this.upcoming_sessions) },
+          {
+            key: 'upcoming_sessions_count.session-store',
+            value: JSON.stringify(this.upcoming_sessions_count)
+          },
+          { key: 'sessions.session-store', value: JSON.stringify(this.sessions) },
+          { key: 'sessions_count.session-store', value: JSON.stringify(this.sessions_count) },
+          { key: 'pending_progress.session-store', value: JSON.stringify(this.pending_progress) }
+        ]
+
+        let success = true
+        for (let idx = 0; idx < arr.length; idx++) {
+          const { success: s1 } = await setStorage(arr[idx])
+          if (!s1) success = false
+        }
+
+        return { success }
+      } catch (error) {
+        console.error(error)
+        return { success: false }
       }
-      const { success } = await setSessionStorage(data)
-      return { success }
     },
     async resolvePendingProgress(): Promise<ResponseSchema> {
       const progress = [...this.pending_progress]
@@ -453,38 +505,90 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message }
         })
     },
+    // latest API for update results
+    // async updateMeasurementResults({
+    //   id,
+    //   results,
+    //   data_result
+    // }: UpdateMeasurementResultsParams): Promise<ResponseSchema> {
+    //   try {
+    //     const app = useAppStore()
+
+    //     if (!app.network_status.connected) {
+    //       const key = `update_measurement_${data_result.id}`
+    //       const newParams = { id, measurement: { results: data_result.results }, data_result }
+
+    //       const index = this.pending_progress.findIndex((i) => i.key === key)
+    //       if (index > -1) {
+    //         this.pending_progress[index].params = newParams
+    //       } else {
+    //         this.pending_progress.push({ key, name: 'update_measurement', params: newParams })
+    //       }
+
+    //       this.setSessionMeasurement(data_result)
+    //       return { success: true, data: data_result, message: '' }
+    //     }
+
+    //     const { data } = await axios.patch(`/api/v1/measurements/${id}/update_results`, { results })
+    //     this.setSessionMeasurement(data)
+    //     return { success: true, data, message: '' }
+    //   } catch (error) {
+    //     if (isAxiosError(error)) {
+    //       const message = getErrorMessage(error.response?.data?.error || error?.message)
+    //       return { success: false, message, data: null }
+    //     }
+    //     return { success: false, message: 'Unexpected error', data: null }
+    //   }
+    // },
+
+    // try to make new API for handle not updated results
     async updateMeasurementResults({
       id,
-      results,
-      data_result
+      measurement,
+      data_result,
+      last_data
     }: UpdateMeasurementResultsParams): Promise<ResponseSchema> {
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        const key = `update_measurement_${data_result.id}`
-        const newParams = { id, measurement: { results: data_result.results }, data_result }
+      try {
+        const app = useAppStore()
 
-        const index = this.pending_progress.findIndex((i) => i.key === key)
-        if (index > -1) {
-          this.pending_progress[index].params = newParams
-        } else {
-          this.pending_progress.push({ key, name: 'update_measurement', params: newParams })
+        // handling for offline mode
+        if (!app.network_status.connected) {
+          const key = `update_measurement_${measurement.id}`
+          const newParams = { id, measurement, data_result, last_data }
+
+          const index = this.pending_progress.findIndex((i) => i.key === key)
+          if (index > -1) {
+            this.pending_progress[index].params = newParams
+          } else {
+            this.pending_progress.push({ key, name: 'update_measurement', params: newParams })
+          }
+
+          // to make measurement up-to-date
+          this.setSessionMeasurement(data_result)
+          return { success: true, data: data_result, message: '' }
         }
 
+        // to make measurement results display up-to-date
         this.setSessionMeasurement(data_result)
-        return { success: true, data: data_result, message: '' }
-      }
 
-      return axios
-        .patch(`/api/v1/measurements/${id}/update_results`, { results })
-        .then(async ({ data }) => {
-          this.setSessionMeasurement(data)
-          return { success: true, data, message: '' }
-        })
-        .catch((error) => {
+        const { data } = await axios.patch(`/api/v1/measurements/${id}`, { measurement })
+
+        // ignore update data from response API
+        // this.setSessionMeasurement(data)
+        return { success: true, data, message: '' }
+      } catch (error) {
+        // resolve data with last_data
+        this.setSessionMeasurement(last_data)
+
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message, data: last_data }
+        }
+        return { success: false, message: 'Unexpected error', data: last_data }
+      }
     },
+    //
+
     async updateMeasurementMarkProbing({
       id,
       visible,

@@ -36,10 +36,10 @@ export const useAppStore = defineStore('app', {
   getters: {},
   actions: {
     resetAppStore() {
-      const { resetSessionStore } = useSessionStore()
-      const { resetClientStore } = useClientStore()
-      resetSessionStore()
-      resetClientStore()
+      const sessionStore = useSessionStore()
+      const clientStore = useClientStore()
+      sessionStore.resetSessionStore()
+      clientStore.resetClientStore()
 
       this.account = null
       this.running_sessions = []

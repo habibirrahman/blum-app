@@ -1,4 +1,3 @@
-import type { User } from '@/lib/types'
 import type { AppStateSchema } from '@/stores/app.store'
 import type { ClientStateSchema } from '@/stores/client.store'
 import type { SessionStateSchema } from '@/stores/session.store'
@@ -85,6 +84,40 @@ export const removeAppStorage = async () => {
   }
 }
 
+export const setStorage = async (data: { key: string; value: string }) => {
+  try {
+    await Preferences.set({ key: data.key, value: data.value })
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false }
+  }
+}
+export const getStorage = async (key: string) => {
+  try {
+    const storage = await Preferences.get({ key })
+    if (!storage.value || storage.value === 'undefined') {
+      return { success: false, data: null }
+    } else {
+      const data = JSON.parse(storage.value || '')
+      return { success: true, data }
+    }
+  } catch (error) {
+    console.error(error)
+    return { success: false, data: null }
+  }
+}
+export const removeStorage = async (key: string) => {
+  try {
+    await Preferences.remove({ key })
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false }
+  }
+}
+
+// end session storage
 export const setSessionStorage = async (data: SessionStateSchema) => {
   try {
     await Preferences.set({ key: 'session.store', value: JSON.stringify(data) })
@@ -117,7 +150,9 @@ export const removeSessionStorage = async () => {
     return { success: false }
   }
 }
+// end session storage
 
+// client storage
 export const setClientStorage = async (data: ClientStateSchema) => {
   try {
     await Preferences.set({ key: 'client.store', value: JSON.stringify(data) })
@@ -150,3 +185,4 @@ export const removeClientStorage = async () => {
     return { success: false }
   }
 }
+// end client storage

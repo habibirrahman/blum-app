@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSessionStore } from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import type { Measurement, Target } from '@/lib/types'
 import { computed, onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue/dist/iconify.js'
@@ -23,10 +23,11 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const singleVariableResult = ref<{ yes: boolean; no: boolean }>({ yes: false, no: false })
 const loading = ref<{ yes: boolean; no: boolean }>({ yes: false, no: false })
-const multipleVariableResult = ref<Record<string, string>>({})
 const loadingMultiple = ref<Record<string, boolean>>({})
+
+const singleVariableResult = ref<{ yes: boolean; no: boolean }>({ yes: false, no: false })
+const multipleVariableResult = ref<Record<string, string>>({})
 const allResults = ref<Record<string, { target_variable_id: number; score: number }>>({})
 
 const isCompletedColdProbe = computed<boolean>(() => {
@@ -36,6 +37,7 @@ const isCompletedColdProbe = computed<boolean>(() => {
   if (results.length === props.target.target_variables?.length) return true
   return false
 })
+
 onMounted(() => {
   if (props.target.cold_probe_format === 'classic') {
     if (props.measurement.results) {
@@ -104,28 +106,36 @@ const saveMultipleVariableResult = async (id: number, value: 'yes' | 'no') => {
     score
   }
 
-  const params = {
+  const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: allResults.value,
-    data_result: { ...props.measurement, results: allResults.value }
+    measurement: { results: allResults.value },
+    data_result: { ...props.measurement, results: allResults.value },
+    last_data: { ...props.measurement }
   }
 
   const { success, message } = await sessionStore.updateMeasurementResults(params)
+
   if (!success) {
-    emit('fetch-session')
     toast.error(message)
     return
   }
 }
 const onSaveColdProbe = async (value: 'yes' | 'no') => {
-  const params = {
+  const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: { score: value === 'yes' ? '100' : '0' },
-    data_result: { ...props.measurement, results: { score: value === 'yes' ? '100' : '0' } }
+    measurement: {
+      results: { score: value === 'yes' ? '100' : '0' }
+    },
+    data_result: {
+      ...props.measurement,
+      results: { score: value === 'yes' ? '100' : '0' }
+    },
+    last_data: { ...props.measurement }
   }
+
   const { success, message } = await sessionStore.updateMeasurementResults(params)
+
   if (!success) {
-    emit('fetch-session')
     toast.error(message)
     return
   }

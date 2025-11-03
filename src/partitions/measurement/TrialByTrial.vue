@@ -101,25 +101,26 @@ const onSavePercentage = debounce(async function (box: PercentageBox) {
   if (box.value === true) val = false
   if (box.value === false) val = null
 
+  const finalResults = results.value
+  finalResults[box.key] = val
+
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: {},
-    data_result: { ...props.measurement, results: results.value }
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
   }
-  params.results[box.key] = val
-  params.data_result.results[box.key] = val
 
   percentageLoadingBox.value = box.key
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   percentageLoadingBox.value = null
+
+  results.value = { ...data.results }
+
   if (!success) {
-    results.value = { ...props.measurement.results }
-    emit('fetch-session')
     toast.error(message)
     return
   }
-
-  results.value = { ...data.results }
 }, 1000)
 
 const onChangePercentage = async (box: PercentageBox) => {
@@ -148,51 +149,62 @@ const onChangePercentage = async (box: PercentageBox) => {
 const onAddBox = async () => {
   if (percentageLoadingBox.value !== null) return
 
-  const boxes = Object.keys(results.value)
+  const finalResults = results.value
+  const length = Object.keys(finalResults).length
+
+  finalResults[length] = null
 
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: {},
-    data_result: { ...props.measurement, results: results.value }
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
   }
-  params.results[boxes.length] = null
-  params.data_result.results[boxes.length] = null
 
   percentageLoadingBox.value = 'add-box'
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   percentageLoadingBox.value = null
 
+  results.value = { ...data.results }
+
   if (!success) {
-    results.value = { ...props.measurement.results }
-    emit('fetch-session')
     toast.error(message)
     return
   }
-
-  results.value = { ...data.results }
 }
 
 const onRemoveBox = async (box: PercentageBox) => {
   if (percentageLoadingBox.value !== null) return
 
+  const lastResults = results.value
+  lastResults[box.key] = 'deleted'
+
+  const finalResults: Record<string, boolean | null> = {}
+  let idx = 0
+  for (let key in lastResults) {
+    if (lastResults[key] === true || lastResults[key] === false || lastResults[key] === null) {
+      finalResults[idx] = lastResults[key]
+      idx++
+    }
+  }
+
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: {},
-    data_result: { ...props.measurement, results: results.value }
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
   }
-  params.results[box.key] = 'deleted'
 
   percentageLoadingBox.value = 'remove-box'
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   percentageLoadingBox.value = null
+
+  results.value = { ...data.results }
+
   if (!success) {
-    results.value = { ...props.measurement.results }
-    emit('fetch-session')
     toast.error(message)
     return
   }
-
-  results.value = { ...data.results }
 }
 </script>
 
@@ -234,7 +246,7 @@ const onRemoveBox = async (box: PercentageBox) => {
                   'border-slate-5 bg-white': box.value === null,
                   'border-grass-7 bg-grass-1': box.value === true,
                   'border-tomato-7 bg-tomato-1': box.value === false,
-                  'border-dashed border-slate-5 bg-slate-2': box.key === 'placeholder'
+                  'border-dashed border-2 border-slate-5 bg-slate-2': box.key === 'placeholder'
                 }"
                 @click="onChangePercentage(box)"
               >

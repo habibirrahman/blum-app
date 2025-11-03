@@ -351,28 +351,31 @@ const onSaveCurrentTrial = async () => {
     .filter((i) => Number(i.prompt_id) && Number(i.target_task_id))
     .map((i, idx) => ({ ...i, key: idx + 1 }))
 
+  const finalResults: Record<string, any> = {}
+  for (let idx = 0; idx < results.length; idx++) {
+    finalResults[idx + 1] = results[idx]
+  }
+
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: {},
-    data_result: { ...props.measurement, results: {} }
-  }
-  for (let idx = 0; idx < results.length; idx++) {
-    params.results[idx + 1] = results[idx]
-    params.data_result.results[idx + 1] = results[idx]
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
   }
 
   submitLoading.value = true
   const { success, message, data } = await sessionStore.updateMeasurementResults(params)
   submitLoading.value = false
-  if (!success) {
-    emit('fetch-session')
-    toast.error(message)
-    return { success: false }
-  }
 
   // complete saved
   isSaved.value = true
   resultsState.value = data.results
+
+  if (!success) {
+    toast.error(message)
+    return { success: false }
+  }
+
   return { success: true }
 }
 
@@ -509,26 +512,31 @@ const onDeleteTrial = async () => {
     .filter((i) => Number(i.prompt_id) && Number(i.target_task_id))
     .map((i, idx) => ({ ...i, key: idx + 1 }))
 
-  const params: UpdateMeasurementResultsParams = {
-    id: props.measurement.id,
-    results: {},
-    data_result: { ...props.measurement, results: {} }
+  const finalResults: Record<string, any> = {}
+  for (let idx = 0; idx < results.length; idx++) {
+    finalResults[idx + 1] = results[idx]
   }
 
-  for (let idx = 0; idx < results.length; idx++) {
-    params.results[idx + 1] = results[idx]
-    params.data_result.results[idx + 1] = results[idx]
+  const params: UpdateMeasurementResultsParams = {
+    id: props.measurement.id,
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
   }
 
   submitLoading.value = true
-  const { success, data } = await sessionStore.updateMeasurementResults(params)
+  const { success, message, data } = await sessionStore.updateMeasurementResults(params)
   submitLoading.value = false
-  if (!success) return { success: false }
 
   // complete saved
   isSaved.value = true
   resultsState.value = data.results
   deleteTrialKey.value = null
+
+  if (!success) {
+    toast.error(message)
+    return
+  }
 }
 
 const onSaveEditTrial = async () => {

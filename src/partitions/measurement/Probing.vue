@@ -108,16 +108,21 @@ const probingLoading = ref<boolean>(false)
 const plusProbingLoading = ref<boolean>(false)
 const reduceProbingLoading = ref<boolean>(false)
 const removeProbingLoading = ref<boolean>(false)
+
 const onAdd = async (bool: boolean) => {
   onDisplayPopup()
+
+  const finalResults = props.measurement.results
+  const length = Object.keys(finalResults).length
+
+  finalResults[length] = bool
+
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: { ...props.measurement.results },
-    data_result: { ...props.measurement }
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
   }
-  const length = Object.keys(params.results).length
-  params.results[length] = bool
-  params.data_result.results = params.results
 
   probingLoading.value = true
   if (bool) plusProbingLoading.value = true
@@ -128,30 +133,34 @@ const onAdd = async (bool: boolean) => {
   reduceProbingLoading.value = false
 
   if (!success) {
-    emit('fetch-session')
     toast.error(message)
     return
   }
   // page.value = pageCount.value
   onDisplayPopup()
 }
+
 const onRemove = async (circle: ProbingCircle) => {
   onDisplayPopup()
-  const params: UpdateMeasurementResultsParams = {
-    id: props.measurement.id,
-    results: {},
-    data_result: { ...props.measurement }
-  }
-  const res = props.measurement.results
-  res[circle.key] = 'removing'
+
+  const lastResults = props.measurement.results
+  lastResults[circle.key] = 'removing'
+
+  const finalResults: Record<string, boolean> = {}
   let idx = 0
-  for (let key in res) {
-    if (res[key] === true || res[key] === false) {
-      params.results[idx] = res[key]
+  for (let key in lastResults) {
+    if (lastResults[key] === true || lastResults[key] === false) {
+      finalResults[idx] = lastResults[key]
       idx++
     }
   }
-  params.data_result.results = params.results
+
+  const params: UpdateMeasurementResultsParams = {
+    id: props.measurement.id,
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
+  }
 
   probingLoading.value = true
   removeProbingLoading.value = true
@@ -160,7 +169,6 @@ const onRemove = async (circle: ProbingCircle) => {
   removeProbingLoading.value = false
 
   if (!success) {
-    emit('fetch-session')
     toast.error(message)
     return
   }
@@ -300,6 +308,7 @@ const probingActionOptions = computed<ProbingAction[]>(() => {
 })
 
 const saveLoading = ref<boolean>(false)
+
 const onSave = async () => {
   const params: UpdateMeasurementMarkProbingParams = {
     id: props.measurement.id,
@@ -319,9 +328,9 @@ const onSave = async () => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+  <div class="flex flex-col justify-between flex-grow h-full gap-2">
     <div
-      class="flex flex-grow flex-col content-center items-center justify-center gap-2 transition-all"
+      class="flex flex-col items-center content-center justify-center flex-grow gap-2 transition-all"
       :class="{
         'h-full w-full': !is_collapsed,
         'absolute left-1/2 mb-2 w-64 -translate-x-1/2 rounded border border-prim-3 bg-white py-3':
@@ -331,7 +340,7 @@ const onSave = async () => {
       }"
     >
       <div
-        class="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+        class="flex gap-4 pb-4 overflow-x-auto snap-x snap-mandatory scroll-smooth"
         :class="{ 'w-[calc(320px-32px)] ': !is_collapsed, 'w-64': is_collapsed }"
         @scroll="onScroll"
       >
@@ -339,16 +348,16 @@ const onSave = async () => {
           v-for="(probingCircles, idx) in probingCirclesPages"
           :key="`${measurement.id}-probing-circle-${idx + 1}`"
           :id="`${measurement.id}-probing-circle-${idx + 1}`"
-          class="flex shrink-0 snap-start justify-center"
+          class="flex justify-center shrink-0 snap-start"
           :class="{ 'w-[calc(320px-32px)] ': !is_collapsed, 'w-64': is_collapsed }"
         >
           <div
-            class="flex max-w-64 flex-wrap content-center items-start justify-center gap-x-2 gap-y-2"
+            class="flex flex-wrap items-start content-center justify-center max-w-64 gap-x-2 gap-y-2"
           >
             <div
               v-for="box in probingCircles"
               :key="`${box.key}_${box.value}`"
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all"
+              class="flex items-center justify-center w-10 h-10 transition-all rounded-full shrink-0"
               :class="{
                 'pointer-events-none':
                   measurement.submitted_at ||
@@ -365,38 +374,39 @@ const onSave = async () => {
               <Icon
                 v-if="box.value === 'removing'"
                 icon="mingcute:loading-fill"
-                class="animate-spin text-2xl text-light-purple-5"
+                class="text-2xl animate-spin text-light-purple-5"
               />
+              <Icon v-else icon="ph:trash" class="text-xl text-white opacity-50" />
             </div>
           </div>
         </div>
       </div>
-      <div v-if="is_collapsed" class="flex h-2 items-center justify-center gap-2">
+      <div v-if="is_collapsed" class="flex items-center justify-center h-2 gap-2">
         <div
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="h-2 w-2 rounded-full transition-all"
+          class="w-2 h-2 transition-all rounded-full"
         ></div>
       </div>
-      <div v-if="measurement.submitted_at && !is_collapsed" class="flex w-60 justify-center">
+      <div v-if="measurement.submitted_at && !is_collapsed" class="flex justify-center w-60">
         <AppChip :chip="measurement.marked_as" />
       </div>
     </div>
 
-    <div class="shrink-0 space-y-2 pb-3" :class="{ 'relative z-[1] h-full': is_collapsed }">
+    <div class="pb-3 space-y-2 shrink-0" :class="{ 'relative z-[1] h-full': is_collapsed }">
       <div
         v-if="measurement.submitted_at && is_collapsed"
-        class="absolute -top-1 left-1/2 flex -translate-x-1/2 justify-center"
+        class="absolute flex justify-center -translate-x-1/2 -top-1 left-1/2"
       >
         <AppChip :chip="measurement.marked_as" />
       </div>
-      <div v-if="!is_collapsed" class="mb-4 flex h-2 items-center justify-center gap-2">
+      <div v-if="!is_collapsed" class="flex items-center justify-center h-2 gap-2 mb-4">
         <div
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="h-2 w-2 rounded-full transition-all"
+          class="w-2 h-2 transition-all rounded-full"
         ></div>
       </div>
       <div class="flex flex-col" :class="{ 'gap-4': !is_collapsed, 'gap-0 pt-2': is_collapsed }">
@@ -405,7 +415,7 @@ const onSave = async () => {
           :class="{ 'scale-90 gap-3': is_collapsed, 'gap-4': !is_collapsed }"
         >
           <div
-            class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-all"
+            class="flex items-center justify-center w-20 h-20 transition-all rounded-full shrink-0"
             :class="{
               'pointer-events-none': measurement.submitted_at || probingLoading,
               'bg-tomato-9': reduceProbingLoading,
@@ -414,10 +424,10 @@ const onSave = async () => {
             }"
             @click="onAdd(false)"
           >
-            <Icon icon="ph:x" class="h-10 w-10 text-white" />
+            <Icon icon="ph:x" class="w-10 h-10 text-white" />
           </div>
           <div
-            class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-all"
+            class="flex items-center justify-center w-20 h-20 transition-all rounded-full shrink-0"
             :class="{
               'pointer-events-none': measurement.submitted_at || probingLoading,
               'bg-lime-7': plusProbingLoading,
@@ -426,7 +436,7 @@ const onSave = async () => {
             }"
             @click.prevent="onAdd(true)"
           >
-            <Icon icon="ph:check" class="h-10 w-10 text-white" />
+            <Icon icon="ph:check" class="w-10 h-10 text-white" />
           </div>
           <div
             v-if="
@@ -434,7 +444,7 @@ const onSave = async () => {
               Object.keys(measurement.results).length >=
                 (measurement.target?.probing_number_of_trial || 0)
             "
-            class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-light-purple-5"
+            class="flex items-center justify-center w-20 h-20 rounded-full shrink-0 bg-light-purple-5"
             @click="onSubmitProbing"
           >
             <div class="text-sm font-semibold text-white">Submit</div>
@@ -443,7 +453,7 @@ const onSave = async () => {
       </div>
       <div v-if="!is_collapsed" class="flex items-center gap-2 text-xs font-medium text-slate-7">
         <div class="w-9 shrink-0">Score</div>
-        <div class="h-4 rounded-full bg-lime-2 px-2 text-lime-7">
+        <div class="h-4 px-2 rounded-full bg-lime-2 text-lime-7">
           {{ probingScore.toFixed(0) }}%
         </div>
       </div>
@@ -467,12 +477,12 @@ const onSave = async () => {
       class="absolute left-0 top-0 z-[1] h-full w-full rounded border-2 border-white"
       :style="{ background: 'linear-gradient(180deg, #F2F8CF 0%, #FFFFFF 100%)' }"
     >
-      <div v-if="showCelebration" class="grid h-full w-full place-content-center">
-        <img alt="celebration" class="h-72 w-72 rounded-full" src="@/assets/celebration.gif" />
+      <div v-if="showCelebration" class="grid w-full h-full place-content-center">
+        <img alt="celebration" class="rounded-full h-72 w-72" src="@/assets/celebration.gif" />
       </div>
       <div
         v-if="!showCelebration"
-        class="flex h-full w-full flex-col items-center justify-center gap-2"
+        class="flex flex-col items-center justify-center w-full h-full gap-2"
       >
         <img
           v-if="isProbingPassed"
@@ -523,7 +533,7 @@ const onSave = async () => {
             <div v-if="opt.message" class="text-sm text-slate-8">{{ opt.message }}</div>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <AppButton kind="plain" color="lime" @click="showPanel = false">
+            <AppButton class="!px-0" kind="plain" color="lime" @click="showPanel = false">
               Back to Session
             </AppButton>
             <AppButton
@@ -541,7 +551,7 @@ const onSave = async () => {
 
     <div
       v-if="showPanel && measurement.is_fixed"
-      class="absolute -bottom-20 left-0 h-20 w-full bg-prim-3"
+      class="absolute left-0 w-full h-20 -bottom-20 bg-prim-3"
     ></div>
   </div>
 </template>

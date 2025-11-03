@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
+import {
+  useSessionStore,
+  type UpdateMeasurementParams,
+  type UpdateMeasurementResultsParams
+} from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import AppButton from '@/components/AppButton.vue'
@@ -234,40 +238,37 @@ const onToggleTimer = async () => {
     }
     emit('toggle-running')
   } else {
-    const capturedDurationTime = timerRunning.value
+    // const capturedDurationTime = timerRunning.value
     const capturedLapTime = currentLapTime.value
     const capturedLapSeconds = lapTimer.value
+
     clearInterval(durationInterval.value)
+
     if (laps.value.length > 0) {
       laps.value[laps.value.length - 1].time = capturedLapTime
       laps.value[laps.value.length - 1].seconds = capturedLapSeconds
     }
-    const formattedResults: Record<number, string> = {}
-    laps.value.forEach((lap, index) => {
-      formattedResults[index] = lap.time
-    })
 
-    const params = {
+    const finalResults = Object.fromEntries(
+      laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
+    )
+
+    const params: UpdateMeasurementResultsParams = {
       id: props.measurement.id,
-      results: formattedResults,
-      data_result: {
-        ...props.measurement,
-        results: Object.fromEntries(
-          laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
-        )
-      }
+      measurement: { results: finalResults },
+      data_result: { ...props.measurement, results: finalResults },
+      last_data: { ...props.measurement }
     }
 
     updateLoading.value = true
-    const { success, data, message } = await sessionStore.updateMeasurementResults(params)
+    const { data } = await sessionStore.updateMeasurementResults(params)
     updateLoading.value = false
 
-    if (!success) {
-      resumeTimerFromString(capturedDurationTime, capturedLapTime)
-      emit('fetch-session')
-      toast.error(message)
-      return
-    }
+    // if (!success) {
+    //   resumeTimerFromString(capturedDurationTime, capturedLapTime)
+    //   toast.error(message)
+    //   return
+    // }
 
     generateLaps(data.results)
     isStarted.value = false
@@ -277,8 +278,8 @@ const onToggleTimer = async () => {
 const onRecordLap = async () => {
   if (!isStarted.value || lapLoading.value) return
 
+  // const capturedDurationTime = timerRunning.value
   const capturedLapTime = currentLapTime.value
-  const capturedDurationTime = timerRunning.value
   const capturedLapSeconds = lapTimer.value
 
   clearInterval(durationInterval.value)
@@ -296,31 +297,27 @@ const onRecordLap = async () => {
     seconds: 0
   })
 
-  const formattedResults: Record<number, string> = {}
-  laps.value.forEach((lap, index) => {
-    formattedResults[index] = lap.time
-  })
+  const finalResults = Object.fromEntries(
+    laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
+  )
 
-  const params = {
+  const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: formattedResults,
-    data_result: {
-      ...props.measurement,
-      results: Object.fromEntries(
-        laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
-      )
-    }
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
   }
 
-  const { success, data } = await sessionStore.updateMeasurementResults(params)
+  const { data } = await sessionStore.updateMeasurementResults(params)
 
-  if (!success) {
-    laps.value.pop()
-    resumeTimerFromString(capturedDurationTime, capturedLapTime)
-  } else {
-    lapTimer.value = 0
-    lastLapTime.value = null
-  }
+  // if (!success) {
+  //   laps.value.pop()
+  //   resumeTimerFromString(capturedDurationTime, capturedLapTime)
+  //   return
+  // }
+
+  lapTimer.value = 0
+  lastLapTime.value = null
 
   // Mulai timer lagi
   generateLaps(data.results)
@@ -335,16 +332,17 @@ const startTimerAfterLap = () => {
   }, 1000)
 }
 
-const resumeTimerFromString = (durationString: string, lapString: string) => {
-  const [dHours, dMinutes, dSeconds] = durationString.split(':').map(Number)
-  durationCounter.value = dHours * 3600 + dMinutes * 60 + dSeconds
+// const resumeTimerFromString = (durationString: string, lapString: string) => {
+//   const [dHours, dMinutes, dSeconds] = durationString.split(':').map(Number)
+//   durationCounter.value = dHours * 3600 + dMinutes * 60 + dSeconds
 
-  if (lapString) {
-    const [lHours, lMinutes, lSeconds] = lapString.split(':').map(Number)
-    lapTimer.value = lHours * 3600 + lMinutes * 60 + lSeconds
-    lastLapTime.value = lapString
-  }
-}
+//   if (lapString) {
+//     const [lHours, lMinutes, lSeconds] = lapString.split(':').map(Number)
+//     lapTimer.value = lHours * 3600 + lMinutes * 60 + lSeconds
+//     lastLapTime.value = lapString
+//   }
+// }
+
 const onResetLaps = async () => {
   if (resetConfirmation.value) {
     laps.value = []
@@ -353,15 +351,15 @@ const onResetLaps = async () => {
     lapTimer.value = 0
     durationCounter.value = 0
 
-    const params = {
+    const finalResults = {
+      0: { string: '00:00:00', seconds: 0 }
+    }
+
+    const params: UpdateMeasurementResultsParams = {
       id: props.measurement.id,
-      results: { 0: '00:00:00' },
-      data_result: {
-        ...props.measurement,
-        results: {
-          0: { string: '00:00:00', seconds: 0 }
-        }
-      }
+      measurement: { results: finalResults },
+      data_result: { ...props.measurement, results: finalResults },
+      last_data: { ...props.measurement }
     }
 
     const { success, data } = await sessionStore.updateMeasurementResults(params)

@@ -14,7 +14,6 @@ import AppTextInput from '@/components/AppTextInput.vue'
 import { getRandomString } from '@/lib/func'
 import moment from 'moment'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
-import { Media } from '@capacitor-community/media'
 import { useToast } from 'vue-toastification'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import { Device } from '@capacitor/device'
@@ -641,7 +640,7 @@ onMounted(async () => {
     leave-from="translate-x-0"
     leave-to="-translate-x-full"
     id="session-comments"
-    class="no-scrollbar fixed left-0 top-0 z-[20] h-screen w-screen overflow-y-auto bg-prim-3 p-safe"
+    class="no-scrollbar fixed left-0 top-0 z-[200] h-screen w-screen overflow-y-auto bg-prim-3 p-safe"
   >
     <!-- Header -->
     <div class="fixed top-0 z-[999] w-screen bg-white pt-safe"></div>
@@ -661,7 +660,7 @@ onMounted(async () => {
       <!-- Filter Options -->
       <div class="pl-4 bg-prim-3">
         <div
-          class="flex items-center h-12 gap-2 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth"
+          class="flex items-center h-12 gap-2 px-8 overflow-x-auto snap-x snap-mandatory scroll-smooth"
         >
           <div
             v-for="opt in filterOptions"

@@ -16,7 +16,7 @@ interface Emits {
   (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
-const emit = defineEmits<Emits>()
+defineEmits<Emits>()
 
 const intervalRound = computed<number>(() => {
   const intervalCount = props.measurement.target?.interval || 0
@@ -52,22 +52,24 @@ const percentageScore = computed<number>(() => {
 })
 
 const scoreLoading = ref<boolean>(false)
+
 const onAddScore = async () => {
   const interval = currentInterval.value - 1
+  const finalResults = props.measurement.results
+  finalResults[interval] = finalResults[interval] + 1
+
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: interval,
-    data_result: { ...props.measurement }
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
   }
-
-  params.data_result.results[interval] = props.measurement.results[interval] + 1
 
   scoreLoading.value = true
   const { success, message } = await sessionStore.updateMeasurementResults(params)
   scoreLoading.value = false
 
   if (!success) {
-    emit('fetch-session')
     toast.error(message)
     return
   }

@@ -143,28 +143,28 @@ watch(
 )
 
 const onSaveScore = debounce(async function (key: number | string, prompt: any, score: number) {
+  const finalResults = results.value
+  finalResults[key] = { ...prompt, score: prompt.score + score }
+
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    results: {},
-    data_result: { ...props.measurement, results: results.value }
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
   }
-
-  params.results[key] = score
-  params.data_result.results[key] = { ...prompt, score: prompt.score + score }
 
   scoreLoadingBox.value = key
   typeLoadingBox.value = prompt.score
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   scoreLoadingBox.value = null
   typeLoadingBox.value = null
+
+  results.value = { ...data.results }
+
   if (!success) {
-    results.value = { ...props.measurement_results }
-    emit('fetch-session')
     toast.error(message)
     return
   }
-
-  results.value = { ...data.results }
 }, 1000)
 
 const onChangeScore = async (prompt: any, score: number) => {
