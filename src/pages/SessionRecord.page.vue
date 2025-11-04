@@ -217,10 +217,11 @@ watch(showReviewMode, (val) => {
 const focusMeasurement = ref<Measurement['id']>(0)
 const onFocusMeasurement = (val: Measurement) => {
   let timer = 500
-  if (!showReviewMode.value) timer = 100
-  showReviewMode.value = false
   if (val.id === focusMeasurement.value) return
   focusMeasurement.value = val.id
+
+  if (!showReviewMode.value) return
+  showReviewMode.value = false
 
   const measurements = sessionStore.session_measurements
   let isFirst = false
