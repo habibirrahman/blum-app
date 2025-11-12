@@ -96,6 +96,7 @@ watch(
 )
 
 const scrollingTimeout = ref<any>(null)
+const isDisabledAction = ref<boolean>(false)
 const scrollListener = (e: any) => {
   let top = e.currentTarget.scrollTop
   if (!appStore.network_status.connected && top < heightReload) {
@@ -107,6 +108,11 @@ const scrollListener = (e: any) => {
     top = 1
     timer = 2000
   }
+  isDisabledAction.value = true
+  if (top >= heightReload) {
+    isDisabledAction.value = false
+    return
+  }
   scrollingTimeout.value = setTimeout(() => {
     if (top === 0) {
       cycleLoading.value = true
@@ -115,6 +121,7 @@ const scrollListener = (e: any) => {
     if (top < heightReload) {
       document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
     }
+    isDisabledAction.value = false
   }, timer)
 }
 
@@ -706,6 +713,7 @@ const duplicateImageCommentsToClientDocument = async () => {
           :measurement="measurement"
           :counter="counter"
           :review_mode="showReviewMode"
+          :is_disabled_action="isDisabledAction"
           :is_running="runningDurationIds.includes(measurement.id)"
           @toggle-updated="onToggleUpdatedMeasurment($event)"
           @toggle-running="onToggleRunningDuration(measurement)"
