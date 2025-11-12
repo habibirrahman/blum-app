@@ -117,7 +117,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           :loading="lap_loading"
           class="w-2/4 rounded-full"
           color="prim"
-          :disabled="!is_started && sessionStore.session?.status !== 'ongoing' || is_disabled_action"
+          :disabled="!is_started && sessionStore.session?.status !== 'ongoing' || (is_started ? false : is_disabled_action)"
           :class="{ 'opacity-50': !is_started }"
           @click="$emit('record-lap')"
         >
@@ -139,7 +139,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           }"
           :color="is_started ? 'tomato' : 'grass'"
           :loading="update_loading"
-          :disabled="is_disabled_action"
+          :disabled="is_started ? false : is_disabled_action"
           @click="emit('toggle-timer')"
         >
           {{ is_started ? 'Stop' : 'Start' }}
