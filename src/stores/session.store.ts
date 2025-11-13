@@ -553,7 +553,7 @@ export const useSessionStore = defineStore('session', {
 
         // handling for offline mode
         if (!app.network_status.connected) {
-          const key = `update_measurement_${measurement.id}`
+          const key = `update_measurement_${id}`
           const newParams = { id, measurement, data_result, last_data }
 
           const index = this.pending_progress.findIndex((i) => i.key === key)
