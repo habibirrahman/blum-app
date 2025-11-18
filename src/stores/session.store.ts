@@ -571,7 +571,11 @@ export const useSessionStore = defineStore('session', {
         // to make measurement results display up-to-date
         this.setSessionMeasurement(data_result)
 
-        const { data } = await axios.patch(`/api/v1/measurements/${id}`, { measurement })
+        const { data } = await axios.patch(
+          `/api/v1/measurements/${id}`,
+          { measurement },
+          { timeout: 5000 }
+        )
 
         // ignore update data from response API
         // this.setSessionMeasurement(data)
@@ -581,6 +585,9 @@ export const useSessionStore = defineStore('session', {
         this.setSessionMeasurement(last_data)
 
         if (isAxiosError(error)) {
+          if (error.code === 'ECONNABORTED') {
+            return { success: false, message: 'Network slow. Please try again.', data: last_data }
+          }
           const message = getErrorMessage(error.response?.data?.error || error?.message)
           return { success: false, message, data: last_data }
         }

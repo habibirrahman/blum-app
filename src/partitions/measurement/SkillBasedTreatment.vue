@@ -670,7 +670,7 @@ const onSaveEditTrial = async () => {
                   <div
                     class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-95"
                     :class="{
-                      'brightness-75': submitLoading,
+                      'pointer-events-none': submitLoading,
                       'bg-teal-7': prompt.id === currentTrial.prompt_id,
                       'bg-teal-1': prompt.id !== currentTrial.prompt_id
                     }"
@@ -874,8 +874,14 @@ const onSaveEditTrial = async () => {
               </span>
             </div>
 
+            <div v-if="submitLoading">
+              <Icon
+                icon="mingcute:loading-fill"
+                class="text-2xl animate-spin text-light-purple-5"
+              />
+            </div>
             <div
-              v-if="deleteTrialKey === key && sessionStore.session?.status !== 'completed'"
+              v-else-if="deleteTrialKey === key && sessionStore.session?.status !== 'completed'"
               class="flex items-center gap-2"
             >
               <Icon icon="ph:check-bold" class="text-grass-6" @click="onDeleteTrial" />
