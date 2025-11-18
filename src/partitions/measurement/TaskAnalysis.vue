@@ -849,6 +849,9 @@ const onSaveEditTrial = async () => {
           </AppButton>
         </div>
         <div class="flex items-center gap-1">
+          <div v-if="submitLoading">
+            <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+          </div>
           <div class="text-sm text-slate-7">Trial</div>
           <div class="text-sm font-semibold text-light-purple-5">
             <span v-if="sessionStore.session?.status === 'completed'">
@@ -887,7 +890,6 @@ const onSaveEditTrial = async () => {
                   <div
                     class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl border transition-all duration-300 hover:brightness-95"
                     :class="{
-                      'pointer-events-none': submitLoading,
                       'brightness-75 ': prompt.id === currentTrial.prompt_id,
                       'border ': prompt.id !== currentTrial.prompt_id
                     }"
@@ -1144,6 +1146,7 @@ const onSaveEditTrial = async () => {
           kind="outline"
           class="w-full"
           :size="is_collapsed ? 'sm' : 'base'"
+          :disabled="submitLoading"
           @click="isOpenProblemBehavior = false"
         >
           Back to result
@@ -1154,6 +1157,7 @@ const onSaveEditTrial = async () => {
           kind="outline"
           class="w-full"
           :size="is_collapsed ? 'sm' : 'base'"
+          :disabled="submitLoading"
           @click="onCloseTrialHistory"
         >
           Back
@@ -1181,6 +1185,7 @@ const onSaveEditTrial = async () => {
           v-if="!isOpenEditTrial && !is_collapsed"
           kind="outline"
           class="shrink-0"
+          :disabled="submitLoading"
           @click="onOpenTrialHistory"
         >
           <Icon icon="material-symbols:menu-rounded" class="text-xl" />
@@ -1189,6 +1194,7 @@ const onSaveEditTrial = async () => {
           v-if="isOpenEditTrial && !is_collapsed"
           kind="outline"
           class="shrink-0"
+          :disabled="submitLoading"
           @click="onCloseEditTrial"
         >
           <Icon icon="material-symbols:menu-rounded" class="text-xl" />

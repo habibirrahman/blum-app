@@ -60,7 +60,7 @@ async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false
 
   if (is_swiped && appStore.network_status.connected) {
     if (data && data.succeeded > 0) {
-      toast.success(`${data.succeeded} items synced`)
+      toast.success(`${data.succeeded} item(s) synced`)
     } else {
       toast.success('Results are now up-to-date!')
     }

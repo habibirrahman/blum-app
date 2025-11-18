@@ -851,7 +851,6 @@ const onSaveEditTrial = async () => {
                   <div
                     class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-95"
                     :class="{
-                      'pointer-events-none': submitLoading,
                       'bg-teal-7': prompt.id === currentTrial.prompt_id,
                       'bg-teal-1': prompt.id !== currentTrial.prompt_id
                     }"
@@ -1102,6 +1101,7 @@ const onSaveEditTrial = async () => {
           kind="outline"
           class="w-full"
           :size="is_collapsed ? 'sm' : 'base'"
+          :disabled="submitLoading"
           @click="isOpenProblemBehavior = false"
         >
           Back to result
@@ -1112,6 +1112,7 @@ const onSaveEditTrial = async () => {
           kind="outline"
           class="w-full"
           :size="is_collapsed ? 'sm' : 'base'"
+          :disabled="submitLoading"
           @click="onCloseTrialHistory"
         >
           Back
@@ -1138,6 +1139,7 @@ const onSaveEditTrial = async () => {
           v-if="!isOpenEditTrial && !is_collapsed"
           kind="outline"
           class="shrink-0"
+          :disabled="submitLoading"
           @click="onOpenTrialHistory"
         >
           <Icon icon="material-symbols:menu-rounded" class="text-xl" />
@@ -1146,6 +1148,7 @@ const onSaveEditTrial = async () => {
           v-if="isOpenEditTrial && !is_collapsed"
           kind="outline"
           class="shrink-0"
+          :disabled="submitLoading"
           @click="onCloseEditTrial"
         >
           <Icon icon="material-symbols:menu-rounded" class="text-xl" />
