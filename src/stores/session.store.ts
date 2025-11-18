@@ -5,6 +5,7 @@ import { useAppStore, type ResponseSchema } from './app.store'
 import { getErrorMessage, getRandomString, onlyUniqueId } from '@/lib/func'
 import type { Session, Comment, Measurement, User, Client, ActionRecommendation } from '@/lib/types'
 
+// Tambahkan field untuk tracking
 interface SessionPendingProgress {
   key: string
   name:
@@ -21,6 +22,10 @@ interface SessionPendingProgress {
     | UpdateSessionCommentParams
     | DeleteSessionCommentParams
     | DuplicateImagesToClientDocumentParams
+  timestamp?: number
+  retryCount?: number
+  lastError?: string
+  lastRetryAt?: number
 }
 
 export interface SessionStateSchema {
@@ -33,6 +38,8 @@ export interface SessionStateSchema {
   sessions: Session[]
   sessions_count: number
   pending_progress: SessionPendingProgress[]
+  _autoSyncInitialized?: boolean // Track auto-sync setup
+  _syncDebounceTimer?: any // For debounced sync
 }
 
 export type SessionCommentFilter = '' | 'general' | 'assessment' | 'target' | 'mine'
@@ -118,10 +125,30 @@ export const useSessionStore = defineStore('session', {
     upcoming_sessions_count: 0,
     sessions: [],
     sessions_count: 0,
-    // to handle offline mode in 1 active session
-    pending_progress: []
+    pending_progress: [],
+    _autoSyncInitialized: false,
+    _syncDebounceTimer: null
   }),
-  getters: {},
+  getters: {
+    // Getter untuk monitoring
+    pendingSyncStats(): {
+      total: number
+      byType: Record<string, number>
+      hasMaxRetries: boolean
+    } {
+      const stats: Record<string, number> = {}
+
+      this.pending_progress.forEach((item) => {
+        stats[item.name] = (stats[item.name] || 0) + 1
+      })
+
+      return {
+        total: this.pending_progress.length,
+        byType: stats,
+        hasMaxRetries: this.pending_progress.some((i) => (i.retryCount || 0) > 5)
+      }
+    }
+  },
   actions: {
     resetSessionStore() {
       this.session = null
@@ -133,6 +160,7 @@ export const useSessionStore = defineStore('session', {
       this.sessions = []
       this.sessions_count = 0
       this.pending_progress = []
+      this._autoSyncInitialized = false
       this.syncSessionStore()
     },
     async generateSessionStore(): Promise<ResponseSchema> {
@@ -167,7 +195,6 @@ export const useSessionStore = defineStore('session', {
           upcoming_sessions_count: upcSesCou.data || 0,
           sessions: sess.data || [],
           sessions_count: sessCou.data || 0,
-          // to handle offline mode in 1 active session
           pending_progress: penPro.data || []
         }
 
@@ -219,52 +246,208 @@ export const useSessionStore = defineStore('session', {
         return { success: false }
       }
     },
+
+    // Improved resolvePendingProgress
     async resolvePendingProgress(): Promise<ResponseSchema> {
+      const app = useAppStore()
+
+      // Early return jika offline
+      if (!app.network_status.connected) {
+        console.log('[resolvePendingProgress] Skipped - offline')
+        return { success: false, message: 'Device is offline' }
+      }
+
+      // Skip jika tidak ada pending items
+      if (this.pending_progress.length === 0) {
+        return { success: true, message: 'No pending items' }
+      }
+
+      console.log(`[resolvePendingProgress] Processing ${this.pending_progress.length} items...`)
+
       const progress = [...this.pending_progress]
       const succeedIndexes: string[] = []
-      for (const p of progress) {
-        const app = useAppStore()
-        if (!app.network_status.connected) continue
+      const failedItems: Array<{ key: string; error: string }> = []
 
-        if (p.name === 'update_measurement') {
-          const { success } = await this.updateMeasurement(p.params as UpdateMeasurementParams)
-          if (success) succeedIndexes.push(p.key)
+      for (const p of progress) {
+        // Double check network status setiap iterasi
+        if (!app.network_status.connected) {
+          console.log('[resolvePendingProgress] Network lost during processing')
+          break
         }
-        if (p.name === 'update_measurement_result') {
-          const { success } = await this.updateMeasurementResults(
-            p.params as UpdateMeasurementResultsParams
-          )
-          if (success) succeedIndexes.push(p.key)
+
+        // Skip jika sudah terlalu banyak retry
+        if (p.retryCount && p.retryCount > 5) {
+          console.warn(`[resolvePendingProgress] Skipping ${p.key} - max retry exceeded`)
+          failedItems.push({ key: p.key, error: 'Max retry exceeded' })
+          continue
         }
-        if (p.name === 'create_comment') {
-          const { success } = await this.createSessionComment(
-            p.params as CreateSessionCommentParams
-          )
-          if (success) succeedIndexes.push(p.key)
+
+        try {
+          let success = false
+
+          if (p.name === 'update_measurement') {
+            const result = await this.updateMeasurement(p.params as UpdateMeasurementParams)
+            success = result.success
+          } else if (p.name === 'update_measurement_result') {
+            const result = await this.updateMeasurementResults(
+              p.params as UpdateMeasurementResultsParams
+            )
+            success = result.success
+          } else if (p.name === 'create_comment') {
+            const result = await this.createSessionComment(p.params as CreateSessionCommentParams)
+            success = result.success
+          } else if (p.name === 'update_comment') {
+            const result = await this.updateSessionComment(p.params as UpdateSessionCommentParams)
+            success = result.success
+          } else if (p.name === 'delete_comment') {
+            const result = await this.deleteSessionComment(p.params as DeleteSessionCommentParams)
+            success = result.success
+          } else if (p.name === 'duplicate_images') {
+            const result = await this.duplicateImagesToClientDocument(
+              p.params as DuplicateImagesToClientDocumentParams
+            )
+            success = result.success
+          }
+
+          if (success) {
+            succeedIndexes.push(p.key)
+            console.log(`[resolvePendingProgress] ✓ ${p.key}`)
+          } else {
+            failedItems.push({ key: p.key, error: 'Operation returned success: false' })
+            console.warn(`[resolvePendingProgress] ✗ ${p.key} - failed`)
+          }
+        } catch (error) {
+          const errorMsg = isAxiosError(error)
+            ? error.response?.data?.error || error.message
+            : 'Unknown error'
+
+          failedItems.push({ key: p.key, error: errorMsg })
+          console.error(`[resolvePendingProgress] ✗ ${p.key} - error:`, errorMsg)
         }
-        if (p.name === 'update_comment') {
-          const { success } = await this.updateSessionComment(
-            p.params as UpdateSessionCommentParams
-          )
-          if (success) succeedIndexes.push(p.key)
-        }
-        if (p.name === 'delete_comment') {
-          const { success } = await this.deleteSessionComment(
-            p.params as DeleteSessionCommentParams
-          )
-          if (success) succeedIndexes.push(p.key)
-        }
-        if (p.name === 'duplicate_images') {
-          const { success } = await this.duplicateImagesToClientDocument(
-            p.params as DuplicateImagesToClientDocumentParams
-          )
-          if (success) succeedIndexes.push(p.key)
-        }
+
+        // Delay antar request untuk menghindari rate limit
+        await new Promise((resolve) => setTimeout(resolve, 300))
       }
-      const arr = progress.filter((i) => !succeedIndexes.includes(i.key))
-      this.pending_progress = [...arr]
+
+      // Update retry count untuk failed items
+      const remainingProgress = progress
+        .filter((i) => !succeedIndexes.includes(i.key))
+        .map((item) => {
+          const failed = failedItems.find((f) => f.key === item.key)
+          if (failed) {
+            return {
+              ...item,
+              retryCount: (item.retryCount || 0) + 1,
+              lastError: failed.error,
+              lastRetryAt: Date.now()
+            }
+          }
+          return item
+        })
+
+      this.pending_progress = remainingProgress
       this.syncSessionStore()
-      return { success: true }
+
+      // Log hasil
+      const summary = {
+        total: progress.length,
+        succeeded: succeedIndexes.length,
+        failed: failedItems.length,
+        remaining: remainingProgress.length
+      }
+      console.log('[resolvePendingProgress] Summary:', summary)
+
+      return {
+        success: true,
+        message: `Synced ${succeedIndexes.length}/${progress.length} items`,
+        data: summary
+      }
+    },
+
+    // Helper untuk local backup
+    async saveLocalBackup(
+      id: number,
+      data: any,
+      status: 'synced' | 'pending' = 'synced'
+    ): Promise<void> {
+      try {
+        await setStorage({
+          key: `measurement_backup_${id}`,
+          value: JSON.stringify({
+            data,
+            status,
+            timestamp: Date.now(),
+            version: data.updated_at || Date.now()
+          })
+        })
+      } catch (error) {
+        console.error('[saveLocalBackup] Failed:', error)
+      }
+    },
+
+    // Restore dari backup
+    async restoreFromBackup(id: number): Promise<any> {
+      try {
+        const result = await getStorage(`measurement_backup_${id}`)
+
+        if (!result.data) return null
+
+        const backup = typeof result.data === 'string' ? JSON.parse(result.data) : result.data
+
+        const currentMeasurement = this.session_measurements?.find((m) => m.id === id)
+
+        // Return backup jika lebih baru atau current data tidak ada
+        if (!currentMeasurement || backup.version > (currentMeasurement.updated_at || 0)) {
+          console.log('[restoreFromBackup] Restored from backup:', backup.timestamp)
+          return backup
+        }
+
+        return null
+      } catch (error) {
+        console.error('[restoreFromBackup] Failed:', error)
+        return null
+      }
+    },
+
+    // Setup auto-sync
+    setupAutoSync(): void {
+      const app = useAppStore()
+
+      // Prevent multiple setup
+      if (this._autoSyncInitialized) {
+        console.log('[setupAutoSync] Already initialized')
+        return
+      }
+
+      console.log('[setupAutoSync] Initializing auto-sync...')
+
+      // Watch network status changes (Vue 3 watch dalam Pinia action)
+      // Note: Ini akan di-handle di component level
+
+      // Periodic sync setiap 30 detik
+      setInterval(async () => {
+        if (app.network_status.connected && this.pending_progress.length > 0) {
+          console.log('[setupAutoSync] Periodic sync triggered')
+          await this.resolvePendingProgress()
+        }
+      }, 30000) // 30 seconds
+
+      this._autoSyncInitialized = true
+      console.log('[setupAutoSync] Auto-sync initialized')
+    },
+
+    // Manual trigger sync dengan debounce
+    triggerSync(immediate = false): void {
+      if (immediate) {
+        clearTimeout(this._syncDebounceTimer)
+        this.resolvePendingProgress()
+        return
+      }
+
+      clearTimeout(this._syncDebounceTimer)
+      this._syncDebounceTimer = setTimeout(() => {
+        this.resolvePendingProgress()
+      }, 2000) as any
     },
 
     setSession(data: Session) {
@@ -439,9 +622,6 @@ export const useSessionStore = defineStore('session', {
       return axios
         .patch(`/api/v1/measurements/resolve_all`, params)
         .then(async ({ data }) => {
-          // reset offline mode data
-          // this.pending_progress = []
-
           this.syncSessionStore()
           return { success: true, data, message: '' }
         })
@@ -485,12 +665,6 @@ export const useSessionStore = defineStore('session', {
     async updateMeasurement({ id, measurement, data_result }: UpdateMeasurementParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {
-        // this.pending_progress.push({
-        //   name: 'update_measurement',
-        //   params: { id, measurement, data_result }
-        // })
-        // this.setSessionMeasurement(data_result)
-        // return { success: true, data: data_result }
         console.log(data_result)
       }
 
@@ -505,49 +679,16 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message }
         })
     },
-    // latest API for update results
-    // async updateMeasurementResults({
-    //   id,
-    //   results,
-    //   data_result
-    // }: UpdateMeasurementResultsParams): Promise<ResponseSchema> {
-    //   try {
-    //     const app = useAppStore()
 
-    //     if (!app.network_status.connected) {
-    //       const key = `update_measurement_${data_result.id}`
-    //       const newParams = { id, measurement: { results: data_result.results }, data_result }
-
-    //       const index = this.pending_progress.findIndex((i) => i.key === key)
-    //       if (index > -1) {
-    //         this.pending_progress[index].params = newParams
-    //       } else {
-    //         this.pending_progress.push({ key, name: 'update_measurement', params: newParams })
-    //       }
-
-    //       this.setSessionMeasurement(data_result)
-    //       return { success: true, data: data_result, message: '' }
-    //     }
-
-    //     const { data } = await axios.patch(`/api/v1/measurements/${id}/update_results`, { results })
-    //     this.setSessionMeasurement(data)
-    //     return { success: true, data, message: '' }
-    //   } catch (error) {
-    //     if (isAxiosError(error)) {
-    //       const message = getErrorMessage(error.response?.data?.error || error?.message)
-    //       return { success: false, message, data: null }
-    //     }
-    //     return { success: false, message: 'Unexpected error', data: null }
-    //   }
-    // },
-
-    // try to make new API for handle not updated results
+    // updateMeasurementResults dengan semua fix
     async updateMeasurementResults({
       id,
       measurement,
       data_result,
       last_data
     }: UpdateMeasurementResultsParams): Promise<ResponseSchema> {
+      // Simpan state sebelumnya untuk rollback
+      const previousMeasurement = this.session_measurements?.find((m) => m.id === id)
       try {
         const app = useAppStore()
 
@@ -559,42 +700,155 @@ export const useSessionStore = defineStore('session', {
           const index = this.pending_progress.findIndex((i) => i.key === key)
           if (index > -1) {
             this.pending_progress[index].params = newParams
+            this.pending_progress[index].timestamp = Date.now()
           } else {
-            this.pending_progress.push({ key, name: 'update_measurement', params: newParams })
+            this.pending_progress.push({
+              key,
+              name: 'update_measurement_result', // ⚠️ Sesuaikan dengan resolvePendingProgress
+              params: newParams,
+              timestamp: Date.now(),
+              retryCount: 0
+            })
           }
 
-          // to make measurement up-to-date
-          this.setSessionMeasurement(data_result)
-          return { success: true, data: data_result, message: '' }
+          // Tandai sebagai pending sync
+          const measurementWithPending = {
+            ...data_result,
+            _pendingSync: true,
+            _lastSyncAttempt: Date.now()
+          }
+          this.setSessionMeasurement(measurementWithPending)
+
+          // Simpan ke local storage
+          await this.saveLocalBackup(Number(id), data_result, 'pending')
+
+          // Sync session store
+          this.syncSessionStore()
+
+          return {
+            success: true,
+            data: measurementWithPending,
+            message: 'Saved offline, will sync automatically'
+          }
         }
 
-        // to make measurement results display up-to-date
-        this.setSessionMeasurement(data_result)
+        // ❌ HAPUS: JANGAN update state sebelum API berhasil!
+        // this.setSessionMeasurement(data_result)
 
-        const { data } = await axios.patch(
-          `/api/v1/measurements/${id}`,
-          { measurement },
-          { timeout: 5000 }
-        )
+        // Tambahkan retry logic dengan exponential backoff
+        let lastError: any
+        const maxRetries = 2
 
-        // ignore update data from response API
-        // this.setSessionMeasurement(data)
-        return { success: true, data, message: '' }
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          try {
+            const { data } = await axios.patch(
+              `/api/v1/measurements/${id}`,
+              { measurement },
+              {
+                timeout: attempt === 0 ? 5000 : 8000,
+                headers: {
+                  'X-Request-Attempt': attempt + 1
+                }
+              }
+            )
+
+            // ✅ Update state SETELAH API berhasil!
+            this.setSessionMeasurement(data)
+
+            // Hapus dari pending queue jika ada
+            const queueIndex = this.pending_progress.findIndex(
+              (i) => i.key === `update_measurement_${id}`
+            )
+            if (queueIndex > -1) {
+              this.pending_progress.splice(queueIndex, 1)
+              this.syncSessionStore()
+            }
+
+            // Update local backup dengan status synced
+            await this.saveLocalBackup(Number(id), data, 'synced')
+
+            return { success: true, data, message: '' }
+          } catch (err) {
+            lastError = err
+
+            // Retry jika timeout dan belum max attempts
+            if (attempt < maxRetries && isAxiosError(err) && err.code === 'ECONNABORTED') {
+              console.log(`[updateMeasurementResults] Retry ${attempt + 1}/${maxRetries}`)
+              await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)))
+              continue
+            }
+
+            throw lastError
+          }
+        }
+
+        throw lastError
       } catch (error) {
-        // resolve data with last_data
-        this.setSessionMeasurement(last_data)
+        // Rollback ke state sebelumnya
+        if (previousMeasurement) {
+          this.setSessionMeasurement(previousMeasurement)
+        }
+
+        // Tambahkan ke pending queue untuk auto-retry
+        const key = `update_measurement_${id}`
+        const newParams = { id, measurement, data_result, last_data }
+
+        const index = this.pending_progress.findIndex((i) => i.key === key)
+        if (index > -1) {
+          this.pending_progress[index].params = newParams
+          this.pending_progress[index].retryCount =
+            (this.pending_progress[index].retryCount || 0) + 1
+          this.pending_progress[index].lastError = isAxiosError(error)
+            ? error.response?.data?.error || error.message
+            : 'Unknown error'
+        } else {
+          this.pending_progress.push({
+            key,
+            name: 'update_measurement_result',
+            params: newParams,
+            timestamp: Date.now(),
+            retryCount: 1,
+            lastError: isAxiosError(error)
+              ? error.response?.data?.error || error.message
+              : 'Unknown error'
+          })
+        }
+
+        // Sync ke session store
+        this.syncSessionStore()
+
+        // Simpan ke local backup dengan status pending
+        await this.saveLocalBackup(Number(id), data_result, 'pending')
 
         if (isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
-            return { success: false, message: 'Network slow. Please try again.', data: last_data }
+            return {
+              success: false,
+              message: 'Slow connection. Data will be saved automatically.',
+              data: previousMeasurement || last_data
+            }
           }
+
+          // Handle conflict (409)
+          if (error.response?.status === 409) {
+            return {
+              success: false,
+              message: 'Data was changed by another user. Please refresh.',
+              data: error.response.data || last_data
+            }
+          }
+
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, message, data: last_data }
+          return { success: false, message, data: previousMeasurement || last_data }
         }
-        return { success: false, message: 'Unexpected error', data: last_data }
+
+        return {
+          success: false,
+          message: 'Failed to save. Will retry automatically.',
+          data: previousMeasurement || last_data
+        }
       }
     },
-    //
 
     async updateMeasurementMarkProbing({
       id,
@@ -628,7 +882,9 @@ export const useSessionStore = defineStore('session', {
         this.pending_progress.push({
           key: getRandomString('create_comment'),
           name: 'create_comment',
-          params: { client_id, session_id, type, session_comment, assessment, data_result, images }
+          params: { client_id, session_id, type, session_comment, assessment, data_result, images },
+          timestamp: Date.now(),
+          retryCount: 0
         })
         this.addSessionComment(data_result, false)
         return { success: true, data: data_result }
@@ -709,8 +965,15 @@ export const useSessionStore = defineStore('session', {
           const index = this.pending_progress.findIndex((i) => i.key === key)
           if (index > -1) {
             this.pending_progress[index].params = newParams
+            this.pending_progress[index].timestamp = Date.now()
           } else {
-            this.pending_progress.push({ key, name: 'update_comment', params: newParams })
+            this.pending_progress.push({
+              key,
+              name: 'update_comment',
+              params: newParams,
+              timestamp: Date.now(),
+              retryCount: 0
+            })
           }
         } else {
           type CreateParams = CreateSessionCommentParams
@@ -724,6 +987,7 @@ export const useSessionStore = defineStore('session', {
             newParams.data_result = data_result as CreateParams['data_result']
 
             this.pending_progress[idx].params = newParams
+            this.pending_progress[idx].timestamp = Date.now()
           }
         }
         this.setSessionComment(data_result)
@@ -771,7 +1035,9 @@ export const useSessionStore = defineStore('session', {
         this.pending_progress.push({
           key: `duplicate_images_${session_id}`,
           name: 'duplicate_images',
-          params: { documents, client_id, session_id, session_slug }
+          params: { documents, client_id, session_id, session_slug },
+          timestamp: Date.now(),
+          retryCount: 0
         })
         return { success: true, data: null }
       }
@@ -800,8 +1066,15 @@ export const useSessionStore = defineStore('session', {
           const index = this.pending_progress.findIndex((i) => i.key === key)
           if (index > -1) {
             this.pending_progress[index].params = newParams
+            this.pending_progress[index].timestamp = Date.now()
           } else {
-            this.pending_progress.push({ key, name: 'delete_comment', params: newParams })
+            this.pending_progress.push({
+              key,
+              name: 'delete_comment',
+              params: newParams,
+              timestamp: Date.now(),
+              retryCount: 0
+            })
           }
         } else {
           const arr = this.pending_progress.filter((i) => {

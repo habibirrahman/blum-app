@@ -28,18 +28,45 @@ const cycleLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
 const heightReload = 112
 
+// Tambahkan computed untuk monitoring
+const hasPendingSync = computed(() => {
+  return sessionStore.pending_progress.length > 0
+})
+
+const pendingSyncStats = computed(() => sessionStore.pendingSyncStats)
+
 interface FetchSessionProps {
   first?: boolean
   is_swiped?: boolean
 }
+
+// Improved syncSession dengan proper feedback
 async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false }) {
-  const { success } = await sessionStore.resolvePendingProgress()
+  if (!appStore.network_status.connected) {
+    console.log('[syncSession] Skipped - offline')
+    return
+  }
+
+  const pendingCount = sessionStore.pending_progress.length
+
+  if (pendingCount > 0) {
+    console.log(`[syncSession] Syncing ${pendingCount} pending items...`)
+  }
+
+  const { success, data } = await sessionStore.resolvePendingProgress()
   sessionLoading.value = false
+
   if (!success) return
+
   if (is_swiped && appStore.network_status.connected) {
-    toast.success('Results are now up-to-date!')
+    if (data && data.succeeded > 0) {
+      toast.success(`${data.succeeded} items synced`)
+    } else {
+      toast.success('Results are now up-to-date!')
+    }
   }
 }
+
 async function fetchSession(
   { first, is_swiped }: FetchSessionProps = { first: false, is_swiped: false }
 ) {
@@ -84,51 +111,72 @@ async function fetchSession(
 }
 
 const showOffline = ref<boolean>(false)
+
+// Watch network status dengan auto-sync
 watch(
   () => appStore.network_status.connected,
-  async (val) => {
-    if (!val) showOffline.value = true
-    if (val) {
+  async (isConnected, wasConnected) => {
+    if (!isConnected) {
+      showOffline.value = true
+      return
+    }
+
+    if (isConnected && !wasConnected) {
+      console.log('[Session Page] Network reconnected')
       sessionLoading.value = true
-      syncSession({ is_swiped: true })
+
+      // Show syncing notification if there are pending items
+      if (sessionStore.pending_progress.length > 0) {
+        toast.info('Syncing data...')
+      }
+
+      await syncSession({ is_swiped: true })
     }
   }
 )
+
+// Watch untuk notifikasi saat sync berhasil
+watch(hasPendingSync, (isPending, wasPending) => {
+  if (wasPending && !isPending) {
+    console.log('[Session Page] All data synced')
+  }
+})
 
 const scrollingTimeout = ref<any>(null)
 const isScrolling = ref<boolean>(false)
 
 const isDisabledAction = computed(() => {
   return (
-    sessionLoading.value || 
-    cycleLoading.value || 
+    sessionLoading.value ||
+    cycleLoading.value ||
     endSessionLoading.value ||
     exitSessionLoading.value ||
     isScrolling.value
   )
 })
+
 const scrollListener = (e: any) => {
   let top = e.currentTarget.scrollTop
-  
+
   isScrolling.value = true
-  
+
   if (!appStore.network_status.connected && top < heightReload) {
     document.getElementById('app')?.scroll({ top: heightReload, behavior: 'instant' })
   }
-  
+
   let timer = 1000
   clearTimeout(scrollingTimeout.value)
-  
+
   if (top <= 0 && runningDurationIds.value.length) {
     top = 1
     timer = 2000
   }
-  
+
   if (top >= heightReload) {
     isScrolling.value = false
     return
   }
-  
+
   scrollingTimeout.value = setTimeout(() => {
     if (top === 0) {
       cycleLoading.value = true
@@ -141,7 +189,10 @@ const scrollListener = (e: any) => {
   }, timer)
 }
 
-onMounted(() => {
+// Periodic check untuk stuck items
+let periodicCheckInterval: any = null
+
+onMounted(async () => {
   const app = document.getElementById('app')
   if (app) {
     app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
@@ -149,16 +200,54 @@ onMounted(() => {
   appStore.getRunningSessions()
 
   sessionLoading.value = true
-  /** generate session.store from storage */
-  sessionStore.generateSessionStore()
-  fetchSession({ first: true })
+
+  // Generate session store dari storage
+  await sessionStore.generateSessionStore()
+
+  // Setup auto-sync (hanya sekali)
+  if (!sessionStore._autoSyncInitialized) {
+    sessionStore.setupAutoSync()
+  }
+
+  // Restore & sync pending items
+  if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
+    console.log('[Session Page] Processing pending items on mount')
+    await sessionStore.resolvePendingProgress()
+  }
+
+  await fetchSession({ first: true })
   redirect.value = route.query.redirect?.toString() || '/home'
+
+  // Setup periodic check untuk stuck items
+  periodicCheckInterval = setInterval(() => {
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+
+    const stuckItems = sessionStore.pending_progress.filter(
+      (item) => item.timestamp && item.timestamp < fiveMinutesAgo
+    )
+
+    if (stuckItems.length > 0 && appStore.network_status.connected) {
+      console.warn('[Session Page] Found stuck items, triggering sync')
+      sessionStore.triggerSync(true)
+    }
+  }, 60000) // Check setiap 1 menit
 })
+
+// Cleanup saat unmount
 onUnmounted(() => {
   const app = document.getElementById('app')
   if (app) {
     app.style.backgroundColor = 'rgb(255 255 255 / var(--tw-bg-opacity))' /* #ffffff */
     app.removeEventListener('scroll', scrollListener)
+  }
+
+  // Clear interval
+  clearInterval(periodicCheckInterval)
+
+  // Trigger sync sebelum unmount jika ada perubahan
+  if (hasPendingSync.value && appStore.network_status.connected) {
+    console.log('[Session Page] Syncing before unmount')
+    sessionStore.triggerSync(true)
   }
 })
 
@@ -361,8 +450,10 @@ const isAllMeasurementResultEmpty = computed<boolean>(() => {
   if (isAllEmpty.length === 0) isAllEmpty.push(false)
   return !isAllEmpty.includes(false)
 })
+
 const showEndSession = ref<boolean>(false)
 const endSessionLoading = ref<boolean>(false)
+
 const openEndSession = () => {
   const unfinishedProbings: Measurement[] = sessionStore.session_measurements.filter(
     (i) => i?.type === 'Measurement::Probing' && !i.submitted_at && !i.is_dropped
@@ -380,6 +471,7 @@ const openEndSession = () => {
   const runningDuration = runningDurationIds.value.length
   const unsavedSbt = unsavedSbtIds.value.length
   const unCompletedColdProbe = unCompletedColdProbeIds.value.length
+
   if (
     isNotCompletedProbes ||
     isNotSavedProbing ||
@@ -401,6 +493,7 @@ const openEndSession = () => {
   }
   showEndSession.value = true
 }
+
 const onTrunOffAllAndEndSession = async () => {
   showEndSession.value = false
   showReviewMode.value = true
@@ -440,6 +533,7 @@ const onTrunOffAllAndEndSession = async () => {
     showEndSession.value = true
   }, 500)
 }
+
 const onKeepActiveAndEndSession = () => {
   showEndSession.value = false
   showReviewMode.value = true
@@ -448,6 +542,7 @@ const onKeepActiveAndEndSession = () => {
     showEndSession.value = true
   }, 500)
 }
+
 const onEndSession = async () => {
   endSessionLoading.value = true
 
@@ -457,25 +552,16 @@ const onEndSession = async () => {
       let results: Measurement['results'] = {}
 
       if (i.type === 'Measurement::Sbt') {
-        // handle SBT results
-
         const res = Object.values(i.results).filter(
           (i: any) => Number(i.prompt_id) && Number(i.target_task_id)
         )
         results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
-
-        // end handle SBT results
       } else if (i.type === 'Measurement::Prompting' && i.target?.is_group) {
-        // handle TA results
-
         const res = Object.values(i.results).filter(
           (i: any) => Number(i.prompt_id) && Number(i.target_id)
         )
         results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
-
-        // end handle TA results
       } else {
-        // other
         results = { ...i.results }
       }
 
@@ -576,6 +662,7 @@ const handleCompletedColdProbe = ({
     }
   }
 }
+
 const duplicateImageCommentsToClientDocument = async () => {
   try {
     const { success, data } = await sessionStore.getSessionComments({
@@ -614,9 +701,10 @@ const duplicateImageCommentsToClientDocument = async () => {
 
 <template>
   <div class="sticky top-0 z-[100] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
+    <!-- Tambahkan pending sync indicator -->
     <div class="flex items-center gap-2">
       <div
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-all"
+        class="flex items-center justify-center w-8 h-8 text-xs font-semibold transition-all border rounded shrink-0"
         :class="{
           'border-prim-3 bg-prim-1 text-light-purple-4': !showReviewMode,
           'border-light-purple-3 bg-light-purple-1 text-dark-purple-4': showReviewMode
@@ -625,25 +713,38 @@ const duplicateImageCommentsToClientDocument = async () => {
       >
         {{ sessionStore.session_measurements.length }}
       </div>
+
+      <!-- Pending sync indicator -->
+      <div v-if="hasPendingSync && !sessionLoading" class="flex">
+        <div
+          class="flex items-center h-6 gap-1 px-2 text-xs rounded-full bg-tulip-1 text-tulip-7"
+          :title="`${pendingSyncStats.total} item(s) pending sync`"
+        >
+          <Icon icon="ph:cloud-arrow-up" class="text-sm animate-pulse" />
+          <span class="font-medium">{{ pendingSyncStats.total }}</span>
+        </div>
+      </div>
+
       <div
-        class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded"
+        class="relative flex items-center justify-center w-8 h-8 rounded shrink-0"
         @click="showSessionComments = true"
       >
         <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
         <div
-          class="absolute right-1 top-1 h-2 w-2 rounded-full bg-light-purple-5 transition-all"
+          class="absolute w-2 h-2 transition-all rounded-full right-1 top-1 bg-light-purple-5"
           :class="[sessionStore.session_comments?.length ? 'opacity-100' : 'opacity-0']"
         ></div>
       </div>
     </div>
-    <div class="flex w-full items-center justify-end gap-2">
+
+    <div class="flex items-center justify-end w-full gap-2">
       <div class="text-xs font-medium text-slate-6">ID {{ sessionStore.session?.id }}</div>
       <div
-        class="h-2 w-2 shrink-0 rounded-full transition-all"
+        class="w-2 h-2 transition-all rounded-full shrink-0"
         :class="{ 'bg-tomato-7': counter % 2 === 0, 'bg-slate-6': counter % 2 === 1 }"
       ></div>
       <div
-        class="grid w-16 grid-cols-5 items-center text-xs font-semibold text-slate-8 transition-all"
+        class="grid items-center w-16 grid-cols-5 text-xs font-semibold transition-all text-slate-8"
       >
         <div class="flex justify-center">{{ recordingTime.split(':')[0] }}</div>
         <div class="flex justify-center">:</div>
@@ -670,14 +771,14 @@ const duplicateImageCommentsToClientDocument = async () => {
     class="fixed left-1/2 z-[9] -translate-x-1/2 transition-all pt-safe"
     :class="{ 'top-[60px]': cycleLoading, '-top-[60px]': !cycleLoading }"
   >
-    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    <div class="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
   </div>
 
   <div
     v-if="!sessionLoading && sessionStore.session?.status === 'ongoing'"
-    class="flex h-28 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
+    class="flex items-end justify-center px-4 text-sm font-semibold text-center h-28 bg-prim-3 text-light-purple-5"
   >
     <div v-if="runningDurationIds.length">
       <div>Can't refresh while the timer is running.</div>
@@ -692,18 +793,18 @@ const duplicateImageCommentsToClientDocument = async () => {
   </div>
 
   <div
-    class="flex min-h-screen w-full flex-col items-center bg-prim-3"
+    class="flex flex-col items-center w-full min-h-screen bg-prim-3"
     :style="{ height: containerHeight }"
   >
     <div
       v-if="showReviewMode"
-      class="flex w-full items-end justify-center bg-prim-3 px-4 pb-2 pt-4 text-center text-sm font-semibold text-light-purple-5"
+      class="flex items-end justify-center w-full px-4 pt-4 pb-2 text-sm font-semibold text-center bg-prim-3 text-light-purple-5"
     >
       <div class="truncapy-3 space-y-3te">{{ sessionStore.session?.client?.name }}</div>
     </div>
     <div
       id="container-record-measurement"
-      class="flex w-full flex-wrap justify-center gap-4 px-4 py-4 transition-all duration-500"
+      class="flex flex-wrap justify-center w-full gap-4 px-4 py-4 transition-all duration-500"
       :class="{
         'origin-top scale-50 object-top': showReviewMode,
         'min-w-[calc((320px*2)+(16px*3))]': showReviewMode,
@@ -714,7 +815,7 @@ const duplicateImageCommentsToClientDocument = async () => {
         '2xl:min-w-[calc((320px*9)+(16px*10))]': showReviewMode
       }"
     >
-      <div v-if="sessionLoading" class="flex w-full flex-wrap justify-center gap-4">
+      <div v-if="sessionLoading" class="flex flex-wrap justify-center w-full gap-4">
         <div
           v-for="n in 8"
           :key="n"
@@ -756,8 +857,8 @@ const duplicateImageCommentsToClientDocument = async () => {
       }"
     >
       <div v-if="!isMeasurementCollapsed" class="flex flex-col items-center gap-1">
-        <Icon icon="ph:lock-fill" class="text-center text-2xl text-prim-5" />
-        <div class="text-center text-xs font-medium text-prim-5">
+        <Icon icon="ph:lock-fill" class="text-2xl text-center text-prim-5" />
+        <div class="text-xs font-medium text-center text-prim-5">
           You're viewing a locked target.
         </div>
       </div>
@@ -789,10 +890,10 @@ const duplicateImageCommentsToClientDocument = async () => {
     class="fixed z-[10] w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
     :class="{ 'bottom-0': !showReviewMode, '-bottom-36': showReviewMode }"
   >
-    <div class="flex h-16 grow items-center gap-6 pl-4">
+    <div class="flex items-center h-16 gap-6 pl-4 grow">
       <div class="relative" @click="showReviewMode = !showReviewMode">
         <div
-          class="flex h-10 w-8 items-center justify-center rounded bg-white text-xs font-semibold text-dark-purple-1"
+          class="flex items-center justify-center w-8 h-10 text-xs font-semibold bg-white rounded text-dark-purple-1"
         >
           {{ sessionStore.session_measurements.length }}
         </div>
@@ -802,13 +903,13 @@ const duplicateImageCommentsToClientDocument = async () => {
         ></div>
       </div>
       <div
-        class="flex snap-x snap-mandatory items-center gap-2 overflow-x-auto scroll-smooth py-3 pr-4"
+        class="flex items-center gap-2 py-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth"
       >
         <div
           v-for="opt in sessionStore.session_measurements"
           :key="opt.id"
           :id="`measurement-nav-${opt.id}`"
-          class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+          class="flex items-center h-8 px-3 text-xs font-medium transition-all border rounded-full cursor-pointer max-w-32 shrink-0 snap-start"
           :class="[
             focusMeasurement === opt.id
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -826,8 +927,8 @@ const duplicateImageCommentsToClientDocument = async () => {
 
   <AppActionSheet :show="showOffline" @close="showOffline = false">
     <div class="flex flex-col items-center gap-4">
-      <div class="text-center text-xl font-semibold">Oops! You're offline</div>
-      <div class="text-center text-sm">
+      <div class="text-xl font-semibold text-center">Oops! You're offline</div>
+      <div class="text-sm text-center">
         Your connection is lost. You can keep tracking data, but you'll need to go online to end the
         session.
       </div>
@@ -839,8 +940,8 @@ const duplicateImageCommentsToClientDocument = async () => {
 
   <AppActionSheet :show="showEndSession" @close="showEndSession = false">
     <div v-if="endSessionStatus === 'normal'" class="flex flex-col items-center gap-4">
-      <div class="text-center text-xl font-semibold">End this session?</div>
-      <div class="text-center text-sm">
+      <div class="text-xl font-semibold text-center">End this session?</div>
+      <div class="text-sm text-center">
         Are you sure you want to end this session? Make sure you've reviewed all data before
         finalizing.
       </div>
@@ -850,10 +951,10 @@ const duplicateImageCommentsToClientDocument = async () => {
       </div>
     </div>
     <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4">
-      <div class="text-center text-xl font-semibold">Session can't be ended</div>
-      <div class="flex w-full flex-col gap-2">
+      <div class="text-xl font-semibold text-center">Session can't be ended</div>
+      <div class="flex flex-col w-full gap-2">
         <div class="text-sm">You can't end the session because of the following reason(s):</div>
-        <div class="w-full pl-4 pr-4 text-left text-sm">
+        <div class="w-full pl-4 pr-4 text-sm text-left">
           <ul class="list-disc">
             <li v-for="(text, idx) in groupReasons" :key="idx">{{ text }}</li>
           </ul>
@@ -865,13 +966,13 @@ const duplicateImageCommentsToClientDocument = async () => {
       </AppButton>
     </div>
     <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col items-center gap-4">
-      <div class="text-center text-xl font-semibold">It seems you haven't recorded any data</div>
+      <div class="text-xl font-semibold text-center">It seems you haven't recorded any data</div>
       <img
         alt="measurement_droped"
-        class="h-auto w-full rounded"
+        class="w-full h-auto rounded"
         src="@/assets/measurement_droped.png"
       />
-      <div class="text-center text-sm">
+      <div class="text-sm text-center">
         Please note that if you end the session now, the targets will record the data as ''0''. To
         prevent any data recording, you can deactivate the toggle on each target. Would you like to
         turn off the toggle for all targets?
@@ -902,12 +1003,12 @@ const duplicateImageCommentsToClientDocument = async () => {
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
     <div class="sticky top-0 z-[10] flex h-14 shrink-0 grow items-center gap-3 bg-white px-4">
-      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-orange-3">
+      <div class="flex items-center justify-center w-8 h-8 rounded shrink-0 bg-orange-3">
         <Icon icon="ph:seal-warning-fill" class="text-2xl text-orange-6" />
       </div>
       <div class="text-2xl text-[22px] font-bold">Passing success metric</div>
     </div>
-    <div class="flex grow flex-col gap-3 px-4">
+    <div class="flex flex-col gap-3 px-4 grow">
       <div class="flex items-center gap-1">
         <AppChip chip="in_progress" />
         <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
@@ -922,7 +1023,7 @@ const duplicateImageCommentsToClientDocument = async () => {
         <div
           v-for="recommendation in sessionStore.session_recommendations"
           :key="recommendation.id"
-          class="flex flex-col gap-2 border-b border-slate-3 py-3"
+          class="flex flex-col gap-2 py-3 border-b border-slate-3"
         >
           <div class="text-sm font-semibold">{{ recommendation.target?.name }}</div>
           <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
@@ -941,7 +1042,7 @@ const duplicateImageCommentsToClientDocument = async () => {
       </div>
     </div>
     <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
-      <div class="flex h-16 grow items-center px-4">
+      <div class="flex items-center h-16 px-4 grow">
         <AppButton class="w-full" :loading="exitSessionLoading" @click="onExitSession">
           Close session
         </AppButton>
