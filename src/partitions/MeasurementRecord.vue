@@ -32,6 +32,7 @@ interface Props {
   is_collapsed?: boolean
   review_mode?: boolean
   is_running?: boolean
+  is_disabled_action?: boolean
 }
 interface Emits {
   (e: 'toggle-updated', payload: { id: Measurement['id']; updated: boolean }): void
@@ -499,6 +500,7 @@ const onToggleSaved = (saved: boolean) => {
               :current_lap_time="currentLapTime"
               :is_collapsed="is_collapsed"
               :reset_confirmation="resetConfirmation"
+              :is_disabled_action="is_disabled_action"
               @toggle-timer="onToggleTimer"
               @record-lap="onRecordLap"
               @reset-laps-confirm="resetConfirmation = true"
