@@ -209,6 +209,9 @@ onMounted(async () => {
     sessionStore.setupAutoSync()
   }
 
+  // Run storage maintenance on startup
+  await sessionStore.runStorageMaintenance()
+
   // Restore & sync pending items
   if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
     console.log('[Session Page] Processing pending items on mount')

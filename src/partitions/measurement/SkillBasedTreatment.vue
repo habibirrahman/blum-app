@@ -66,29 +66,6 @@ const SBTPrompts = ref<Prompt[]>([])
 const SBTTaskCodes = ref<TargetTask[]>([])
 const SBTProblemBehaviors = ref<TargetProblemBehavior[]>([])
 
-// 🔧 Tambahkan computed untuk monitoring
-const hasPendingSync = computed(() => {
-  return sessionStore.pending_progress.some(
-    (item) => item.key === `update_measurement_${props.measurement.id}`
-  )
-})
-
-const syncStatusText = computed(() => {
-  if (!hasPendingSync.value) return ''
-
-  const item = sessionStore.pending_progress.find(
-    (i) => i.key === `update_measurement_${props.measurement.id}`
-  )
-
-  if (!item) return ''
-
-  if (item.retryCount && item.retryCount > 3) {
-    return `Sync failed: ${item.retryCount} attempt(s)`
-  }
-
-  return 'Syncing...'
-})
-
 const currentDisplay = computed({
   // getter
   get() {
@@ -182,6 +159,13 @@ watch(
   }
 )
 
+// 🔧 Tambahkan computed untuk monitoring
+const hasPendingSync = computed(() => {
+  return sessionStore.pending_progress.some(
+    (item) => item.key === `update_measurement_${props.measurement.id}`
+  )
+})
+
 // Watch untuk notifikasi saat sync berhasil
 watch(hasPendingSync, (isPending, wasPending) => {
   if (wasPending && !isPending) {
@@ -198,6 +182,7 @@ watch(hasPendingSync, (isPending, wasPending) => {
 let idleTimer: any = null
 const resetIdleTimer = () => {
   clearTimeout(idleTimer)
+  if (sessionStore.session?.status !== 'ongoing') return
 
   // Auto-save setelah 5 detik idle
   idleTimer = setTimeout(() => {
@@ -370,12 +355,12 @@ const getTrial = (trial: Trial) => {
 }
 
 const generateRatioScores = () => {
-   /**
+  /**
    * percentage: average all task
    * green ratio: ratio of current task count from the most task count
    * red badge: any problem_behavior(?) yes: put the badge
    */
-  
+
   let maxRatio = 0
   const results = Object.keys(resultsState.value).map((key) => ({
     ...resultsState.value[key],
@@ -711,6 +696,8 @@ const onDeleteTrial = async () => {
 }
 
 const onSaveEditTrial = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   const { success } = await onSaveCurrentTrial()
   if (!success) return
   isOpenEditTrial.value = false
@@ -720,13 +707,6 @@ const onSaveEditTrial = async () => {
 
 <template>
   <div class="flex flex-col flex-grow min-h-full gap-2 pb-16">
-    <!-- Tambahkan sync status indicator (optional) -->
-    <div v-if="hasPendingSync && !is_collapsed" class="flex">
-      <div class="px-2 py-1 text-xs rounded bg-tulip-1 text-tulip-7">
-        {{ syncStatusText }}
-      </div>
-    </div>
-
     <!-- ratio boxes -->
     <div
       v-if="!is_collapsed"

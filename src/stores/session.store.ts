@@ -150,6 +150,10 @@ export const useSessionStore = defineStore('session', {
     }
   },
   actions: {
+    // ========================================
+    // INTERNAL FUNCTIONS
+    // ========================================
+
     resetSessionStore() {
       this.session = null
       this.session_comments = []
@@ -163,6 +167,7 @@ export const useSessionStore = defineStore('session', {
       this._autoSyncInitialized = false
       this.syncSessionStore()
     },
+
     async generateSessionStore(): Promise<ResponseSchema> {
       try {
         const arr = [
@@ -214,6 +219,7 @@ export const useSessionStore = defineStore('session', {
         return { success: false, data: null }
       }
     },
+
     async syncSessionStore(): Promise<ResponseSchema> {
       try {
         const arr = [
@@ -450,6 +456,243 @@ export const useSessionStore = defineStore('session', {
       }, 2000) as any
     },
 
+    // ========================================
+    // CLEANUP FUNCTIONS
+    // ========================================
+
+    /**
+     * Clear all measurement backups
+     * Use: After session ends successfully
+     */
+    async clearAllMeasurementBackups(): Promise<{ success: boolean; count: number }> {
+      try {
+        const { Preferences } = await import('@capacitor/preferences')
+        const { keys } = await Preferences.keys()
+
+        const backupKeys = keys.filter((key) => key.startsWith('measurement_backup_'))
+
+        console.log(`[clearAllMeasurementBackups] Clearing ${backupKeys.length} backup(s)`)
+
+        for (const key of backupKeys) {
+          await Preferences.remove({ key })
+        }
+
+        return { success: true, count: backupKeys.length }
+      } catch (error) {
+        console.error('[clearAllMeasurementBackups] Failed:', error)
+        return { success: false, count: 0 }
+      }
+    },
+
+    /**
+     * Clear backups for specific session measurements
+     * Use: After session ends successfully
+     */
+    async clearSessionMeasurementBackups(
+      measurementIds: number[]
+    ): Promise<{ success: boolean; count: number }> {
+      try {
+        const { Preferences } = await import('@capacitor/preferences')
+
+        console.log(`[clearSessionMeasurementBackups] Clearing ${measurementIds.length} backup(s)`)
+
+        for (const id of measurementIds) {
+          const key = `measurement_backup_${id}`
+          await Preferences.remove({ key })
+        }
+
+        return { success: true, count: measurementIds.length }
+      } catch (error) {
+        console.error('[clearSessionMeasurementBackups] Failed:', error)
+        return { success: false, count: 0 }
+      }
+    },
+
+    /**
+     * Clear old backups (older than specified days)
+     * Use: Periodic maintenance to prevent storage bloat
+     */
+    async clearOldBackups(olderThanDays: number = 7): Promise<{ success: boolean; count: number }> {
+      try {
+        const { Preferences } = await import('@capacitor/preferences')
+        const { keys } = await Preferences.keys()
+
+        const backupKeys = keys.filter((key) => key.startsWith('measurement_backup_'))
+        const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000
+
+        let removedCount = 0
+
+        for (const key of backupKeys) {
+          const { value } = await Preferences.get({ key })
+          if (value) {
+            const backup = JSON.parse(value)
+            if (backup.timestamp && backup.timestamp < cutoffTime) {
+              await Preferences.remove({ key })
+              removedCount++
+            }
+          }
+        }
+
+        console.log(`[clearOldBackups] Removed ${removedCount} old backup(s)`)
+        return { success: true, count: removedCount }
+      } catch (error) {
+        console.error('[clearOldBackups] Failed:', error)
+        return { success: false, count: 0 }
+      }
+    },
+
+    /**
+     * Clear all synced backups (status: 'synced')
+     * Keep only pending backups
+     */
+    async clearSyncedBackups(): Promise<{ success: boolean; count: number }> {
+      try {
+        const { Preferences } = await import('@capacitor/preferences')
+        const { keys } = await Preferences.keys()
+
+        const backupKeys = keys.filter((key) => key.startsWith('measurement_backup_'))
+        let removedCount = 0
+
+        for (const key of backupKeys) {
+          const { value } = await Preferences.get({ key })
+          if (value) {
+            const backup = JSON.parse(value)
+            if (backup.status === 'synced') {
+              await Preferences.remove({ key })
+              removedCount++
+            }
+          }
+        }
+
+        console.log(`[clearSyncedBackups] Removed ${removedCount} synced backup(s)`)
+        return { success: true, count: removedCount }
+      } catch (error) {
+        console.error('[clearSyncedBackups] Failed:', error)
+        return { success: false, count: 0 }
+      }
+    },
+
+    // ========================================
+    // MONITORING FUNCTIONS
+    // ========================================
+
+    /**
+     * Get storage statistics
+     * Use: For monitoring and debugging
+     */
+    async getStorageStats(): Promise<{
+      totalBackups: number
+      pendingBackups: number
+      syncedBackups: number
+      oldestBackup: number | null
+      newestBackup: number | null
+      totalSize: number // Approximate in bytes
+    }> {
+      try {
+        const { Preferences } = await import('@capacitor/preferences')
+        const { keys } = await Preferences.keys()
+
+        const backupKeys = keys.filter((key) => key.startsWith('measurement_backup_'))
+
+        let pendingCount = 0
+        let syncedCount = 0
+        let oldestTimestamp: number | null = null
+        let newestTimestamp: number | null = null
+        let totalSize = 0
+
+        for (const key of backupKeys) {
+          const { value } = await Preferences.get({ key })
+          if (value) {
+            const backup = JSON.parse(value)
+
+            // Count by status
+            if (backup.status === 'pending') pendingCount++
+            if (backup.status === 'synced') syncedCount++
+
+            // Track timestamps
+            if (backup.timestamp) {
+              if (!oldestTimestamp || backup.timestamp < oldestTimestamp) {
+                oldestTimestamp = backup.timestamp
+              }
+              if (!newestTimestamp || backup.timestamp > newestTimestamp) {
+                newestTimestamp = backup.timestamp
+              }
+            }
+
+            // Approximate size
+            totalSize += value.length
+          }
+        }
+
+        return {
+          totalBackups: backupKeys.length,
+          pendingBackups: pendingCount,
+          syncedBackups: syncedCount,
+          oldestBackup: oldestTimestamp,
+          newestBackup: newestTimestamp,
+          totalSize
+        }
+      } catch (error) {
+        console.error('[getStorageStats] Failed:', error)
+        return {
+          totalBackups: 0,
+          pendingBackups: 0,
+          syncedBackups: 0,
+          oldestBackup: null,
+          newestBackup: null,
+          totalSize: 0
+        }
+      }
+    },
+
+    /**
+     * List all backup keys
+     * Use: For debugging
+     */
+    async listAllBackups(): Promise<string[]> {
+      try {
+        const { Preferences } = await import('@capacitor/preferences')
+        const { keys } = await Preferences.keys()
+        return keys.filter((key) => key.startsWith('measurement_backup_'))
+      } catch (error) {
+        console.error('[listAllBackups] Failed:', error)
+        return []
+      }
+    },
+
+    // ========================================
+    // PERIODIC MAINTENANCE
+    // ========================================
+
+    /**
+     * Run periodic maintenance
+     * Call this on app startup or periodically
+     */
+    async runStorageMaintenance(): Promise<void> {
+      console.log('[runStorageMaintenance] Starting maintenance...')
+
+      // 1. Clear old backups (older than 7 days)
+      const oldResult = await this.clearOldBackups(7)
+      if (oldResult.count > 0) {
+        console.log(`[runStorageMaintenance] Cleared ${oldResult.count} old backup(s)`)
+      }
+
+      // 2. Clear synced backups if too many
+      const stats = await this.getStorageStats()
+      if (stats.syncedBackups > 10) {
+        const syncedResult = await this.clearSyncedBackups()
+        console.log(`[runStorageMaintenance] Cleared ${syncedResult.count} synced backup(s)`)
+      }
+
+      // 3. Log final stats
+      const finalStats = await this.getStorageStats()
+      console.log('[runStorageMaintenance] Final stats:', finalStats)
+    },
+
+    // ========================================
+    // SESSION FUNCTIONS
+    // ========================================
+
     setSession(data: Session) {
       this.session = data
       const idx = this.sessions.findIndex((i) => i.id === data.id)
@@ -637,7 +880,17 @@ export const useSessionStore = defineStore('session', {
         .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'completed' } })
         .then(async ({ data }) => {
           await getRunningSessions()
+
           this.session = data
+
+          // ✅ Clear backups setelah session berhasil di-end
+          const measurementIds = this.session_measurements.map((m) => Number(m.id)).filter((i) => i)
+          const result = await this.clearSessionMeasurementBackups(measurementIds)
+
+          if (result.success) {
+            console.log(`[endSession] Cleared ${result.count} backup(s)`)
+          }
+
           this.syncSessionStore()
           return { success: true, data, message: '' }
         })
@@ -867,6 +1120,10 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message }
         })
     },
+
+    // ========================================
+    // COMMENT FUNCTIONS
+    // ========================================
 
     async createSessionComment({
       client_id,

@@ -78,6 +78,29 @@ watch(
 
 const cardId = ref<string>('card-random-id')
 
+// 🔧 Tambahkan computed untuk monitoring
+const hasPendingSync = computed(() => {
+  return sessionStore.pending_progress.some(
+    (item) => item.key === `update_measurement_${props.measurement.id}`
+  )
+})
+
+const syncStatusText = computed(() => {
+  if (!hasPendingSync.value) return ''
+
+  const item = sessionStore.pending_progress.find(
+    (i) => i.key === `update_measurement_${props.measurement.id}`
+  )
+
+  if (!item) return ''
+
+  if (item.retryCount && item.retryCount > 3) {
+    return `Sync failed: ${item.retryCount} attempt(s)`
+  }
+
+  return 'Syncing...'
+})
+
 // drop measurement property
 const isDropped = ref<boolean>(false)
 watch(
@@ -489,6 +512,16 @@ const onToggleSaved = (saved: boolean) => {
             </div>
           </div>
           <div v-else :key="`measurement-card-${cardId}`" class="w-full h-full">
+            <!-- Tambahkan sync status indicator (optional) -->
+            <div
+              v-if="sessionStore.session?.status === 'ongoing' && hasPendingSync && !is_collapsed"
+              class="flex"
+            >
+              <div class="px-2 py-1 text-xs rounded bg-tulip-1 text-tulip-7">
+                {{ syncStatusText }}
+              </div>
+            </div>
+
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
               :measurement="measurement"
