@@ -8,6 +8,7 @@ import PastSessions from '@/partitions/client/PastSessions.vue'
 import Targets from '@/partitions/client/Targets.vue'
 import Profile from '@/partitions/client/Profile.vue'
 import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
+import TargetJobProgression from '@/partitions/target/TargetJobProgression.vue'
 
 const route = useRoute()
 const appStore = useAppStore()
@@ -93,6 +94,7 @@ onMounted(() => {
     </div>
   </div>
 
+  <TargetJobProgression/>
   <div v-if="clientLoading">
     <div class="px-4 pt-3">
       <div class="w-56 h-8 rounded-full shrink-0 animate-pulse bg-slate-3"></div>

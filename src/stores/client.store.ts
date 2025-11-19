@@ -18,6 +18,7 @@ export interface ClientStateSchema {
   targets_count: number
   clients: Client[]
   clients_count: number
+  client_target_job: any
 }
 
 export const useClientStore = defineStore('client', {
@@ -33,7 +34,8 @@ export const useClientStore = defineStore('client', {
     targets: [],
     targets_count: 0,
     clients: [],
-    clients_count: 0
+    clients_count: 0,
+    client_target_job: null
   }),
   getters: {},
   actions: {
@@ -86,7 +88,8 @@ export const useClientStore = defineStore('client', {
         targets: this.targets,
         targets_count: this.targets_count,
         clients: this.clients,
-        clients_count: this.clients_count
+        clients_count: this.clients_count,
+        client_target_job: this.client_target_job
       }
       const { success } = await setClientStorage(data)
       return { success }
@@ -286,6 +289,68 @@ export const useClientStore = defineStore('client', {
           this.targets = data.targets
           this.targets_count = data.total_count
           this.syncClientStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async createBulkTarget({
+      data
+    }: {
+      data: {
+        client_id: Client['id']
+        target_ids: string
+      }
+    }): Promise<ResponseSchema> {
+      return axios
+        .post(`/api/v1/clients/${data.client_id}/bulk_create_targets`, {
+          target_ids: data.target_ids
+        })
+        .then(async ({ data: response }) => {
+          this.checkTargetJob({ data: { client_id: data.client_id, job_id: response.job_id } })
+          return { success: true, data: response }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async checkTargetJob({ data }: { data: {
+      client_id: Client['id']
+      job_id: string
+    }}): Promise<ResponseSchema> {
+      const clientId = this.client?.id
+      if (clientId !== data.client_id) return { success: false, data: null }
+
+      return axios
+        .get(`/api/v1/clients/${data.client_id}/check_duplicate_targets_job/${data.job_id}`)
+        .then(async ({ data }) => {
+          if (!data.job) return { success: false, data: null }
+          this.client_target_job = data.job
+          const jobStatus = data.job.status
+          if (jobStatus === 'in_progress' || jobStatus === 'pending') {
+            setTimeout(() => {
+              this.checkTargetJob({ data })
+            })
+          }
+          if (jobStatus === 'completed') {
+            const createdTargets = data.targets.filter((target: Target) => !target.group_id)
+            this.targets = createdTargets
+            this.targets_count = createdTargets.length
+            this.syncClientStore()
+          }
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async cancelTargetJob({ data }: { data: {
+      job_id: string
+    }}): Promise<ResponseSchema> {
+      return axios
+        .post(`/api/v1/cancel_duplicate_targets_job/${data.job_id}`)
+        .then(async ({ data }) => {
           return { success: true, data }
         })
         .catch(({ response }) => {
