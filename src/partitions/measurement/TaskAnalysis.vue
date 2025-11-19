@@ -196,6 +196,11 @@ const resetIdleTimer = () => {
 
   // Auto-save setelah 5 detik idle
   idleTimer = setTimeout(() => {
+    if (sessionStore.session?.status !== 'ongoing') {
+      clearTimeout(idleTimer)
+      return
+    }
+
     if (!isSaved.value && currentTrial.value.prompt_id && !isOpenEditTrial.value) {
       console.log('[Component] Auto-saving due to idle')
       onSaveCurrentTrial()
