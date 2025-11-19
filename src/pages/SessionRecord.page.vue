@@ -327,13 +327,15 @@ watch(showReviewMode, (val) => {
   }, 1000)
 })
 const focusMeasurement = ref<Measurement['id']>(0)
-const onFocusMeasurement = (val: Measurement) => {
+const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
   let timer = 500
   if (val.id === focusMeasurement.value) return
   focusMeasurement.value = val.id
 
-  if (!showReviewMode.value) return
-  showReviewMode.value = false
+  if (checkReviewMode) {
+    if (!showReviewMode.value) return
+    showReviewMode.value = false
+  }
 
   const measurements = sessionStore.session_measurements
   let isFirst = false
@@ -836,7 +838,7 @@ const duplicateImageCommentsToClientDocument = async () => {
           @toggle-running="onToggleRunningDuration(measurement)"
           @toggle-saved="onToggleSavedSbt($event)"
           @check-completed-cold-probe="handleCompletedColdProbe"
-          @click="onFocusMeasurement(measurement)"
+          @click="onFocusMeasurement(measurement, true)"
           @fetch-session="fetchSession({ first: false, is_swiped: false })"
         />
       </div>
@@ -915,7 +917,7 @@ const duplicateImageCommentsToClientDocument = async () => {
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
               : 'border-slate-4 bg-white'
           ]"
-          @click="onFocusMeasurement(opt)"
+          @click="onFocusMeasurement(opt, false)"
         >
           <div class="truncate">{{ opt.target?.name }}</div>
         </div>
