@@ -97,9 +97,13 @@ export const useAppStore = defineStore('app', {
         })
     },
     async signin({ email, password, device }: SigninSchema): Promise<ResponseSchema> {
+      const sessionStore = useSessionStore()
+
       return axios
         .post('/signin', { email, password, device })
         .then(async ({ data }) => {
+          sessionStore.resetSessionStore()
+
           await setAccessStorage(data)
           this.account = data.user
           this.syncAppStore()
