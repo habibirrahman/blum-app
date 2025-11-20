@@ -6,10 +6,12 @@ import { getTargetType } from '@/lib/func'
 import type { Target } from '@/lib/types'
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useClientStore } from '@/stores/client.store'
 interface Props {
   showDetails: boolean
   loading: boolean
   target: Target | null
+  editAble?: boolean
 }
 
 interface Emits {
@@ -18,6 +20,8 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+const clientStore = useClientStore()
 
 const sortedPrompts = computed(() => {
   return [...(props.target?.prompts || [])].sort((a, b) => (a?.position || 0) - (b?.position || 0))
@@ -34,6 +38,8 @@ const actionRecommendation = computed(() => {
   if (!props.target.action_recommendations.length) return empty
   return props.target.action_recommendations[0]
 })
+
+const onEdit = () => {}
 </script>
 
 <template>
@@ -164,6 +170,38 @@ const actionRecommendation = computed(() => {
               }}
             </div>
           </div>
+          <div v-if="target?.is_group" class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Targets within this group:</div>
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="member in target?.members"
+                :key="member?.id"
+                class="text-sm text-slate-10"
+              >
+                <div class="font-semibold">{{ member?.code_definition }} - {{ member?.name }}</div>
+                <div class="whitespace-pre-line">
+                  {{ member?.description || '-' }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-if="target?.is_group" class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Problem behaviors:</div>
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="problemBehavior in target?.target_problem_behaviors"
+                :key="problemBehavior?.id"
+                class="text-sm text-slate-10"
+              >
+                <div class="font-semibold">
+                  {{ problemBehavior?.code }} - {{ problemBehavior?.code_definition }}
+                </div>
+                <div class="whitespace-pre-line">
+                  {{ problemBehavior?.description || '-' }}
+                </div>
+              </div>
+            </div>
+          </div>
           <div
             v-if="target?.prompting_format === 'classic'"
             class="flex flex-col gap-1 border-b border-slate-3 py-3"
@@ -285,8 +323,21 @@ const actionRecommendation = computed(() => {
           </div>
         </div>
       </div>
-      <div class="sticky bottom-0 w-full bg-white pt-4">
+      <div class="sticky bottom-0 flex w-full items-center gap-2 bg-white pt-4">
         <AppButton kind="plain" class="w-full" @click="emit('close')">Close</AppButton>
+        <RouterLink
+          v-if="editAble"
+          class="w-full"
+          :to="{
+            name: 'edit-client-target',
+            params: {
+              id: clientStore.client?.id,
+              target_id: target?.id
+            }
+          }"
+        >
+          <AppButton class="w-full" @click="onEdit">Edit details</AppButton>
+        </RouterLink>
       </div>
     </div>
   </AppActionSheet>

@@ -13,6 +13,7 @@ import TargetItem from '../TargetItem.vue'
 import TargetItemLoader from '@/components/skeletons/TargetItemLoader.vue'
 import AddTargetFromDatabank from '@/partitions/target/AddTargetFromDatabank.vue'
 import PreviewTargetModal from '@/partitions/target/PreviewTargetModal.vue'
+import TargetJobProgression from '../target/TargetJobProgression.vue'
 
 const route = useRoute()
 const clientStore = useClientStore()
@@ -160,7 +161,7 @@ const onToggleGroup = (id: Target['id']) => {
   </div>
 
   <div class="space-y-3 bg-white pt-3">
-    <div class="px-4 flex items-center gap-3">
+    <div class="flex items-center gap-3 px-4">
       <AppTextInput
         class="grow"
         name="query"
@@ -168,7 +169,9 @@ const onToggleGroup = (id: Target['id']) => {
         v-model="query"
         suffix_icon="ph:magnifying-glass"
       />
-      <AppButton class="flex-shrink-0" @click="addTargetOpen = true"><Icon icon="ph:plus-bold" /></AppButton>
+      <AppButton class="flex-shrink-0" @click="addTargetOpen = true"
+        ><Icon icon="ph:plus-bold"
+      /></AppButton>
     </div>
     <div class="pl-4">
       <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
@@ -204,6 +207,8 @@ const onToggleGroup = (id: Target['id']) => {
       </div>
     </div>
   </div>
+
+  <TargetJobProgression />
 
   <div v-if="targetsLoading">
     <div class="px-4 pt-2">
@@ -247,7 +252,7 @@ const onToggleGroup = (id: Target['id']) => {
             class="flex h-[52px] items-center justify-between border-l-[6px] border-prim-2 px-3"
             @click="onToggleGroup(target.id)"
           >
-            <div class="flex items-center gap-2">
+            <div @click.stop="onOpenTarget(target)" class="flex items-center gap-2">
               <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
               <div class="text-sm font-semibold text-slate-10">
                 {{ target.name }}
@@ -344,6 +349,12 @@ const onToggleGroup = (id: Target['id']) => {
     </div>
   </AppActionSheet>
 
-  <PreviewTargetModal :show-details="showDetails" @close="showDetails = false" :target="targetDetails" :loading="targetLoading"/>
-  <AddTargetFromDatabank v-if="addTargetOpen" @close="addTargetOpen = false"/>
+  <PreviewTargetModal
+    edit-able
+    :show-details="showDetails"
+    @close="showDetails = false"
+    :target="targetDetails"
+    :loading="targetLoading"
+  />
+  <AddTargetFromDatabank v-if="addTargetOpen" @close="addTargetOpen = false" />
 </template>

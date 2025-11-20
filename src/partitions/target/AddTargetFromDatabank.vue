@@ -13,6 +13,7 @@ import PreviewTargetModal from './PreviewTargetModal.vue'
 import { getTargetType } from '@/lib/func'
 import { useClientStore } from '@/stores/client.store'
 import { useToast } from 'vue-toastification'
+import CurriculumItemModal from '../CurriculumItemModal.vue'
 
 interface Emits {
   (e: 'close'): void
@@ -177,8 +178,8 @@ const onResetCurriculum = () => {
   page.value = 1
   fetchTargets()
 }
-const onApplyCurriculum = () => {
-  curriculums.value = selectCurriculums.value
+const onApplyCurriculum = (values: number[]) => {
+  curriculums.value = values
   showCurriculums.value = false
   page.value = 1
   fetchTargets()
@@ -230,7 +231,9 @@ const onAddTarget = async () => {
     toast.error(message)
     return
   }
-  toast.success(`Success! ${targets.value.length} targets has been added`)
+  toast.success(
+    `Success! ${targets.value.length} target(s) has been added from the databank. Please note that it may take some time to complete the process.`
+  )
   emit('close')
 }
 </script>
@@ -328,7 +331,9 @@ const onAddTarget = async () => {
         <div>
           <div v-for="target in appStore.center_targets" :key="target.id">
             <div v-if="target.is_group">
-              <div class="flex h-[154px] flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-3">
+              <div
+                class="flex h-[154px] flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-4"
+              >
                 <div class="flex items-center justify-between">
                   <div class="truncate text-xs text-slate-8">
                     {{ target.curriculum_name }}
@@ -373,7 +378,11 @@ const onAddTarget = async () => {
         />
       </div>
       <div class="sticky bottom-0 w-full bg-white p-4">
-        <AppButton :loading="submitLoading" class="w-full" @click="onAddTarget" :disabled="targets.length === 0"
+        <AppButton
+          :loading="submitLoading"
+          class="w-full"
+          @click="onAddTarget"
+          :disabled="targets.length === 0"
           >Add {{ targets.length }} target(s)</AppButton
         >
       </div>
@@ -386,52 +395,15 @@ const onAddTarget = async () => {
       :loading="targetLoading"
     />
 
-    <AppActionSheet :show="showCurriculums" @close="showCurriculums = false">
-      <div class="space-y-4">
-        <div class="flex w-full items-center justify-between">
-          <div class="text-xl font-semibold">Curriculum</div>
-          <div class="cursor-pointer" @click="showCurriculums = false">
-            <Icon icon="ph:x" class="text-2xl" />
-          </div>
-        </div>
-        <AppTextInput
-          name="query"
-          placeholder="Search curriculum"
-          v-model="curriculumQuery"
-          suffix_icon="ph:magnifying-glass"
-        />
-        <div>
-          <div
-            v-for="opt in curriculumOptions"
-            :key="opt.value"
-            class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
-          >
-            <div
-              class="h-6 w-6 flex-shrink-0 rounded-full"
-              :style="{
-                backgroundColor: opt.color
-              }"
-            ></div>
-            <label :for="`curriculum_filter_${opt.value}`" class="grow truncate text-sm">
-              {{ opt.label }}
-            </label>
-            <input
-              type="checkbox"
-              :name="`curriculum_filter_${opt.value}`"
-              :id="`curriculum_filter_${opt.value}`"
-              :checked="selectCurriculums.includes(opt.value)"
-              :value="opt.value"
-              class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
-              @click="onCheckCurriculum(opt.value)"
-            />
-          </div>
-        </div>
-        <div class="grid w-full grid-cols-2 gap-2">
-          <AppButton kind="plain" @click="onResetCurriculum">Reset</AppButton>
-          <AppButton @click="onApplyCurriculum">Apply</AppButton>
-        </div>
-      </div>
-    </AppActionSheet>
+    <CurriculumItemModal
+      :show="showCurriculums"
+      :curriculum-options="curriculumOptions"
+      :selected-curriculum="curriculums"
+      :use-multiple-select="true"
+      @close="showCurriculums = false"
+      @apply="onApplyCurriculum($event)"
+      @reset="onResetCurriculum"
+    />
     <AppActionSheet :show="showMethods" @close="showMethods = false">
       <div class="space-y-4">
         <div class="flex w-full items-center justify-between">

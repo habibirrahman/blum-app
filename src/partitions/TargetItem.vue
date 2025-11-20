@@ -31,7 +31,7 @@ const handleCheckboxClick = (event: Event) => {
 
 <template>
   <div
-    class="flex h-[154px] flex-col justify-center gap-1.5 border-l-[6px] px-3"
+    class="flex h-[154px] flex-col justify-center gap-1.5 border-l-[6px] px-4"
     :style="{ borderColor: target.curriculum_color }"
   >
     <div v-if="showStatus" class="flex">

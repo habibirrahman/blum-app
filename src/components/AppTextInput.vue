@@ -11,6 +11,7 @@ interface Props {
   required?: boolean
   error?: string | boolean
   suffix_icon?: string
+  suffix_text?: string
   borderless?: boolean
 }
 
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<Props>(), {
   required: false,
   error: false,
   suffix_icon: '',
+  suffix_text: '',
   borderless: false
 })
 
@@ -69,7 +71,7 @@ const openPassword = ref<boolean>(false)
         'bg-slate-2': disabled,
         'border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2': !error,
         'border-tomato-7 focus:ring-tomato-2': error,
-        'border px-4 py-2': !borderless,
+        'border py-2': !borderless,
         'border-none px-0 py-1 focus:ring-0': borderless
       }"
     />
@@ -80,6 +82,13 @@ const openPassword = ref<boolean>(false)
       :class="[label ? 'top-[30px]' : 'top-1']"
       @click.prevent="openPassword = !openPassword"
     />
+    <div
+      v-if="suffix_text"
+      class="absolute right-2 cursor-pointer text-[16px] text-slate-7"
+      :class="[label ? 'top-[30px]' : 'top-1']"
+    >
+      {{ suffix_text }}
+    </div>
     <Icon
       v-if="suffix_icon"
       :icon="suffix_icon"

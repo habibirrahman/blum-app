@@ -24,7 +24,8 @@ const isUseNav = computed<boolean>(
   () =>
     routeName.value !== 'signin' &&
     !routeName.value.includes('record') &&
-    !isShowRunningSession.value
+    !isShowRunningSession.value &&
+    routeName.value !== 'edit-client-target'
 )
 const networkStatus: NetworkStatus = reactive({
   connected: false,

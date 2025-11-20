@@ -324,17 +324,17 @@ export const useClientStore = defineStore('client', {
 
       return axios
         .get(`/api/v1/clients/${data.client_id}/check_duplicate_targets_job/${data.job_id}`)
-        .then(async ({ data }) => {
-          if (!data.job) return { success: false, data: null }
-          this.client_target_job = data.job
-          const jobStatus = data.job.status
+        .then(async (response) => {
+          if (!response.data.job) return { success: false, data: null }
+          this.client_target_job = response.data.job
+          const jobStatus = response.data.job.status
           if (jobStatus === 'in_progress' || jobStatus === 'pending') {
             setTimeout(() => {
               this.checkTargetJob({ data })
-            })
+            }, 5000)
           }
           if (jobStatus === 'completed') {
-            const createdTargets = data.targets.filter((target: Target) => !target.group_id)
+            const createdTargets = response.data.targets.filter((target: Target) => !target.group_id)
             this.targets = createdTargets
             this.targets_count = createdTargets.length
             this.syncClientStore()
@@ -349,8 +349,9 @@ export const useClientStore = defineStore('client', {
       job_id: string
     }}): Promise<ResponseSchema> {
       return axios
-        .post(`/api/v1/cancel_duplicate_targets_job/${data.job_id}`)
+        .patch(`/api/v1/cancel_duplicate_targets_job/${data.job_id}`)
         .then(async ({ data }) => {
+          this.client_target_job = data
           return { success: true, data }
         })
         .catch(({ response }) => {
