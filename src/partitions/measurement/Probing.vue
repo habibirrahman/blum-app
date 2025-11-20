@@ -20,6 +20,7 @@ const toast = useToast()
 
 interface Props {
   measurement: Measurement
+  measurement_results: Measurement['results']
   is_collapsed: boolean
 }
 interface Emits {
@@ -61,7 +62,7 @@ const onScroll = (e: any) => {
 
 const perPage = computed<number>(() => 20)
 const pageCount = computed<number>(() => {
-  const results = Object.keys(props.measurement.results).length || 0
+  const results = Object.keys(props.measurement_results).length || 0
   const trial = props.measurement.target?.probing_number_of_trial || 0
   let circles = results || trial
   // if (!props.measurement.submitted_at && circles >= trial) {
@@ -74,7 +75,7 @@ interface ProbingCircle {
   value: boolean | 'empty' | 'removing'
 }
 const probingCirclesPages = computed<ProbingCircle[][]>(() => {
-  const results = props.measurement.results
+  const results = props.measurement_results
   const trial = props.measurement.target?.probing_number_of_trial || 0
   const circles: ProbingCircle[] = []
   for (let idx = 0; idx < trial; idx++) {
@@ -98,7 +99,7 @@ const probingCirclesPages = computed<ProbingCircle[][]>(() => {
   return res
 })
 const probingScore = computed<number>(() => {
-  const results = props.measurement.results
+  const results = props.measurement_results
   const trials = Object.values(results).length
   const totalSuccess = Object.values(results).filter((i) => i).length
   return (totalSuccess / trials) * 100 || 0
@@ -112,7 +113,7 @@ const removeProbingLoading = ref<boolean>(false)
 const onAdd = async (bool: boolean) => {
   onDisplayPopup()
 
-  const finalResults = props.measurement.results
+  const finalResults = props.measurement_results
   const length = Object.keys(finalResults).length
 
   finalResults[length] = bool
@@ -143,7 +144,7 @@ const onAdd = async (bool: boolean) => {
 const onRemove = async (circle: ProbingCircle) => {
   onDisplayPopup()
 
-  const lastResults = props.measurement.results
+  const lastResults = props.measurement_results
   lastResults[circle.key] = 'removing'
 
   const finalResults: Record<string, boolean> = {}
@@ -441,7 +442,7 @@ const onSave = async () => {
           <div
             v-if="
               !measurement.submitted_at &&
-              Object.keys(measurement.results).length >=
+              Object.keys(measurement_results).length >=
                 (measurement.target?.probing_number_of_trial || 0)
             "
             class="flex items-center justify-center w-20 h-20 rounded-full shrink-0 bg-light-purple-5"

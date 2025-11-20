@@ -12,6 +12,7 @@ const toast = useToast()
 
 interface Props {
   measurement: Measurement
+  measurement_results: Measurement['results']
   is_collapsed: boolean
 }
 interface Emits {
@@ -24,7 +25,7 @@ const emit = defineEmits<Emits>()
 const results = ref<Measurement['results']>({})
 
 onMounted(() => {
-  results.value = { ...props.measurement.results }
+  results.value = { ...props.measurement_results }
 })
 
 const page = ref<number>(1)

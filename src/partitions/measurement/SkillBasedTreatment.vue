@@ -264,16 +264,6 @@ onMounted(async () => {
     currentTrial.value = newTrial
   }
 
-  // Restore dari backup jika ada
-  const measurementId = Number(props.measurement.id)
-  const backup = await sessionStore.restoreFromBackup(measurementId)
-  if (backup) {
-    if (backup.status === 'pending') {
-      resultsState.value = backup.data.results
-      toast.info('Data restored from backup`')
-    }
-  }
-
   // Setup auto-sync (hanya sekali)
   if (!sessionStore._autoSyncInitialized) {
     sessionStore.setupAutoSync()

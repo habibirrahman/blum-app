@@ -155,6 +155,8 @@ export const useSessionStore = defineStore('session', {
     // ========================================
 
     resetSessionStore() {
+      this.clearAllMeasurementBackups()
+
       this.session = null
       this.session_comments = []
       this.session_measurements = []
@@ -370,6 +372,10 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
+    // ========================================
+    // BACKUP FUNCTIONS
+    // ========================================
+
     // Helper untuk local backup
     async saveLocalBackup(
       id: number,
@@ -457,7 +463,7 @@ export const useSessionStore = defineStore('session', {
     },
 
     // ========================================
-    // CLEANUP FUNCTIONS
+    // CLEANUP BACKUP FUNCTIONS
     // ========================================
 
     /**

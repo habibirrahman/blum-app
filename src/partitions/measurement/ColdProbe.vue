@@ -10,6 +10,7 @@ const sessionStore = useSessionStore()
 
 interface Props {
   measurement: Measurement
+  measurement_results: Measurement['results']
   is_collapsed: boolean
   target: Target
 }
@@ -40,17 +41,17 @@ const isCompletedColdProbe = computed<boolean>(() => {
 
 onMounted(() => {
   if (props.target.cold_probe_format === 'classic') {
-    if (props.measurement.results) {
+    if (props.measurement_results) {
       singleVariableResult.value = {
-        yes: props.measurement.results.score === '100',
-        no: props.measurement.results.score === '0'
+        yes: props.measurement_results.score === '100',
+        no: props.measurement_results.score === '0'
       }
     }
   } else if (props.target.cold_probe_format === 'custom') {
-    if (props.measurement.results && Object.keys(props.measurement.results).length > 0) {
-      allResults.value = { ...props.measurement.results }
-      for (const id in props.measurement.results) {
-        const result = props.measurement.results[id]
+    if (props.measurement_results && Object.keys(props.measurement_results).length > 0) {
+      allResults.value = { ...props.measurement_results }
+      for (const id in props.measurement_results) {
+        const result = props.measurement_results[id]
         multipleVariableResult.value[id] = result.score === 100 ? 'yes' : 'no'
       }
     }

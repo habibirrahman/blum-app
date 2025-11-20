@@ -49,11 +49,23 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 onMounted(async () => {
+  measurementResults.value = props.measurement.results
+
+  // Restore dari backup jika ada
+  const measurementId = Number(props.measurement.id)
+  const backup = await sessionStore.restoreFromBackup(measurementId)
+  if (backup) {
+    if (backup.status === 'pending') {
+      measurementResults.value = backup.data.results
+      toast.info('Data restored from backup`')
+    }
+  }
+
   if (
     props.measurement.type === 'Measurement::Duration' ||
     props.measurement.type === 'Measurement::Latency'
   ) {
-    generateLaps(props.measurement.results)
+    generateLaps(measurementResults)
   }
 
   target.value = props.measurement.target
@@ -61,6 +73,8 @@ onMounted(async () => {
   isDropped.value = props.measurement.is_dropped || false
   cardLoading.value = false
 })
+
+const measurementResults = ref<Measurement['results']>()
 
 const cardLoading = ref<boolean>(true)
 const measurementType = computed<MeasurementType | TargetType | ''>(() => {
@@ -525,6 +539,7 @@ const onToggleSaved = (saved: boolean) => {
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
               :measurement="measurement"
+              :measurement_results="measurementResults"
               :is_started="isStarted"
               :timer="timerRunning"
               :update_loading="updateLoading"
@@ -544,6 +559,7 @@ const onToggleSaved = (saved: boolean) => {
             <Frequency
               v-if="measurementType.includes('Frequency')"
               :measurement="measurement"
+              :measurement_results="measurementResults"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
@@ -551,6 +567,7 @@ const onToggleSaved = (saved: boolean) => {
             <PartialIntervalRecording
               v-if="measurementType.includes('Pir')"
               :measurement="measurement"
+              :measurement_results="measurementResults"
               :counter="counter"
               :is_collapsed="is_collapsed"
               @fetch-session="emit('fetch-session')"
@@ -558,6 +575,7 @@ const onToggleSaved = (saved: boolean) => {
             <Percentage
               v-if="measurementType.includes('Percentage')"
               :measurement="measurement"
+              :measurement_results="measurementResults"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
@@ -565,6 +583,7 @@ const onToggleSaved = (saved: boolean) => {
             <TrialByTrial
               v-if="measurementType.includes('TrialByTrial')"
               :measurement="measurement"
+              :measurement_results="measurementResults"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
@@ -572,6 +591,7 @@ const onToggleSaved = (saved: boolean) => {
             <Probing
               v-if="measurementType.includes('Probing')"
               :measurement="measurement"
+              :measurement_results="measurementResults"
               :is_collapsed="is_collapsed"
               @toggle-collapsed="emit('toggle-collapsed', $event)"
               @fetch-session="emit('fetch-session')"
@@ -579,7 +599,7 @@ const onToggleSaved = (saved: boolean) => {
             <Prompting
               v-if="measurementType.includes('Prompting') && target && !target.is_group"
               :measurement="measurement"
-              :measurement_results="measurement.results || {}"
+              :measurement_results="measurementResults"
               :target="target"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
@@ -588,7 +608,7 @@ const onToggleSaved = (saved: boolean) => {
             <TaskAnalysis
               v-if="measurementType.includes('Prompting') && target && target.is_group"
               :measurement="measurement"
-              :measurement_results="measurement.results || {}"
+              :measurement_results="measurementResults"
               :target="target"
               :is_collapsed="is_collapsed"
               @toggle-saved="onToggleSaved($event)"
@@ -597,7 +617,7 @@ const onToggleSaved = (saved: boolean) => {
             <SkillBasedTreatment
               v-if="measurementType.includes('Sbt') && target"
               :measurement="measurement"
-              :measurement_results="measurement.results || {}"
+              :measurement_results="measurementResults"
               :target="target"
               :is_collapsed="is_collapsed"
               @toggle-saved="onToggleSaved($event)"
@@ -606,6 +626,7 @@ const onToggleSaved = (saved: boolean) => {
             <ColdProbe
               v-if="measurementType.includes('ColdProbe') && target"
               :measurement="measurement"
+              :measurement_results="measurementResults"
               :target="target"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
@@ -702,11 +723,11 @@ const onToggleSaved = (saved: boolean) => {
                 <div v-else>
                   Prompts used in this session:
                   {{
-                    Object.keys(measurement.results || {})
+                    Object.keys(measurementResults)
                       ?.map((key) => {
                         const found = target?.prompts?.find((i) => i.id === Number(key))
                         const percentage = found?.score || 0
-                        return { ...measurement.results[key], percentage }
+                        return { ...measurementResults[key], percentage }
                       })
                       ?.sort((a, b) => a.position - b.position)
                       ?.map((prompt) => {
