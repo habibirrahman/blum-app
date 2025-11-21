@@ -14,6 +14,7 @@ const app = useAppStore()
 
 interface Props {
   measurement: Measurement
+  measurement_results: Measurement['results']
   is_collapsed: boolean
 }
 interface Emits {
@@ -26,7 +27,7 @@ const emit = defineEmits<Emits>()
 const results = ref<Measurement['results']>({})
 
 onMounted(() => {
-  results.value = { ...props.measurement.results }
+  results.value = { ...props.measurement_results }
 })
 
 const page = ref<number>(1)
@@ -246,7 +247,7 @@ const onRemoveBox = async (box: PercentageBox) => {
                   'border-slate-5 bg-white': box.value === null,
                   'border-grass-7 bg-grass-1': box.value === true,
                   'border-tomato-7 bg-tomato-1': box.value === false,
-                  'border-dashed border-2 border-slate-5 bg-slate-2': box.key === 'placeholder'
+                  'border-2 border-dashed border-slate-5 bg-slate-2': box.key === 'placeholder'
                 }"
                 @click="onChangePercentage(box)"
               >

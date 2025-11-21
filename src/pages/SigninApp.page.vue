@@ -29,7 +29,13 @@ async function onSignin() {
   signinLoading.value = true
   const input = {
     email: email.value,
-    password: password.value
+    password: password.value,
+    device: {
+      device_type: 'mobile', // mobile or desktop
+      app_type: 'mobile_app' // browser or mobile_app
+      // device_id: `${email.value}#${this.deviceId}`,
+      // device_details: this.deviceDetails
+    }
   }
   const { success, message } = await appStore.signin(input)
   signinLoading.value = false

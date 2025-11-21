@@ -196,6 +196,8 @@ export interface Measurement {
   visible?: boolean
   deleted_at?: string
   submitted_at?: string
+  created_at?: string
+  updated_at?: string
   session_id?: Session['id']
   target_id?: Target['id']
   target?: Target

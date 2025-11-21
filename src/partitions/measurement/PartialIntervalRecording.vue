@@ -9,6 +9,7 @@ const toast = useToast()
 
 interface Props {
   measurement: Measurement
+  measurement_results: Measurement['results']
   counter: number
   is_collapsed: boolean
 }
@@ -23,7 +24,7 @@ const intervalRound = computed<number>(() => {
   if (!props.measurement.target || !intervalCount) {
     return 1
   }
-  const duration = Object.keys(props.measurement.results).length * intervalCount
+  const duration = Object.keys(props.measurement_results).length * intervalCount
   return duration / intervalCount
 })
 const currentInterval = computed<number>(() => {
@@ -36,18 +37,18 @@ const currentInterval = computed<number>(() => {
   return interval > intervalRound.value ? intervalRound.value : interval
 })
 const scoreInInterval = computed<number>(() => {
-  if (!props.measurement.results) return 0
-  if (!props.measurement.results[currentInterval.value - 1]) return 0
-  return props.measurement.results[currentInterval.value - 1]
+  if (!props.measurement_results) return 0
+  if (!props.measurement_results[currentInterval.value - 1]) return 0
+  return props.measurement_results[currentInterval.value - 1]
 })
 const totalScore = computed<number>(() => {
-  if (!props.measurement.results) return 0
-  const results: number[] = Object.values(props.measurement.results)
+  if (!props.measurement_results) return 0
+  const results: number[] = Object.values(props.measurement_results)
   return results.reduce((a, b) => a + b, 0) || 0
 })
 const percentageScore = computed<number>(() => {
-  if (!props.measurement.results) return 0
-  const res = Object.values(props.measurement.results).filter((a: any) => a)
+  if (!props.measurement_results) return 0
+  const res = Object.values(props.measurement_results).filter((a: any) => a)
   return Math.floor((res.length / intervalRound.value) * 100)
 })
 
@@ -55,7 +56,7 @@ const scoreLoading = ref<boolean>(false)
 
 const onAddScore = async () => {
   const interval = currentInterval.value - 1
-  const finalResults = props.measurement.results
+  const finalResults = props.measurement_results
   finalResults[interval] = finalResults[interval] + 1
 
   const params: UpdateMeasurementResultsParams = {

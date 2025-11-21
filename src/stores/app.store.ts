@@ -26,6 +26,10 @@ export interface NetworkStatus {
 interface SigninSchema {
   email: User['email']
   password: string
+  device: {
+    device_type: string // mobile or desktop
+    app_type: string // browser or mobile_app
+  }
 }
 
 export const useAppStore = defineStore('app', {
@@ -92,15 +96,16 @@ export const useAppStore = defineStore('app', {
           return { success: true, data, message: 'You have signed in' }
         })
         .catch(async ({ response }) => {
+          console.log(response)
           if (response?.status === 401) {
             this.resetAppStore()
           }
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async signin({ email, password }: SigninSchema): Promise<ResponseSchema> {
+    async signin({ email, password, device }: SigninSchema): Promise<ResponseSchema> {
       return axios
-        .post('/signin', { email, password })
+        .post('/signin', { email, password, device })
         .then(async ({ data }) => {
           await setAccessStorage(data)
           this.account = data.user

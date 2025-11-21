@@ -12,6 +12,7 @@ const toast = useToast()
 
 interface Props {
   measurement: Measurement
+  measurement_results: Measurement['results']
   is_collapsed: boolean
 }
 interface Emits {
@@ -40,7 +41,7 @@ watch(
 )
 
 const onSaveScore = debounce(async function (score: number) {
-  const finalScore = props.measurement.results.score + score
+  const finalScore = props.measurement_results.score + score
 
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,

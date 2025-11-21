@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
-import { computed, onMounted, ref, watch } from 'vue'
+import { useAppStore } from '@/stores/app.store'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type {
   Measurement,
   Prompt,
@@ -14,6 +15,7 @@ import AppButton from '@/components/AppButton.vue'
 import { promptColors } from '@/lib/data'
 
 const sessionStore = useSessionStore()
+const appStore = useAppStore()
 const toast = useToast()
 
 interface Props {
@@ -138,6 +140,7 @@ watch(
     emit('toggle-saved', val)
   }
 )
+
 watch(
   () => props.is_collapsed,
   () => {
@@ -148,6 +151,7 @@ watch(
     }, 300)
   }
 )
+
 watch(
   () => props.measurement_results,
   (val) => {
@@ -156,6 +160,7 @@ watch(
   },
   { deep: true }
 )
+
 watch(
   () => deleteTrialKey.value,
   (val) => {
@@ -164,7 +169,49 @@ watch(
   }
 )
 
-onMounted(() => {
+// 🔧 Tambahkan computed untuk monitoring
+const hasPendingSync = computed(() => {
+  return sessionStore.pending_progress.some(
+    (item) => item.key === `update_measurement_${props.measurement.id}`
+  )
+})
+
+// Watch untuk notifikasi saat sync berhasil
+watch(hasPendingSync, (isPending, wasPending) => {
+  if (wasPending && !isPending) {
+    // Sync completed
+    const updated = { ...resultsState.value }
+    delete updated._pendingSync
+    resultsState.value = updated
+
+    toast.success('Data synced to server')
+  }
+})
+
+// Auto-save timer
+let idleTimer: any = null
+const resetIdleTimer = () => {
+  clearTimeout(idleTimer)
+  if (sessionStore.session?.status !== 'ongoing') return
+
+  // Auto-save setelah 5 detik idle
+  idleTimer = setTimeout(() => {
+    if (sessionStore.session?.status !== 'ongoing') {
+      clearTimeout(idleTimer)
+      return
+    }
+
+    if (!isSaved.value && currentTrial.value.prompt_id && !isOpenEditTrial.value) {
+      console.log('[Component] Auto-saving due to idle')
+      onSaveCurrentTrial()
+    }
+  }, 5000)
+}
+
+// Periodic check untuk stuck items
+let periodicCheckInterval: any = null
+
+onMounted(async () => {
   const prompts = (props.target?.prompts || [])
     .map((i) => {
       if (props.target.prompting_format === 'classic') {
@@ -216,14 +263,14 @@ onMounted(() => {
         target_id: nextTargetId,
         prompt_id: 0,
         prompt_parent_id: null,
-        target_problem_behavior_id: null // optional
+        target_problem_behavior_id: null
       }
       resultsState.value[newTrial.key] = {
         key: newTrial.key,
         target_id: newTrial.target_id,
         prompt_id: newTrial.prompt_id,
         prompt_parent_id: newTrial.prompt_parent_id,
-        target_problem_behavior_id: newTrial.target_problem_behavior_id // optional
+        target_problem_behavior_id: newTrial.target_problem_behavior_id
       }
       currentTrial.value = newTrial
     }
@@ -233,7 +280,7 @@ onMounted(() => {
       target_id: 0,
       prompt_id: 0,
       prompt_parent_id: null,
-      target_problem_behavior_id: null // optional
+      target_problem_behavior_id: null
     }
     if (TAUsedTargets.value.length) {
       newTrial.target_id = TAUsedTargets.value[0].target_id
@@ -243,9 +290,45 @@ onMounted(() => {
       target_id: newTrial.target_id,
       prompt_id: newTrial.prompt_id,
       prompt_parent_id: newTrial.prompt_parent_id,
-      target_problem_behavior_id: newTrial.target_problem_behavior_id // optional
+      target_problem_behavior_id: newTrial.target_problem_behavior_id
     }
     currentTrial.value = newTrial
+  }
+
+  // Setup auto-sync (hanya sekali)
+  if (!sessionStore._autoSyncInitialized) {
+    sessionStore.setupAutoSync()
+  }
+
+  // Process pending items jika online
+  if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
+    console.log('[Component] Processing pending items on mount')
+    await sessionStore.resolvePendingProgress()
+  }
+
+  // Setup periodic check untuk stuck items
+  periodicCheckInterval = setInterval(() => {
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+
+    const stuckItems = sessionStore.pending_progress.filter(
+      (item) => item.timestamp && item.timestamp < fiveMinutesAgo
+    )
+
+    if (stuckItems.length > 0 && appStore.network_status.connected) {
+      console.warn('[Component] Found stuck items, triggering sync')
+      sessionStore.triggerSync(true)
+    }
+  }, 60000) // Check setiap 1 menit
+})
+
+// Cleanup saat unmount
+onUnmounted(() => {
+  clearInterval(periodicCheckInterval)
+  clearTimeout(idleTimer)
+
+  // Trigger sync sebelum unmount jika ada perubahan
+  if (!isSaved.value && appStore.network_status.connected) {
+    sessionStore.triggerSync(true)
   }
 })
 
@@ -255,6 +338,7 @@ const onScroll = (e: any) => {
   const current = Math.floor(scrollLeft / offsetWidth) + 1
   page.value = current
 }
+
 const getColor = (id: number): string => {
   const found = TAPrompts.value.find((i) => i.id === id)
   return found ? found.color || '' : ''
@@ -274,6 +358,7 @@ const getCode = (id: number, data: 'target' | 'prompt' | 'problem_behavior') => 
   }
   return '-'
 }
+
 const getTrial = (trial: Trial) => {
   const defaultTarget = TAUsedTargets.value.length ? TAUsedTargets.value[0] : { target_code: '' }
   const target = TAUsedTargets.value.find((i) => i.target_id === trial.target_id) || defaultTarget
@@ -298,6 +383,7 @@ const getTrial = (trial: Trial) => {
     average
   }
 }
+
 const generateRatioScores = () => {
   /**
    * percentage: average all task
@@ -335,17 +421,17 @@ const generateRatioScores = () => {
 const onOpenTrialHistory = () => {
   isOpenTrialHistory.value = true
 }
+
 const onCloseTrialHistory = () => {
   isOpenTrialHistory.value = false
   deleteTrialKey.value = null
 
   setTheLastTrial()
 }
+
 const setTheLastTrial = () => {
-  // return the key value
   const data = resultsState.value
   if (activeDisplay.value === 'select-prompt') {
-    // set new last key
     const filtered = Object.values(data).filter((i: any) => i.prompt_id && i.target_id)
     const newKey = filtered.length + 1
     currentTrial.value = {
@@ -357,7 +443,6 @@ const setTheLastTrial = () => {
     }
   }
   if (activeDisplay.value === 'select-next-task') {
-    // set last result as current
     const results = Object.keys(data).map((key) => ({ ...data[key], key }))
 
     const index = results.findIndex((i) => Number(i.key) === Number(currentTrial.value.key))
@@ -368,9 +453,15 @@ const setTheLastTrial = () => {
     }
   }
 }
+
+// onSaveCurrentTrial dengan proper error handling
 const onSaveCurrentTrial = async () => {
   if (sessionStore.session?.status !== 'ongoing') return { success: false }
   if (submitLoading.value) return { success: false }
+
+  // Simpan state sebelumnya untuk rollback
+  const previousResults = { ...resultsState.value }
+  const previousIsSaved = isSaved.value
 
   let results = Object.keys(resultsState.value).map((key) => {
     return { ...resultsState.value[key], key }
@@ -400,32 +491,67 @@ const onSaveCurrentTrial = async () => {
   }
 
   submitLoading.value = true
-  const { success, message, data } = await sessionStore.updateMeasurementResults(params)
-  submitLoading.value = false
 
-  // complete saved
-  isSaved.value = true
-  resultsState.value = data.results
+  try {
+    const { success, message, data } = await sessionStore.updateMeasurementResults(params)
 
-  if (!success) {
-    toast.error(message)
+    // ✅ CEK success SEBELUM update state!
+    if (!success) {
+      resultsState.value = previousResults
+      isSaved.value = previousIsSaved
+      toast.error(message || 'Failed to save data')
+      return { success: false }
+    }
+
+    // ✅ Update state HANYA jika success
+    isSaved.value = true
+    resultsState.value = data.results
+
+    // ✅ Visual feedback berbeda untuk offline/online
+    if (data._pendingSync) {
+      toast.info('Saved offline, will sync automatically')
+    } else {
+      // toast.success('Successfully saved') // Optional: bisa di-comment jika terlalu banyak notif
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error in onSaveCurrentTrial:', error)
+
+    resultsState.value = previousResults
+    isSaved.value = previousIsSaved
+
+    toast.error('Something went wrong. Please try again.')
     return { success: false }
+  } finally {
+    submitLoading.value = false
   }
-
-  return { success: true }
 }
 
+// onChoosePrompt dengan guard
 const onChoosePrompt = async (prompt: Prompt) => {
   if (sessionStore.session?.status !== 'ongoing') return
+
+  // Prevent multiple submissions
+  if (submitLoading.value) {
+    toast.warning('Saving data, please wait...')
+    return
+  }
+
   const newTrial: Trial = {
     ...currentTrial.value,
     prompt_id: prompt.id,
     prompt_parent_id: prompt.prompt_parent_id
   }
 
-  // choose new prompt value
+  // Simpan state sebelumnya untuk rollback
+  const previousTrial = { ...currentTrial.value }
+
   isSaved.value = false
   currentTrial.value = newTrial
+
+  // Reset idle timer
+  resetIdleTimer()
 
   // if edit trial - skip assign next task and select-next-task
   if (isOpenEditTrial.value) {
@@ -433,7 +559,12 @@ const onChoosePrompt = async (prompt: Prompt) => {
   }
 
   const { success } = await onSaveCurrentTrial()
-  if (!success) return
+
+  if (!success) {
+    // Rollback jika gagal
+    currentTrial.value = previousTrial
+    return
+  }
 
   const index = ratioScores.value.findIndex((i) => i.target_id === newTrial.target_id)
   if (index > -1 && index + 1 <= ratioScores.value.length - 1) {
@@ -443,8 +574,10 @@ const onChoosePrompt = async (prompt: Prompt) => {
   }
   currentDisplay.value = 'select-next-task'
 }
+
 const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) => {
   if (sessionStore.session?.status !== 'ongoing') return
+
   let newId: Trial['target_problem_behavior_id'] = problemBehavior.id
   if (currentTrial.value.target_problem_behavior_id === newId) {
     newId = null
@@ -455,9 +588,11 @@ const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) =
     target_problem_behavior_id: newId
   }
 
-  // choose new problem behavior value
   isSaved.value = false
   currentTrial.value = newTrial
+
+  // Reset idle timer
+  resetIdleTimer()
 
   if (isOpenEditTrial.value) {
     return
@@ -466,6 +601,7 @@ const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) =
   const { success } = await onSaveCurrentTrial()
   if (!success) return
 }
+
 const onUndoTrial = () => {
   if (sessionStore.session?.status !== 'ongoing') return
   const results = Object.keys(resultsState.value).map((key) => ({
@@ -478,23 +614,21 @@ const onUndoTrial = () => {
     target_id: 0,
     prompt_id: 0,
     prompt_parent_id: null,
-    target_problem_behavior_id: null // optional
+    target_problem_behavior_id: null
   }
   if (results.length) {
-    // take last trial for current trial
     newTrial = {
       ...results[results.length - 1],
       key: results.length
     }
   }
-  // change active trial
   currentTrial.value = newTrial
 
-  // change next task
   const index = ratioScores.value.findIndex((i) => i.target_id === newTrial.target_id)
   nextTarget.value = ratioScores.value[index]
   currentDisplay.value = 'reselect-task'
 }
+
 const onTakeNextTrial = (payload: { isNew: boolean }) => {
   if (sessionStore.session?.status !== 'ongoing') return
   const newKey = payload.isNew ? Number(currentTrial.value.key) + 1 : currentTrial.value.key
@@ -503,14 +637,14 @@ const onTakeNextTrial = (payload: { isNew: boolean }) => {
     target_id: nextTarget.value?.target_id,
     prompt_id: 0,
     prompt_parent_id: null,
-    target_problem_behavior_id: null // optional
+    target_problem_behavior_id: null
   }
   resultsState.value[newTrial.key] = {
     key: newTrial.key,
     target_id: newTrial.target_id,
     prompt_id: newTrial.prompt_id,
     prompt_parent_id: newTrial.prompt_parent_id,
-    target_problem_behavior_id: newTrial.target_problem_behavior_id // optional
+    target_problem_behavior_id: newTrial.target_problem_behavior_id
   }
   currentDisplay.value = 'select-prompt'
   currentTrial.value = newTrial
@@ -528,19 +662,22 @@ const onOpenEditTrial = (key: Trial['key']) => {
     currentTrial.value = results[index]
     currentDisplay.value = 'select-prompt'
 
-    // open edit trial
     isSaved.value = false
   }
 }
+
 const onCloseEditTrial = () => {
-  // cancel edit trial
   isSaved.value = true
   isOpenEditTrial.value = false
 }
 
+// onDeleteTrial dengan proper error handling
 const onDeleteTrial = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
   if (submitLoading.value) return { success: false }
+
+  // Simpan state sebelumnya untuk rollback
+  const previousResults = { ...resultsState.value }
 
   const key = deleteTrialKey.value
   let results = Object.keys(resultsState.value).map((key) => {
@@ -566,21 +703,36 @@ const onDeleteTrial = async () => {
   }
 
   submitLoading.value = true
-  const { success, message, data } = await sessionStore.updateMeasurementResults(params)
-  submitLoading.value = false
+  try {
+    const { success, message, data } = await sessionStore.updateMeasurementResults(params)
 
-  // complete saved
-  isSaved.value = true
-  resultsState.value = data.results
-  deleteTrialKey.value = null
+    if (!success) {
+      resultsState.value = previousResults
+      toast.error(message || 'Failed to delete data')
+      return
+    }
 
-  if (!success) {
-    toast.error(message)
-    return
+    isSaved.value = true
+    resultsState.value = data.results
+    deleteTrialKey.value = null
+
+    if (data._pendingSync) {
+      toast.info('Deleted offline, will sync automatically')
+    } else {
+      toast.success('Data deleted')
+    }
+  } catch (error) {
+    console.error('Unexpected error in onDeleteTrial:', error)
+    resultsState.value = previousResults
+    toast.error('Something went wrong. Please try again.')
+  } finally {
+    submitLoading.value = false
   }
 }
 
 const onSaveEditTrial = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   const { success } = await onSaveCurrentTrial()
   if (!success) return
   isOpenEditTrial.value = false
@@ -672,6 +824,9 @@ const onSaveEditTrial = async () => {
           </AppButton>
         </div>
         <div class="flex items-center gap-1">
+          <div v-if="submitLoading">
+            <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+          </div>
           <div class="text-sm text-slate-7">Trial</div>
           <div class="text-sm font-semibold text-light-purple-5">
             <span v-if="sessionStore.session?.status === 'completed'">
@@ -710,7 +865,6 @@ const onSaveEditTrial = async () => {
                   <div
                     class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl border transition-all duration-300 hover:brightness-95"
                     :class="{
-                      'pointer-events-none': submitLoading,
                       'brightness-75 ': prompt.id === currentTrial.prompt_id,
                       'border ': prompt.id !== currentTrial.prompt_id
                     }"
@@ -967,6 +1121,7 @@ const onSaveEditTrial = async () => {
           kind="outline"
           class="w-full"
           :size="is_collapsed ? 'sm' : 'base'"
+          :disabled="submitLoading"
           @click="isOpenProblemBehavior = false"
         >
           Back to result
@@ -977,6 +1132,7 @@ const onSaveEditTrial = async () => {
           kind="outline"
           class="w-full"
           :size="is_collapsed ? 'sm' : 'base'"
+          :disabled="submitLoading"
           @click="onCloseTrialHistory"
         >
           Back
@@ -1004,6 +1160,7 @@ const onSaveEditTrial = async () => {
           v-if="!isOpenEditTrial && !is_collapsed"
           kind="outline"
           class="shrink-0"
+          :disabled="submitLoading"
           @click="onOpenTrialHistory"
         >
           <Icon icon="material-symbols:menu-rounded" class="text-xl" />
@@ -1012,6 +1169,7 @@ const onSaveEditTrial = async () => {
           v-if="isOpenEditTrial && !is_collapsed"
           kind="outline"
           class="shrink-0"
+          :disabled="submitLoading"
           @click="onCloseEditTrial"
         >
           <Icon icon="material-symbols:menu-rounded" class="text-xl" />

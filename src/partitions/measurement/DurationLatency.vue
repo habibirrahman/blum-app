@@ -7,6 +7,7 @@ const sessionStore = useSessionStore()
 
 interface Props {
   measurement: Measurement
+  measurement_results: Measurement['results']
   is_started: boolean
   timer: string
   update_loading: boolean
