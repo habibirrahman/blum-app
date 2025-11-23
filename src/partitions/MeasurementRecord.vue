@@ -65,7 +65,7 @@ onMounted(async () => {
     props.measurement.type === 'Measurement::Duration' ||
     props.measurement.type === 'Measurement::Latency'
   ) {
-    generateLaps(measurementResults)
+    generateLaps(measurementResults.value)
   }
 
   target.value = props.measurement.target
