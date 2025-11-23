@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import type { Client, Session, Target } from '@/lib/types'
+import type { ActionRecommendation, Client, Session, Target } from '@/lib/types'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getClientStorage, setClientStorage } from '@/plugins/preferences.plugin'
 import { onlyUniqueId } from '@/lib/func'
@@ -352,6 +352,45 @@ export const useClientStore = defineStore('client', {
         .patch(`/api/v1/cancel_duplicate_targets_job/${data.job_id}`)
         .then(async ({ data }) => {
           this.client_target_job = data
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+
+    async updateTarget({ id, data }: { id: Target['id']; data: Partial<Target> }): Promise<ResponseSchema> {
+      return axios
+        .patch(`/api/v1/targets/${id}`, data)
+        .then(async ({ data }) => {
+          this.target = data
+          this.syncClientStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+
+    async createActionRecommendation({ data }: { data: ActionRecommendation }): Promise<ResponseSchema> {
+      return axios
+        .post(`/api/v1/action_recommendations`, {
+          action_recommendation: data
+        })
+        .then(async ({ data }) => {
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+
+    async updateActionRecommendation({ id, data }: { id: ActionRecommendation['id']; data: Partial<ActionRecommendation> }): Promise<ResponseSchema> {
+      return axios
+        .patch(`/api/v1/action_recommendations/${id}`, {
+          action_recommendation: data
+        })
+        .then(async ({ data }) => {
           return { success: true, data }
         })
         .catch(({ response }) => {
