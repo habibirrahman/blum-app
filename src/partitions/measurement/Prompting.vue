@@ -186,6 +186,18 @@ const onChangeScore = async (prompt: any, score: number) => {
   const gapScore = newScore - props.measurement_results[prompt.key].score
   scoreLoadingBox.value = prompt.key
   typeLoadingBox.value = score
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: score === 1 ? `prompting_add` : `prompting_subtract`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: results.value } },
+    notes: `Target: ${props.measurement.target?.name} [${prompt.key}: ${newScore}]`,
+    timestamp: new Date().toISOString()
+  })
+
   onSaveScore(prompt.key, props.measurement_results[prompt.key], gapScore)
 }
 </script>

@@ -131,6 +131,18 @@ const onChangePercentage = async (box: PercentageBox) => {
 
   // save state
   percentageLoadingBox.value = box.key
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `percentage_score`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: results.value } },
+    notes: `Target: ${props.measurement.target?.name} [${box.key}: ${val}]`,
+    timestamp: new Date().toISOString()
+  })
+
   onSavePercentage(box)
 }
 </script>

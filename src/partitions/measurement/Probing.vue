@@ -128,6 +128,18 @@ const onAdd = async (bool: boolean) => {
   probingLoading.value = true
   if (bool) plusProbingLoading.value = true
   else reduceProbingLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: bool ? `probing_success` : `probing_failed`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name} [${length}: ${bool}]`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
   plusProbingLoading.value = false
@@ -165,7 +177,20 @@ const onRemove = async (circle: ProbingCircle) => {
 
   probingLoading.value = true
   removeProbingLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `probing_delete`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name} [${circle.key}]`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message } = await sessionStore.updateMeasurementResults(params)
+
   probingLoading.value = false
   removeProbingLoading.value = false
 
@@ -183,10 +208,20 @@ watch(showPanel, (val) => {
 })
 const isProbingPassed = ref<boolean>(false)
 const showCelebration = ref<boolean>(false)
-const onSubmitProbing = () => {
+const onSubmitProbing = async () => {
   probingAction.value = null
   showPanel.value = true
   isProbingPassed.value = probingScore.value >= (props.measurement.target?.probing_goal || 0)
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `probing_submit`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
   if (isProbingPassed.value) {
     showCelebration.value = true
     setTimeout(() => {
@@ -308,6 +343,20 @@ const probingActionOptions = computed<ProbingAction[]>(() => {
   }
 })
 
+const onSelectProbingAction = async (act: ProbingAction) => {
+  probingAction.value = act
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `probing_select_action`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    params: act,
+    notes: `Target: ${props.measurement.target?.name} [${act.id}]`,
+    timestamp: new Date().toISOString()
+  })
+}
+
 const saveLoading = ref<boolean>(false)
 
 const onSave = async () => {
@@ -316,7 +365,23 @@ const onSave = async () => {
     visible: probingAction.value?.visible,
     marked_as: probingAction.value?.marked_as
   }
+
   saveLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `probing_post_action`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}/mark_probing`,
+    params: {
+      visible: probingAction.value?.visible,
+      marked_as: probingAction.value?.marked_as
+    },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message } = await sessionStore.updateMeasurementMarkProbing(params)
   saveLoading.value = false
   if (!success) {
@@ -525,7 +590,7 @@ const onSave = async () => {
               'border-white': probingAction?.id !== opt.id
             }"
             :style="{ boxShadow: '0px 4px 8px -2px #B9D84333' }"
-            @click="probingAction = opt"
+            @click="onSelectProbingAction(opt)"
           >
             <div class="flex items-center gap-2">
               <div class="text-sm font-semibold text-slate-8">{{ opt.title }}</div>

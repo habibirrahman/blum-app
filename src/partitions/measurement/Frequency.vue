@@ -68,6 +68,18 @@ const onChangeScore = async (score: number) => {
 
   // save state
   const gapScore = currentScore.value - (props.measurement?.results?.score || 0)
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: score === 1 ? `frequency_add` : `frequency_subtract`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: { score: currentScore.value } } },
+    notes: `Target: ${props.measurement.target?.name} [${currentScore.value}]`,
+    timestamp: new Date().toISOString()
+  })
+
   onSaveScore(gapScore)
 }
 </script>

@@ -112,27 +112,33 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
         <div class="flex justify-center pb-2">:</div>
         <div class="flex justify-center">{{ timer.split(':')[2] }}</div>
       </div>
+
       <div class="flex items-center w-full gap-3">
         <AppButton
           v-if="is_started || (!is_started && laps && laps.length === 0)"
-          :loading="lap_loading"
           class="w-2/4 rounded-full"
+          :class="{
+            'pointer-events-none': sessionStore.session?.status !== 'ongoing'
+          }"
           color="prim"
-          :disabled="!is_started && sessionStore.session?.status !== 'ongoing' || (is_started ? false : is_disabled_action)"
-          :class="{ 'opacity-50': !is_started }"
+          :loading="lap_loading"
+          :disabled="!is_started || is_disabled_action"
           @click="$emit('record-lap')"
         >
           Lap
         </AppButton>
         <AppButton
           v-if="!is_started && laps && laps.length > 0"
-          label="Reset"
           class="w-2/4 rounded-full"
+          :class="{
+            'pointer-events-none': sessionStore.session?.status !== 'ongoing'
+          }"
           color="prim"
-          :disabled="sessionStore.session?.status !== 'ongoing' || is_disabled_action"
+          :disabled="is_disabled_action"
           @click="$emit('reset-laps-confirm')"
-          >Reset</AppButton
         >
+          Reset
+        </AppButton>
         <AppButton
           class="w-2/4 rounded-full"
           :class="{
@@ -146,6 +152,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           {{ is_started ? 'Stop' : 'Start' }}
         </AppButton>
       </div>
+
       <div
         v-if="laps.length > 0 && !is_collapsed"
         class="w-full mt-2 overflow-scroll"

@@ -198,9 +198,6 @@ const resetIdleTimer = () => {
   }, 5000)
 }
 
-// Periodic check untuk stuck items
-let periodicCheckInterval: any = null
-
 onMounted(async () => {
   const prompts = props.target?.prompts || []
   const tasks = props.target?.target_tasks || []
@@ -263,36 +260,10 @@ onMounted(async () => {
     }
     currentTrial.value = newTrial
   }
-
-  // Setup auto-sync (hanya sekali)
-  if (!sessionStore._autoSyncInitialized) {
-    sessionStore.setupAutoSync()
-  }
-
-  // Process pending items jika online
-  if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
-    console.log('[Component] Processing pending items on mount')
-    await sessionStore.resolvePendingProgress()
-  }
-
-  // Setup periodic check untuk stuck items
-  periodicCheckInterval = setInterval(() => {
-    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
-
-    const stuckItems = sessionStore.pending_progress.filter(
-      (item) => item.timestamp && item.timestamp < fiveMinutesAgo
-    )
-
-    if (stuckItems.length > 0 && appStore.network_status.connected) {
-      console.warn('[Component] Found stuck items, triggering sync')
-      sessionStore.triggerSync(true)
-    }
-  }, 60000) // Check setiap 1 menit
 })
 
 // Cleanup saat unmount
 onUnmounted(() => {
-  clearInterval(periodicCheckInterval)
   clearTimeout(idleTimer)
 
   // Trigger sync sebelum unmount jika ada perubahan
@@ -383,8 +354,30 @@ const generateRatioScores = () => {
   ratioScores.value = [...assignedMaxRatio]
 }
 
-const onOpenTrialHistory = () => {
+const onOpenTrialHistory = async () => {
   isOpenTrialHistory.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_open_trails`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+}
+
+const onOpenProblemBehavior = async () => {
+  isOpenProblemBehavior.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_open_pb`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
 }
 
 const onCloseTrialHistory = () => {
@@ -516,6 +509,17 @@ const onChoosePrompt = async (prompt: Prompt) => {
   // Reset idle timer
   resetIdleTimer()
 
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_select_prompt`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: { [newTrial.key]: newTrial } } },
+    notes: `Target: ${props.measurement.target?.name} [${newTrial.key}: ${prompt.id} ${prompt.abbreviation}]`,
+    timestamp: new Date().toISOString()
+  })
+
   // if edit trial - skip assign next task and select-next-task
   if (isOpenEditTrial.value) {
     return
@@ -541,9 +545,17 @@ const onChoosePrompt = async (prompt: Prompt) => {
 const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) => {
   if (sessionStore.session?.status !== 'ongoing') return
 
+  // Prevent multiple submissions
+  if (submitLoading.value) {
+    toast.warning('Saving data, please wait...')
+    return
+  }
+
   let newId: Trial['target_problem_behavior_id'] = problemBehavior.id
+  let newCode: TargetProblemBehavior['code_definition'] = problemBehavior.code_definition
   if (currentTrial.value.target_problem_behavior_id === newId) {
     newId = null
+    newCode = ''
   }
 
   const newTrial: Trial = {
@@ -557,6 +569,17 @@ const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) =
   // Reset idle timer
   resetIdleTimer()
 
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_select_pb`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: { [newTrial.key]: newTrial } } },
+    notes: `Target: ${props.measurement.target?.name} [${newTrial.key}: ${newId} ${newCode}]`,
+    timestamp: new Date().toISOString()
+  })
+
   if (isOpenEditTrial.value) {
     return
   }
@@ -565,7 +588,20 @@ const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) =
   if (!success) return
 }
 
-const onUndoTrial = () => {
+const onChooseTask = async (taskCode: any) => {
+  nextTask.value = taskCode
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_select_task`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.measurement.target?.name} [${taskCode.code}]`,
+    timestamp: new Date().toISOString()
+  })
+}
+
+const onUndoTrial = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
   const results = Object.keys(resultsState.value).map((key) => ({
     ...resultsState.value[key],
@@ -589,9 +625,31 @@ const onUndoTrial = () => {
   const index = ratioScores.value.findIndex((i) => i.id === newTrial.target_task_id)
   nextTask.value = ratioScores.value[index]
   currentDisplay.value = 'reselect-task'
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_change_task`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
 }
 
-const onTakeNextTrial = (payload: { isNew: boolean }) => {
+const onChangeForChoosePrompt = async () => {
+  currentDisplay.value = 'select-prompt'
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_change_prompt`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+}
+
+const onTakeNextTrial = async (payload: { isNew: boolean }) => {
   if (sessionStore.session?.status !== 'ongoing') return
   const newKey = payload.isNew ? Number(currentTrial.value.key) + 1 : currentTrial.value.key
   const newTrial: Trial = {
@@ -610,25 +668,77 @@ const onTakeNextTrial = (payload: { isNew: boolean }) => {
   currentTrial.value = newTrial
   nextTask.value = {}
   generateRatioScores()
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_next_trail`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.measurement.target?.name} [${newTrial.target_task_id}]`,
+    timestamp: new Date().toISOString()
+  })
 }
 
-const onOpenEditTrial = (key: Trial['key']) => {
+const onOpenEditTrial = async (key: Trial['key']) => {
   let results = Object.keys(resultsState.value).map((key) => {
     return { ...resultsState.value[key], key }
   })
   const index = results.findIndex((i) => Number(i.key) === Number(key))
+
   if (index > -1) {
     isOpenEditTrial.value = true
     currentTrial.value = results[index]
     currentDisplay.value = 'select-prompt'
 
     isSaved.value = false
+
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `sbt_open_edit_trail`,
+      recordable: 'Measurement',
+      recordable_id: props.measurement.id,
+      notes: `Target: ${props.measurement.target?.name}`,
+      timestamp: new Date().toISOString()
+    })
   }
 }
 
 const onCloseEditTrial = () => {
   isSaved.value = true
   isOpenEditTrial.value = false
+}
+
+const onOpenDeleteTrial = async (key: Trial['key']) => {
+  let results = Object.keys(resultsState.value).map((key) => {
+    return { ...resultsState.value[key], key }
+  })
+  const index = results.findIndex((i) => Number(i.key) === Number(key))
+
+  if (index > -1) {
+    deleteTrialKey.value = key
+
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `sbt_open_delete_trail`,
+      recordable: 'Measurement',
+      recordable_id: props.measurement.id,
+      notes: `Target: ${props.measurement.target?.name}`,
+      timestamp: new Date().toISOString()
+    })
+  }
+}
+
+const onCancelDeleteTrail = async () => {
+  deleteTrialKey.value = null
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_cancel_delete_trail`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
 }
 
 // onDeleteTrial dengan proper error handling
@@ -663,12 +773,23 @@ const onDeleteTrial = async () => {
 
   submitLoading.value = true
 
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_delete_trail`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name} [${key}]`,
+    timestamp: new Date().toISOString()
+  })
+
   try {
     const { success, message, data } = await sessionStore.updateMeasurementResults(params)
 
     if (!success) {
       resultsState.value = previousResults
-      toast.error(message || 'Failed to delete data')
+      toast.error(message || 'Failed to delete trial')
       return
     }
 
@@ -679,7 +800,7 @@ const onDeleteTrial = async () => {
     if (data._pendingSync) {
       toast.info('Deleted offline, will sync automatically')
     } else {
-      toast.success('Data deleted')
+      toast.success('Trial deleted')
     }
   } catch (error) {
     console.error('Unexpected error in onDeleteTrial:', error)
@@ -692,6 +813,17 @@ const onDeleteTrial = async () => {
 
 const onSaveEditTrial = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `sbt_update_trail`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: { [currentTrial.value.key]: currentTrial.value } } },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
 
   const { success } = await onSaveCurrentTrial()
   if (!success) return
@@ -885,7 +1017,7 @@ const onSaveEditTrial = async () => {
                   :kind="taskCode.id === nextTask?.id ? 'primary' : 'outline'"
                   size="sm"
                   class="shrink-0"
-                  @click="nextTask = taskCode"
+                  @click="onChooseTask(taskCode)"
                 >
                   {{ taskCode.code }} | {{ taskCode.count + 1 }}
                 </AppButton>
@@ -923,12 +1055,7 @@ const onSaveEditTrial = async () => {
             >
               {{ currentTrialData.prompt.score }}%
             </span>
-            <AppButton
-              v-if="!is_collapsed"
-              kind="plain"
-              size="sm"
-              @click="currentDisplay = 'select-prompt'"
-            >
+            <AppButton v-if="!is_collapsed" kind="plain" size="sm" @click="onChangeForChoosePrompt">
               Change
             </AppButton>
           </div>
@@ -950,7 +1077,7 @@ const onSaveEditTrial = async () => {
                   :kind="taskCode.id === nextTask?.id ? 'primary' : 'outline'"
                   size="sm"
                   class="shrink-0"
-                  @click="nextTask = taskCode"
+                  @click="onChooseTask(taskCode)"
                 >
                   {{ taskCode.code }} | {{ taskCode.count + 1 }}
                 </AppButton>
@@ -1040,7 +1167,7 @@ const onSaveEditTrial = async () => {
               class="flex items-center gap-2"
             >
               <Icon icon="ph:check-bold" class="text-grass-6" @click="onDeleteTrial" />
-              <Icon icon="ph:x-bold" class="text-tomato-7" @click="deleteTrialKey = null" />
+              <Icon icon="ph:x-bold" class="text-tomato-7" @click="onCancelDeleteTrail" />
             </div>
             <div
               v-else-if="sessionStore.session?.status !== 'completed'"
@@ -1051,7 +1178,7 @@ const onSaveEditTrial = async () => {
                 v-if="Object.values(resultsState).filter((i: any) => i.target_task_id).length > 1"
                 icon="ph:trash"
                 class="text-tomato-7"
-                @click="deleteTrialKey = key"
+                @click="onOpenDeleteTrial(key)"
               />
             </div>
           </div>
@@ -1157,7 +1284,7 @@ const onSaveEditTrial = async () => {
             'bg-tomato-2': !currentTrial.target_problem_behavior_id,
             'bg-tomato-7': currentTrial.target_problem_behavior_id
           }"
-          @click="isOpenProblemBehavior = true"
+          @click="onOpenProblemBehavior"
         >
           <span
             class="text-sm font-semibold"

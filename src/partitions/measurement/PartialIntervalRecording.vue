@@ -67,6 +67,18 @@ const onAddScore = async () => {
   }
 
   scoreLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `pir_incident`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message } = await sessionStore.updateMeasurementResults(params)
   scoreLoading.value = false
 

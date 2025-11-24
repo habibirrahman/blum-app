@@ -144,6 +144,18 @@ const onChangePercentage = async (box: PercentageBox) => {
 
   // save state
   percentageLoadingBox.value = box.key
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `tbt_score`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: results.value } },
+    notes: `Target: ${props.measurement.target?.name} [${box.key}: ${val}]`,
+    timestamp: new Date().toISOString()
+  })
+
   onSavePercentage(box)
 }
 
@@ -163,6 +175,18 @@ const onAddBox = async () => {
   }
 
   percentageLoadingBox.value = 'add-box'
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `tbt_add`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   percentageLoadingBox.value = null
 
@@ -197,6 +221,18 @@ const onRemoveBox = async (box: PercentageBox) => {
   }
 
   percentageLoadingBox.value = 'remove-box'
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `tbt_delete`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name} [${box.key}]`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   percentageLoadingBox.value = null
 

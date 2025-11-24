@@ -747,7 +747,7 @@ onMounted(async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-95"
-    class="fixed left-0 top-0 z-[22] h-screen w-screen bg-[#1d2939]"
+    class="fixed left-0 top-0 z-[1022] h-screen w-screen bg-[#1d2939]"
   >
     <div class="relative w-full h-full">
       <div class="flex items-center justify-center h-full">
@@ -787,13 +787,13 @@ onMounted(async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-75"
-    class="fixed left-0 top-0 z-[21] h-screen w-screen bg-white p-safe"
+    class="fixed left-0 top-0 z-[1021] h-screen w-screen bg-white p-safe"
   >
     <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
     <div class="flex-colh-[52px] sticky top-0 z-[10] flex shrink-0 flex-col gap-3 bg-white px-4">
-      <div class="flex items-center gap-3">
+      <div class="flex h-[52px] items-center gap-3">
         <div
           class="flex items-center justify-center w-8 h-8 rounded-full shrink-0 bg-slate-2"
           @click="showNew = false"
@@ -921,7 +921,7 @@ onMounted(async () => {
     leave="transition-all duration-200 ease-in"
     leave-from="opacity-100 scale-100"
     leave-to="opacity-0 scale-95"
-    class="fixed left-0 top-0 z-[25] h-screen w-screen bg-[#1d2939]"
+    class="fixed left-0 top-0 z-[1025] h-screen w-screen bg-[#1d2939]"
   >
     <div class="relative w-full h-full">
       <!-- Close button -->
@@ -983,7 +983,7 @@ onMounted(async () => {
     leave="transition-opacity ease-linear duration-300"
     leave-from="opacity-100"
     leave-to="opacity-0"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-white/75"
+    class="fixed inset-0 z-[1050] flex items-center justify-center bg-white/75"
   >
     <div class="flex items-center justify-center">
       <div

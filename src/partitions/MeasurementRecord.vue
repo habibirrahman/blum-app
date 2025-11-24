@@ -4,7 +4,7 @@ import {
   type UpdateMeasurementParams,
   type UpdateMeasurementResultsParams
 } from '@/stores/session.store'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
@@ -22,8 +22,10 @@ import { useToast } from 'vue-toastification'
 import TrialByTrial from './measurement/TrialByTrial.vue'
 import ColdProbe from './measurement/ColdProbe.vue'
 import TaskAnalysis from './measurement/TaskAnalysis.vue'
+import { useAppStore } from '@/stores/app.store'
 
 const toast = useToast()
+const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
 interface Props {
@@ -48,8 +50,48 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<Emits>()
 
+// Periodic check untuk stuck items
+let periodicCheckInterval: any = null
+
 onMounted(async () => {
-  measurementResults.value = props.measurement.results
+  if (sessionStore.session?.status === 'ongoing') {
+    // Setup auto-sync (hanya sekali)
+    if (!sessionStore._autoSyncInitialized) {
+      sessionStore.setupAutoSync()
+    }
+
+    // Process pending items jika online
+    if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
+      console.log('[Component] Processing pending items on mount')
+      await sessionStore.resolvePendingProgress()
+    }
+  }
+
+  await generateResults(props.measurement.results)
+
+  target.value = props.measurement.target
+
+  isDropped.value = props.measurement.is_dropped || false
+  cardLoading.value = false
+})
+
+// Cleanup saat unmount
+onUnmounted(() => {
+  clearInterval(periodicCheckInterval)
+})
+
+const measurementResults = ref<Measurement['results']>()
+
+watch(
+  () => props.measurement.results,
+  async (val) => {
+    await generateResults(val)
+    cardLoading.value = false
+  }
+)
+
+const generateResults = async (res: Measurement['results']) => {
+  measurementResults.value = res
 
   // Restore dari backup jika ada
   const measurementId = Number(props.measurement.id)
@@ -67,14 +109,7 @@ onMounted(async () => {
   ) {
     generateLaps(measurementResults.value)
   }
-
-  target.value = props.measurement.target
-
-  isDropped.value = props.measurement.is_dropped || false
-  cardLoading.value = false
-})
-
-const measurementResults = ref<Measurement['results']>()
+}
 
 const cardLoading = ref<boolean>(true)
 const measurementType = computed<MeasurementType | TargetType | ''>(() => {
@@ -89,6 +124,29 @@ watch(
     if (val) display.value = 'target'
   }
 )
+const onChangeDisplay = async (val: 'target' | 'description' | 'comment') => {
+  if (display.value === val) {
+    display.value = 'target'
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `${val}_close`,
+      recordable: 'Measurement',
+      recordable_id: props.measurement.id,
+      notes: `Closed ${val}, and open target measurement`,
+      timestamp: new Date().toISOString()
+    })
+    return
+  }
+
+  display.value = val
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `${val}_open`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    timestamp: new Date().toISOString()
+  })
+}
 
 const cardId = ref<string>('card-random-id')
 
@@ -131,7 +189,20 @@ const onDrop = async (bool: boolean) => {
     measurement: { is_dropped: !bool },
     data_result: { ...props.measurement, is_dropped: !bool }
   }
+
   isDropLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `measurement_dropped`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: params.measurement },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message, data } = await sessionStore.updateMeasurement(params)
   isDropLoading.value = false
   if (!success) {
@@ -275,6 +346,20 @@ const onToggleTimer = async () => {
       })
     }
     emit('toggle-running')
+
+    const finalResults = Object.fromEntries(
+      laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
+    )
+
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `duration_start`,
+      recordable: 'Measurement',
+      recordable_id: props.measurement.id,
+      params: { measurement: { results: finalResults } },
+      notes: `Target: ${props.measurement.target?.name}`,
+      timestamp: new Date().toISOString()
+    })
   } else {
     // const capturedDurationTime = timerRunning.value
     const capturedLapTime = currentLapTime.value
@@ -299,6 +384,17 @@ const onToggleTimer = async () => {
     }
 
     updateLoading.value = true
+
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `duration_stop`,
+      recordable: 'Measurement',
+      recordable_id: props.measurement.id,
+      params: { measurement: { results: finalResults } },
+      notes: `Target: ${props.measurement.target?.name}`,
+      timestamp: new Date().toISOString()
+    })
+
     const { data } = await sessionStore.updateMeasurementResults(params)
     updateLoading.value = false
 
@@ -345,6 +441,16 @@ const onRecordLap = async () => {
     data_result: { ...props.measurement, results: finalResults },
     last_data: { ...props.measurement }
   }
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `duration_lap`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
 
   const { data } = await sessionStore.updateMeasurementResults(params)
 
@@ -400,6 +506,16 @@ const onResetLaps = async () => {
       last_data: { ...props.measurement }
     }
 
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `duration_reset`,
+      recordable: 'Measurement',
+      recordable_id: props.measurement.id,
+      params: { measurement: { results: finalResults } },
+      notes: `Target: ${props.measurement.target?.name}`,
+      timestamp: new Date().toISOString()
+    })
+
     const { success, data } = await sessionStore.updateMeasurementResults(params)
 
     if (!success) {
@@ -444,14 +560,14 @@ const onToggleSaved = (saved: boolean) => {
         <div
           class="flex items-center justify-center w-6 h-6 transition-all rounded"
           :class="{ 'bg-white': display === 'description' }"
-          @click="display = display === 'description' ? 'target' : 'description'"
+          @click="onChangeDisplay('description')"
         >
           <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
         </div>
         <div
           class="relative flex items-center justify-center w-6 h-6 transition-all rounded"
           :class="{ 'bg-white': display === 'comment' }"
-          @click="display = display === 'comment' ? 'target' : 'comment'"
+          @click="onChangeDisplay('comment')"
         >
           <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
           <div
