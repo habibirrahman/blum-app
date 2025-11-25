@@ -241,7 +241,20 @@ const onSaveComment = async () => {
     measurement: { comment: commentInput.value },
     data_result: { ...props.measurement, comment: commentInput.value }
   }
+
   commentLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `comment_save`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: params.measurement },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message } = await sessionStore.updateMeasurement(params)
   commentLoading.value = false
   if (!success) {
