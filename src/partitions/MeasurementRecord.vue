@@ -67,6 +67,7 @@ onMounted(async () => {
     }
   }
 
+  cardLoading.value = true
   await generateResults(props.measurement.results)
 
   target.value = props.measurement.target
@@ -87,7 +88,8 @@ watch(
   async (val) => {
     await generateResults(val)
     cardLoading.value = false
-  }
+  },
+  { deep: true }
 )
 
 const generateResults = async (res: Measurement['results']) => {
