@@ -89,6 +89,9 @@ watch(
 )
 
 const onSavePercentage = debounce(async function (box: PercentageBox) {
+  // igonre save for the same box
+  // if (percentageLoadingBox.value === box.key) return
+
   let val = null
   if (box.value === null) val = true
   if (box.value === true) val = false
@@ -105,6 +108,7 @@ const onSavePercentage = debounce(async function (box: PercentageBox) {
   }
 
   percentageLoadingBox.value = box.key
+  console.log('[onSavePercentage] start')
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   percentageLoadingBox.value = null
 

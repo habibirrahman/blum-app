@@ -982,7 +982,9 @@ const onToggleSaved = (saved: boolean) => {
             <!-- end group targets -->
           </div>
           <div class="absolute bottom-0 flex h-16 w-[calc(100%-2rem)] items-center bg-pure-white">
-            <AppButton kind="outline" class="w-full" @click="display = 'target'">Close</AppButton>
+            <AppButton kind="outline" class="w-full" @click="onChangeDisplay('description')">
+              Close
+            </AppButton>
           </div>
         </div>
         <div
@@ -1008,12 +1010,14 @@ const onToggleSaved = (saved: boolean) => {
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"
               class="w-full"
-              @click="display = 'target'"
+              @click="onChangeDisplay('comment')"
             >
               Close
             </AppButton>
             <div v-else class="grid grid-cols-2">
-              <AppButton kind="plain" class="w-full" @click="display = 'target'">Cancel</AppButton>
+              <AppButton kind="plain" class="w-full" @click="onChangeDisplay('comment')">
+                Cancel
+              </AppButton>
               <AppButton
                 class="w-full"
                 :disabled="isDisabledSaveComment"

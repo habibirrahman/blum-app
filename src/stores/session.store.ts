@@ -1578,6 +1578,8 @@ export const useSessionStore = defineStore('session', {
     // ========================================
     async addSessionActivity(params: AddSessionActivity): Promise<void> {
       if (!this.session?.id) return
+      // ignore for not ongoing session
+      if (this.session?.status !== 'ongoing') return
 
       try {
         const key = `session_activities_${this.session.id}`
