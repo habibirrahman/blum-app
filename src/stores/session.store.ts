@@ -750,6 +750,7 @@ export const useSessionStore = defineStore('session', {
     // SESSION FUNCTIONS
     // ========================================
 
+    // SETTER
     setSession(data: Session) {
       this.session = data
       const idx = this.sessions.findIndex((i) => i.id === data.id)
@@ -779,6 +780,29 @@ export const useSessionStore = defineStore('session', {
       this.syncSessionStore()
     },
 
+    // ACTION
+    async getSessions({ params }: { params?: string }) {
+      const app = useAppStore()
+      if (!app.network_status.connected) {
+        // return {
+        //   success: true,
+        //   data: { sessions: this.sessions, total_count: this.sessions_count }
+        // }
+      }
+
+      return axios
+        .get(`/api/v1/sessions/draft_sessions${params}&outcome=targets`)
+        .then(async ({ data }) => {
+          this.sessions = data.sessions
+          this.sessions_count = data.total_count
+          this.syncSessionStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+
     async getSession({ slug }: { slug: Session['slug'] }): Promise<ResponseSchema> {
       const data = this.sessions.find((i) => i.slug === slug)
       if (data) {
@@ -802,6 +826,7 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
+
     async getSessionComments({
       id,
       filter
@@ -833,6 +858,7 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
+
     async getSessionMeasurements({ id }: { id: Session['id'] }): Promise<ResponseSchema> {
       if (!id) return { success: false, data: null }
       this.session_measurements = this.session?.measurements || []
@@ -846,6 +872,18 @@ export const useSessionStore = defineStore('session', {
         .get(`/api/v1/sessions/${id}/measurements`)
         .then(async ({ data }) => {
           this.session_measurements = data
+          // async
+          // sering race condition
+          /*
+          // lebih baik pakai ini
+          setState((prev) => {
+            return { ...prev, ...data }
+          })
+
+          // ini sering race condition jika dipanggil bersaman
+          setState({...this.state, ...data})
+          **/
+
           const session: Session = {
             ...this.session,
             measurements: [...data, ...(this.session?.measurements || [])].filter(onlyUniqueId)
@@ -857,27 +895,7 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async getSessions({ params }: { params?: string }) {
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        // return {
-        //   success: true,
-        //   data: { sessions: this.sessions, total_count: this.sessions_count }
-        // }
-      }
 
-      return axios
-        .get(`/api/v1/sessions/draft_sessions${params}&outcome=targets`)
-        .then(async ({ data }) => {
-          this.sessions = data.sessions
-          this.sessions_count = data.total_count
-          this.syncSessionStore()
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
-    },
     async getUpcomingSessions() {
       const app = useAppStore()
       if (!app.network_status.connected) {
@@ -1090,9 +1108,6 @@ export const useSessionStore = defineStore('session', {
             message: 'Saved offline, will sync automatically'
           }
         }
-
-        // ❌ HAPUS: JANGAN update state sebelum API berhasil!
-        // this.setSessionMeasurement(data_result)
 
         // Tambahkan retry logic dengan exponential backoff
         let lastError: any
