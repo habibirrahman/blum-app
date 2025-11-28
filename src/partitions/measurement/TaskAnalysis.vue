@@ -232,12 +232,13 @@ onMounted(async () => {
   TAPrompts.value = prompts || []
   TAUsedTargets.value = usedTargets || []
   TAProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-  resultsState.value = props.measurement_results
+
+  const currentResults = props.measurement_results || {}
 
   generateRatioScores()
 
-  const results = Object.keys(resultsState.value).map((key) => ({
-    ...resultsState.value[key],
+  const results = Object.keys(currentResults).map((key) => ({
+    ...currentResults[key],
     key
   }))
 
@@ -262,7 +263,7 @@ onMounted(async () => {
         prompt_parent_id: null,
         target_problem_behavior_id: null
       }
-      resultsState.value[newTrial.key] = {
+      currentResults[newTrial.key] = {
         key: newTrial.key,
         target_id: newTrial.target_id,
         prompt_id: newTrial.prompt_id,
@@ -282,7 +283,7 @@ onMounted(async () => {
     if (TAUsedTargets.value.length) {
       newTrial.target_id = TAUsedTargets.value[0].target_id
     }
-    resultsState.value[newTrial.key] = {
+    currentResults[newTrial.key] = {
       key: newTrial.key,
       target_id: newTrial.target_id,
       prompt_id: newTrial.prompt_id,
@@ -291,6 +292,8 @@ onMounted(async () => {
     }
     currentTrial.value = newTrial
   }
+
+  resultsState.value = currentResults
 })
 
 // Cleanup saat unmount
@@ -361,10 +364,11 @@ const generateRatioScores = () => {
    * green ratio: ratio of current task count from the most task count
    * red badge: any problem_behavior(?) yes: put the badge
    */
+  const currentResults = resultsState.value || {}
 
   let maxRatio = 0
-  const results = Object.keys(resultsState.value).map((key) => ({
-    ...resultsState.value[key],
+  const results = Object.keys(currentResults).map((key) => ({
+    ...currentResults[key],
     key
   }))
 

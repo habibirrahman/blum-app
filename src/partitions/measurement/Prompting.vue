@@ -204,6 +204,10 @@ const onChangeScore = async (prompt: any, score: number) => {
 
 <template>
   <div class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div v-if="scoreLoadingBox !== null" class="absolute z-10 bottom-4 right-4">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    </div>
+
     <div class="flex items-center content-center justify-center flex-grow h-full">
       <div
         class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
