@@ -1172,6 +1172,10 @@ export const useSessionStore = defineStore('session', {
             // this.setSessionMeasurement(data)
             const { data: getData } = await this.getMeasurement({ id: patchData.id })
 
+            // Handle new Data
+            let newData = patchData
+            if (getData) newData = getData
+
             // Hapus dari pending queue jika ada
             const queueIndex = this.pending_progress.findIndex(
               (i) => i.key === `update_measurement_${id}`
@@ -1182,9 +1186,9 @@ export const useSessionStore = defineStore('session', {
             }
 
             // Update local backup dengan status synced
-            await this.saveLocalBackup(Number(id), getData, 'synced')
+            await this.saveLocalBackup(Number(id), newData, 'synced')
 
-            return { success: true, data: getData, message: '' }
+            return { success: true, data: newData, message: '' }
           } catch (err) {
             lastError = err
 
