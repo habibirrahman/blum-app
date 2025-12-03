@@ -227,6 +227,7 @@ export type TargetPromptingFormat = 'classic' | 'custom'
 export type TargetColdProbeFormat = 'classic' | 'custom'
 export interface Target {
   id?: number
+  action_recommendations?: ActionRecommendation[]
   type?: TargetType
   status?: TargetStatus
   prompting_format?: TargetPromptingFormat

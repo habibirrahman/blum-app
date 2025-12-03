@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { getAppStorage, setAccessStorage, setAppStorage } from '@/plugins/preferences.plugin'
-import type { Branch, Session, User } from '@/lib/types'
+import type { Branch, Session, Target, User } from '@/lib/types'
 import axios from 'axios'
 import { useSessionStore } from './session.store'
 import { useClientStore } from './client.store'
@@ -10,6 +10,8 @@ export interface AppStateSchema {
   account: User | null
   running_sessions: Session[]
   branches: Branch[]
+  center_targets: Target[]
+  total_center_targets: number
 }
 
 export interface ResponseSchema {
@@ -35,7 +37,9 @@ export const useAppStore = defineStore('app', {
     network_status: { connected: false, connection_type: 'none' },
     account: null,
     running_sessions: [],
-    branches: []
+    branches: [],
+    center_targets: [],
+    total_center_targets: 0
   }),
   getters: {},
   actions: {
@@ -68,7 +72,9 @@ export const useAppStore = defineStore('app', {
         network_status: this.network_status,
         account: this.account,
         running_sessions: this.running_sessions,
-        branches: this.branches
+        branches: this.branches,
+        center_targets: this.center_targets,
+        total_center_targets: this.total_center_targets
       }
       const { success } = await setAppStorage(data)
       return { success }
@@ -148,6 +154,67 @@ export const useAppStore = defineStore('app', {
           // this.branches_count = data.total_count
           this.syncAppStore()
           return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getTargets({ params }: { params?: string }): Promise<ResponseSchema> {
+      if (!this.network_status.connected) {
+        // return {
+        //   success: true,
+        //   data: { targets: this.targets, total_count: this.targets_count }
+        // }
+      }
+
+      return axios
+        .get(`/api/v1/targets${params}`)
+        .then(async ({ data }) => {
+          this.center_targets = data.targets
+          this.total_center_targets = data.total_count
+          this.syncAppStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getTarget({
+      id,
+      plain = false
+    }: {
+      id?: Target['id']
+      plain?: boolean
+    }): Promise<ResponseSchema> {
+      if (!this.network_status.connected && !plain) {
+        // return { success: true, data: this.target }
+      }
+
+      return axios
+        .get(`/api/v1/targets/${id}`)
+        .then(async ({ data }) => {
+          if (plain) {
+            return { success: true, data }
+          }
+          this.syncAppStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getCurriculums({ params }: { params?: string }): Promise<ResponseSchema> {
+      if (!this.network_status.connected) {
+        // return {
+        //   success: true,
+        //   data: { curriculums: this.curriculums, total_count: this.curriculums_count }
+        // }
+      }
+
+      return axios
+        .get(`/api/v1/curriculums${params}`)
+        .then(async ({ data }) => {
+          return { success: true, data: data.curriculums }
         })
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }

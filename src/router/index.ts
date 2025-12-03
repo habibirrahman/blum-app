@@ -34,6 +34,11 @@ const router = createRouter({
       component: () => import('../pages/ClientDetails.page.vue')
     },
     {
+      path: '/client/:id/targets/:target_id/edit',
+      name: 'edit-client-target',
+      component: () => import('../pages/EditClientTarget.page.vue')
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('../pages/ProfileApp.page.vue')

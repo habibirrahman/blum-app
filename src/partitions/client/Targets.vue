@@ -10,14 +10,16 @@ import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppButton from '@/components/AppButton.vue'
 import TargetItem from '../TargetItem.vue'
-import AppChip from '@/components/AppChip.vue'
-import { getTargetType } from '@/lib/func'
 import TargetItemLoader from '@/components/skeletons/TargetItemLoader.vue'
+import AddTargetFromDatabank from '@/partitions/target/AddTargetFromDatabank.vue'
+import PreviewTargetModal from '@/partitions/target/PreviewTargetModal.vue'
+import TargetJobProgression from '../target/TargetJobProgression.vue'
 
 const route = useRoute()
 const clientStore = useClientStore()
 
 const targetsLoading = ref<boolean>(false)
+const addTargetOpen = ref<boolean>(false)
 
 const page = ref<number>(1)
 const perPage = ref<number>(25)
@@ -159,13 +161,17 @@ const onToggleGroup = (id: Target['id']) => {
   </div>
 
   <div class="space-y-3 bg-white pt-3">
-    <div class="px-4">
+    <div class="flex items-center gap-3 px-4">
       <AppTextInput
+        class="grow"
         name="query"
         placeholder="Search target by name"
         v-model="query"
         suffix_icon="ph:magnifying-glass"
       />
+      <AppButton class="flex-shrink-0" @click="addTargetOpen = true"
+        ><Icon icon="ph:plus-bold"
+      /></AppButton>
     </div>
     <div class="pl-4">
       <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
@@ -201,6 +207,8 @@ const onToggleGroup = (id: Target['id']) => {
       </div>
     </div>
   </div>
+
+  <TargetJobProgression />
 
   <div v-if="targetsLoading">
     <div class="px-4 pt-2">
@@ -244,7 +252,7 @@ const onToggleGroup = (id: Target['id']) => {
             class="flex h-[52px] items-center justify-between border-l-[6px] border-prim-2 px-3"
             @click="onToggleGroup(target.id)"
           >
-            <div class="flex items-center gap-2">
+            <div @click.stop="onOpenTarget(target)" class="flex items-center gap-2">
               <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
               <div class="text-sm font-semibold text-slate-10">
                 {{ target.name }}
@@ -341,206 +349,12 @@ const onToggleGroup = (id: Target['id']) => {
     </div>
   </AppActionSheet>
 
-  <AppActionSheet :show="showDetails" @close="showDetails = false">
-    <div v-if="targetLoading">
-      <div class="flex w-full flex-col gap-2">
-        <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
-        <div class="h-6 w-3/4 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
-      </div>
-      <div class="mt-4 flex flex-col">
-        <div v-for="n in 5" :key="n" class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
-          <div class="h-4 w-2/3 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
-        </div>
-      </div>
-      <div class="sticky bottom-0 flex w-full justify-center bg-white pt-4">
-        <div class="h-[38px] w-1/3 shrink-0 animate-pulse rounded bg-slate-3"></div>
-      </div>
-    </div>
-    <div v-else>
-      <div class="flex w-full flex-col gap-2">
-        <div class="flex">
-          <AppChip :chip="targetDetails?.status" />
-        </div>
-        <div class="text-lg font-semibold">{{ targetDetails?.name }}</div>
-      </div>
-      <div class="mt-4 flex flex-col">
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Curriculum:</div>
-          <div class="text-sm">{{ targetDetails?.curriculum_name }}</div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Description:</div>
-          <div class="whitespace-pre-line text-sm">{{ targetDetails?.description }}</div>
-        </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Data collection method:</div>
-          <div class="text-sm">{{ getTargetType(targetDetails?.type) }}</div>
-        </div>
-        <div
-          v-if="
-            targetDetails?.type === 'Target::Duration' || targetDetails?.type === 'Target::Latency'
-          "
-          class="flex flex-col"
-        >
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Goal time:</div>
-            <div class="text-sm">{{ targetDetails?.goal_time }}</div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-          </div>
-        </div>
-        <div v-if="targetDetails?.type === 'Target::Percentage'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Goal:</div>
-            <div class="text-sm">{{ targetDetails?.goal }}%</div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Number of trials:</div>
-            <div class="text-sm">{{ targetDetails?.number_of_trial }} trial(s)</div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-          </div>
-        </div>
-        <div v-if="targetDetails?.type === 'Target::TrialByTrial'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Goal:</div>
-            <div class="text-sm">{{ targetDetails?.goal }}%</div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Number of minimum trial:</div>
-            <div class="text-sm">{{ targetDetails?.number_of_trial }} trial(s)</div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-          </div>
-        </div>
-        <div v-if="targetDetails?.type === 'Target::Pir'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Goal:</div>
-            <div class="text-sm">{{ targetDetails?.goal }}%</div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Interval:</div>
-            <div class="text-sm">{{ targetDetails?.interval }} minute(s)</div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Duration:</div>
-            <div class="text-sm">{{ targetDetails?.duration }} minute(s)</div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-          </div>
-        </div>
-        <div v-if="targetDetails?.type === 'Target::Frequency'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Goal:</div>
-            <div class="text-sm">{{ targetDetails?.goal }} attempt(s) per session</div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-          </div>
-        </div>
-        <div v-if="targetDetails?.type === 'Target::Prompting'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Format:</div>
-            <div class="capitalize-first text-sm">
-              {{ targetDetails?.prompting_format }}
-            </div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Prompts:</div>
-            <div class="text-sm">
-              {{
-                targetDetails?.prompts
-                  ?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-                  ?.map((i) => {
-                    if (targetDetails?.prompting_format === 'custom') {
-                      return `${i.name} (${i.score}%)`
-                    }
-                    return i.name
-                  })
-                  ?.join(', ')
-              }}
-            </div>
-          </div>
-          <div
-            v-if="targetDetails?.prompting_format === 'classic'"
-            class="flex flex-col gap-1 border-b border-slate-3 py-3"
-          >
-            <div class="text-xs text-slate-8">Goal and success metric:</div>
-            <div class="text-sm">
-              Achieve target with
-              <span class="font-semibold">{{ targetDetails?.success_metric }}</span> prompt, minimum
-              <span class="font-semibold">{{ targetDetails?.goal }}</span> attempt(s) per session
-            </div>
-          </div>
-          <div
-            v-if="targetDetails?.prompting_format === 'custom'"
-            class="flex flex-col gap-1 border-b border-slate-3 py-3"
-          >
-            <div class="text-xs text-slate-8">Goal:</div>
-            <div class="text-sm">{{ targetDetails?.goal }}%</div>
-          </div>
-          <div
-            v-if="targetDetails?.prompting_format === 'custom'"
-            class="flex flex-col gap-1 border-b border-slate-3 py-3"
-          >
-            <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ targetDetails?.success_metric }}</div>
-          </div>
-        </div>
-        <div v-if="targetDetails?.type === 'Target::Sbt'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Prompts:</div>
-            <div class="text-sm">
-              {{ targetDetails?.prompts?.map((i) => i.name).join(', ') }}
-            </div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Tasks:</div>
-            <div class="flex flex-col gap-2">
-              <div
-                v-for="task in targetDetails?.target_tasks"
-                :key="task?.id"
-                class="text-sm text-slate-10"
-              >
-                <div class="font-semibold">{{ task?.code }} - {{ task?.title }}</div>
-                <div class="whitespace-pre-line">
-                  {{ task?.description || '-' }}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Problem behaviors:</div>
-            <div class="flex flex-col gap-2">
-              <div
-                v-for="problemBehavior in targetDetails?.target_problem_behaviors"
-                :key="problemBehavior?.id"
-                class="text-sm text-slate-10"
-              >
-                <div class="font-semibold">
-                  {{ problemBehavior?.code }} - {{ problemBehavior?.code_definition }}
-                </div>
-                <div class="whitespace-pre-line">
-                  {{ problemBehavior?.description || '-' }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="sticky bottom-0 w-full bg-white pt-4">
-        <AppButton kind="plain" class="w-full" @click="showDetails = false">Close</AppButton>
-      </div>
-    </div>
-  </AppActionSheet>
+  <PreviewTargetModal
+    edit-able
+    :show-details="showDetails"
+    @close="showDetails = false"
+    :target="targetDetails"
+    :loading="targetLoading"
+  />
+  <AddTargetFromDatabank v-if="addTargetOpen" @close="addTargetOpen = false" />
 </template>

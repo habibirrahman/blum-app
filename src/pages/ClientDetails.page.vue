@@ -48,7 +48,14 @@ const tabs = computed<Tab[]>(() => {
 async function fetchClient() {
   clientLoading.value = true
   const id = Number(route.params.id)
-  const { success } = await clientStore.getClient({ id })
+  const { success, data } = await clientStore.getClient({ id })
+  if (data.running_create_target_job) {
+    const payload = {
+      client_id: data.id,
+      job_id: data.running_create_target_job.job_id
+    }
+    await clientStore.checkTargetJob({ data: payload })
+  }
   clientLoading.value = false
   if (!success) return
   setTimeout(() => {
@@ -65,14 +72,14 @@ onMounted(() => {
 
 <template>
   <div class="sticky top-0 z-10 bg-chestnut-1">
-    <div class="flex items-center justify-center w-full h-10 font-semibold text-dark-purple-1">
-      <div class="px-4 truncate">
+    <div class="flex h-10 w-full items-center justify-center font-semibold text-dark-purple-1">
+      <div class="truncate px-4">
         {{ clientStore.client?.name }}
       </div>
     </div>
-    <div class="flex items-end h-10">
+    <div class="flex h-10 items-end">
       <div
-        class="flex gap-2 px-4 overflow-x-auto border-b snap-x snap-mandatory scroll-smooth border-chestnut-2"
+        class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth border-b border-chestnut-2 px-4"
       >
         <RouterLink
           v-for="tab in tabs"
@@ -95,20 +102,20 @@ onMounted(() => {
 
   <div v-if="clientLoading">
     <div class="px-4 pt-3">
-      <div class="w-56 h-8 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
+      <div class="h-8 w-56 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
     </div>
     <div class="px-4 pt-3">
-      <div class="w-full rounded h-9 shrink-0 animate-pulse bg-slate-3"></div>
+      <div class="h-9 w-full shrink-0 animate-pulse rounded bg-slate-3"></div>
     </div>
     <div class="flex gap-2 px-4 pt-3">
       <div
         v-for="n in 3"
         :key="n"
-        class="w-24 h-8 rounded-full shrink-0 animate-pulse bg-slate-3"
+        class="h-8 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"
       ></div>
     </div>
     <div class="flex flex-col px-4 pt-5">
-      <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
+      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
       <SessionItemLoader v-for="n in 12" :key="n" />
     </div>
     <!-- <div class="flex flex-col items-center gap-3 px-4 py-6">
