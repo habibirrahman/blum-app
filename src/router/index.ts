@@ -24,6 +24,16 @@ const router = createRouter({
       component: () => import('../pages/SessionRecord.page.vue')
     },
     {
+      path: '/session/:slug',
+      name: 'session-edit',
+      component: () => import('../pages/PreSessionRecord.page.vue')
+    },
+    {
+      path: '/session/:slug/select-target',
+      name: 'session-select-target',
+      component: () => import('../pages/SessionDraftSelectTarget.page.vue')
+    },
+    {
       path: '/client',
       name: 'clients',
       component: () => import('../pages/ClientList.page.vue')

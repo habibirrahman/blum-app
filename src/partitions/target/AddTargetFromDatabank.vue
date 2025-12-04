@@ -244,13 +244,13 @@ const onAddTarget = async () => {
       <div class="flex items-center gap-3 px-4">
         <div
           @click="emit('close')"
-          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-2"
+          class="flex items-center justify-center w-8 h-8 rounded-full cursor-pointer bg-slate-2"
         >
           <Icon icon="tabler:chevron-left" class="text-2xl text-slate-7" />
         </div>
         <div class="text-[22px] font-bold text-slate-10">Add from databank</div>
       </div>
-      <div class="space-y-3 bg-white pt-3">
+      <div class="pt-3 space-y-3 bg-white">
         <div class="px-4">
           <AppTextInput
             name="query"
@@ -260,9 +260,9 @@ const onAddTarget = async () => {
           />
         </div>
         <div class="pl-4">
-          <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+          <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
             <div
-              class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+              class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
               :class="[
                 curriculums.length
                   ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -273,14 +273,14 @@ const onAddTarget = async () => {
               <span>Curriculum</span>
               <span
                 v-if="curriculums.length > 0"
-                class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+                class="flex items-center justify-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
               >
                 {{ curriculums.length }}
               </span>
               <Icon icon="ph:caret-down" class="text-base text-slate-8" />
             </div>
             <div
-              class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+              class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
               :class="[
                 methods.length
                   ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -291,7 +291,7 @@ const onAddTarget = async () => {
               <span>Method</span>
               <span
                 v-if="methods.length > 0"
-                class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+                class="flex items-center justify-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
               >
                 {{ methods.length }}
               </span>
@@ -302,7 +302,7 @@ const onAddTarget = async () => {
       </div>
       <div v-if="loading">
         <div class="px-4 pt-2">
-          <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+          <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
         </div>
         <div class="px-4">
           <TargetItemLoader v-for="n in perPage" :key="n" />
@@ -325,7 +325,7 @@ const onAddTarget = async () => {
             type="checkbox"
             :checked="isAllChecked"
             @change="toggleCheckAll"
-            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
           />
         </div>
         <div>
@@ -335,23 +335,23 @@ const onAddTarget = async () => {
                 class="flex h-[154px] flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-4"
               >
                 <div class="flex items-center justify-between">
-                  <div class="truncate text-xs text-slate-8">
+                  <div class="text-xs truncate text-slate-8">
                     {{ target.curriculum_name }}
                   </div>
                   <input
                     type="checkbox"
                     :checked="targets.includes(target.id as number)"
                     @change="toggleTarget(target.id as number)"
-                    class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+                    class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
                   />
                 </div>
                 <div class="flex items-center gap-2">
-                  <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
+                  <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
                   <div class="text-sm font-semibold text-slate-10">
                     {{ target.name }}
                   </div>
                 </div>
-                <div class="line-clamp-3 whitespace-pre-line text-xs text-slate-8">
+                <div class="text-xs whitespace-pre-line line-clamp-3 text-slate-8">
                   {{ target.description }}
                 </div>
                 <div class="text-xs font-medium text-slate-8">
@@ -373,11 +373,12 @@ const onAddTarget = async () => {
         </div>
         <AppPagination
           :page="page"
+          :per_page="perPage"
           :total_count="appStore.total_center_targets"
           @change="page = $event"
         />
       </div>
-      <div class="sticky bottom-0 w-full bg-white p-4">
+      <div class="sticky bottom-0 w-full p-4 bg-white">
         <AppButton
           :loading="submitLoading"
           class="w-full"
@@ -406,7 +407,7 @@ const onAddTarget = async () => {
     />
     <AppActionSheet :show="showMethods" @close="showMethods = false">
       <div class="space-y-4">
-        <div class="flex w-full items-center justify-between">
+        <div class="flex items-center justify-between w-full">
           <div class="text-xl font-semibold">Data Collection Method</div>
           <div class="cursor-pointer" @click="showMethods = false">
             <Icon icon="ph:x" class="text-2xl" />
@@ -416,9 +417,9 @@ const onAddTarget = async () => {
           <div
             v-for="opt in methodOptions"
             :key="opt.value"
-            class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
+            class="flex items-center justify-between w-full gap-4 border-b h-14 border-slate-3"
           >
-            <label :for="`method_filter_${opt.value}`" class="w-full truncate text-sm">
+            <label :for="`method_filter_${opt.value}`" class="w-full text-sm truncate">
               {{ opt.label }}
             </label>
             <input
@@ -427,7 +428,7 @@ const onAddTarget = async () => {
               :id="`method_filter_${opt.value}`"
               :checked="selectMethods.includes(opt.value)"
               :value="opt.value"
-              class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+              class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
               @click="onCheckMethod(opt.value)"
             />
           </div>

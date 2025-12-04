@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Target } from '@/lib/types'
 import AppChip from '@/components/AppChip.vue'
-import { getTargetType } from '@/lib/func';
+import { getTargetType } from '@/lib/func'
+import AppCheckInput from '@/components/AppCheckInput.vue'
 
 interface Props {
   target: Target
@@ -37,17 +38,20 @@ const handleCheckboxClick = (event: Event) => {
     <div v-if="showStatus" class="flex">
       <AppChip :chip="target.status" />
     </div>
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-4">
       <div class="text-xs truncate text-slate-8">
         {{ target.curriculum_name }}
       </div>
-      <input
+      <AppCheckInput
         v-if="isChecked !== undefined && useAction"
-        type="checkbox"
+        :name="`check-${target.id}`"
         :checked="isChecked"
-        @click="handleCheckboxClick"
-        class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+        @change.stop="handleCheckboxClick"
       />
+      <!-- <input
+        type="checkbox"
+        class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+      /> -->
     </div>
     <div class="text-sm font-semibold truncate">
       {{ target.name }}
@@ -55,7 +59,7 @@ const handleCheckboxClick = (event: Event) => {
     <div class="text-xs whitespace-pre-line line-clamp-3 text-slate-8">
       {{ target.description }}
     </div>
-    <div v-if="showType" class="text-xs text-slate-8 font-medium">
+    <div v-if="showType" class="text-xs font-medium text-slate-8">
       {{ getTargetType(target.type) }}
     </div>
   </div>

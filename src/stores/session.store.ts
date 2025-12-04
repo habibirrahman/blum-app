@@ -3,7 +3,15 @@ import axios, { isAxiosError } from 'axios'
 import { getStorage, setStorage } from '@/plugins/preferences.plugin'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getErrorMessage, getRandomString, onlyUniqueId } from '@/lib/func'
-import type { Session, Comment, Measurement, User, Client, ActionRecommendation } from '@/lib/types'
+import type {
+  Session,
+  Comment,
+  Measurement,
+  User,
+  Client,
+  ActionRecommendation,
+  Target
+} from '@/lib/types'
 
 interface SessionPendingProgress {
   key: string
@@ -40,6 +48,13 @@ export interface SessionStateSchema {
   _syncDebounceTimer?: any // For debounced sync
 }
 export type SessionCommentFilter = '' | 'general' | 'assessment' | 'target' | 'mine'
+export interface CreateSessionParams {
+  client_id: Client['id']
+}
+export interface AddMultipleTargetSessionParams {
+  id: Session['id']
+  target_ids: Target['id'][]
+}
 export interface UpdateMeasurementParams {
   id: Measurement['id']
   measurement: Measurement
@@ -757,6 +772,11 @@ export const useSessionStore = defineStore('session', {
       if (idx > -1) this.sessions[idx] = data
       this.syncSessionStore()
     },
+    addSession(data: Session) {
+      this.session = data
+      this.sessions = [data, ...this.sessions]
+      this.syncSessionStore()
+    },
     setSessionMeasurement(data: Measurement) {
       const idx = this.session_measurements.findIndex((i) => i.target?.id === data.target?.id)
       if (idx > -1) this.session_measurements[idx] = data
@@ -802,7 +822,6 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-
     async getSession({ slug }: { slug: Session['slug'] }): Promise<ResponseSchema> {
       const data = this.sessions.find((i) => i.slug === slug)
       if (data) {
@@ -826,39 +845,6 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-
-    async getSessionComments({
-      id,
-      filter
-    }: {
-      id: Session['id']
-      filter?: SessionCommentFilter
-    }): Promise<ResponseSchema> {
-      if (!id) return { success: false, data: null }
-      this.session_comments = this.session?.comments || []
-
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        // return { success: true, data: this.session_comments }
-      }
-
-      const params = filter ? `?filter_by=${filter}` : ''
-      return axios
-        .get(`/api/v1/sessions/${id}/comments${params}`)
-        .then(async ({ data }) => {
-          this.session_comments = data
-          const session: Session = {
-            ...this.session,
-            comments: [...data, ...(this.session?.comments || [])].filter(onlyUniqueId)
-          }
-          this.setSession(session)
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
-    },
-
     async getSessionMeasurements({ id }: { id: Session['id'] }): Promise<ResponseSchema> {
       if (!id) return { success: false, data: null }
       this.session_measurements = this.session?.measurements || []
@@ -895,7 +881,6 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-
     async getUpcomingSessions() {
       const app = useAppStore()
       if (!app.network_status.connected) {
@@ -920,6 +905,20 @@ export const useSessionStore = defineStore('session', {
         })
     },
 
+    async createSession({ client_id }: CreateSessionParams) {
+      return axios
+        .post(`/api/v1/clients/${client_id}/sessions`, {
+          session: { name: '', status: 'draft' }
+        })
+        .then((response) => {
+          this.addSession(response.data)
+          return { success: true, data: response.data, message: '' }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
     async startSession() {
       return axios
         .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'ongoing' } })
@@ -1012,6 +1011,21 @@ export const useSessionStore = defineStore('session', {
         })
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+
+    async addMultipleTargetsSession({ id, target_ids }: AddMultipleTargetSessionParams) {
+      return axios
+        .post(`/api/v1/sessions/${id}/add_multiple_targets`, {
+          target_ids
+        })
+        .then((response) => {
+          this.setSession(response.data)
+          return { success: true, data: response.data, message: '' }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
         })
     },
 
@@ -1324,7 +1338,37 @@ export const useSessionStore = defineStore('session', {
     // ========================================
     // COMMENT FUNCTIONS
     // ========================================
+    async getSessionComments({
+      id,
+      filter
+    }: {
+      id: Session['id']
+      filter?: SessionCommentFilter
+    }): Promise<ResponseSchema> {
+      if (!id) return { success: false, data: null }
+      this.session_comments = this.session?.comments || []
 
+      const app = useAppStore()
+      if (!app.network_status.connected) {
+        // return { success: true, data: this.session_comments }
+      }
+
+      const params = filter ? `?filter_by=${filter}` : ''
+      return axios
+        .get(`/api/v1/sessions/${id}/comments${params}`)
+        .then(async ({ data }) => {
+          this.session_comments = data
+          const session: Session = {
+            ...this.session,
+            comments: [...data, ...(this.session?.comments || [])].filter(onlyUniqueId)
+          }
+          this.setSession(session)
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
     async createSessionComment({
       client_id,
       session_id,
@@ -1480,7 +1524,6 @@ export const useSessionStore = defineStore('session', {
       }
       return { success: false, data: null }
     },
-
     async duplicateImagesToClientDocument({
       documents,
       client_id,
@@ -1512,7 +1555,6 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-
     async deleteSessionComment({ client_id, comment_id, type }: DeleteSessionCommentParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {

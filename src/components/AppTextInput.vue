@@ -16,7 +16,7 @@ interface Props {
 }
 
 const model = defineModel({ type: String || Number })
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   type: 'text',
   placeholder: '',
   disabled: false,
@@ -72,28 +72,30 @@ const openPassword = ref<boolean>(false)
         'border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2': !error,
         'border-tomato-7 focus:ring-tomato-2': error,
         'border py-2': !borderless,
-        'border-none px-0 py-1 focus:ring-0': borderless
+        'border-none px-0 py-1 focus:ring-0': borderless,
+        'pr-10': type === 'password' || suffix_icon
       }"
     />
+
     <Icon
       v-if="type === 'password'"
       :icon="openPassword ? 'ph:eye-closed' : 'ph:eye'"
-      class="absolute right-2 cursor-pointer text-2xl text-slate-7"
-      :class="[label ? 'top-[30px]' : 'top-1']"
+      class="absolute text-2xl cursor-pointer right-2 text-slate-7"
+      :class="[label ? 'top-[30px]' : 'top-1.5']"
       @click.prevent="openPassword = !openPassword"
     />
     <div
       v-if="suffix_text"
       class="absolute right-2 cursor-pointer text-[16px] text-slate-7"
-      :class="[label ? 'top-[30px]' : 'top-1']"
+      :class="[label ? 'top-[30px]' : 'top-1.5']"
     >
       {{ suffix_text }}
     </div>
     <Icon
       v-if="suffix_icon"
       :icon="suffix_icon"
-      class="absolute right-2 cursor-pointer text-2xl text-slate-7"
-      :class="[label ? 'top-[30px]' : 'top-1']"
+      class="absolute text-2xl cursor-pointer right-2 text-slate-7"
+      :class="[label ? 'top-[30px]' : 'top-1.5']"
     />
     <div v-if="error" class="mt-1 text-sm text-tomato-7">{{ error === true ? '' : error }}</div>
   </label>

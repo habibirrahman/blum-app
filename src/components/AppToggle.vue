@@ -9,7 +9,7 @@ interface Emits {
   (e: 'change', checked: boolean): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   checked: false,
   disabled: false,
   loading: false

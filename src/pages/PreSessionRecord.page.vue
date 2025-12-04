@@ -147,11 +147,22 @@ const onStartSession = () => {
         <RouterLink :to="redirect" class="flex items-center justify-center w-8 h-8 shrink-0">
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </RouterLink>
-        <div class="truncate text-[22px] text-xl font-bold">
-          {{ sessionStore.session?.client?.name }}
+        <div>
+          <div class="truncate text-[22px] text-xl font-bold">
+            {{ sessionStore.session?.client?.name }}
+          </div>
+          <div class="text-xs shrink-0 text-slate-8">Session ID {{ sessionStore.session?.id }}</div>
         </div>
       </div>
-      <div class="text-xs shrink-0 text-slate-8">Session ID {{ sessionStore.session?.id }}</div>
+      <RouterLink
+        :to="{
+          name: 'session-select-target',
+          params: { slug: sessionStore.session?.slug },
+          query: { redirect: `/pre-session-record/${sessionStore.session?.slug}` }
+        }"
+      >
+        <AppButton><Icon icon="ph:pencil" /></AppButton>
+      </RouterLink>
     </div>
   </div>
 
