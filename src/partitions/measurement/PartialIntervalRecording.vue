@@ -108,12 +108,13 @@ const onAddScore = async () => {
         :class="{
           'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing',
           'h-[200px] w-[200px]': !is_collapsed,
-          'h-[90px] w-[90px]': is_collapsed
+          'h-[120px] w-[120px]': is_collapsed
         }"
         @click="onAddScore()"
       >
         <div class="text-sm font-semibold text-white">Incident</div>
       </div>
+      <div v-if="is_collapsed"></div>
     </div>
 
     <div v-if="!is_collapsed" class="pb-3 space-y-1 text-xs font-medium shrink-0 text-slate-7">

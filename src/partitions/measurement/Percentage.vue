@@ -6,6 +6,7 @@ import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import { debounce } from '@/lib/func'
+import AppToggle from '@/components/AppToggle.vue'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
@@ -18,6 +19,7 @@ interface Props {
 interface Emits {
   (e: 'toggle-updated', bool: boolean): void
   (e: 'fetch-session'): void
+  (e: 'after-commit'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -149,6 +151,67 @@ const onChangePercentage = async (box: PercentageBox) => {
 
   onSavePercentage(box)
 }
+
+// draft
+const switchLoading = ref<boolean>(false)
+const onChangeProbing = async () => {
+  if (sessionStore.session?.status !== 'draft') return
+  if (switchLoading.value) return
+
+  const checked = props.measurement.type?.includes('Probing')
+  const temp = {
+    session_id: sessionStore.session.id,
+    target_id: props.measurement.target_id,
+    measurement_id: props.measurement.id,
+    position: props.measurement.position,
+    is_fixed: props.measurement.is_fixed
+  }
+
+  if (!checked) {
+    const updateParams = {
+      id: temp.measurement_id,
+      measurement: { visible: false },
+      data_result: props.measurement
+    }
+
+    switchLoading.value = true
+    const { success: successUpdate } = await sessionStore.updateMeasurement(updateParams)
+    if (!successUpdate) {
+      switchLoading.value = false
+      return
+    }
+
+    const createParams = {
+      id: temp.session_id,
+      target_id: temp.target_id,
+      measurement: {
+        type: 'Measurement::Probing' as Measurement['type'],
+        position: temp.position,
+        is_fixed: temp.is_fixed
+      }
+    }
+    const { success: succesCreate } = await sessionStore.createMeasurement(createParams)
+    if (!succesCreate) {
+      switchLoading.value = false
+      return
+    }
+  } else {
+    const payload = {
+      id: temp.measurement_id
+    }
+
+    switchLoading.value = true
+    const { success } = await sessionStore.deleteMeasurement(payload)
+    if (!success) {
+      switchLoading.value = false
+      return
+    }
+  }
+  setTimeout(() => {
+    emit('after-commit')
+    switchLoading.value = false
+  }, 300)
+}
 </script>
 
 <template>
@@ -202,12 +265,37 @@ const onChangePercentage = async (box: PercentageBox) => {
           class="w-2 h-2 transition-all rounded-full"
         ></div>
       </div>
+
       <div
         v-if="!is_collapsed"
         class="flex items-center justify-center gap-2 text-xs font-medium text-center text-slate-7"
       >
         <div>Goal: {{ measurement.target?.goal }}%</div>
         <div>Score: {{ percentageScore.toFixed(0) }}%</div>
+      </div>
+
+      <div
+        v-if="sessionStore.session?.status === 'draft' && measurement?.target?.probing_enable"
+        class="z-10 flex items-center justify-between w-full px-4 py-2 rounded-full bg-lime-2"
+      >
+        <div class="text-sm font-semibold text-lime-7">Set as probing</div>
+        <div class="flex items-center gap-1">
+          <Icon
+            v-if="switchLoading"
+            icon="mingcute:loading-fill"
+            class="text-xl animate-spin text-lime-7"
+          />
+          <div class="text-sm font-semibold text-lime-7">
+            {{ measurement.type?.includes('Probing') ? 'Yes' : 'No' }}
+          </div>
+          <AppToggle
+            :name="`toggle-probing-${measurement.id}`"
+            color="lime"
+            :loading="switchLoading"
+            :checked="measurement.type?.includes('Probing')"
+            @change="onChangeProbing"
+          />
+        </div>
       </div>
     </div>
   </div>

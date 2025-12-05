@@ -149,20 +149,26 @@ onMounted(() => {
 
 const showJoinConfirmation = ref<boolean>(false)
 const sessionToJoin = ref<Session | null>(null)
-const onOpenSession = (session: Session) => {
+const onOpenSession = (event: Event, session: Session) => {
+  const target = event.target as HTMLElement
+  // Check if the clicked element or its parent has the ID
+  if (target.id === 'action-button' || target.closest('#action-button')) {
+    return
+  }
+
   sessionToJoin.value = null
   if (session.status === 'draft') {
     router.push({
       name: 'pre-session-record',
       params: { slug: session?.slug },
-      query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
+      query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
     })
   } else {
     if (session.user_id === appStore.account?.id) {
       router.push({
         name: 'session-record',
         params: { slug: session?.slug },
-        query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
+        query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
       })
     } else {
       sessionToJoin.value = session
@@ -189,7 +195,7 @@ const onCreateSession = async () => {
     router.push({
       name: 'session-select-target',
       params: { slug: data.slug },
-      query: { redirect: `/client/${clientStore.client?.id}/sessions-draft` }
+      query: { redirect: `/clients/${clientStore.client?.id}/sessions-draft` }
     })
   } catch (error) {
     createLoading.value = false
@@ -225,7 +231,7 @@ const onCreateSession = async () => {
             :to="{
               name: 'pre-session-record',
               params: { slug: session?.slug },
-              query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
+              query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
             }"
           >
             <UpcomingSession
@@ -336,7 +342,8 @@ const onCreateSession = async () => {
         :key="session.id"
         :session="session"
         :title="session.appointment_id ? `With ${session.appointment?.user?.name}` : `Unscheduled`"
-        @click="onOpenSession(session)"
+        @click="onOpenSession($event, session)"
+        @after-commit="fetchDraftSession"
       />
     </div>
     <AppPagination
@@ -458,7 +465,7 @@ const onCreateSession = async () => {
         :to="{
           name: 'session-record',
           params: { slug: sessionToJoin?.slug },
-          query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
+          query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
         }"
         class="w-full"
       >

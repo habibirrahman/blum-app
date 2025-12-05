@@ -24,27 +24,27 @@ const router = createRouter({
       component: () => import('../pages/SessionRecord.page.vue')
     },
     {
-      path: '/session/:slug',
-      name: 'session-edit',
-      component: () => import('../pages/PreSessionRecord.page.vue')
+      path: '/sessions/:slug',
+      name: 'session-draft',
+      component: () => import('../pages/SessionDraft.page.vue')
     },
     {
-      path: '/session/:slug/select-target',
+      path: '/sessions/:slug/select-target',
       name: 'session-select-target',
-      component: () => import('../pages/SessionDraftSelectTarget.page.vue')
+      component: () => import('../pages/SessionSelectTarget.page.vue')
     },
     {
-      path: '/client',
+      path: '/clients',
       name: 'clients',
       component: () => import('../pages/ClientList.page.vue')
     },
     {
-      path: '/client/:id/:tab',
+      path: '/clients/:id/:tab',
       name: 'client',
       component: () => import('../pages/ClientDetails.page.vue')
     },
     {
-      path: '/client/:id/targets/:target_id/edit',
+      path: '/clients/:id/targets/:target_id/edit',
       name: 'edit-client-target',
       component: () => import('../pages/EditClientTarget.page.vue')
     },

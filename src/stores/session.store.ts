@@ -51,6 +51,11 @@ export type SessionCommentFilter = '' | 'general' | 'assessment' | 'target' | 'm
 export interface CreateSessionParams {
   client_id: Client['id']
 }
+export interface CreateMeasurementParams {
+  id: Measurement['id']
+  target_id: Target['id']
+  measurement: Measurement
+}
 export interface AddMultipleTargetSessionParams {
   id: Session['id']
   target_ids: Target['id'][]
@@ -919,6 +924,19 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message }
         })
     },
+
+    async deleteSession({ id }: { id: Session['id'] }) {
+      return axios
+        .delete(`/api/v1/sessions/${id}`)
+        .then((response) => {
+          return { success: true, data: response.data, message: response.data.message }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
+
     async startSession() {
       return axios
         .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'ongoing' } })
@@ -1014,6 +1032,17 @@ export const useSessionStore = defineStore('session', {
         })
     },
 
+    async createMeasurement({ id, target_id, measurement }: CreateMeasurementParams) {
+      return axios
+        .post(`/api/v1/sessions/${id}/targets/${target_id}/measurements`, { measurement })
+        .then(async ({ data }) => {
+          return { success: true, data, message: '' }
+        })
+        .catch(async (error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
     async addMultipleTargetsSession({ id, target_ids }: AddMultipleTargetSessionParams) {
       return axios
         .post(`/api/v1/sessions/${id}/add_multiple_targets`, {
@@ -1067,6 +1096,17 @@ export const useSessionStore = defineStore('session', {
             timestamp: new Date().toISOString()
           })
 
+          return { success: false, data: null, message }
+        })
+    },
+    async deleteMeasurement({ id, params }: { id: Measurement['id']; params?: string }) {
+      return axios
+        .delete(`/api/v1/measurements/${id}${params || ''}`)
+        .then((response) => {
+          return { success: true, data: response.data, message: '' }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
           return { success: false, data: null, message }
         })
     },

@@ -23,6 +23,7 @@ import TrialByTrial from './measurement/TrialByTrial.vue'
 import ColdProbe from './measurement/ColdProbe.vue'
 import TaskAnalysis from './measurement/TaskAnalysis.vue'
 import { useAppStore } from '@/stores/app.store'
+import AppCheckInput from '@/components/AppCheckInput.vue'
 
 const toast = useToast()
 const appStore = useAppStore()
@@ -30,11 +31,13 @@ const sessionStore = useSessionStore()
 
 interface Props {
   measurement: Measurement
-  counter: number
+  counter?: number
   is_collapsed?: boolean
   review_mode?: boolean
   is_running?: boolean
   is_disabled_action?: boolean
+  useLock?: boolean
+  isChecked?: boolean
 }
 interface Emits {
   (e: 'toggle-updated', payload: { id: Measurement['id']; updated: boolean }): void
@@ -43,8 +46,12 @@ interface Emits {
   (e: 'toggle-collapsed', bool: boolean): void
   (e: 'fetch-session'): void
   (e: 'check-completed-cold-probe', payload: { id: Measurement['id']; isCompleted: boolean }): void
+  (e: 'toggle-lock'): void
+  (e: 'toggle-check'): void
+  (e: 'after-commit'): void
 }
 const props = withDefaults(defineProps<Props>(), {
+  counter: 0,
   is_collapsed: false,
   review_mode: false
 })
@@ -553,7 +560,8 @@ const onToggleSaved = (saved: boolean) => {
     class="relative transition-all rounded shrink-0"
     :class="{
       'h-[600px] w-[320px]': !is_collapsed,
-      'h-[180px] w-full': is_collapsed
+      'h-[160px] w-full': is_collapsed,
+      'border border-light-purple-5 shadow-[4px_4px_4px_4px_#D6C7E066]': isChecked
     }"
   >
     <div
@@ -562,42 +570,65 @@ const onToggleSaved = (saved: boolean) => {
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
-    <div class="flex flex-col h-full" :class="{ 'pointer-events-none': review_mode }">
+    <div
+      class="flex flex-col h-full"
+      :class="{ 'pointer-events-none': review_mode && sessionStore.session?.status !== 'draft' }"
+    >
       <div
         class="h-[6px] w-full shrink-0 rounded-t"
         :style="{ backgroundColor: measurement.target?.curriculum_color }"
       ></div>
-      <div
-        v-if="!is_collapsed"
-        id="measurememt-header"
-        class="flex items-center justify-between w-full px-4 h-9 shrink-0 bg-prim-2"
-      >
+      <div v-if="!is_collapsed" id="measurememt-header">
         <div
-          class="flex items-center justify-center w-6 h-6 transition-all rounded"
-          :class="{ 'bg-white': display === 'description' }"
-          @click="onChangeDisplay('description')"
+          v-if="sessionStore.session?.status === 'draft'"
+          class="flex items-center justify-between w-full px-2 h-9 shrink-0 bg-prim-2"
         >
-          <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
-        </div>
-        <div
-          class="relative flex items-center justify-center w-6 h-6 transition-all rounded"
-          :class="{ 'bg-white': display === 'comment' }"
-          @click="onChangeDisplay('comment')"
-        >
-          <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
           <div
-            class="absolute w-2 h-2 transition-all rounded-full right-px top-px bg-light-purple-5"
-            :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
-          ></div>
+            v-if="useLock"
+            class="flex items-center justify-center transition-all bg-white rounded h-7 w-7"
+            @click="emit('toggle-lock')"
+          >
+            <Icon icon="ph:lock-open-fill" class="text-2xl text-light-purple-5" />
+          </div>
+          <div v-else></div>
+
+          <div :class="[review_mode ? 'relative right-4 top-4' : '']">
+            <AppCheckInput
+              :name="`check-${measurement.id}`"
+              :checked="isChecked"
+              :class="[review_mode ? 'scale-150' : '']"
+              @change.stop="emit('toggle-check')"
+            />
+          </div>
         </div>
-        <div>
-          <AppToggle
-            :name="`toggle_measurement_${measurement.id}`"
-            :checked="!isDropped"
-            :loading="isDropLoading"
-            :disabled="sessionStore.session?.status !== 'ongoing'"
-            @change="onDrop"
-          />
+        <div v-else class="flex items-center justify-between w-full px-4 h-9 shrink-0 bg-prim-2">
+          <div
+            class="flex items-center justify-center w-6 h-6 transition-all rounded"
+            :class="{ 'bg-white': display === 'description' }"
+            @click="onChangeDisplay('description')"
+          >
+            <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
+          </div>
+          <div
+            class="relative flex items-center justify-center w-6 h-6 transition-all rounded"
+            :class="{ 'bg-white': display === 'comment' }"
+            @click="onChangeDisplay('comment')"
+          >
+            <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
+            <div
+              class="absolute w-2 h-2 transition-all rounded-full right-px top-px bg-light-purple-5"
+              :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
+            ></div>
+          </div>
+          <div>
+            <AppToggle
+              :name="`toggle_measurement_${measurement.id}`"
+              :checked="!isDropped"
+              :loading="isDropLoading"
+              :disabled="sessionStore.session?.status !== 'ongoing'"
+              @change="onDrop"
+            />
+          </div>
         </div>
       </div>
 
@@ -710,6 +741,7 @@ const onToggleSaved = (saved: boolean) => {
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
+              @after-commit="emit('after-commit')"
             />
             <TrialByTrial
               v-if="measurementType.includes('TrialByTrial')"
@@ -718,6 +750,7 @@ const onToggleSaved = (saved: boolean) => {
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
+              @after-commit="emit('after-commit')"
             />
             <Probing
               v-if="measurementType.includes('Probing')"
@@ -726,6 +759,7 @@ const onToggleSaved = (saved: boolean) => {
               :is_collapsed="is_collapsed"
               @toggle-collapsed="emit('toggle-collapsed', $event)"
               @fetch-session="emit('fetch-session')"
+              @after-commit="emit('after-commit')"
             />
             <Prompting
               v-if="measurementType.includes('Prompting') && target && !target.is_group"

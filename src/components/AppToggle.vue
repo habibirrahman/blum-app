@@ -1,6 +1,7 @@
 <script setup lang="ts">
 interface Props {
   name: string
+  color?: 'primary' | 'lime'
   checked?: boolean
   disabled?: boolean
   loading?: boolean
@@ -10,23 +11,25 @@ interface Emits {
 }
 
 withDefaults(defineProps<Props>(), {
+  color: 'primary',
   checked: false,
   disabled: false,
   loading: false
 })
 const emit = defineEmits<Emits>()
-
 </script>
 
 <template>
   <label
     :for="name"
-    class="relative flex items-center w-8 h-4 transition-all border rounded-full cursor-pointer shrink-0"
-    :class="{
-      'border-transparent bg-light-purple-3': checked,
-      'border-slate-5 bg-slate-4': !checked,
-      'pointer-events-none': disabled || loading
-    }"
+    class="relative flex items-center w-8 h-4 transition-all border rounded-full shrink-0"
+    :class="[
+      checked
+        ? `border-transparent ${color === 'lime' ? ' bg-lime-7' : 'bg-light-purple-3'} `
+        : 'border-slate-5 bg-slate-4',
+      disabled || loading ? 'pointer-events-none' : 'cursor-pointer',
+      disabled ? '!grayscale opacity-50' : ''
+    ]"
   >
     <input
       :id="name"

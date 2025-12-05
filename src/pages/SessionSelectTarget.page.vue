@@ -4,14 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
-import type { Session, Target, TargetStatus } from '@/lib/types'
-import AppPagination from '@/components/AppPagination.vue'
+import type { Target, TargetStatus } from '@/lib/types'
 import AppTextInput from '@/components/AppTextInput.vue'
-import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppButton from '@/components/AppButton.vue'
-import { TransitionRoot } from '@headlessui/vue'
-import { displayDate } from '@/lib/func'
-import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
 import { useSessionStore } from '@/stores/session.store'
 import TargetItemLoader from '@/components/skeletons/TargetItemLoader.vue'
 import TargetItem from '@/partitions/TargetItem.vue'
@@ -27,11 +22,15 @@ const appStore = useAppStore()
 const clientStore = useClientStore()
 const sessionStore = useSessionStore()
 
-const redirect = ref<string>('/home')
+const redirect = ref<string>('')
 
 onMounted(async () => {
+  const app = document.getElementById('app')
+  if (app) {
+    app.scroll({ top: 0, behavior: 'smooth' })
+  }
+
   appStore.getRunningSessions()
-  redirect.value = route.query.redirect?.toString() || '/home'
 
   await fetchSession()
   await fetchTargets()
@@ -49,13 +48,15 @@ async function fetchSession() {
   const slug = route.params?.slug as string
 
   sessionLoading.value = true
-  const { success } = await sessionStore.getSession({ slug })
+  const { success, data } = await sessionStore.getSession({ slug })
   sessionLoading.value = false
 
   if (!success) {
     document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
     return
   }
+
+  redirect.value = route.query.redirect?.toString() || `/clients/${data?.client_id}/sessions-draft`
 
   addedTargetIds.value = sessionStore.session_measurements.map((i) => i.target_id)
 }
@@ -200,7 +201,7 @@ const onAddCheckedTargets = async () => {
 
   toast.success(`${checkedTargetIds.value.length} target(s) has been successfully added`)
   router.push({
-    name: 'session-edit',
+    name: 'session-draft',
     params: { slug: data.slug },
     query: { redirect: `/pre-session-record/${data.slug}` }
   })
