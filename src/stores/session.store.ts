@@ -770,7 +770,7 @@ export const useSessionStore = defineStore('session', {
     // SESSION FUNCTIONS
     // ========================================
 
-    // SETTER
+    // SETTER Session and Measurement
     setSession(data: Session) {
       this.session = data
       const idx = this.sessions.findIndex((i) => i.id === data.id)
@@ -787,6 +787,8 @@ export const useSessionStore = defineStore('session', {
       if (idx > -1) this.session_measurements[idx] = data
       this.syncSessionStore()
     },
+
+    // SETTER Session Comment
     addSessionComment(data: Comment, check: boolean = false) {
       let arr = [...this.session_comments, data]
       if (check) {
@@ -886,6 +888,36 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
+    async getMeasurement({ id }: { id: Measurement['id'] }): Promise<ResponseSchema> {
+      if (!id) return { success: false, data: null }
+
+      const app = useAppStore()
+      if (!app.network_status.connected) {
+        // return { success: true, data: this.session_measurements }
+      }
+
+      return axios
+        .get(`/api/v1/measurements/${id}`)
+        .then(async ({ data }) => {
+          this.setSessionMeasurement(data)
+          // async
+          // sering race condition
+          /*
+          // lebih baik pakai ini
+          setState((prev) => {
+            return { ...prev, ...data }
+          })
+
+          // ini sering race condition jika dipanggil bersaman
+          setState({...this.state, ...data})
+          **/
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+
     async getUpcomingSessions() {
       const app = useAppStore()
       if (!app.network_status.connected) {
@@ -1169,7 +1201,7 @@ export const useSessionStore = defineStore('session', {
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
-            const { data } = await axios.patch(
+            const { data: patchData } = await axios.patch(
               `/api/v1/measurements/${id}`,
               { measurement },
               {
@@ -1192,7 +1224,12 @@ export const useSessionStore = defineStore('session', {
             })
 
             // ✅ Update state SETELAH API berhasil!
-            this.setSessionMeasurement(data)
+            // this.setSessionMeasurement(data)
+            const { data: getData } = await this.getMeasurement({ id: patchData.id })
+
+            // Handle new Data
+            let newData = patchData
+            if (getData) newData = getData
 
             // Hapus dari pending queue jika ada
             const queueIndex = this.pending_progress.findIndex(
@@ -1204,9 +1241,9 @@ export const useSessionStore = defineStore('session', {
             }
 
             // Update local backup dengan status synced
-            await this.saveLocalBackup(Number(id), data, 'synced')
+            await this.saveLocalBackup(Number(id), newData, 'synced')
 
-            return { success: true, data, message: '' }
+            return { success: true, data: newData, message: '' }
           } catch (err) {
             lastError = err
 

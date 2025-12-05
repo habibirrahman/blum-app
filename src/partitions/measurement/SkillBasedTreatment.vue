@@ -205,12 +205,13 @@ onMounted(async () => {
   SBTPrompts.value = prompts.sort((a, b) => (b?.score || 0) - (a?.score || 0))
   SBTTaskCodes.value = tasks.sort((a, b) => (a?.position || 0) - (b?.position || 0))
   SBTProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-  resultsState.value = props.measurement_results
+
+  const currentResults = props.measurement_results || {}
 
   generateRatioScores()
 
-  const results = Object.keys(resultsState.value).map((key) => ({
-    ...resultsState.value[key],
+  const results = Object.keys(currentResults).map((key) => ({
+    ...currentResults[key],
     key
   }))
 
@@ -234,7 +235,7 @@ onMounted(async () => {
         prompt_id: 0,
         target_problem_behavior_id: null
       }
-      resultsState.value[newTrial.key] = {
+      currentResults[newTrial.key] = {
         key: newTrial.key,
         target_task_id: newTrial.target_task_id,
         prompt_id: newTrial.prompt_id,
@@ -252,7 +253,7 @@ onMounted(async () => {
     if (SBTTaskCodes.value.length) {
       newTrial.target_task_id = SBTTaskCodes.value[0].id
     }
-    resultsState.value[newTrial.key] = {
+    currentResults[newTrial.key] = {
       key: newTrial.key,
       target_task_id: newTrial.target_task_id,
       prompt_id: newTrial.prompt_id,
@@ -260,6 +261,8 @@ onMounted(async () => {
     }
     currentTrial.value = newTrial
   }
+
+  resultsState.value = currentResults
 })
 
 // Cleanup saat unmount
@@ -327,9 +330,11 @@ const generateRatioScores = () => {
    * red badge: any problem_behavior(?) yes: put the badge
    */
 
+  const currentResults = resultsState.value || {}
+
   let maxRatio = 0
-  const results = Object.keys(resultsState.value).map((key) => ({
-    ...resultsState.value[key],
+  const results = Object.keys(currentResults).map((key) => ({
+    ...currentResults[key],
     key
   }))
 

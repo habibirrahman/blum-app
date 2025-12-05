@@ -77,8 +77,6 @@ onMounted(async () => {
   cardLoading.value = true
   await generateResults(props.measurement.results)
 
-  target.value = props.measurement.target
-
   isDropped.value = props.measurement.is_dropped || false
   cardLoading.value = false
 })
@@ -88,7 +86,7 @@ onUnmounted(() => {
   clearInterval(periodicCheckInterval)
 })
 
-const measurementResults = ref<Measurement['results']>()
+const measurementResults = ref<Measurement['results']>(props.measurement.results)
 
 watch(
   () => props.measurement.results,
@@ -122,7 +120,7 @@ const generateResults = async (res: Measurement['results']) => {
 
 const cardLoading = ref<boolean>(true)
 const measurementType = computed<MeasurementType | TargetType | ''>(() => {
-  const targetData: Target = props.measurement?.target || target.value || {}
+  const targetData: Target = props.measurement?.target || {}
   return props.measurement?.type || targetData?.type || ''
 })
 
@@ -549,10 +547,59 @@ const onResetLaps = async () => {
 }
 
 // prompting & sbt property
-const target = ref<Target>()
 const onToggleSaved = (saved: boolean) => {
   emit('toggle-saved', { id: props.measurement.id, saved })
 }
+const promptingPrompts = computed(() => {
+  console.log('[promptingPrompts] measurementResults.value', measurementResults.value)
+  if (!measurementResults.value) return ''
+  const promptKeys = Object.keys(measurementResults.value)
+  console.log('[promptingPrompts] promptKeys', promptKeys)
+  if (!promptKeys.length) return ''
+
+  const prompts = props.measurement.target?.prompts || []
+  if (!prompts.length) return ''
+
+  const usedPrompts = promptKeys?.map((key) => {
+    const prompt = prompts?.find((i) => i.id === Number(key))
+    const percentage = prompt?.score || 0
+    return { ...measurementResults.value[key], percentage }
+  })
+  const sorted = usedPrompts?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+  const format = props.measurement.target?.prompting_format
+
+  return sorted
+    ?.map((prompt) => {
+      if (format === 'custom') `${prompt?.name} (${prompt?.percentage}%)`
+      return prompt?.name
+    })
+    ?.join(', ')
+})
+const sbtPrompts = computed(() => {
+  const prompts = props.measurement.target?.prompts || []
+  if (!prompts.length) return ''
+
+  const sorted = prompts?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+
+  return sorted?.map((prompt) => `${prompt.name} (${prompt.score}%)`)?.join(', ')
+})
+
+// task analysis property
+const taskAnalysisPrompts = computed(() => {
+  const prompts = props.measurement.target?.prompts || []
+  if (!prompts.length) return ''
+
+  const sorted = prompts?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+  const format = props.measurement.target?.prompting_format
+
+  return sorted
+    ?.map((prompt) => {
+      if (format === 'custom') `${prompt.name} (${prompt.score}%)`
+      const score = prompt.abbreviation === 'Id' && prompt.name === 'Independent' ? 100 : 0
+      return `${prompt.name} (${score}%)`
+    })
+    ?.join(', ')
+})
 </script>
 
 <template>
@@ -762,37 +809,45 @@ const onToggleSaved = (saved: boolean) => {
               @after-commit="emit('after-commit')"
             />
             <Prompting
-              v-if="measurementType.includes('Prompting') && target && !target.is_group"
+              v-if="
+                measurementType.includes('Prompting') &&
+                measurement.target &&
+                !measurement.target?.is_group
+              "
               :measurement="measurement"
               :measurement_results="measurementResults"
-              :target="target"
+              :target="measurement?.target"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
             />
             <TaskAnalysis
-              v-if="measurementType.includes('Prompting') && target && target.is_group"
+              v-if="
+                measurementType.includes('Prompting') &&
+                measurement.target &&
+                measurement.target?.is_group
+              "
               :measurement="measurement"
               :measurement_results="measurementResults"
-              :target="target"
+              :target="measurement?.target"
               :is_collapsed="is_collapsed"
               @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
             />
             <SkillBasedTreatment
-              v-if="measurementType.includes('Sbt') && target"
+              v-if="measurementType.includes('Sbt') && measurement?.target"
               :measurement="measurement"
               :measurement_results="measurementResults"
-              :target="target"
+              :target="measurement?.target"
               :is_collapsed="is_collapsed"
               @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
             />
             <ColdProbe
-              v-if="measurementType.includes('ColdProbe') && target"
+              v-if="measurementType.includes('ColdProbe') && measurement?.target"
               :measurement="measurement"
               :measurement_results="measurementResults"
-              :target="target"
+              :target="measurement?.target"
               :is_collapsed="is_collapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
@@ -869,51 +924,19 @@ const onToggleSaved = (saved: boolean) => {
                 <div v-if="measurement.target?.prompting_format === 'custom'">
                   Success metric: {{ measurement.target?.success_metric }}
                 </div>
-                <div v-if="target?.is_group">
+                <div v-if="measurement?.target?.is_group">
                   Prompts used in this session:
-                  {{
-                    target?.prompts
-                      ?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-                      ?.map((prompt) => {
-                        if (target?.prompting_format === 'custom') {
-                          return `${prompt.name} (${prompt.score}%)`
-                        }
-                        const score =
-                          prompt.abbreviation === 'Id' && prompt.name === 'Independent' ? 100 : 0
-                        return `${prompt.name} (${score}%)`
-                      })
-                      ?.join(', ')
-                  }}
+                  {{ taskAnalysisPrompts }}
                 </div>
                 <div v-else>
                   Prompts used in this session:
-                  {{
-                    Object.keys(measurementResults)
-                      ?.map((key) => {
-                        const found = target?.prompts?.find((i) => i.id === Number(key))
-                        const percentage = found?.score || 0
-                        return { ...measurementResults[key], percentage }
-                      })
-                      ?.sort((a, b) => a.position - b.position)
-                      ?.map((prompt) => {
-                        if (target?.prompting_format === 'custom') {
-                          return `${prompt?.name} (${prompt?.percentage}%)`
-                        }
-                        return prompt?.name
-                      })
-                      ?.join(', ')
-                  }}
+                  {{ promptingPrompts }}
                 </div>
               </div>
               <div v-if="measurement.target?.type === 'Target::Sbt'" class="space-y-0.5">
                 <div>
                   Prompts used in this session:
-                  {{
-                    target?.prompts
-                      ?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-                      ?.map((prompt) => `${prompt.name} (${prompt.score}%)`)
-                      ?.join(', ')
-                  }}
+                  {{ sbtPrompts }}
                 </div>
               </div>
             </div>
@@ -954,7 +977,11 @@ const onToggleSaved = (saved: boolean) => {
             <div v-if="measurement.target?.type === 'Target::Sbt'">
               <!-- sbt taks -->
               <div class="py-3 space-y-3 border-t-2 border-slate-4">
-                <div v-for="taskCode in target?.target_tasks" :key="taskCode.id" class="space-y-1">
+                <div
+                  v-for="taskCode in measurement.target?.target_tasks"
+                  :key="taskCode.id"
+                  class="space-y-1"
+                >
                   <div class="text-sm font-semibold text-slate-8">
                     {{ taskCode.code }} - {{ taskCode.title }}
                   </div>
@@ -966,7 +993,7 @@ const onToggleSaved = (saved: boolean) => {
               <!-- sbt problem behavior -->
               <div class="py-3 space-y-3 border-t-2 border-slate-4">
                 <div
-                  v-for="problemBehavior in target?.target_problem_behaviors"
+                  v-for="problemBehavior in measurement.target?.target_problem_behaviors"
                   :key="problemBehavior.id"
                   class="space-y-1"
                 >
@@ -1000,7 +1027,7 @@ const onToggleSaved = (saved: boolean) => {
               <!-- group targets problem behavior -->
               <div class="py-3 space-y-3 border-t-2 border-slate-4">
                 <div
-                  v-for="problemBehavior in target?.target_problem_behaviors"
+                  v-for="problemBehavior in measurement.target?.target_problem_behaviors"
                   :key="problemBehavior.id"
                   class="space-y-1"
                 >

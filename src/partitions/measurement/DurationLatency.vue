@@ -2,6 +2,7 @@
 import { useSessionStore } from '@/stores/session.store'
 import type { Measurement } from '@/lib/types'
 import AppButton from '@/components/AppButton.vue'
+import { Icon } from '@iconify/vue/dist/iconify.js'
 
 const sessionStore = useSessionStore()
 
@@ -95,6 +96,10 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
 <template>
   <div v-if="!reset_confirmation" class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div v-if="update_loading || lap_loading" class="absolute z-10 bottom-4 right-4">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    </div>
+
     <div
       class="flex flex-col items-center content-center justify-center flex-grow h-full transition-all gap-x-3"
       :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"

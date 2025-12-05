@@ -86,6 +86,10 @@ const onChangeScore = async (score: number) => {
 
 <template>
   <div class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div v-if="scoreLoading" class="absolute z-10 bottom-4 right-4">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    </div>
+
     <div
       class="flex flex-wrap items-center content-center justify-center flex-grow h-full gap-x-3 gap-y-4"
       :class="{ 'scale-90': is_collapsed }"

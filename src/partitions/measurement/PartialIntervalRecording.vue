@@ -3,6 +3,7 @@ import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/s
 import { computed, ref } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { useToast } from 'vue-toastification'
+import { Icon } from '@iconify/vue/dist/iconify.js'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
@@ -91,6 +92,10 @@ const onAddScore = async () => {
 
 <template>
   <div class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div v-if="scoreLoading" class="absolute z-10 bottom-4 right-4">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    </div>
+
     <div
       class="flex flex-wrap items-center content-center flex-grow h-full transition-all gap-x-3 gap-y-4"
       :class="{ 'justify-center': !is_collapsed, 'justify-between': is_collapsed }"
