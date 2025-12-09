@@ -37,6 +37,8 @@ const setup = (val: any) => {
     if (val.status === 'completed' || val.status === 'canceled') {
       setTimeout(() => {
         showing.value = false
+        currentJobId.value = ''
+        clientStore.client_target_job = ''
       }, 5000)
     }
     currentJobId.value = val.job_id
