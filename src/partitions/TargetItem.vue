@@ -14,6 +14,7 @@ interface Props {
 
 interface Emits {
   (e: 'toggleCheck'): void
+  (e: 'open'): void
 }
 
 const emit = defineEmits<Emits>()
@@ -28,39 +29,44 @@ const handleCheckboxClick = (event: Event) => {
   event.stopPropagation()
   emit('toggleCheck')
 }
+
+const handleOpenDetail = () => {
+  emit('open')
+}
 </script>
 
 <template>
-  <div
-    class="flex h-[154px] flex-col justify-center gap-1.5 border-l-[6px] px-4"
-    :style="{ borderColor: target.curriculum_color }"
-  >
-    <div v-if="showStatus" class="flex">
-      <AppChip :chip="target.status" />
-    </div>
-    <div class="flex items-center justify-between gap-4">
+  <div class="flex h-[154px] border-l-[6px]" :style="{ borderColor: target.curriculum_color }">
+    <div
+      class="flex flex-1 cursor-pointer flex-col justify-center gap-1.5 px-4"
+      @click="handleOpenDetail"
+    >
+      <div v-if="showStatus" class="flex">
+        <AppChip :chip="target.status" />
+      </div>
       <div class="text-xs truncate text-slate-8">
         {{ target.curriculum_name }}
       </div>
+      <div class="text-sm font-semibold truncate">
+        {{ target.name }}
+      </div>
+      <div class="text-xs whitespace-pre-line line-clamp-3 text-slate-8">
+        {{ target.description }}
+      </div>
+      <div v-if="showType" class="text-xs font-medium text-slate-8">
+        {{ getTargetType(target.type) }}
+      </div>
+    </div>
+
+    <div
+      v-if="isChecked !== undefined && useAction"
+      class="flex items-center justify-end w-20 pr-4 shrink-0"
+    >
       <AppCheckInput
-        v-if="isChecked !== undefined && useAction"
         :name="`check-${target.id}`"
         :checked="isChecked"
         @change.stop="handleCheckboxClick"
       />
-      <!-- <input
-        type="checkbox"
-        class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
-      /> -->
-    </div>
-    <div class="text-sm font-semibold truncate">
-      {{ target.name }}
-    </div>
-    <div class="text-xs whitespace-pre-line line-clamp-3 text-slate-8">
-      {{ target.description }}
-    </div>
-    <div v-if="showType" class="text-xs font-medium text-slate-8">
-      {{ getTargetType(target.type) }}
     </div>
   </div>
 </template>

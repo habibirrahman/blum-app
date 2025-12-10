@@ -31,16 +31,22 @@ const curriculumQuery = ref<string>('')
 const selectCurriculums = ref<number[]>([...props.selectedCurriculum])
 
 // Watch untuk sync dengan props
-watch(() => props.selectedCurriculum, (newVal) => {
-  selectCurriculums.value = [...newVal]
-})
-
-watch(() => props.show, (newVal) => {
-  if (newVal) {
-    selectCurriculums.value = [...props.selectedCurriculum]
-    curriculumQuery.value = ''
+watch(
+  () => props.selectedCurriculum,
+  (newVal) => {
+    selectCurriculums.value = [...newVal]
   }
-})
+)
+
+watch(
+  () => props.show,
+  (newVal) => {
+    if (newVal) {
+      selectCurriculums.value = [...props.selectedCurriculum]
+      curriculumQuery.value = ''
+    }
+  }
+)
 
 watch(curriculumQuery, (val) => {
   emit('update:curriculumQuery', val)
@@ -73,19 +79,21 @@ const onApplyCurriculum = () => {
 <template>
   <AppActionSheet :show="show" @close="emit('close')">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
-        <div class="text-xl font-semibold">Curriculum</div>
-        <div class="cursor-pointer" @click="emit('close')">
-          <Icon icon="ph:x" class="text-2xl" />
+      <div class="sticky top-0 z-10 h-14 space-y-3 bg-white">
+        <div class="flex w-full items-center justify-between">
+          <div class="text-xl font-semibold">Curriculum</div>
+          <div class="cursor-pointer" @click="emit('close')">
+            <Icon icon="ph:x" class="text-2xl" />
+          </div>
         </div>
+        <AppTextInput
+          name="query"
+          placeholder="Search curriculum"
+          v-model="curriculumQuery"
+          suffix_icon="ph:magnifying-glass"
+        />
       </div>
-      <AppTextInput
-        name="query"
-        placeholder="Search curriculum"
-        v-model="curriculumQuery"
-        suffix_icon="ph:magnifying-glass"
-      />
-      <div>
+      <div class="h-[500px] overflow-y-auto">
         <div
           v-for="opt in curriculumOptions"
           :key="opt.value"
@@ -100,7 +108,7 @@ const onApplyCurriculum = () => {
           <label :for="`curriculum_filter_${opt.value}`" class="grow truncate text-sm">
             {{ opt.label }}
           </label>
-          
+
           <!-- Checkbox untuk multiple select -->
           <input
             v-if="useMultipleSelect"
@@ -112,7 +120,7 @@ const onApplyCurriculum = () => {
             class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="onCheckCurriculum(opt.value)"
           />
-          
+
           <!-- Radio untuk single select -->
           <input
             v-else
@@ -126,8 +134,12 @@ const onApplyCurriculum = () => {
           />
         </div>
       </div>
-      <div class="flex w-full items-center gap-2">
-        <AppButton class="w-full" v-if="resetAble" kind="plain" @click="onResetCurriculum">Reset</AppButton>
+      <div
+        class="sticky bottom-0 flex h-14 w-full items-center justify-center gap-2 bg-white pb-safe"
+      >
+        <AppButton class="w-full" v-if="resetAble" kind="plain" @click="onResetCurriculum"
+          >Reset</AppButton
+        >
         <AppButton class="w-full" @click="onApplyCurriculum">Apply</AppButton>
       </div>
     </div>

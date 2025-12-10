@@ -48,14 +48,7 @@ const tabs = computed<Tab[]>(() => {
 async function fetchClient() {
   clientLoading.value = true
   const id = Number(route.params.id)
-  const { success, data } = await clientStore.getClient({ id })
-  if (data.running_create_target_job) {
-    const payload = {
-      client_id: data.id,
-      job_id: data.running_create_target_job.job_id
-    }
-    await clientStore.checkTargetJob({ data: payload })
-  }
+  const { success } = await clientStore.getClient({ id })
   clientLoading.value = false
   if (!success) return
   setTimeout(() => {

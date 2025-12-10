@@ -25,6 +25,7 @@ const isUseNav = computed<boolean>(
     routeName.value !== 'signin' &&
     !routeName.value.includes('record') &&
     !isShowRunningSession.value &&
+    routeName.value !== 'new-client-target' &&
     routeName.value !== 'edit-client-target' &&
     routeName.value !== 'session-draft' &&
     routeName.value !== 'session-select-target'

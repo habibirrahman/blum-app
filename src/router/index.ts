@@ -44,7 +44,12 @@ const router = createRouter({
       component: () => import('../pages/ClientDetails.page.vue')
     },
     {
-      path: '/clients/:id/targets/:target_id/edit',
+      path: '/client/:id/targets/new',
+      name: 'new-client-target',
+      component: () => import('../pages/AddTarget.page.vue')
+    },
+    {
+      path: '/client/:id/targets/:target_id/edit',
       name: 'edit-client-target',
       component: () => import('../pages/EditClientTarget.page.vue')
     },

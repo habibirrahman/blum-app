@@ -580,6 +580,7 @@ function onApplyPromptSuccessMetric(val: string) {
             suffix_text="attempt(s)"
             v-model="goal"
             type="number"
+            inputmode="numeric"
           />
         </div>
 
@@ -597,6 +598,7 @@ function onApplyPromptSuccessMetric(val: string) {
             suffix_text="percent (%)"
             v-model="goal"
             type="number"
+            inputmode="numeric"
           />
         </div>
 
@@ -631,6 +633,7 @@ function onApplyPromptSuccessMetric(val: string) {
               : ''
           "
           type="number"
+          inputmode="numeric"
         />
 
         <!-- PIR Goal -->
@@ -648,6 +651,7 @@ function onApplyPromptSuccessMetric(val: string) {
               : ''
           "
           type="number"
+          inputmode="numeric"
         />
 
         <!-- Frequency Goal -->
@@ -660,6 +664,7 @@ function onApplyPromptSuccessMetric(val: string) {
           suffix_text="attempt(s) per session"
           v-model="goal"
           type="number"
+          inputmode="numeric"
         />
 
         <!-- Percentage Goal -->
@@ -677,6 +682,7 @@ function onApplyPromptSuccessMetric(val: string) {
               : ''
           "
           type="number"
+          inputmode="numeric"
         />
 
         <!-- Trial by Trial Goal -->
@@ -694,6 +700,7 @@ function onApplyPromptSuccessMetric(val: string) {
               : ''
           "
           type="number"
+          inputmode="numeric"
         />
 
         <!-- Success Metric Radio Buttons -->
@@ -736,6 +743,7 @@ function onApplyPromptSuccessMetric(val: string) {
           required
           v-model="number_of_trial"
           type="number"
+          inputmode="numeric"
         />
 
         <!-- Apply to All Member Checkbox -->
@@ -777,6 +785,7 @@ function onApplyPromptSuccessMetric(val: string) {
         required
         v-model="probingTrial"
         type="number"
+        inputmode="numeric"
         suffix_text="trials"
         :disabled="!probingEnabled"
       />
@@ -787,6 +796,7 @@ function onApplyPromptSuccessMetric(val: string) {
         required
         v-model="probingGoal"
         type="number"
+        inputmode="numeric"
         suffix_text="percent (%)"
         :disabled="!probingEnabled"
       />
@@ -844,6 +854,7 @@ function onApplyPromptSuccessMetric(val: string) {
         <div class="flex items-center gap-2 pt-2">
           <input
             type="number"
+            inputmode="numeric"
             min="1"
             v-model="totalSuccessInput"
             :disabled="!totalSuccessChecked"
@@ -875,6 +886,7 @@ function onApplyPromptSuccessMetric(val: string) {
         <div class="flex items-center gap-2 pt-2">
           <input
             type="number"
+            inputmode="numeric"
             v-model="consecutiveSuccessInput"
             min="2"
             :disabled="!consecutiveSuccessChecked"

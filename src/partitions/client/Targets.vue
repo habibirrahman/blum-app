@@ -11,15 +11,13 @@ import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppButton from '@/components/AppButton.vue'
 import TargetItem from '../TargetItem.vue'
 import TargetItemLoader from '@/components/skeletons/TargetItemLoader.vue'
-import AddTargetFromDatabank from '@/partitions/target/AddTargetFromDatabank.vue'
 import PreviewTargetModal from '@/partitions/target/PreviewTargetModal.vue'
 import TargetJobProgression from '../target/TargetJobProgression.vue'
 
 const route = useRoute()
 const clientStore = useClientStore()
 
-const targetsLoading = ref<boolean>(true)
-const addTargetOpen = ref<boolean>(false)
+const targetsLoading = ref<boolean>(false)
 
 const page = ref<number>(1)
 const perPage = ref<number>(25)
@@ -118,7 +116,7 @@ async function fetchTargets() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   fetchTargets()
 })
 const showDetails = ref<boolean>(false)
@@ -169,9 +167,9 @@ const onToggleGroup = (id: Target['id']) => {
         v-model="query"
         suffix_icon="ph:magnifying-glass"
       />
-      <AppButton class="flex-shrink-0" @click="addTargetOpen = true"
-        ><Icon icon="ph:plus-bold"
-      /></AppButton>
+      <RouterLink :to="{ name: 'new-client-target', params: { id: clientStore.client?.id } }">
+        <AppButton class="flex-shrink-0"><Icon icon="ph:plus-bold" /></AppButton>
+      </RouterLink>
     </div>
     <div class="pl-4">
       <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
@@ -360,5 +358,4 @@ const onToggleGroup = (id: Target['id']) => {
     :target="targetDetails"
     :loading="targetLoading"
   />
-  <AddTargetFromDatabank v-if="addTargetOpen" @close="addTargetOpen = false" />
 </template>
