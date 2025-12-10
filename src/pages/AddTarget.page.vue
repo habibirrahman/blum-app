@@ -309,7 +309,7 @@ const onAddTarget = async () => {
       <TargetItemLoader v-for="n in perPage" :key="n" />
     </div>
   </div>
-  <div v-else>
+  <div v-else class="mb-24">
     <div class="flex items-center justify-between gap-3 px-4 pt-2 text-xs text-slate-7">
       <div class="h-5">
         <span>Showing </span>
@@ -378,14 +378,18 @@ const onAddTarget = async () => {
       @change="page = $event"
     />
   </div>
-  <div class="sticky bottom-0 flex items-center justify-center w-full px-4 bg-white h-14 pb-safe">
-    <AppButton
-      :loading="submitLoading"
-      class="w-full"
-      @click="onAddTarget"
-      :disabled="targets.length === 0"
-      >Add {{ targets.length }} target(s)</AppButton
-    >
+
+  <div class="fixed bottom-0 z-20 w-full px-4 bg-pure-white pb-safe">
+    <div class="flex items-center w-full h-16">
+      <AppButton
+        class="grow"
+        :loading="submitLoading"
+        @click="onAddTarget"
+        :disabled="targets.length === 0"
+      >
+        Add {{ targets.length }} target(s)
+      </AppButton>
+    </div>
   </div>
 
   <PreviewTargetModal

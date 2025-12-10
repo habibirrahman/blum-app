@@ -854,12 +854,13 @@ function onApplyPromptSuccessMetric(val: string) {
         <div class="flex items-center gap-2 pt-2">
           <input
             type="number"
+            pattern="[0-9]*"
             inputmode="numeric"
             min="1"
             v-model="totalSuccessInput"
             :disabled="!totalSuccessChecked"
             :class="{ 'opacity-50': !totalSuccessChecked }"
-            class="w-10 h-8 px-2 text-center border rounded outline-none border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2"
+            class="h-8 w-10 rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] appearance-none focus:border-light-purple-5 focus:ring-light-purple-2"
           />
           <div class="text-xs text-slate-8">successful session(s).</div>
         </div>
@@ -886,12 +887,13 @@ function onApplyPromptSuccessMetric(val: string) {
         <div class="flex items-center gap-2 pt-2">
           <input
             type="number"
+            pattern="[0-9]*"
             inputmode="numeric"
             v-model="consecutiveSuccessInput"
             min="2"
             :disabled="!consecutiveSuccessChecked"
             :class="{ 'opacity-50': !consecutiveSuccessChecked }"
-            class="w-10 h-8 px-2 text-center border rounded outline-none border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2"
+            class="h-8 w-10 rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] appearance-none focus:border-light-purple-5 focus:ring-light-purple-2"
           />
           <div class="text-xs text-slate-8">consecutive session(s).</div>
         </div>

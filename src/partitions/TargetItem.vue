@@ -38,7 +38,7 @@ const handleOpenDetail = () => {
 <template>
   <div class="flex h-[154px] border-l-[6px]" :style="{ borderColor: target.curriculum_color }">
     <div
-      class="flex flex-1 cursor-pointer flex-col justify-center gap-1.5 px-4"
+      class="flex flex-1 cursor-pointer flex-col justify-center gap-1.5 truncate px-4"
       @click="handleOpenDetail"
     >
       <div v-if="showStatus" class="flex">
@@ -60,7 +60,7 @@ const handleOpenDetail = () => {
 
     <div
       v-if="isChecked !== undefined && useAction"
-      class="flex items-center justify-end w-20 pr-4 shrink-0"
+      class="flex items-center justify-end pr-4 shrink-0"
     >
       <AppCheckInput
         :name="`check-${target.id}`"

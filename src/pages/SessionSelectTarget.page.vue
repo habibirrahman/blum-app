@@ -360,15 +360,17 @@ const onAddCheckedTargets = async () => {
     </div>
   </div>
 
-  <div class="fixed bottom-0 z-20 flex items-center w-full h-16 px-4 bg-pure-white">
-    <AppButton
-      class="flex-grow"
-      :loading="addLoading"
-      :disabled="!checkedTargetIds.length"
-      @click="onAddCheckedTargets"
-    >
-      Add {{ checkedTargetIds.length }} target(s)
-    </AppButton>
+  <div class="fixed bottom-0 z-20 w-full px-4 bg-pure-white pb-safe">
+    <div class="flex items-center w-full h-16">
+      <AppButton
+        class="grow"
+        :loading="addLoading"
+        :disabled="!checkedTargetIds.length"
+        @click="onAddCheckedTargets"
+      >
+        Add {{ checkedTargetIds.length }} target(s)
+      </AppButton>
+    </div>
   </div>
 
   <PreviewTargetModal
