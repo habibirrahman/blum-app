@@ -23,7 +23,7 @@ const toast = useToast()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
-const sessionLoading = ref<boolean>(false)
+const sessionLoading = ref<boolean>(true)
 const cycleLoading = ref<boolean>(false)
 const redirect = ref<string>('/home')
 const heightReload = 112
@@ -73,9 +73,8 @@ async function fetchSession(
   const slug = route.params?.slug as string
   const { success, data } = await sessionStore.getSession({ slug })
   const session = data as Session
-  await sessionStore.getSessionComments({ id: session.id, filter: '' })
+  await sessionStore.getSessionComments({ id: session?.id, filter: '' })
   sessionLoading.value = false
-  cycleLoading.value = false
   if (!success) return
 
   const app = document.getElementById('app')
@@ -118,6 +117,15 @@ watch(
   async (isConnected, wasConnected) => {
     if (!isConnected) {
       showOffline.value = true
+
+      // record session activities
+      await sessionStore.addSessionActivity({
+        action_label: `network_offline`,
+        recordable: 'Network',
+        notes: `Network disconnected`,
+        timestamp: new Date().toISOString()
+      })
+
       return
     }
 
@@ -129,6 +137,14 @@ watch(
       if (sessionStore.pending_progress.length > 0) {
         toast.info('Syncing data...')
       }
+
+      // record session activities
+      await sessionStore.addSessionActivity({
+        action_label: `network_online`,
+        recordable: 'Network',
+        notes: `Network reconnected`,
+        timestamp: new Date().toISOString()
+      })
 
       await syncSession({ is_swiped: true })
     }
@@ -155,7 +171,9 @@ const isDisabledAction = computed(() => {
   )
 })
 
-const scrollListener = (e: any) => {
+const isRefreshing = ref<boolean>(false)
+
+const scrollListener = async (e: any) => {
   let top = e.currentTarget.scrollTop
 
   isScrolling.value = true
@@ -177,10 +195,22 @@ const scrollListener = (e: any) => {
     return
   }
 
-  scrollingTimeout.value = setTimeout(() => {
-    if (top === 0) {
+  scrollingTimeout.value = setTimeout(async () => {
+    if (top === 0 && !isRefreshing.value) {
+      isRefreshing.value = true
       cycleLoading.value = true
-      fetchSession({ is_swiped: true })
+
+      await sessionStore.addSessionActivity({
+        action_label: `session_refresh`,
+        recordable: 'Session',
+        recordable_id: sessionStore.session?.id,
+        notes: `Refresh session (swipe up)`,
+        timestamp: new Date().toISOString()
+      })
+      await fetchSession({ is_swiped: true })
+
+      isRefreshing.value = false
+      cycleLoading.value = false
     }
     if (top < heightReload) {
       document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
@@ -197,9 +227,9 @@ onMounted(async () => {
   if (app) {
     app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
   }
-  appStore.getRunningSessions()
 
-  sessionLoading.value = true
+  appStore.getRunningSessions()
+  redirect.value = route.query.redirect?.toString() || '/home'
 
   // Generate session store dari storage
   await sessionStore.generateSessionStore()
@@ -219,21 +249,22 @@ onMounted(async () => {
   }
 
   await fetchSession({ first: true })
-  redirect.value = route.query.redirect?.toString() || '/home'
 
-  // Setup periodic check untuk stuck items
-  periodicCheckInterval = setInterval(() => {
-    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+  if (sessionStore.session?.status === 'ongoing') {
+    // Setup periodic check untuk stuck items
+    periodicCheckInterval = setInterval(() => {
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
 
-    const stuckItems = sessionStore.pending_progress.filter(
-      (item) => item.timestamp && item.timestamp < fiveMinutesAgo
-    )
+      const stuckItems = sessionStore.pending_progress.filter(
+        (item) => item.timestamp && item.timestamp < fiveMinutesAgo
+      )
 
-    if (stuckItems.length > 0 && appStore.network_status.connected) {
-      console.warn('[Session Page] Found stuck items, triggering sync')
-      sessionStore.triggerSync(true)
-    }
-  }, 60000) // Check setiap 1 menit
+      if (stuckItems.length > 0 && appStore.network_status.connected) {
+        console.warn('[Session Page] Found stuck items, triggering sync')
+        sessionStore.triggerSync(true)
+      }
+    }, 60000) // Check setiap 1 menit
+  }
 })
 
 // Cleanup saat unmount
@@ -329,6 +360,7 @@ watch(showReviewMode, (val) => {
     containerHeight.value = `${realHeight + 44}px`
   }, 1000)
 })
+
 const focusMeasurement = ref<Measurement['id']>(0)
 const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
   let timer = 500
@@ -504,6 +536,7 @@ const onTrunOffAllAndEndSession = async () => {
   showReviewMode.value = true
   cycleLoading.value = true
   const length = sessionStore.session_measurements.length
+
   for (let idx = 0; idx < length; idx++) {
     const measurement: Measurement = sessionStore.session_measurements[idx]
     if (!measurement.is_dropped) {
@@ -528,10 +561,10 @@ const onTrunOffAllAndEndSession = async () => {
       const { success, message } = await sessionStore.updateMeasurement(params)
       if (!success) {
         toast.error(message)
-        return
       }
     }
   }
+
   endSessionStatus.value = 'normal'
   setTimeout(() => {
     cycleLoading.value = false
@@ -597,11 +630,14 @@ const checkActionRecommendations = async () => {
   const { success, data } = await sessionStore.getSessionRecommendations()
   endSessionLoading.value = false
   showEndSession.value = false
+
   toast.success('The session has been completed.')
+
   if (!success) {
     onExitSession()
     return
   }
+
   if (data.action_recommendations.length) {
     showActionRecommendations.value = true
   } else {
@@ -705,7 +741,7 @@ const duplicateImageCommentsToClientDocument = async () => {
 </script>
 
 <template>
-  <div class="sticky top-0 z-[100] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
+  <div class="sticky top-0 z-[10] flex h-14 shrink-0 items-center gap-3 bg-white px-4">
     <!-- Tambahkan pending sync indicator -->
     <div class="flex items-center gap-2">
       <div
@@ -851,13 +887,13 @@ const duplicateImageCommentsToClientDocument = async () => {
   <div
     v-if="!sessionLoading && fixedMeasurement && !showReviewMode"
     id="fixed-measurement"
-    class="fixed bottom-0 z-[10] flex w-screen bg-prim-3 transition-all px-safe pb-safe"
+    class="fixed bottom-0 z-[9] flex w-screen bg-prim-3 transition-all px-safe pb-safe"
   >
     <div
       class="flex grow"
       :class="{
-        'max-h-[180px] justify-center': isMeasurementCollapsed,
-        'no-scrollbar h-[calc(100vh-52px)] flex-col items-center gap-4 overflow-y-auto py-4':
+        'max-h-[160px] justify-center': isMeasurementCollapsed,
+        'no-scrollbar h-[calc(100vh-56px)] flex-col items-center gap-4 overflow-y-auto py-4':
           !isMeasurementCollapsed
       }"
     >
@@ -892,7 +928,7 @@ const duplicateImageCommentsToClientDocument = async () => {
 
   <div
     v-if="!sessionLoading && !fixedMeasurement"
-    class="fixed z-[10] w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
+    class="fixed z-[9] w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
     :class="{ 'bottom-0': !showReviewMode, '-bottom-36': showReviewMode }"
   >
     <div class="flex items-center h-16 gap-6 pl-4 grow">

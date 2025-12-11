@@ -289,12 +289,17 @@ onMounted(() => {
       <RouterLink
         v-for="client in clientStore.clients"
         :key="client.id"
-        :to="{ name: 'client', params: { id: client.id, tab: 'draft-sessions' } }"
+        :to="{ name: 'client', params: { id: client.id, tab: 'sessions-draft' } }"
       >
         <ClientItem :client="client" />
       </RouterLink>
     </div>
-    <AppPagination :page="page" :total_count="clientStore.clients_count" @change="page = $event" />
+    <AppPagination
+      :page="page"
+      :per_page="perPage"
+      :total_count="clientStore.clients_count"
+      @change="page = $event"
+    />
   </div>
 
   <AppActionSheet :show="showBranch" @close="showBranch = false">

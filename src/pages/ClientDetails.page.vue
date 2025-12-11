@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, type RouteParamsRaw } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
-import DraftSessions from '@/partitions/client/DraftSessions.vue'
+import SessionsDraft from '@/partitions/client/SessionsDraft.vue'
 import PastSessions from '@/partitions/client/PastSessions.vue'
 import Targets from '@/partitions/client/Targets.vue'
 import Profile from '@/partitions/client/Profile.vue'
@@ -23,9 +23,9 @@ interface Tab {
 const tabs = computed<Tab[]>(() => {
   return [
     {
-      params: { id: route.params.id, tab: 'draft-sessions' },
-      label: 'Draft sessions',
-      is_active: route.params.tab === 'draft-sessions'
+      params: { id: route.params.id, tab: 'sessions-draft' },
+      label: 'Sessions Draft',
+      is_active: route.params.tab === 'sessions-draft'
     },
     {
       params: { id: route.params.id, tab: 'past-sessions' },
@@ -129,7 +129,7 @@ onMounted(() => {
     </div> -->
   </div>
   <div v-else>
-    <DraftSessions v-if="route.params.tab === 'draft-sessions'" />
+    <SessionsDraft v-if="route.params.tab === 'sessions-draft'" />
     <PastSessions v-if="route.params.tab === 'past-sessions'" />
     <Targets v-if="route.params.tab === 'targets'" />
     <Profile v-if="route.params.tab === 'profile'" />

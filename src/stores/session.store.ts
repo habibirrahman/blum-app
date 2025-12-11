@@ -3,9 +3,16 @@ import axios, { isAxiosError } from 'axios'
 import { getStorage, setStorage } from '@/plugins/preferences.plugin'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getErrorMessage, getRandomString, onlyUniqueId } from '@/lib/func'
-import type { Session, Comment, Measurement, User, Client, ActionRecommendation } from '@/lib/types'
+import type {
+  Session,
+  Comment,
+  Measurement,
+  User,
+  Client,
+  ActionRecommendation,
+  Target
+} from '@/lib/types'
 
-// Tambahkan field untuk tracking
 interface SessionPendingProgress {
   key: string
   name:
@@ -27,7 +34,6 @@ interface SessionPendingProgress {
   lastError?: string
   lastRetryAt?: number
 }
-
 export interface SessionStateSchema {
   session: Session | null
   session_comments: Comment[]
@@ -41,14 +47,24 @@ export interface SessionStateSchema {
   _autoSyncInitialized?: boolean // Track auto-sync setup
   _syncDebounceTimer?: any // For debounced sync
 }
-
 export type SessionCommentFilter = '' | 'general' | 'assessment' | 'target' | 'mine'
+export interface CreateSessionParams {
+  client_id: Client['id']
+}
+export interface CreateMeasurementParams {
+  id: Measurement['id']
+  target_id: Target['id']
+  measurement: Measurement
+}
+export interface AddMultipleTargetSessionParams {
+  id: Session['id']
+  target_ids: Target['id'][]
+}
 export interface UpdateMeasurementParams {
   id: Measurement['id']
   measurement: Measurement
   data_result: Measurement
 }
-
 export interface ResolveAllMeasurementsParams {
   params: {
     id: Measurement['id']
@@ -107,12 +123,21 @@ export interface DeleteSessionCommentParams {
   comment_id: Comment['id']
   type: 'general' | 'assessment'
 }
-
 export interface DuplicateImagesToClientDocumentParams {
   client_id: Client['id']
   documents: any[]
   session_id: Session['id']
   session_slug: Session['slug']
+}
+
+export interface AddSessionActivity {
+  action_label: string
+  recordable: 'Session' | 'Measurement' | 'Comment' | 'Network' | 'App'
+  recordable_id?: number
+  api?: string
+  params?: any
+  notes?: string
+  timestamp: string // new Date().toISOString()
 }
 
 export const useSessionStore = defineStore('session', {
@@ -156,6 +181,7 @@ export const useSessionStore = defineStore('session', {
 
     resetSessionStore() {
       this.clearAllMeasurementBackups()
+      this.clearSessionActivities()
 
       this.session = null
       this.session_comments = []
@@ -373,7 +399,7 @@ export const useSessionStore = defineStore('session', {
     },
 
     // ========================================
-    // BACKUP FUNCTIONS
+    // MEASUREMENT BACKUP FUNCTIONS
     // ========================================
 
     // Helper untuk local backup
@@ -408,8 +434,17 @@ export const useSessionStore = defineStore('session', {
 
         const currentMeasurement = this.session_measurements?.find((m) => m.id === id)
 
+        // Konversi backup.version ke number (bisa string ISO atau number timestamp)
+        const backupVersion =
+          typeof backup.version === 'string' ? new Date(backup.version).getTime() : backup.version
+
+        // Konversi currentMeasurement.updated_at ke number (selalu string ISO)
+        const currentVersion = currentMeasurement?.updated_at
+          ? new Date(currentMeasurement.updated_at).getTime()
+          : 0
+
         // Return backup jika lebih baru atau current data tidak ada
-        if (!currentMeasurement || backup.version > (currentMeasurement.updated_at || 0)) {
+        if (!currentMeasurement || backupVersion > currentVersion) {
           console.log('[restoreFromBackup] Restored from backup:', backup.timestamp)
           return backup
         }
@@ -463,7 +498,7 @@ export const useSessionStore = defineStore('session', {
     },
 
     // ========================================
-    // CLEANUP BACKUP FUNCTIONS
+    // CLEANUP MEASUREMENT BACKUP FUNCTIONS
     // ========================================
 
     /**
@@ -575,6 +610,42 @@ export const useSessionStore = defineStore('session', {
       } catch (error) {
         console.error('[clearSyncedBackups] Failed:', error)
         return { success: false, count: 0 }
+      }
+    },
+
+    async clearSessionActivities() {
+      try {
+        const { Preferences } = await import('@capacitor/preferences')
+        const { keys } = await Preferences.keys()
+
+        // Filter keys yang mengandung 'session_activities_'
+        const sessionActivityKeys = keys.filter((key) => key.startsWith('session_activities_'))
+
+        if (sessionActivityKeys.length === 0) {
+          console.log('[clearSessionActivities] No session activities found')
+          return { success: true, count: 0 }
+        }
+
+        // Hapus semua session activities
+        const deletePromises = sessionActivityKeys.map((key) => Preferences.remove({ key }))
+        await Promise.all(deletePromises)
+
+        console.log(
+          `[clearSessionActivities] Cleared ${sessionActivityKeys.length} session activity key(s)`
+        )
+
+        return {
+          success: true,
+          count: sessionActivityKeys.length,
+          keys: sessionActivityKeys
+        }
+      } catch (error) {
+        console.error('[clearSessionActivities] Failed to clear session activities:', error)
+        return {
+          success: false,
+          count: 0,
+          error
+        }
       }
     },
 
@@ -699,10 +770,16 @@ export const useSessionStore = defineStore('session', {
     // SESSION FUNCTIONS
     // ========================================
 
+    // SETTER Session and Measurement
     setSession(data: Session) {
       this.session = data
       const idx = this.sessions.findIndex((i) => i.id === data.id)
       if (idx > -1) this.sessions[idx] = data
+      this.syncSessionStore()
+    },
+    addSession(data: Session) {
+      this.session = data
+      this.sessions = [data, ...this.sessions]
       this.syncSessionStore()
     },
     setSessionMeasurement(data: Measurement) {
@@ -710,6 +787,8 @@ export const useSessionStore = defineStore('session', {
       if (idx > -1) this.session_measurements[idx] = data
       this.syncSessionStore()
     },
+
+    // SETTER Session Comment
     addSessionComment(data: Comment, check: boolean = false) {
       let arr = [...this.session_comments, data]
       if (check) {
@@ -728,6 +807,28 @@ export const useSessionStore = defineStore('session', {
       this.syncSessionStore()
     },
 
+    // ACTION
+    async getSessions({ params }: { params?: string }) {
+      const app = useAppStore()
+      if (!app.network_status.connected) {
+        // return {
+        //   success: true,
+        //   data: { sessions: this.sessions, total_count: this.sessions_count }
+        // }
+      }
+
+      return axios
+        .get(`/api/v1/sessions/draft_sessions${params}&outcome=targets`)
+        .then(async ({ data }) => {
+          this.sessions = data.sessions
+          this.sessions_count = data.total_count
+          this.syncSessionStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
     async getSession({ slug }: { slug: Session['slug'] }): Promise<ResponseSchema> {
       const data = this.sessions.find((i) => i.slug === slug)
       if (data) {
@@ -751,37 +852,6 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async getSessionComments({
-      id,
-      filter
-    }: {
-      id: Session['id']
-      filter?: SessionCommentFilter
-    }): Promise<ResponseSchema> {
-      if (!id) return { success: false, data: null }
-      this.session_comments = this.session?.comments || []
-
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        // return { success: true, data: this.session_comments }
-      }
-
-      const params = filter ? `?filter_by=${filter}` : ''
-      return axios
-        .get(`/api/v1/sessions/${id}/comments${params}`)
-        .then(async ({ data }) => {
-          this.session_comments = data
-          const session: Session = {
-            ...this.session,
-            comments: [...data, ...(this.session?.comments || [])].filter(onlyUniqueId)
-          }
-          this.setSession(session)
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
-    },
     async getSessionMeasurements({ id }: { id: Session['id'] }): Promise<ResponseSchema> {
       if (!id) return { success: false, data: null }
       this.session_measurements = this.session?.measurements || []
@@ -795,6 +865,18 @@ export const useSessionStore = defineStore('session', {
         .get(`/api/v1/sessions/${id}/measurements`)
         .then(async ({ data }) => {
           this.session_measurements = data
+          // async
+          // sering race condition
+          /*
+          // lebih baik pakai ini
+          setState((prev) => {
+            return { ...prev, ...data }
+          })
+
+          // ini sering race condition jika dipanggil bersaman
+          setState({...this.state, ...data})
+          **/
+
           const session: Session = {
             ...this.session,
             measurements: [...data, ...(this.session?.measurements || [])].filter(onlyUniqueId)
@@ -806,27 +888,36 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async getSessions({ params }: { params?: string }) {
+    async getMeasurement({ id }: { id: Measurement['id'] }): Promise<ResponseSchema> {
+      if (!id) return { success: false, data: null }
+
       const app = useAppStore()
       if (!app.network_status.connected) {
-        // return {
-        //   success: true,
-        //   data: { sessions: this.sessions, total_count: this.sessions_count }
-        // }
+        // return { success: true, data: this.session_measurements }
       }
 
       return axios
-        .get(`/api/v1/sessions/draft_sessions${params}&outcome=targets`)
+        .get(`/api/v1/measurements/${id}`)
         .then(async ({ data }) => {
-          this.sessions = data.sessions
-          this.sessions_count = data.total_count
-          this.syncSessionStore()
+          this.setSessionMeasurement(data)
+          // async
+          // sering race condition
+          /*
+          // lebih baik pakai ini
+          setState((prev) => {
+            return { ...prev, ...data }
+          })
+
+          // ini sering race condition jika dipanggil bersaman
+          setState({...this.state, ...data})
+          **/
           return { success: true, data }
         })
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
+
     async getUpcomingSessions() {
       const app = useAppStore()
       if (!app.network_status.connected) {
@@ -848,6 +939,33 @@ export const useSessionStore = defineStore('session', {
         })
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+
+    async createSession({ client_id }: CreateSessionParams) {
+      return axios
+        .post(`/api/v1/clients/${client_id}/sessions`, {
+          session: { name: '', status: 'draft' }
+        })
+        .then((response) => {
+          this.addSession(response.data)
+          return { success: true, data: response.data, message: '' }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
+
+    async deleteSession({ id }: { id: Session['id'] }) {
+      return axios
+        .delete(`/api/v1/sessions/${id}`)
+        .then((response) => {
+          return { success: true, data: response.data, message: response.data.message }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
         })
     },
 
@@ -882,8 +1000,30 @@ export const useSessionStore = defineStore('session', {
     async endSession() {
       const { getRunningSessions } = useAppStore()
 
+      let activities: AddSessionActivity[] = []
+      try {
+        const key = `session_activities_${this.session?.id}`
+        const result = await getStorage(key)
+        const backup = typeof result.data === 'string' ? JSON.parse(result.data) : result.data
+        activities = backup.activities
+      } catch (error) {
+        activities = []
+      }
+
+      activities.push({
+        action_label: `session_end`,
+        recordable: 'Session',
+        recordable_id: this.session?.id,
+        api: `PATCH /api/v1/sessions/${this.session?.id}`,
+        params: { session: { status: 'completed', session_activities: 'SessionActivity[]' } }, // prevent infinite array
+        notes: `End session`,
+        timestamp: new Date().toISOString()
+      })
+
       return axios
-        .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'completed' } })
+        .patch(`/api/v1/sessions/${this.session?.id}`, {
+          session: { status: 'completed', session_activities: activities }
+        })
         .then(async ({ data }) => {
           await getRunningSessions()
 
@@ -896,6 +1036,9 @@ export const useSessionStore = defineStore('session', {
           if (result.success) {
             console.log(`[endSession] Cleared ${result.count} backup(s)`)
           }
+
+          // ✅ Clear session activities dari storage
+          await this.clearSessionActivities()
 
           this.syncSessionStore()
           return { success: true, data, message: '' }
@@ -921,6 +1064,32 @@ export const useSessionStore = defineStore('session', {
         })
     },
 
+    async createMeasurement({ id, target_id, measurement }: CreateMeasurementParams) {
+      return axios
+        .post(`/api/v1/sessions/${id}/targets/${target_id}/measurements`, { measurement })
+        .then(async ({ data }) => {
+          return { success: true, data, message: '' }
+        })
+        .catch(async (error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
+    async addMultipleTargetsSession({ id, target_ids }: AddMultipleTargetSessionParams) {
+      return axios
+        .post(`/api/v1/sessions/${id}/add_multiple_targets`, {
+          target_ids
+        })
+        .then((response) => {
+          this.setSession(response.data)
+          return { success: true, data: response.data, message: '' }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
+
     async updateMeasurement({ id, measurement, data_result }: UpdateMeasurementParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {
@@ -931,7 +1100,42 @@ export const useSessionStore = defineStore('session', {
         .patch(`/api/v1/measurements/${id}`, { measurement })
         .then(async ({ data }) => {
           this.setSessionMeasurement(data)
+
+          // record session activities
+          await this.addSessionActivity({
+            action_label: 'api_success',
+            recordable: 'Measurement',
+            recordable_id: id,
+            api: `PATCH /api/v1/measurements/${id}`,
+            params: { measurement },
+            notes: 'Success update measurement',
+            timestamp: new Date().toISOString()
+          })
+
           return { success: true, data, message: '' }
+        })
+        .catch(async (error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+
+          // record session activities
+          await this.addSessionActivity({
+            action_label: 'api_failed',
+            recordable: 'Measurement',
+            recordable_id: id,
+            api: `PATCH /api/v1/measurements/${id}`,
+            params: { measurement },
+            notes: message as string,
+            timestamp: new Date().toISOString()
+          })
+
+          return { success: false, data: null, message }
+        })
+    },
+    async deleteMeasurement({ id, params }: { id: Measurement['id']; params?: string }) {
+      return axios
+        .delete(`/api/v1/measurements/${id}${params || ''}`)
+        .then((response) => {
+          return { success: true, data: response.data, message: '' }
         })
         .catch((error) => {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
@@ -991,16 +1195,13 @@ export const useSessionStore = defineStore('session', {
           }
         }
 
-        // ❌ HAPUS: JANGAN update state sebelum API berhasil!
-        // this.setSessionMeasurement(data_result)
-
         // Tambahkan retry logic dengan exponential backoff
         let lastError: any
         const maxRetries = 2
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
-            const { data } = await axios.patch(
+            const { data: patchData } = await axios.patch(
               `/api/v1/measurements/${id}`,
               { measurement },
               {
@@ -1011,8 +1212,24 @@ export const useSessionStore = defineStore('session', {
               }
             )
 
+            // record session activities
+            await this.addSessionActivity({
+              action_label: 'api_success',
+              recordable: 'Measurement',
+              recordable_id: id,
+              api: `PATCH /api/v1/measurements/${id}`,
+              params: { measurement },
+              notes: `Success update measurement [attempt: ${attempt + 1}]`,
+              timestamp: new Date().toISOString()
+            })
+
             // ✅ Update state SETELAH API berhasil!
-            this.setSessionMeasurement(data)
+            // this.setSessionMeasurement(data)
+            const { data: getData } = await this.getMeasurement({ id: patchData.id })
+
+            // Handle new Data
+            let newData = patchData
+            if (getData) newData = getData
 
             // Hapus dari pending queue jika ada
             const queueIndex = this.pending_progress.findIndex(
@@ -1024,14 +1241,24 @@ export const useSessionStore = defineStore('session', {
             }
 
             // Update local backup dengan status synced
-            await this.saveLocalBackup(Number(id), data, 'synced')
+            await this.saveLocalBackup(Number(id), newData, 'synced')
 
-            return { success: true, data, message: '' }
+            return { success: true, data: newData, message: '' }
           } catch (err) {
             lastError = err
 
             // Retry jika timeout dan belum max attempts
             if (attempt < maxRetries && isAxiosError(err) && err.code === 'ECONNABORTED') {
+              // record session activities
+              await this.addSessionActivity({
+                action_label: 'api_failed',
+                recordable: 'Measurement',
+                recordable_id: id,
+                api: `PATCH /api/v1/measurements/${id}`,
+                params: { measurement },
+                notes: `Failed, timeout [attempt: ${attempt + 1}]`,
+                timestamp: new Date().toISOString()
+              })
               console.log(`[updateMeasurementResults] Retry ${attempt + 1}/${maxRetries}`)
               await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)))
               continue
@@ -1081,6 +1308,17 @@ export const useSessionStore = defineStore('session', {
 
         if (isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
+            // record session activities
+            await this.addSessionActivity({
+              action_label: 'api_failed',
+              recordable: 'Measurement',
+              recordable_id: id,
+              api: `PATCH /api/v1/measurements/${id}`,
+              params: { measurement },
+              notes: `Slow connection. Data will be saved automatically.`,
+              timestamp: new Date().toISOString()
+            })
+
             return {
               success: false,
               message: 'Slow connection. Data will be saved automatically.',
@@ -1090,6 +1328,17 @@ export const useSessionStore = defineStore('session', {
 
           // Handle conflict (409)
           if (error.response?.status === 409) {
+            // record session activities
+            await this.addSessionActivity({
+              action_label: 'api_failed',
+              recordable: 'Measurement',
+              recordable_id: id,
+              api: `PATCH /api/v1/measurements/${id}`,
+              params: { measurement },
+              notes: `Data was changed by another user. Please refresh.`,
+              timestamp: new Date().toISOString()
+            })
+
             return {
               success: false,
               message: 'Data was changed by another user. Please refresh.',
@@ -1098,6 +1347,18 @@ export const useSessionStore = defineStore('session', {
           }
 
           const message = getErrorMessage(error.response?.data?.error || error?.message)
+
+          // record session activities
+          await this.addSessionActivity({
+            action_label: 'api_failed',
+            recordable: 'Measurement',
+            recordable_id: id,
+            api: `PATCH /api/v1/measurements/${id}`,
+            params: { measurement },
+            notes: message as string,
+            timestamp: new Date().toISOString()
+          })
+
           return { success: false, message, data: previousMeasurement || last_data }
         }
 
@@ -1118,11 +1379,35 @@ export const useSessionStore = defineStore('session', {
         .patch(`/api/v1/measurements/${id}/mark_probing`, { visible, marked_as })
         .then(async ({ data }) => {
           this.setSessionMeasurement(data)
+
+          // record session activities
+          await this.addSessionActivity({
+            action_label: 'api_success',
+            recordable: 'Measurement',
+            recordable_id: id,
+            api: `PATCH /api/v1/measurements/${id}/mark_probing`,
+            params: { visible, marked_as },
+            notes: `Success update measurement mark probing`,
+            timestamp: new Date().toISOString()
+          })
+
           return { success: true, data, message: '' }
         })
-        .catch((error) => {
+        .catch(async (error) => {
           console.log(error)
           const message = getErrorMessage(error.response?.data?.error || error?.message)
+
+          // record session activities
+          await this.addSessionActivity({
+            action_label: 'api_failed',
+            recordable: 'Measurement',
+            recordable_id: id,
+            api: `PATCH /api/v1/measurements/${id}/mark_probing`,
+            params: { visible, marked_as },
+            notes: message as string,
+            timestamp: new Date().toISOString()
+          })
+
           return { success: false, data: null, message }
         })
     },
@@ -1130,7 +1415,37 @@ export const useSessionStore = defineStore('session', {
     // ========================================
     // COMMENT FUNCTIONS
     // ========================================
+    async getSessionComments({
+      id,
+      filter
+    }: {
+      id: Session['id']
+      filter?: SessionCommentFilter
+    }): Promise<ResponseSchema> {
+      if (!id) return { success: false, data: null }
+      this.session_comments = this.session?.comments || []
 
+      const app = useAppStore()
+      if (!app.network_status.connected) {
+        // return { success: true, data: this.session_comments }
+      }
+
+      const params = filter ? `?filter_by=${filter}` : ''
+      return axios
+        .get(`/api/v1/sessions/${id}/comments${params}`)
+        .then(async ({ data }) => {
+          this.session_comments = data
+          const session: Session = {
+            ...this.session,
+            comments: [...data, ...(this.session?.comments || [])].filter(onlyUniqueId)
+          }
+          this.setSession(session)
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
     async createSessionComment({
       client_id,
       session_id,
@@ -1286,7 +1601,6 @@ export const useSessionStore = defineStore('session', {
       }
       return { success: false, data: null }
     },
-
     async duplicateImagesToClientDocument({
       documents,
       client_id,
@@ -1318,7 +1632,6 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-
     async deleteSessionComment({ client_id, comment_id, type }: DeleteSessionCommentParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {
@@ -1377,6 +1690,43 @@ export const useSessionStore = defineStore('session', {
           })
       }
       return { success: false }
+    },
+
+    // ========================================
+    // SESSION ACTIVITIES FUNCTIONS
+    // ========================================
+    async addSessionActivity(params: AddSessionActivity): Promise<void> {
+      if (!this.session?.id) return
+      // ignore for not ongoing session
+      if (this.session?.status !== 'ongoing') return
+
+      try {
+        const key = `session_activities_${this.session.id}`
+        const result = await getStorage(key)
+        const backup = typeof result.data === 'string' ? JSON.parse(result.data) : result.data
+
+        if (!backup) {
+          const data = {
+            session_id: this.session.id,
+            activities: [params],
+            timestamp: Date.now()
+          }
+          await setStorage({
+            key,
+            value: JSON.stringify(data)
+          })
+          return
+        }
+
+        backup.activities.push(params)
+        backup.timestamp = Date.now()
+        await setStorage({
+          key,
+          value: JSON.stringify(backup)
+        })
+      } catch (error) {
+        console.error('[saveLocalBackup] Failed:', error)
+      }
     }
   }
 })

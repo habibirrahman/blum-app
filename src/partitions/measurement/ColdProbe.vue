@@ -83,6 +83,38 @@ const onClickSingleVariable = async (value: 'yes' | 'no') => {
   }
 }
 
+const onSaveColdProbe = async (value: 'yes' | 'no') => {
+  const params: UpdateMeasurementResultsParams = {
+    id: props.measurement.id,
+    measurement: {
+      results: { score: value === 'yes' ? '100' : '0' }
+    },
+    data_result: {
+      ...props.measurement,
+      results: { score: value === 'yes' ? '100' : '0' }
+    },
+    last_data: { ...props.measurement }
+  }
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: value === 'yes' ? `cold_probe_success` : `cold_probe_failed`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: { score: value === 'yes' ? '100' : '0' } } },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
+  const { success, message } = await sessionStore.updateMeasurementResults(params)
+
+  if (!success) {
+    toast.error(message)
+    return
+  }
+}
+
 const onClickMultipleVariable = async (id: number, value: 'yes' | 'no') => {
   if (sessionStore.session?.status !== 'ongoing') return
   emit('toggle-updated', true)
@@ -114,25 +146,16 @@ const saveMultipleVariableResult = async (id: number, value: 'yes' | 'no') => {
     last_data: { ...props.measurement }
   }
 
-  const { success, message } = await sessionStore.updateMeasurementResults(params)
-
-  if (!success) {
-    toast.error(message)
-    return
-  }
-}
-const onSaveColdProbe = async (value: 'yes' | 'no') => {
-  const params: UpdateMeasurementResultsParams = {
-    id: props.measurement.id,
-    measurement: {
-      results: { score: value === 'yes' ? '100' : '0' }
-    },
-    data_result: {
-      ...props.measurement,
-      results: { score: value === 'yes' ? '100' : '0' }
-    },
-    last_data: { ...props.measurement }
-  }
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: value === 'yes' ? `cold_probe_success` : `cold_probe_failed`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: allResults.value } },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
 
   const { success, message } = await sessionStore.updateMeasurementResults(params)
 
@@ -141,10 +164,27 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
     return
   }
 }
+
+// check loading state
+const isLoading = computed(() => {
+  if (loading.value.yes) return true
+  if (loading.value.no) return true
+
+  const arr = Object.values(loadingMultiple.value) || []
+  if (arr.includes(true)) {
+    return true
+  }
+
+  return false
+})
 </script>
 
 <template>
   <div class="flex flex-col justify-center flex-grow h-full">
+    <div v-if="isLoading" class="absolute z-10 bottom-4 right-4">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    </div>
+
     <div
       class="flex items-center content-center justify-center h-full"
       :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"

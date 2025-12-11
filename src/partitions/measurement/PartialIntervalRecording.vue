@@ -3,6 +3,7 @@ import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/s
 import { computed, ref } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { useToast } from 'vue-toastification'
+import { Icon } from '@iconify/vue/dist/iconify.js'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
@@ -67,6 +68,18 @@ const onAddScore = async () => {
   }
 
   scoreLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `pir_incident`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message } = await sessionStore.updateMeasurementResults(params)
   scoreLoading.value = false
 
@@ -79,6 +92,10 @@ const onAddScore = async () => {
 
 <template>
   <div class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div v-if="scoreLoading" class="absolute z-10 bottom-4 right-4">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    </div>
+
     <div
       class="flex flex-wrap items-center content-center flex-grow h-full transition-all gap-x-3 gap-y-4"
       :class="{ 'justify-center': !is_collapsed, 'justify-between': is_collapsed }"
@@ -96,12 +113,13 @@ const onAddScore = async () => {
         :class="{
           'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing',
           'h-[200px] w-[200px]': !is_collapsed,
-          'h-[90px] w-[90px]': is_collapsed
+          'h-[120px] w-[120px]': is_collapsed
         }"
         @click="onAddScore()"
       >
         <div class="text-sm font-semibold text-white">Incident</div>
       </div>
+      <div v-if="is_collapsed"></div>
     </div>
 
     <div v-if="!is_collapsed" class="pb-3 space-y-1 text-xs font-medium shrink-0 text-slate-7">

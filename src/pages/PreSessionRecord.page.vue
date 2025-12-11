@@ -15,7 +15,7 @@ const router = useRouter()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
-const redirect = ref<string>('/home')
+const redirect = ref<string>('')
 const isScheduled = computed<boolean>(() => sessionStore.session?.appointment_id !== null)
 const isOrphanAppointment = computed<boolean>(() => {
   if (isScheduled.value && !sessionStore.session?.appointment?.user_id) {
@@ -41,7 +41,7 @@ async function fetchSession() {
   const slug = route.params?.slug as string
   sessionLoading.value = true
   commentsLoading.value = true
-  const { success } = await sessionStore.getSession({ slug })
+  const { data, success } = await sessionStore.getSession({ slug })
   sessionLoading.value = false
   if (!success) {
     setTimeout(() => {
@@ -49,14 +49,21 @@ async function fetchSession() {
     }, 100)
     return
   }
+
+  redirect.value = route.query.redirect?.toString() || `/clients/${data?.client_id}/sessions-draft`
+
   fetchComments()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  const app = document.getElementById('app')
+  if (app) {
+    app.scroll({ top: 0, behavior: 'smooth' })
+  }
+
   appStore.getRunningSessions()
 
-  fetchSession()
-  redirect.value = route.query.redirect?.toString() || '/home'
+  await fetchSession()
 })
 
 interface Schedule {
@@ -142,16 +149,27 @@ const onStartSession = () => {
 
 <template>
   <div class="sticky top-0 z-10 bg-white">
-    <div class="flex items-center justify-between gap-4 px-4 py-3">
+    <div class="flex items-center justify-between gap-4 px-4 h-14">
       <div class="flex items-center gap-3 truncate">
         <RouterLink :to="redirect" class="flex items-center justify-center w-8 h-8 shrink-0">
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </RouterLink>
-        <div class="truncate text-[22px] text-xl font-bold">
-          {{ sessionStore.session?.client?.name }}
+        <div class="space-y-1">
+          <div class="font-bold truncate">
+            {{ sessionStore.session?.client?.name }}
+          </div>
+          <div class="text-xs shrink-0 text-slate-8">Session ID {{ sessionStore.session?.id }}</div>
         </div>
       </div>
-      <div class="text-xs shrink-0 text-slate-8">Session ID {{ sessionStore.session?.id }}</div>
+      <RouterLink
+        :to="{
+          name: 'session-draft',
+          params: { slug: sessionStore.session?.slug },
+          query: { redirect: `/pre-session-record/${sessionStore.session?.slug}` }
+        }"
+      >
+        <AppButton><Icon icon="ph:pencil" /></AppButton>
+      </RouterLink>
     </div>
   </div>
 
@@ -248,7 +266,7 @@ const onStartSession = () => {
         class="flex h-[calc(100vh/2)] flex-col items-center justify-center px-4 text-center text-sm text-dark-purple-1"
       >
         <div>Whoops, no targets here!</div>
-        <div>Add targets from the desktop to kick off your session.</div>
+        <div>Add targets before kick off your session.</div>
       </div>
       <div v-else class="px-4 space-y-2">
         <div class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1">

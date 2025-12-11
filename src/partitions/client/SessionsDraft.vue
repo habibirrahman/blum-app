@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
-import moment from 'moment'
 import UpcomingSession from '../UpcomingSession.vue'
 import type { Session } from '@/lib/types'
 import SessionItem from '../SessionItem.vue'
@@ -15,11 +14,15 @@ import AppButton from '@/components/AppButton.vue'
 import { TransitionRoot } from '@headlessui/vue'
 import { displayDate } from '@/lib/func'
 import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
+import { useSessionStore } from '@/stores/session.store'
+import { useToast } from 'vue-toastification'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 const appStore = useAppStore()
 const clientStore = useClientStore()
+const sessionStore = useSessionStore()
 
 const upcomingLoading = ref<boolean>(false)
 const sessionsLoading = ref<boolean>(false)
@@ -115,16 +118,9 @@ const onApplySort = () => {
 }
 
 const params = computed<string>(() => {
-  let p = `?page=${page.value}&per_page=25`
+  let p = `?page=${page.value}&per_page=${perPage.value}`
   if (query.value) p += `&query=${query.value}`
-  if (date.value) {
-    const d = moment()
-    p += `&start_date=${d.startOf(date.value).format('YYYY-MM-DD')}`
-    p += `&end_date=${d.endOf(date.value).format('YYYY-MM-DD')}`
-  }
   p += `&status=draft,ongoing`
-  if (status.value) p += `,${status.value}`
-  p += `&sort=${sort.value}`
   return p
 })
 
@@ -153,20 +149,26 @@ onMounted(() => {
 
 const showJoinConfirmation = ref<boolean>(false)
 const sessionToJoin = ref<Session | null>(null)
-const onOpenSession = (session: Session) => {
+const onOpenSession = (event: Event, session: Session) => {
+  const target = event.target as HTMLElement
+  // Check if the clicked element or its parent has the ID
+  if (target.id === 'action-button' || target.closest('#action-button')) {
+    return
+  }
+
   sessionToJoin.value = null
   if (session.status === 'draft') {
     router.push({
       name: 'pre-session-record',
       params: { slug: session?.slug },
-      query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
+      query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
     })
   } else {
     if (session.user_id === appStore.account?.id) {
       router.push({
         name: 'session-record',
         params: { slug: session?.slug },
-        query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
+        query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
       })
     } else {
       sessionToJoin.value = session
@@ -174,19 +176,45 @@ const onOpenSession = (session: Session) => {
     }
   }
 }
+
+const createLoading = ref<boolean>(false)
+const onCreateSession = async () => {
+  try {
+    createLoading.value = true
+    const payload = { client_id: clientStore.client?.id }
+
+    const { data, success, message } = await sessionStore.createSession(payload)
+    createLoading.value = false
+
+    if (!success) {
+      toast.error(message)
+      return
+    }
+
+    toast.success('Session has been successfully added')
+    router.push({
+      name: 'session-select-target',
+      params: { slug: data.slug },
+      query: { redirect: `/clients/${clientStore.client?.id}/sessions-draft` }
+    })
+  } catch (error) {
+    createLoading.value = false
+    console.error(error)
+  }
+}
 </script>
 
 <template>
   <div
-    class="space-y-3 pt-3 transition-all"
+    class="pt-3 space-y-3 transition-all"
     :class="{ 'bg-chestnut-1': clientStore.upcoming_sessions_count }"
   >
     <div class="flex items-center gap-3 px-4">
-      <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Draft Sessions</div>
-      <div v-if="sessionsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
+      <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Sessions Draft</div>
+      <div v-if="sessionsLoading" class="w-6 h-6 rounded shrink-0 animate-pulse bg-slate-3"></div>
       <div
         v-else
-        class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
+        class="flex items-center justify-center h-6 px-1 text-xs font-semibold text-white rounded min-w-6 bg-light-purple-5"
       >
         {{ clientStore.draft_sessions_count }}
       </div>
@@ -196,14 +224,14 @@ const onOpenSession = (session: Session) => {
         {{ clientStore.upcoming_sessions.length }} upcoming session(s) assigned to you this week
       </div>
       <div class="pl-4">
-        <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+        <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
           <RouterLink
             v-for="session in clientStore.upcoming_sessions"
             :key="session.id"
             :to="{
               name: 'pre-session-record',
               params: { slug: session?.slug },
-              query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
+              query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
             }"
           >
             <UpcomingSession
@@ -222,21 +250,25 @@ const onOpenSession = (session: Session) => {
     </div>
   </div>
 
-  <div class="space-y-3 bg-white pt-3">
-    <div class="px-4">
+  <div class="pt-3 space-y-3 bg-white">
+    <div class="flex items-center gap-4 px-4">
       <AppTextInput
         name="query"
         placeholder="Search draft by client name or ID"
         v-model="query"
         suffix_icon="ph:magnifying-glass"
+        class="flex-grow"
       />
+      <AppButton :loading="createLoading" @click="onCreateSession">
+        <Icon icon="ph:plus" />
+      </AppButton>
     </div>
     <div class="pl-4">
-      <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+      <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
         <div
           v-for="opt in dateOptions"
           :key="opt.value"
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+          class="flex items-center h-8 px-3 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
           :class="[
             date === opt.value
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -247,7 +279,7 @@ const onOpenSession = (session: Session) => {
           {{ opt.label }}
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
           :class="[
             status
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -259,7 +291,7 @@ const onOpenSession = (session: Session) => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
+          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all bg-white border rounded-full cursor-pointer shrink-0 snap-start border-slate-4"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />
@@ -272,7 +304,7 @@ const onOpenSession = (session: Session) => {
 
   <div v-if="sessionsLoading">
     <div class="px-4 pt-2">
-      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
     </div>
     <div class="px-4">
       <SessionItemLoader v-for="n in perPage" :key="n" />
@@ -280,19 +312,17 @@ const onOpenSession = (session: Session) => {
   </div>
   <div
     v-else-if="!clientStore.draft_sessions_count"
-    class="flex h-64 w-full items-center justify-center px-4"
+    class="flex items-center justify-center w-full h-64 px-4"
   >
-    <div v-if="date" class="text-center text-sm text-slate-8">
-      No draft sessions scheduled for
+    <div v-if="date" class="text-sm text-center text-slate-8">
+      No sessions draft scheduled for
       {{ date === 'days' ? 'today' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
     </div>
-    <div v-else-if="query" class="text-center text-sm text-slate-8">
+    <div v-else-if="query" class="text-sm text-center text-slate-8">
       Sorry, no drafts match your search. Try searching with a different therapist name or session
       ID.
     </div>
-    <div v-else class="text-center text-sm text-slate-8">
-      No draft sessions are available yet. Create drafts on your desktop to see them here.
-    </div>
+    <div v-else class="text-sm text-center text-slate-8">No sessions draft are available yet.</div>
   </div>
   <div v-else>
     <div class="px-4 pt-2 text-xs text-slate-7">
@@ -312,11 +342,13 @@ const onOpenSession = (session: Session) => {
         :key="session.id"
         :session="session"
         :title="session.appointment_id ? `With ${session.appointment?.user?.name}` : `Unscheduled`"
-        @click="onOpenSession(session)"
+        @click="onOpenSession($event, session)"
+        @after-commit="fetchDraftSession"
       />
     </div>
     <AppPagination
       :page="page"
+      :per_page="perPage"
       :total_count="clientStore.draft_sessions_count"
       @change="page = $event"
     />
@@ -324,7 +356,7 @@ const onOpenSession = (session: Session) => {
 
   <AppActionSheet :show="showStatus" @close="showStatus = false">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold">Statuses</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -334,7 +366,7 @@ const onOpenSession = (session: Session) => {
         <div
           v-for="opt in statusOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
         >
           <label :for="`status_filter_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
           <input
@@ -343,7 +375,7 @@ const onOpenSession = (session: Session) => {
             :id="`status_filter_${opt.value}`"
             :checked="selectStatus === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="selectStatus = opt.value"
           />
         </div>
@@ -357,7 +389,7 @@ const onOpenSession = (session: Session) => {
 
   <AppActionSheet :show="showSort" @close="showSort = false">
     <div class="space-y-4">
-      <div class="flex w-full items-center justify-between">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -367,7 +399,7 @@ const onOpenSession = (session: Session) => {
         <div
           v-for="opt in sortOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
         >
           <label :for="`sort_by_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
           <input
@@ -376,7 +408,7 @@ const onOpenSession = (session: Session) => {
             :id="`sort_by_${opt.value}`"
             :checked="selectSort === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="selectSort = opt.value"
           />
         </div>
@@ -412,7 +444,7 @@ const onOpenSession = (session: Session) => {
           </div>
         </div>
         <div class="text-sm text-light-purple-4">Session ID {{ sessionToJoin?.id }}</div>
-        <div class="text-center text-xl font-semibold text-dark-purple-1">
+        <div class="text-xl font-semibold text-center text-dark-purple-1">
           Session in progress for {{ sessionToJoin?.client?.name }}
         </div>
         <div class="flex flex-col items-center gap-4 text-sm text-light-purple-5">
@@ -433,7 +465,7 @@ const onOpenSession = (session: Session) => {
         :to="{
           name: 'session-record',
           params: { slug: sessionToJoin?.slug },
-          query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
+          query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
         }"
         class="w-full"
       >

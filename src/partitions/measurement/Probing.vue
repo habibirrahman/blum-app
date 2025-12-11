@@ -13,6 +13,7 @@ import AppButton from '@/components/AppButton.vue'
 import AppChip from '@/components/AppChip.vue'
 import { useAppStore } from '@/stores/app.store'
 import { useToast } from 'vue-toastification'
+import AppToggle from '@/components/AppToggle.vue'
 
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
@@ -26,6 +27,7 @@ interface Props {
 interface Emits {
   (e: 'toggle-collapsed', bool: boolean): void
   (e: 'fetch-session'): void
+  (e: 'after-commit'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -128,6 +130,18 @@ const onAdd = async (bool: boolean) => {
   probingLoading.value = true
   if (bool) plusProbingLoading.value = true
   else reduceProbingLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: bool ? `probing_success` : `probing_failed`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name} [${length}: ${bool}]`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message } = await sessionStore.updateMeasurementResults(params)
   probingLoading.value = false
   plusProbingLoading.value = false
@@ -165,7 +179,20 @@ const onRemove = async (circle: ProbingCircle) => {
 
   probingLoading.value = true
   removeProbingLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `probing_delete`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name} [${circle.key}]`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message } = await sessionStore.updateMeasurementResults(params)
+
   probingLoading.value = false
   removeProbingLoading.value = false
 
@@ -183,10 +210,20 @@ watch(showPanel, (val) => {
 })
 const isProbingPassed = ref<boolean>(false)
 const showCelebration = ref<boolean>(false)
-const onSubmitProbing = () => {
+const onSubmitProbing = async () => {
   probingAction.value = null
   showPanel.value = true
   isProbingPassed.value = probingScore.value >= (props.measurement.target?.probing_goal || 0)
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `probing_submit`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
   if (isProbingPassed.value) {
     showCelebration.value = true
     setTimeout(() => {
@@ -308,6 +345,20 @@ const probingActionOptions = computed<ProbingAction[]>(() => {
   }
 })
 
+const onSelectProbingAction = async (act: ProbingAction) => {
+  probingAction.value = act
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `probing_select_action`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    params: act,
+    notes: `Target: ${props.measurement.target?.name} [${act.id}]`,
+    timestamp: new Date().toISOString()
+  })
+}
+
 const saveLoading = ref<boolean>(false)
 
 const onSave = async () => {
@@ -316,7 +367,23 @@ const onSave = async () => {
     visible: probingAction.value?.visible,
     marked_as: probingAction.value?.marked_as
   }
+
   saveLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `probing_post_action`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}/mark_probing`,
+    params: {
+      visible: probingAction.value?.visible,
+      marked_as: probingAction.value?.marked_as
+    },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
   const { success, message } = await sessionStore.updateMeasurementMarkProbing(params)
   saveLoading.value = false
   if (!success) {
@@ -325,6 +392,67 @@ const onSave = async () => {
     return
   }
   showPanel.value = false
+}
+
+// draft
+const switchLoading = ref<boolean>(false)
+const onChangeToPercentage = async () => {
+  if (sessionStore.session?.status !== 'draft') return
+  if (switchLoading.value) return
+
+  const checked = props.measurement.type?.includes('Probing')
+  const temp = {
+    session_id: props.measurement.session_id,
+    target_id: props.measurement.target_id,
+    measurement_id: props.measurement.id,
+    position: props.measurement.position,
+    is_fixed: props.measurement.is_fixed
+  }
+
+  if (!checked) {
+    const updateParams = {
+      id: temp.measurement_id,
+      measurement: { visible: false },
+      data_result: props.measurement
+    }
+
+    switchLoading.value = true
+    const { success: successUpdate } = await sessionStore.updateMeasurement(updateParams)
+    if (!successUpdate) {
+      switchLoading.value = false
+      return
+    }
+
+    const createParams = {
+      id: temp.session_id,
+      target_id: temp.target_id,
+      measurement: {
+        type: 'Measurement::Probing' as Measurement['type'],
+        position: temp.position,
+        is_fixed: temp.is_fixed
+      }
+    }
+    const { success: succesCreate } = await sessionStore.createMeasurement(createParams)
+    if (!succesCreate) {
+      switchLoading.value = false
+      return
+    }
+  } else {
+    const payload = {
+      id: temp.measurement_id
+    }
+
+    switchLoading.value = true
+    const { success } = await sessionStore.deleteMeasurement(payload)
+    if (!success) {
+      switchLoading.value = false
+      return
+    }
+  }
+  setTimeout(async () => {
+    emit('after-commit')
+    switchLoading.value = false
+  }, 300)
 }
 </script>
 
@@ -458,11 +586,36 @@ const onSave = async () => {
           {{ probingScore.toFixed(0) }}%
         </div>
       </div>
+
       <div v-if="!is_collapsed" class="flex items-center gap-2 text-xs font-medium text-slate-7">
         <div class="w-9 shrink-0">Goal</div>
         <div>
           score ≥ {{ measurement.target?.probing_goal }}% in minimum
           {{ measurement.target?.probing_number_of_trial }} trial(s)
+        </div>
+      </div>
+
+      <div
+        v-if="sessionStore.session?.status === 'draft' && measurement?.target?.probing_enable"
+        class="z-10 flex items-center justify-between w-full px-4 py-2 rounded-full bg-lime-2"
+      >
+        <div class="text-sm font-semibold text-lime-7">Set as probing</div>
+        <div class="flex items-center gap-1">
+          <Icon
+            v-if="switchLoading"
+            icon="mingcute:loading-fill"
+            class="text-xl animate-spin text-lime-7"
+          />
+          <div class="text-sm font-semibold text-lime-7">
+            {{ measurement.type?.includes('Probing') ? 'Yes' : 'No' }}
+          </div>
+          <AppToggle
+            :name="`toggle-probing-${measurement.id}`"
+            color="lime"
+            :loading="switchLoading"
+            :checked="measurement.type?.includes('Probing')"
+            @change="onChangeToPercentage"
+          />
         </div>
       </div>
     </div>
@@ -525,7 +678,7 @@ const onSave = async () => {
               'border-white': probingAction?.id !== opt.id
             }"
             :style="{ boxShadow: '0px 4px 8px -2px #B9D84333' }"
-            @click="probingAction = opt"
+            @click="onSelectProbingAction(opt)"
           >
             <div class="flex items-center gap-2">
               <div class="text-sm font-semibold text-slate-8">{{ opt.title }}</div>

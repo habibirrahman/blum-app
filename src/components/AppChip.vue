@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import type { ClientStatus, TargetStatus, TargetType } from '@/lib/types'
+import type { ClientStatus, TargetStatus } from '@/lib/types'
 import { computed, ref } from 'vue'
 
 interface Props {
   chip?: 'chip' | null | TargetStatus | ClientStatus
+  label?: string
+  class?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  chip: 'chip'
-})
+const props = withDefaults(defineProps<Props>(), {})
 
 interface ChipAsset {
   label: string
@@ -74,14 +74,21 @@ const assets = ref<{ [key: string]: ChipAsset }>({
 })
 
 const current = computed<ChipAsset>(() => {
-  if (!props.chip) return assets.value['chip']
+  if (!props.chip) {
+    return {
+      label: props.label || 'chip',
+      class: props.class || 'bg-slate-2 text-slate-7',
+      color: '',
+      backgroundColor: ''
+    }
+  }
   return assets.value[props.chip]
 })
 </script>
 
 <template>
   <div
-    class="flex h-5 shrink-0 items-center rounded-full px-2 text-xs font-semibold"
+    class="flex items-center h-5 px-2 text-xs font-semibold rounded-full shrink-0"
     :class="current.class"
   >
     {{ current.label }}

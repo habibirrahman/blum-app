@@ -2,6 +2,7 @@
 import { useSessionStore } from '@/stores/session.store'
 import type { Measurement } from '@/lib/types'
 import AppButton from '@/components/AppButton.vue'
+import { Icon } from '@iconify/vue/dist/iconify.js'
 
 const sessionStore = useSessionStore()
 
@@ -95,6 +96,10 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
 <template>
   <div v-if="!reset_confirmation" class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div v-if="update_loading || lap_loading" class="absolute z-10 bottom-4 right-4">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    </div>
+
     <div
       class="flex flex-col items-center content-center justify-center flex-grow h-full transition-all gap-x-3"
       :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
@@ -112,27 +117,33 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
         <div class="flex justify-center pb-2">:</div>
         <div class="flex justify-center">{{ timer.split(':')[2] }}</div>
       </div>
+
       <div class="flex items-center w-full gap-3">
         <AppButton
           v-if="is_started || (!is_started && laps && laps.length === 0)"
-          :loading="lap_loading"
           class="w-2/4 rounded-full"
+          :class="{
+            'pointer-events-none': sessionStore.session?.status !== 'ongoing'
+          }"
           color="prim"
-          :disabled="!is_started && sessionStore.session?.status !== 'ongoing' || (is_started ? false : is_disabled_action)"
-          :class="{ 'opacity-50': !is_started }"
+          :loading="lap_loading"
+          :disabled="!is_started || is_disabled_action"
           @click="$emit('record-lap')"
         >
           Lap
         </AppButton>
         <AppButton
           v-if="!is_started && laps && laps.length > 0"
-          label="Reset"
           class="w-2/4 rounded-full"
+          :class="{
+            'pointer-events-none': sessionStore.session?.status !== 'ongoing'
+          }"
           color="prim"
-          :disabled="sessionStore.session?.status !== 'ongoing' || is_disabled_action"
+          :disabled="is_disabled_action"
           @click="$emit('reset-laps-confirm')"
-          >Reset</AppButton
         >
+          Reset
+        </AppButton>
         <AppButton
           class="w-2/4 rounded-full"
           :class="{
@@ -146,6 +157,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           {{ is_started ? 'Stop' : 'Start' }}
         </AppButton>
       </div>
+
       <div
         v-if="laps.length > 0 && !is_collapsed"
         class="w-full mt-2 overflow-scroll"

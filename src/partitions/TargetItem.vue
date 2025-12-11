@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Target } from '@/lib/types'
 import AppChip from '@/components/AppChip.vue'
-import { getTargetType } from '@/lib/func';
+import { getTargetType } from '@/lib/func'
+import AppCheckInput from '@/components/AppCheckInput.vue'
 
 interface Props {
   target: Target
@@ -37,7 +38,7 @@ const handleOpenDetail = () => {
 <template>
   <div class="flex h-[154px] border-l-[6px]" :style="{ borderColor: target.curriculum_color }">
     <div
-      class="flex flex-1 flex-col justify-center gap-1.5 px-4 cursor-pointer"
+      class="flex flex-1 cursor-pointer flex-col justify-center gap-1.5 truncate px-4"
       @click="handleOpenDetail"
     >
       <div v-if="showStatus" class="flex">
@@ -52,20 +53,19 @@ const handleOpenDetail = () => {
       <div class="text-xs whitespace-pre-line line-clamp-3 text-slate-8">
         {{ target.description }}
       </div>
-      <div v-if="showType" class="text-xs text-slate-8 font-medium">
+      <div v-if="showType" class="text-xs font-medium text-slate-8">
         {{ getTargetType(target.type) }}
       </div>
     </div>
 
     <div
       v-if="isChecked !== undefined && useAction"
-      class="flex items-center justify-end pr-4 shrink-0 w-20"
+      class="flex items-center justify-end pr-4 shrink-0"
     >
-      <input
-        type="checkbox"
+      <AppCheckInput
+        :name="`check-${target.id}`"
         :checked="isChecked"
-        @change="handleCheckboxClick"
-        class="rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+        @change.stop="handleCheckboxClick"
       />
     </div>
   </div>

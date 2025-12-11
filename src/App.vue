@@ -25,7 +25,10 @@ const isUseNav = computed<boolean>(
     routeName.value !== 'signin' &&
     !routeName.value.includes('record') &&
     !isShowRunningSession.value &&
-    routeName.value !== 'new-client-target'
+    routeName.value !== 'new-client-target' &&
+    routeName.value !== 'edit-client-target' &&
+    routeName.value !== 'session-draft' &&
+    routeName.value !== 'session-select-target'
 )
 const networkStatus: NetworkStatus = reactive({
   connected: false,
@@ -173,7 +176,7 @@ const navigations = computed<Nav[]>(() => {
       route_name: 'home',
       icon: 'ph:file',
       active_icon: 'ph:file-fill',
-      label: 'Draft Sessions',
+      label: 'Upcoming',
       is_active: routeName.value.includes('home')
     },
     {

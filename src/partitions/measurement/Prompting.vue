@@ -7,6 +7,9 @@ import { promptColors } from '@/lib/data'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import { debounce } from '@/lib/func'
+import AppButton from '@/components/AppButton.vue'
+import AppActionSheet from '@/components/AppActionSheet.vue'
+import AppToggle from '@/components/AppToggle.vue'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
@@ -186,12 +189,88 @@ const onChangeScore = async (prompt: any, score: number) => {
   const gapScore = newScore - props.measurement_results[prompt.key].score
   scoreLoadingBox.value = prompt.key
   typeLoadingBox.value = score
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: score === 1 ? `prompting_add` : `prompting_subtract`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: results.value } },
+    notes: `Target: ${props.measurement.target?.name} [${prompt.key}: ${newScore}]`,
+    timestamp: new Date().toISOString()
+  })
+
   onSaveScore(prompt.key, props.measurement_results[prompt.key], gapScore)
+}
+
+interface Prompt {
+  key: string | number
+  abbreviation: string
+  color: string
+  enabled: boolean
+  name: string
+  position: number
+  score: number
+  shape: string
+}
+
+const shapes: Record<string, string> = {
+  square: 'ph:square-fill',
+  circle: 'ph:circle-fill',
+  triangle: 'ph:triangle-fill',
+  diamond: 'ph:diamond-fill'
+}
+
+const defaultPrompts = ref<Prompt[]>([])
+const saveLoading = ref<boolean>(false)
+const showCustomize = ref<boolean>(false)
+
+watch(
+  () => showCustomize.value,
+  (val) => {
+    if (!val) return
+
+    const results = props.measurement_results
+    const keys = Object.keys(results)
+    if (keys && keys.length) {
+      const n = keys.map((i) => ({ ...results[i], key: i })).sort((a, b) => a.position - b.position)
+      defaultPrompts.value = n
+    }
+  }
+)
+
+const onToggleEnabledPrompt = (prompt: Prompt) => {
+  const index = defaultPrompts.value.findIndex((i) => Number(i.key) === Number(prompt.key))
+  if (index > -1) {
+    defaultPrompts.value[index].enabled = !prompt.enabled
+  }
+}
+
+const onSavePrompts = async () => {
+  const payload = {
+    id: props.measurement.id,
+    measurement: { results: {} as Record<string, Prompt> },
+    data_result: props.measurement
+  }
+  defaultPrompts.value.forEach((i) => {
+    payload.measurement.results[i.key] = i
+  })
+
+  saveLoading.value = true
+  await sessionStore.updateMeasurement(payload)
+  saveLoading.value = false
+
+  showCustomize.value = false
 }
 </script>
 
 <template>
   <div class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div v-if="scoreLoadingBox !== null" class="absolute z-10 bottom-4 right-4">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    </div>
+
     <div class="flex items-center content-center justify-center flex-grow h-full">
       <div
         class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
@@ -280,5 +359,69 @@ const onChangeScore = async (prompt: any, score: number) => {
         </div>
       </div>
     </div>
+
+    <AppButton
+      v-if="sessionStore.session?.status === 'draft'"
+      kind="outline"
+      @click="showCustomize = !showCustomize"
+    >
+      Customize prompt visibility
+    </AppButton>
   </div>
+
+  <AppActionSheet :show="showCustomize" @close="showCustomize = false">
+    <div class="space-y-4">
+      <div class="sticky top-0 z-10 flex items-center justify-between bg-white pt-safe">
+        <div class="text-xl font-semibold">Customize prompt visibility</div>
+        <div class="cursor-pointer" @click="showCustomize = false">
+          <Icon icon="ph:x" class="text-2xl" />
+        </div>
+      </div>
+
+      <div>
+        <div
+          v-for="prompt in defaultPrompts"
+          :key="prompt.key"
+          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
+          :class="[
+            prompt.name === measurement.target?.success_metric
+              ? 'cursor-not-allowed'
+              : 'cursor-pointer'
+          ]"
+        >
+          <div
+            class="flex items-center h-10 gap-3 truncate"
+            :class="{ 'pointer-events-none': prompt.name === measurement.target?.success_metric }"
+            @click="onToggleEnabledPrompt(prompt)"
+          >
+            <Icon
+              :icon="shapes[prompt.shape]"
+              class="text-2xl"
+              :style="{ color: promptColors[prompt.color].primaryColor }"
+            />
+            <div class="text-sm truncate text-slate-8">
+              {{ prompt.name }}
+            </div>
+            <div
+              v-if="prompt.name === measurement.target?.success_metric"
+              class="text-xs italic truncate text-slate-6"
+            >
+              as success metric
+            </div>
+          </div>
+
+          <AppToggle
+            :name="`toggle-prompt-${prompt.key}`"
+            :checked="prompt.enabled"
+            :disabled="prompt.name === measurement.target?.success_metric"
+            @change="onToggleEnabledPrompt(prompt)"
+          />
+        </div>
+      </div>
+
+      <div class="sticky bottom-0 z-10 flex items-center justify-between bg-white pb-safe">
+        <AppButton class="w-full" :loading="saveLoading" @click="onSavePrompts"> Apply </AppButton>
+      </div>
+    </div>
+  </AppActionSheet>
 </template>

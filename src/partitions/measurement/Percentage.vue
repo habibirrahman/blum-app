@@ -6,6 +6,7 @@ import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import { debounce } from '@/lib/func'
+import AppToggle from '@/components/AppToggle.vue'
 
 const sessionStore = useSessionStore()
 const toast = useToast()
@@ -18,6 +19,7 @@ interface Props {
 interface Emits {
   (e: 'toggle-updated', bool: boolean): void
   (e: 'fetch-session'): void
+  (e: 'after-commit'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -89,6 +91,9 @@ watch(
 )
 
 const onSavePercentage = debounce(async function (box: PercentageBox) {
+  // igonre save for the same box
+  // if (percentageLoadingBox.value === box.key) return
+
   let val = null
   if (box.value === null) val = true
   if (box.value === true) val = false
@@ -105,6 +110,7 @@ const onSavePercentage = debounce(async function (box: PercentageBox) {
   }
 
   percentageLoadingBox.value = box.key
+  console.log('[onSavePercentage] start')
   const { success, data, message } = await sessionStore.updateMeasurementResults(params)
   percentageLoadingBox.value = null
 
@@ -131,12 +137,89 @@ const onChangePercentage = async (box: PercentageBox) => {
 
   // save state
   percentageLoadingBox.value = box.key
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `percentage_score`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+    params: { measurement: { results: results.value } },
+    notes: `Target: ${props.measurement.target?.name} [${box.key}: ${val}]`,
+    timestamp: new Date().toISOString()
+  })
+
   onSavePercentage(box)
+}
+
+// draft
+const switchLoading = ref<boolean>(false)
+const onChangeProbing = async () => {
+  if (sessionStore.session?.status !== 'draft') return
+  if (switchLoading.value) return
+
+  const checked = props.measurement.type?.includes('Probing')
+  const temp = {
+    session_id: sessionStore.session.id,
+    target_id: props.measurement.target_id,
+    measurement_id: props.measurement.id,
+    position: props.measurement.position,
+    is_fixed: props.measurement.is_fixed
+  }
+
+  if (!checked) {
+    const updateParams = {
+      id: temp.measurement_id,
+      measurement: { visible: false },
+      data_result: props.measurement
+    }
+
+    switchLoading.value = true
+    const { success: successUpdate } = await sessionStore.updateMeasurement(updateParams)
+    if (!successUpdate) {
+      switchLoading.value = false
+      return
+    }
+
+    const createParams = {
+      id: temp.session_id,
+      target_id: temp.target_id,
+      measurement: {
+        type: 'Measurement::Probing' as Measurement['type'],
+        position: temp.position,
+        is_fixed: temp.is_fixed
+      }
+    }
+    const { success: succesCreate } = await sessionStore.createMeasurement(createParams)
+    if (!succesCreate) {
+      switchLoading.value = false
+      return
+    }
+  } else {
+    const payload = {
+      id: temp.measurement_id
+    }
+
+    switchLoading.value = true
+    const { success } = await sessionStore.deleteMeasurement(payload)
+    if (!success) {
+      switchLoading.value = false
+      return
+    }
+  }
+  setTimeout(() => {
+    emit('after-commit')
+    switchLoading.value = false
+  }, 300)
 }
 </script>
 
 <template>
   <div class="flex flex-col justify-between flex-grow h-full gap-2">
+    <div v-if="percentageLoadingBox !== null" class="absolute z-10 bottom-4 right-4">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    </div>
+
     <div class="flex items-center content-center justify-center flex-grow h-full">
       <div
         class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
@@ -186,12 +269,37 @@ const onChangePercentage = async (box: PercentageBox) => {
           class="w-2 h-2 transition-all rounded-full"
         ></div>
       </div>
+
       <div
         v-if="!is_collapsed"
         class="flex items-center justify-center gap-2 text-xs font-medium text-center text-slate-7"
       >
         <div>Goal: {{ measurement.target?.goal }}%</div>
         <div>Score: {{ percentageScore.toFixed(0) }}%</div>
+      </div>
+
+      <div
+        v-if="sessionStore.session?.status === 'draft' && measurement?.target?.probing_enable"
+        class="z-10 flex items-center justify-between w-full px-4 py-2 rounded-full bg-lime-2"
+      >
+        <div class="text-sm font-semibold text-lime-7">Set as probing</div>
+        <div class="flex items-center gap-1">
+          <Icon
+            v-if="switchLoading"
+            icon="mingcute:loading-fill"
+            class="text-xl animate-spin text-lime-7"
+          />
+          <div class="text-sm font-semibold text-lime-7">
+            {{ measurement.type?.includes('Probing') ? 'Yes' : 'No' }}
+          </div>
+          <AppToggle
+            :name="`toggle-probing-${measurement.id}`"
+            color="lime"
+            :loading="switchLoading"
+            :checked="measurement.type?.includes('Probing')"
+            @change="onChangeProbing"
+          />
+        </div>
       </div>
     </div>
   </div>

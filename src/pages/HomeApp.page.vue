@@ -182,7 +182,7 @@ const onOpenSession = (session: Session) => {
     :class="{ 'bg-chestnut-1': sessionStore.upcoming_sessions_count }"
   >
     <div class="flex items-center gap-3 px-4">
-      <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Draft Sessions</div>
+      <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Upcoming Sessions</div>
       <div v-if="sessionsLoading" class="w-6 h-6 rounded shrink-0 animate-pulse bg-slate-3"></div>
       <div
         v-else
@@ -287,11 +287,11 @@ const onOpenSession = (session: Session) => {
     class="flex items-center justify-center w-full h-64 px-4"
   >
     <div v-if="date" class="text-sm text-center text-slate-8">
-      No draft sessions scheduled for
+      No upcoming scheduled for
       {{ date === 'days' ? 'today' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
     </div>
     <div v-else class="text-sm text-center text-slate-8">
-      Oops! No draft sessions fit your filter criteria. Try changing the filter to find more
+      Oops! No upcoming sessions fit your filter criteria. Try changing the filter to find more
       results!
     </div>
   </div>
@@ -318,6 +318,7 @@ const onOpenSession = (session: Session) => {
     </div>
     <AppPagination
       :page="page"
+      :per_page="perPage"
       :total_count="sessionStore.sessions_count"
       @change="page = $event"
     />
