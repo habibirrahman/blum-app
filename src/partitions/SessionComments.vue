@@ -993,29 +993,31 @@ onMounted(async () => {
   </TransitionRoot>
 
   <AppActionSheet :show="showPermissionModal" @close="closePermissionModal">
-    <!-- Icon -->
-    <div class="flex justify-center mb-4">
-      <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-50">
-        <Icon
-          :icon="permissionType === 'camera' ? 'ph:camera-slash' : 'uil:image-slash'"
-          class="text-3xl text-red-500"
-        />
+    <div class="py-3">
+      <!-- Icon -->
+      <div class="flex justify-center mb-4">
+        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-50">
+          <Icon
+            :icon="permissionType === 'camera' ? 'ph:camera-slash' : 'uil:image-slash'"
+            class="text-3xl text-red-500"
+          />
+        </div>
       </div>
-    </div>
 
-    <!-- Title -->
-    <div class="mb-2 text-lg font-semibold text-center text-slate-800">
-      {{ permissionType === 'camera' ? 'Camera Access Required' : 'Gallery Access Required' }}
-    </div>
+      <!-- Title -->
+      <div class="mb-2 text-lg font-semibold text-center text-slate-800">
+        {{ permissionType === 'camera' ? 'Camera Access Required' : 'Gallery Access Required' }}
+      </div>
 
-    <!-- Message -->
-    <div class="mb-6 text-sm text-center text-slate-600">
-      {{ permissionMessage }}
-    </div>
+      <!-- Message -->
+      <div class="mb-6 text-sm text-center text-slate-600">
+        {{ permissionMessage }}
+      </div>
 
-    <!-- Button -->
-    <div class="flex justify-center">
-      <AppButton @click="closePermissionModal" class="px-8 py-2"> Okay </AppButton>
+      <!-- Button -->
+      <div class="flex justify-center">
+        <AppButton @click="closePermissionModal" class="px-8 py-2"> Okay </AppButton>
+      </div>
     </div>
   </AppActionSheet>
 </template>

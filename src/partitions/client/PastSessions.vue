@@ -228,12 +228,13 @@ const onOpenSession = (session: Session) => {
 
   <AppActionSheet :show="showSort" @close="showSort = false">
     <div class="space-y-4">
-      <div class="flex items-center justify-between w-full">
+      <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">
           <Icon icon="ph:x" class="text-2xl" />
         </div>
       </div>
+
       <div>
         <div
           v-for="opt in sortOptions"
@@ -252,7 +253,8 @@ const onOpenSession = (session: Session) => {
           />
         </div>
       </div>
-      <div class="grid w-full grid-cols-2 gap-2">
+
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-2 gap-2 py-3 bg-white">
         <AppButton kind="plain" @click="onResetSort">Reset</AppButton>
         <AppButton @click="onApplySort">Apply</AppButton>
       </div>

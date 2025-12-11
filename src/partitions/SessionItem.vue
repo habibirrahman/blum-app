@@ -144,7 +144,7 @@ const onDeleteSession = async () => {
   </div>
 
   <AppActionSheet :show="showMenu" @close="showMenu = false">
-    <div class="space-y-4">
+    <div class="py-3 space-y-4">
       <div class="flex items-center justify-between w-full">
         <div class="text-xl font-semibold text-center">Session ID {{ session.id }}</div>
         <div class="cursor-pointer" @click="showMenu = false">
@@ -187,7 +187,7 @@ const onDeleteSession = async () => {
   </AppActionSheet>
 
   <AppActionSheet :show="showDelete" @close="showDelete = false">
-    <div class="flex flex-col items-center gap-4">
+    <div class="flex flex-col items-center gap-4 py-3">
       <div class="text-xl font-semibold text-center">Delete the draft</div>
       <div class="text-sm text-center">
         You are about to delete the session draft. Are you sure you want to proceed? This action is

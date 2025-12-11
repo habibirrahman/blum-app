@@ -525,7 +525,7 @@ const onStartSession = () => {
   </div>
 
   <AppActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
-    <div class="flex flex-col items-center gap-4">
+    <div class="flex flex-col items-center gap-4 py-3">
       <div
         v-if="actionBeforeLunchStatus === 'before_schedule'"
         class="flex flex-col items-center gap-4"

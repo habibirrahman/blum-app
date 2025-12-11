@@ -333,13 +333,10 @@ const onAddTarget = async () => {
       <div v-for="target in appStore.center_targets" :key="target.id">
         <div v-if="target.is_group">
           <div
-            class="cursor-pointer flex h-[154px] flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-4"
+            class="flex h-[154px] cursor-pointer flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-4"
           >
             <div class="flex items-center justify-between">
-              <div
-                @click="onOpenTarget(target)"
-                class="text-xs truncate text-slate-8"
-              >
+              <div @click="onOpenTarget(target)" class="text-xs truncate text-slate-8">
                 {{ target.curriculum_name }}
               </div>
               <input
@@ -349,10 +346,7 @@ const onAddTarget = async () => {
                 class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               />
             </div>
-            <div
-              @click="onOpenTarget(target)"
-              class="flex items-center gap-2"
-            >
+            <div @click="onOpenTarget(target)" class="flex items-center gap-2">
               <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
               <div class="text-sm font-semibold text-slate-10">
                 {{ target.name }}
@@ -364,10 +358,7 @@ const onAddTarget = async () => {
             >
               {{ target.description }}
             </div>
-            <div
-              @click="onOpenTarget(target)"
-              class="text-xs font-medium text-slate-8"
-            >
+            <div @click="onOpenTarget(target)" class="text-xs font-medium text-slate-8">
               {{ getTargetType(target.type) }}
             </div>
           </div>
@@ -422,7 +413,7 @@ const onAddTarget = async () => {
   />
   <AppActionSheet :show="showMethods" @close="showMethods = false">
     <div class="space-y-4">
-      <div class="flex items-center justify-between w-full">
+      <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Data Collection Method</div>
         <div class="cursor-pointer" @click="showMethods = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -448,7 +439,7 @@ const onAddTarget = async () => {
           />
         </div>
       </div>
-      <div class="grid w-full grid-cols-2 gap-2">
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-2 gap-2 py-3 bg-white">
         <AppButton kind="plain" @click="onResetMethod">Reset</AppButton>
         <AppButton @click="onApplyMethod">Apply</AppButton>
       </div>

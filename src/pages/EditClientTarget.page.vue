@@ -218,7 +218,7 @@ async function loadInitialData() {
 // Navigation Guard
 onBeforeRouteLeave((to, from, next) => {
   const currentDataStr = JSON.stringify(buildTargetData())
-  
+
   if (initialDataStr.value && initialDataStr.value !== currentDataStr) {
     showUnsavedChangesModal.value = true
     pendingRoute.value = to
@@ -453,7 +453,7 @@ async function onSubmit() {
     toast.success('The target has been updated.')
     // Update initial data to avoid AYS on successful save
     initialDataStr.value = JSON.stringify(buildTargetData())
-    
+
     setTimeout(() => {
       router.push({ name: 'client', params: { id: clientId.value, tab: 'targets' } })
     }, 1000)
@@ -577,7 +577,7 @@ function onApplyPromptSuccessMetric(val: string) {
           label="Description"
           type="textarea"
           v-model="description"
-          :custom-heigth="isGroup ? 'h-52': 'h-full'"
+          :custom-heigth="isGroup ? 'h-52' : 'h-full'"
         />
 
         <!-- Divider for Prompting Types -->
@@ -896,7 +896,7 @@ function onApplyPromptSuccessMetric(val: string) {
             v-model="totalSuccessInput"
             :disabled="!totalSuccessChecked"
             :class="{ 'opacity-50': !totalSuccessChecked }"
-            class="h-8 w-10 rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] appearance-none focus:border-light-purple-5 focus:ring-light-purple-2"
+            class="h-8 w-10 appearance-none rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] focus:border-light-purple-5 focus:ring-light-purple-2"
           />
           <div class="text-xs text-slate-8">successful session(s).</div>
         </div>
@@ -929,7 +929,7 @@ function onApplyPromptSuccessMetric(val: string) {
             min="2"
             :disabled="!consecutiveSuccessChecked"
             :class="{ 'opacity-50': !consecutiveSuccessChecked }"
-            class="h-8 w-10 rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] appearance-none focus:border-light-purple-5 focus:ring-light-purple-2"
+            class="h-8 w-10 appearance-none rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] focus:border-light-purple-5 focus:ring-light-purple-2"
           />
           <div class="text-xs text-slate-8">consecutive session(s).</div>
         </div>
@@ -963,7 +963,7 @@ function onApplyPromptSuccessMetric(val: string) {
   <!-- Status Action Sheet -->
   <AppActionSheet :show="showStatus" @close="showStatus = false">
     <div class="space-y-4">
-      <div class="flex items-center justify-between w-full">
+      <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Status</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -993,16 +993,18 @@ function onApplyPromptSuccessMetric(val: string) {
         </div>
       </div>
 
-      <AppButton class="w-full" @click="onApplyStatus(selectStatus as TargetStatus)">
-        Apply
-      </AppButton>
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-1 gap-2 py-3 bg-white">
+        <AppButton class="w-full" @click="onApplyStatus(selectStatus as TargetStatus)">
+          Apply
+        </AppButton>
+      </div>
     </div>
   </AppActionSheet>
 
   <!-- Prompt Level Action Sheet -->
   <AppActionSheet :show="showPromptLevel" @close="showPromptLevel = false">
     <div class="space-y-4">
-      <div class="flex items-center justify-between w-full">
+      <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Prompt</div>
         <div class="cursor-pointer" @click="showPromptLevel = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -1030,15 +1032,17 @@ function onApplyPromptSuccessMetric(val: string) {
         </div>
       </div>
 
-      <AppButton class="w-full" @click="onApplyPromptSuccessMetric(selectedPromptSuccessMetric)">
-        Apply
-      </AppButton>
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-1 gap-2 py-3 bg-white">
+        <AppButton class="w-full" @click="onApplyPromptSuccessMetric(selectedPromptSuccessMetric)">
+          Apply
+        </AppButton>
+      </div>
     </div>
   </AppActionSheet>
 
   <!-- Unsaved Changes AYS Modal -->
   <AppActionSheet :show="showUnsavedChangesModal" @close="onStay">
-    <div class="space-y-6 pb-4 pt-2">
+    <div class="py-3 space-y-6">
       <div class="flex flex-col items-center justify-center space-y-2 text-center">
         <div class="text-xl font-bold text-slate-10">Unsaved changes</div>
         <div class="text-base text-slate-8">Are you sure you want to leave this page?</div>
@@ -1048,9 +1052,7 @@ function onApplyPromptSuccessMetric(val: string) {
         <AppButton class="w-full" kind="plain" @click="onDiscard">
           <span class="text-base font-semibold text-light-purple-6">Discard change</span>
         </AppButton>
-        <AppButton class="w-full" @click="onStay">
-          Stay
-        </AppButton>
+        <AppButton class="w-full" @click="onStay"> Stay </AppButton>
       </div>
     </div>
   </AppActionSheet>

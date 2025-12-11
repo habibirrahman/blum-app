@@ -92,7 +92,7 @@ async function onSignin() {
     </div>
   </div>
   <AppActionSheet :show="showForgotPassword" @close="showForgotPassword = false">
-    <div class="flex flex-col items-center gap-4">
+    <div class="flex flex-col items-center gap-4 py-3">
       <div class="text-xl font-semibold text-center">Reset password</div>
       <div class="text-sm text-center">
         Password resets aren't available on mobile yet. Please log in to Blüm on a desktop and

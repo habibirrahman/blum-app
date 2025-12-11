@@ -215,11 +215,7 @@ const isHeightFull = computed<boolean>(
     class="tracking-wide font-blum"
     :class="{ 'pb-14': isUseNav, 'h-full': isHeightFull }"
   >
-    <div
-      v-if="routeName !== 'session-record'"
-      class="sticky left-0 top-0 z-[999]"
-      :class="{ 'px-safe pt-safe': !networkStatus.connected }"
-    >
+    <div v-if="routeName !== 'session-record'" class="sticky left-0 top-0 z-[999]">
       <div
         class="flex items-center justify-center w-full text-sm font-medium transition-all bg-rose-3 text-rose-7"
         :class="{ 'h-8': !networkStatus.connected, 'h-0': networkStatus.connected }"
@@ -312,7 +308,7 @@ const isHeightFull = computed<boolean>(
 
   <!-- Update Required Modal -->
   <AppActionSheet :show="updateRequired">
-    <div class="space-y-5 tracking-wide font-blum">
+    <div class="py-3 space-y-5 tracking-wide font-blum">
       <div class="text-2xl font-semibold text-center text-slate-10">Update required</div>
       <div class="text-sm text-center text-slate-8">
         To continue using Blüm, please update to the latest version. We've made important

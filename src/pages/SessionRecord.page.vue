@@ -967,7 +967,7 @@ const duplicateImageCommentsToClientDocument = async () => {
   <SessionComments :show="showSessionComments" @close="showSessionComments = false" />
 
   <AppActionSheet :show="showOffline" @close="showOffline = false">
-    <div class="flex flex-col items-center gap-4">
+    <div class="flex flex-col items-center gap-4 py-3">
       <div class="text-xl font-semibold text-center">Oops! You're offline</div>
       <div class="text-sm text-center">
         Your connection is lost. You can keep tracking data, but you'll need to go online to end the
@@ -980,7 +980,7 @@ const duplicateImageCommentsToClientDocument = async () => {
   </AppActionSheet>
 
   <AppActionSheet :show="showEndSession" @close="showEndSession = false">
-    <div v-if="endSessionStatus === 'normal'" class="flex flex-col items-center gap-4">
+    <div v-if="endSessionStatus === 'normal'" class="flex flex-col items-center gap-4 py-3">
       <div class="text-xl font-semibold text-center">End this session?</div>
       <div class="text-sm text-center">
         Are you sure you want to end this session? Make sure you've reviewed all data before
@@ -991,7 +991,7 @@ const duplicateImageCommentsToClientDocument = async () => {
         <AppButton :loading="endSessionLoading" @click="onEndSession">End now</AppButton>
       </div>
     </div>
-    <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4">
+    <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4 py-3">
       <div class="text-xl font-semibold text-center">Session can't be ended</div>
       <div class="flex flex-col w-full gap-2">
         <div class="text-sm">You can't end the session because of the following reason(s):</div>
@@ -1006,7 +1006,7 @@ const duplicateImageCommentsToClientDocument = async () => {
         Back to session
       </AppButton>
     </div>
-    <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col items-center gap-4">
+    <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col items-center gap-4 py-3">
       <div class="text-xl font-semibold text-center">It seems you haven't recorded any data</div>
       <img
         alt="measurement_droped"

@@ -34,11 +34,9 @@ const filteredCurriculumOptions = computed(() => {
   if (!curriculumQuery.value.trim()) {
     return props.curriculumOptions
   }
-  
+
   const query = curriculumQuery.value.toLowerCase().trim()
-  return props.curriculumOptions.filter((opt) => 
-    opt.label.toLowerCase().includes(query)
-  )
+  return props.curriculumOptions.filter((opt) => opt.label.toLowerCase().includes(query))
 })
 
 // Watch untuk sync dengan props
@@ -86,8 +84,8 @@ const onApplyCurriculum = () => {
 <template>
   <AppActionSheet :show="show" @close="emit('close')">
     <div class="space-y-4">
-      <div class="sticky top-0 z-10 h-14 space-y-3 bg-white">
-        <div class="flex w-full items-center justify-between">
+      <div class="sticky top-0 z-10 w-full py-3 space-y-3 bg-white">
+        <div class="flex items-center justify-between w-full">
           <div class="text-xl font-semibold">Curriculum</div>
           <div class="cursor-pointer" @click="emit('close')">
             <Icon icon="ph:x" class="text-2xl" />
@@ -100,11 +98,12 @@ const onApplyCurriculum = () => {
           suffix_icon="ph:magnifying-glass"
         />
       </div>
-      <div class="h-[500px] overflow-y-auto">
+
+      <div>
         <!-- Tampilkan pesan jika tidak ada hasil -->
-        <div 
-          v-if="filteredCurriculumOptions.length === 0" 
-          class="flex h-full items-center justify-center text-slate-5"
+        <div
+          v-if="filteredCurriculumOptions.length === 0"
+          class="flex items-center justify-center h-full text-slate-5"
         >
           <div class="text-center">
             <Icon icon="ph:magnifying-glass" class="mx-auto mb-2 text-4xl" />
@@ -115,15 +114,15 @@ const onApplyCurriculum = () => {
         <div
           v-for="opt in filteredCurriculumOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
+          class="flex items-center justify-between w-full gap-4 border-b h-14 border-slate-3"
         >
           <div
-            class="h-6 w-6 flex-shrink-0 rounded-full"
+            class="flex-shrink-0 w-6 h-6 rounded-full"
             :style="{
               backgroundColor: opt.color
             }"
           ></div>
-          <label :for="`curriculum_filter_${opt.value}`" class="grow truncate text-sm">
+          <label :for="`curriculum_filter_${opt.value}`" class="text-sm truncate grow">
             {{ opt.label }}
           </label>
 
@@ -135,7 +134,7 @@ const onApplyCurriculum = () => {
             :id="`curriculum_filter_${opt.value}`"
             :checked="selectCurriculums.includes(opt.value)"
             :value="opt.value"
-            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="onCheckCurriculum(opt.value)"
           />
 
@@ -147,14 +146,13 @@ const onApplyCurriculum = () => {
             :id="`curriculum_filter_${opt.value}`"
             :checked="selectCurriculums.includes(opt.value)"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="onCheckCurriculum(opt.value)"
           />
         </div>
       </div>
-      <div
-        class="sticky bottom-0 flex h-14 w-full items-center justify-center gap-2 bg-white pb-safe"
-      >
+
+      <div class="sticky bottom-0 z-10 flex items-center justify-center w-full gap-2 py-3 bg-white">
         <AppButton class="w-full" v-if="resetAble" kind="plain" @click="onResetCurriculum"
           >Reset</AppButton
         >
