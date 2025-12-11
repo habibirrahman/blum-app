@@ -277,7 +277,7 @@ const onDeleteMeasurements = async () => {
       class="flex grow"
       :class="{
         'max-h-[160px] justify-center': isMeasurementCollapsed,
-        'no-scrollbar h-[calc(100vh-56px)] flex-col items-center gap-4 overflow-y-auto py-4':
+        'no-scrollbar h-[calc(100vh-56px)] flex-col items-center gap-4 overflow-y-auto py-32':
           !isMeasurementCollapsed
       }"
     >
@@ -315,7 +315,7 @@ const onDeleteMeasurements = async () => {
     class="fixed z-[9] w-screen bg-prim-3 transition-all duration-500 px-safe pb-safe"
     :class="[showReviewMode || !isMeasurementCollapsed ? '-bottom-36' : 'bottom-0']"
   >
-    <div class="flex items-center h-16 gap-6 px-4 grow">
+    <div class="flex items-center w-full h-16 gap-6 px-4">
       <div class="relative" @click="showReviewMode = !showReviewMode">
         <div
           class="flex items-center justify-center w-8 h-10 text-xs font-semibold bg-white rounded text-dark-purple-1"

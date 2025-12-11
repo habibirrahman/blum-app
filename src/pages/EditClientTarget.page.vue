@@ -542,6 +542,7 @@ function onApplyPromptSuccessMetric(val: string) {
           label="Description"
           type="textarea"
           v-model="description"
+          :custom-heigth="isGroup ? 'h-52': 'h-full'"
         />
 
         <!-- Divider for Prompting Types -->

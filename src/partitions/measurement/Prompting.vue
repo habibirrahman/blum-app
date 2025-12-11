@@ -370,8 +370,8 @@ const onSavePrompts = async () => {
   </div>
 
   <AppActionSheet :show="showCustomize" @close="showCustomize = false">
-    <div class="flex flex-col gap-4">
-      <div class="flex items-center justify-between">
+    <div class="space-y-4">
+      <div class="sticky top-0 z-10 flex items-center justify-between bg-white pt-safe">
         <div class="text-xl font-semibold">Customize prompt visibility</div>
         <div class="cursor-pointer" @click="showCustomize = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -419,7 +419,9 @@ const onSavePrompts = async () => {
         </div>
       </div>
 
-      <AppButton class="w-full" :loading="saveLoading" @click="onSavePrompts"> Apply </AppButton>
+      <div class="sticky bottom-0 z-10 flex items-center justify-between bg-white pb-safe">
+        <AppButton class="w-full" :loading="saveLoading" @click="onSavePrompts"> Apply </AppButton>
+      </div>
     </div>
   </AppActionSheet>
 </template>
