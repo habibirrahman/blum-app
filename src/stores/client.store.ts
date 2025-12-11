@@ -315,15 +315,6 @@ export const useClientStore = defineStore('client', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    /**
-     * 10 target
-     * 5 - offline (timeout) tidak call API checkTargetJob
-     * akibat nya
-     * 1. job selalu in_progress
-     * 2. user tidak bisa add target lagi
-     * expectasi nya
-     * 1. job berhenti -> failed karena error timeout
-     */
     async checkTargetJob({
       data
     }: {
@@ -336,7 +327,9 @@ export const useClientStore = defineStore('client', {
       if (clientId !== data.client_id) return { success: false, data: null }
 
       return axios
-        .get(`/api/v1/clients/${data.client_id}/check_duplicate_targets_job/${data.job_id}`)
+        .get(`/api/v1/clients/${data.client_id}/check_duplicate_targets_job/${data.job_id}`, {
+          timeout: 30000
+        })
         .then(async (response) => {
           if (!response.data.job) return { success: false, data: null }
           this.client_target_job = response.data.job
@@ -357,18 +350,7 @@ export const useClientStore = defineStore('client', {
           return { success: true, data }
         })
         .catch((error) => {
-          /**
-           * 1. timeout
-           * this.client_target_job = null
-           * -> in_progress
-           * change status -> close the banner
-           * failed: toast
-           */
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          if (message === 'Network Error') {
-            this.client_target_job = null
-            return { success: false, data: null, message }
-          }
           return { success: false, data: null, message }
         })
     },
