@@ -13,6 +13,7 @@ interface Props {
   suffix_icon?: string
   suffix_text?: string
   borderless?: boolean
+  customHeigth?: string
 }
 
 const model = defineModel({ type: String || Number })
@@ -24,7 +25,8 @@ const props = withDefaults(defineProps<Props>(), {
   error: false,
   suffix_icon: '',
   suffix_text: '',
-  borderless: false
+  borderless: false,
+  customHeigth: 'h-full'
 })
 
 const openPassword = ref<boolean>(false)
@@ -54,7 +56,8 @@ const openPassword = ref<boolean>(false)
         'border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2': !error,
         'border-tomato-7 focus:ring-tomato-2': error,
         'border px-4 py-2': !borderless,
-        '!border-none px-0 py-1 focus:!ring-0': borderless
+        '!border-none px-0 py-1 focus:!ring-0': borderless,
+        [customHeigth]: true
       }"
     ></textarea>
     <input

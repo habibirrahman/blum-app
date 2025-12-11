@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
@@ -17,7 +17,6 @@ interface Emits {
   (e: 'close'): void
   (e: 'apply', value: number[]): void
   (e: 'reset'): void
-  (e: 'update:curriculumQuery', value: string): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -29,6 +28,18 @@ const emit = defineEmits<Emits>()
 
 const curriculumQuery = ref<string>('')
 const selectCurriculums = ref<number[]>([...props.selectedCurriculum])
+
+// Computed untuk filter curriculum berdasarkan query
+const filteredCurriculumOptions = computed(() => {
+  if (!curriculumQuery.value.trim()) {
+    return props.curriculumOptions
+  }
+  
+  const query = curriculumQuery.value.toLowerCase().trim()
+  return props.curriculumOptions.filter((opt) => 
+    opt.label.toLowerCase().includes(query)
+  )
+})
 
 // Watch untuk sync dengan props
 watch(
@@ -47,10 +58,6 @@ watch(
     }
   }
 )
-
-watch(curriculumQuery, (val) => {
-  emit('update:curriculumQuery', val)
-})
 
 const onCheckCurriculum = (val: number) => {
   if (props.useMultipleSelect) {
@@ -94,8 +101,19 @@ const onApplyCurriculum = () => {
         />
       </div>
       <div class="h-[500px] overflow-y-auto">
+        <!-- Tampilkan pesan jika tidak ada hasil -->
+        <div 
+          v-if="filteredCurriculumOptions.length === 0" 
+          class="flex h-full items-center justify-center text-slate-5"
+        >
+          <div class="text-center">
+            <Icon icon="ph:magnifying-glass" class="mx-auto mb-2 text-4xl" />
+            <p>No curriculum found</p>
+          </div>
+        </div>
+
         <div
-          v-for="opt in curriculumOptions"
+          v-for="opt in filteredCurriculumOptions"
           :key="opt.value"
           class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
         >
