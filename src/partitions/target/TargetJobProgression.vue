@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useClientStore } from '@/stores/client.store'
+import { useAppStore } from '@/stores/app.store'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { TransitionChild, TransitionRoot } from '@headlessui/vue'
 const clientStore = useClientStore()
+const appStore = useAppStore()
 
 const currentJobId = ref<string>('')
 const showing = ref<boolean>(false)
@@ -16,6 +18,26 @@ const wasCompletedButHasFailed = computed(() => {
     (status === 'completed' && clientStore.client_target_job.total_errors) || status === 'cancelled'
   )
 })
+
+
+watch(
+  () => appStore.network_status.connected,
+  (val) => {
+    if (val && clientStore.client_target_job) {
+      if (
+        clientStore.client_target_job.status === 'in_progress' ||
+        clientStore.client_target_job.status === 'pending'
+      ) {
+        clientStore.checkTargetJob({
+          data: {
+            client_id: clientStore.client?.id as number,
+            job_id: clientStore.client_target_job.job_id
+          }
+        })
+      }
+    }
+  }
+)
 
 watch(
   () => clientStore.client_target_job,

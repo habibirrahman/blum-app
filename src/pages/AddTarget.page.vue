@@ -333,10 +333,13 @@ const onAddTarget = async () => {
       <div v-for="target in appStore.center_targets" :key="target.id">
         <div v-if="target.is_group">
           <div
-            class="flex h-[154px] flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-4"
+            class="cursor-pointer flex h-[154px] flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-4"
           >
             <div class="flex items-center justify-between">
-              <div class="text-xs truncate text-slate-8">
+              <div
+                @click="onOpenTarget(target)"
+                class="text-xs truncate text-slate-8"
+              >
                 {{ target.curriculum_name }}
               </div>
               <input
@@ -346,16 +349,25 @@ const onAddTarget = async () => {
                 class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               />
             </div>
-            <div class="flex items-center gap-2">
+            <div
+              @click="onOpenTarget(target)"
+              class="flex items-center gap-2"
+            >
               <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
               <div class="text-sm font-semibold text-slate-10">
                 {{ target.name }}
               </div>
             </div>
-            <div class="text-xs whitespace-pre-line line-clamp-3 text-slate-8">
+            <div
+              @click="onOpenTarget(target)"
+              class="text-xs whitespace-pre-line line-clamp-3 text-slate-8"
+            >
               {{ target.description }}
             </div>
-            <div class="text-xs font-medium text-slate-8">
+            <div
+              @click="onOpenTarget(target)"
+              class="text-xs font-medium text-slate-8"
+            >
               {{ getTargetType(target.type) }}
             </div>
           </div>

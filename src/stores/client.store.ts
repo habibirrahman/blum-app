@@ -365,6 +365,10 @@ export const useClientStore = defineStore('client', {
            * failed: toast
            */
           const message = getErrorMessage(error.response?.data?.error || error?.message)
+          if (message === 'Network Error') {
+            this.client_target_job = null
+            return { success: false, data: null, message }
+          }
           return { success: false, data: null, message }
         })
     },
