@@ -3,7 +3,7 @@ import axios from 'axios'
 import type { ActionRecommendation, Client, Session, Target } from '@/lib/types'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getClientStorage, setClientStorage } from '@/plugins/preferences.plugin'
-import { onlyUniqueId } from '@/lib/func'
+import { getErrorMessage, onlyUniqueId } from '@/lib/func'
 
 export interface ClientStateSchema {
   client: Client | null
@@ -315,10 +315,23 @@ export const useClientStore = defineStore('client', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
-    async checkTargetJob({ data }: { data: {
-      client_id: Client['id']
-      job_id: string
-    }}): Promise<ResponseSchema> {
+    /**
+     * 10 target
+     * 5 - offline (timeout) tidak call API checkTargetJob
+     * akibat nya
+     * 1. job selalu in_progress
+     * 2. user tidak bisa add target lagi
+     * expectasi nya
+     * 1. job berhenti -> failed karena error timeout
+     */
+    async checkTargetJob({
+      data
+    }: {
+      data: {
+        client_id: Client['id']
+        job_id: string
+      }
+    }): Promise<ResponseSchema> {
       const clientId = this.client?.id
       if (clientId !== data.client_id) return { success: false, data: null }
 
@@ -334,20 +347,34 @@ export const useClientStore = defineStore('client', {
             }, 5000)
           }
           if (jobStatus === 'completed') {
-            const createdTargets = response.data.targets.filter((target: Target) => !target.group_id)
+            const createdTargets = response.data.targets.filter(
+              (target: Target) => !target.group_id
+            )
             this.targets = createdTargets
             this.targets_count = createdTargets.length
             this.syncClientStore()
           }
           return { success: true, data }
         })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
+        .catch((error) => {
+          /**
+           * 1. timeout
+           * this.client_target_job = null
+           * -> in_progress
+           * change status -> close the banner
+           * failed: toast
+           */
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
         })
     },
-    async cancelTargetJob({ data }: { data: {
-      job_id: string
-    }}): Promise<ResponseSchema> {
+    async cancelTargetJob({
+      data
+    }: {
+      data: {
+        job_id: string
+      }
+    }): Promise<ResponseSchema> {
       return axios
         .patch(`/api/v1/cancel_duplicate_targets_job/${data.job_id}`)
         .then(async ({ data }) => {
@@ -359,7 +386,13 @@ export const useClientStore = defineStore('client', {
         })
     },
 
-    async updateTarget({ id, data }: { id: Target['id']; data: Partial<Target> }): Promise<ResponseSchema> {
+    async updateTarget({
+      id,
+      data
+    }: {
+      id: Target['id']
+      data: Partial<Target>
+    }): Promise<ResponseSchema> {
       return axios
         .patch(`/api/v1/targets/${id}`, data)
         .then(async ({ data }) => {
@@ -372,7 +405,11 @@ export const useClientStore = defineStore('client', {
         })
     },
 
-    async createActionRecommendation({ data }: { data: ActionRecommendation }): Promise<ResponseSchema> {
+    async createActionRecommendation({
+      data
+    }: {
+      data: ActionRecommendation
+    }): Promise<ResponseSchema> {
       return axios
         .post(`/api/v1/action_recommendations`, {
           action_recommendation: data
@@ -385,7 +422,13 @@ export const useClientStore = defineStore('client', {
         })
     },
 
-    async updateActionRecommendation({ id, data }: { id: ActionRecommendation['id']; data: Partial<ActionRecommendation> }): Promise<ResponseSchema> {
+    async updateActionRecommendation({
+      id,
+      data
+    }: {
+      id: ActionRecommendation['id']
+      data: Partial<ActionRecommendation>
+    }): Promise<ResponseSchema> {
       return axios
         .patch(`/api/v1/action_recommendations/${id}`, {
           action_recommendation: data

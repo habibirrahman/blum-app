@@ -42,6 +42,8 @@ const setup = (val: any) => {
       }, 5000)
     }
     currentJobId.value = val.job_id
+  } else {
+    showing.value = false
   }
 }
 
@@ -65,7 +67,7 @@ const onCancelJob = async () => {
     >
       <div
         v-if="clientStore.client_target_job"
-        class="h-15 flex items-center justify-between gap-2 rounded-b px-2 py-1"
+        class="flex items-center justify-between gap-2 px-2 py-1 rounded-b h-15"
         :class="[wasCompletedButHasFailed ? 'bg-[#FAEFCC]' : 'bg-[#F2FFE3]']"
       >
         <div class="flex items-center gap-2">
@@ -121,7 +123,7 @@ const onCancelJob = async () => {
               </span>
               <div
                 :class="[wasCompletedButHasFailed ? 'bg-[#9B7600]' : 'bg-[#4b810e]']"
-                class="h-1 w-1 rounded-full opacity-50"
+                class="w-1 h-1 rounded-full opacity-50"
               />
               <span
                 class="text-xs font-semibold"
@@ -142,7 +144,7 @@ const onCancelJob = async () => {
           "
         >
           <button
-            class="flex h-7 items-center justify-center rounded border border-lime-500 px-2 outline-none"
+            class="flex items-center justify-center px-2 border rounded outline-none h-7 border-lime-500"
             :class="
               cancelLoading
                 ? 'bg-grey-100 cursor-wait'
