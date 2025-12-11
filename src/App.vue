@@ -205,7 +205,7 @@ const isHeightFull = computed<boolean>(
   <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
   <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
-  <div v-if="loadingApp" class="grid w-full h-full tracking-wide font-blum place-items-center">
+  <div v-if="loadingApp" class="grid w-full h-full tracking-wide place-items-center font-blum">
     <div class="flex items-center text-4xl font-bold animate-pulse font-logo text-light-purple-5">
       Blüm
     </div>
@@ -217,10 +217,15 @@ const isHeightFull = computed<boolean>(
   >
     <div
       v-if="routeName !== 'session-record'"
-      class="sticky left-0 top-0 z-[999] flex w-full items-center justify-center bg-rose-3 text-sm font-medium text-rose-7 transition-all"
-      :class="{ 'h-8': !networkStatus.connected, 'h-0': networkStatus.connected }"
+      class="sticky left-0 top-0 z-[999]"
+      :class="{ 'px-safe pt-safe': !networkStatus.connected }"
     >
-      <div v-if="!networkStatus.connected">You're offline. Connect to sync your data.</div>
+      <div
+        class="flex items-center justify-center w-full text-sm font-medium transition-all bg-rose-3 text-rose-7"
+        :class="{ 'h-8': !networkStatus.connected, 'h-0': networkStatus.connected }"
+      >
+        <div v-if="!networkStatus.connected">You're offline. Connect to sync your data.</div>
+      </div>
     </div>
 
     <div
@@ -280,7 +285,7 @@ const isHeightFull = computed<boolean>(
 
   <footer
     v-if="!loadingApp && isUseNav"
-    class="font-blum fixed bottom-0 z-[100] flex w-screen bg-white tracking-wide px-safe pb-safe"
+    class="fixed bottom-0 z-[100] flex w-screen bg-white font-blum tracking-wide px-safe pb-safe"
   >
     <nav
       class="grid items-center w-full h-14"
