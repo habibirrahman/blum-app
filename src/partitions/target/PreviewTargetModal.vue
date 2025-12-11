@@ -106,6 +106,24 @@ const onEdit = () => {}
             <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
           </div>
         </div>
+          <div
+          v-if="(target?.type === 'Target::Percentage' || target?.type === 'Target::TrialByTrial') && target?.probing_enable"
+          class="flex flex-col"
+        >
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-sm font-semibold text-slate-10">Probing</div>
+            <div class="flex flex-col bg-slate-1 border border-slate-3 px-4 py-3">
+              <div class="flex flex-col gap-1 border-b border-slate-3 pb-3">
+                <div class="text-xs text-slate-8">Minimum number of trials:</div>
+                <div class="text-sm">{{ target?.probing_number_of_trial }}</div>
+              </div>
+              <div class="flex flex-col gap-1 pt-3">
+                <div class="text-xs text-slate-8">Goal for probing</div>
+                <div class="capitalize-first text-sm">≥ {{ target?.probing_goal }}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div v-if="target?.type === 'Target::TrialByTrial'" class="flex flex-col">
           <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
             <div class="text-xs text-slate-8">Goal:</div>

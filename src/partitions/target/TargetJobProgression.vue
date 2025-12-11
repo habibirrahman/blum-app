@@ -13,7 +13,7 @@ const wasCompletedButHasFailed = computed(() => {
   if (!clientStore.client_target_job) return false
   const status = clientStore.client_target_job.status
   return (
-    (status === 'completed' && clientStore.client_target_job.total_errors) || status === 'canceled'
+    (status === 'completed' && clientStore.client_target_job.total_errors) || status === 'cancelled'
   )
 })
 
@@ -34,7 +34,7 @@ const setup = (val: any) => {
     if (currentJobId.value !== val.job_id) {
       showing.value = true
     }
-    if (val.status === 'completed' || val.status === 'canceled') {
+    if (val.status === 'completed' || val.status === 'cancelled') {
       setTimeout(() => {
         showing.value = false
         currentJobId.value = ''
@@ -79,7 +79,7 @@ const onCancelJob = async () => {
             <Icon
               v-if="wasCompletedButHasFailed"
               icon="fluent:warning-28-filled"
-              class="text-[18px] text-[#e8b100]"
+              class="text-[18px] text-[#9B7600]"
             />
             <Icon
               v-else-if="clientStore.client_target_job.status === 'completed'"
@@ -94,8 +94,7 @@ const onCancelJob = async () => {
           </div>
           <div class="flex flex-col">
             <div v-if="wasCompletedButHasFailed" class="text-xs text-[#9B7600]">
-              Some targets were not successfully added. Please review and retry for the unsuccessful
-              targets.
+              Adding targets from the databank is complete. You can now add new targets.
             </div>
 
             <div
@@ -110,7 +109,7 @@ const onCancelJob = async () => {
             <div
               v-if="
                 clientStore.client_target_job.status === 'completed' ||
-                clientStore.client_target_job.status === 'canceled'
+                clientStore.client_target_job.status === 'cancelled'
               "
               class="flex items-center gap-2"
             >
@@ -128,7 +127,7 @@ const onCancelJob = async () => {
                 class="text-xs font-semibold"
                 :class="[wasCompletedButHasFailed ? 'text-[#9B7600]' : 'text-[#4b810e]']"
               >
-                Failed targets: {{ clientStore.client_target_job.total_errors }}
+                Failed targets: {{ clientStore.client_target_job.remaining_targets }}
               </span>
             </div>
             <span v-else class="text-xs font-semibold text-[#4b810e]">

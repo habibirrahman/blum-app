@@ -11,7 +11,7 @@ import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 
 // ========== CONSTANTS ==========
@@ -41,6 +41,9 @@ const loading = ref(false)
 const submitLoading = ref(false)
 const isCloseTargetDetails = ref(false)
 const isCloseActionRecommendation = ref(true)
+const showUnsavedChangesModal = ref(false)
+const pendingRoute = ref<any>(null)
+const initialDataStr = ref('')
 
 // ========== FORM STATE ==========
 // Basic fields
@@ -137,8 +140,9 @@ const useActionRecommendations = computed(() => !isSbtType.value && !isGroup.val
 
 const useSuccessMetric = computed(
   () =>
-    (!isSbtType.value && !isGroup.value && !isColdProbeType.value && !isPromptingType.value) ||
-    isPromptingCustom.value
+    !isGroup.value &&
+    ((!isSbtType.value && !isColdProbeType.value && !isPromptingType.value) ||
+      isPromptingCustom.value)
 )
 
 const useProbing = computed(() => isPercentageType.value || isTrialByTrialType.value)
@@ -202,11 +206,39 @@ async function loadInitialData() {
     await clientStore.getTarget({ id: targetId.value })
     const { data } = await appStore.getCurriculums({ params: curriculumParams.value })
     initializeFormData(data)
+    initialDataStr.value = JSON.stringify(buildTargetData())
   } catch (error) {
     toast.error('Failed to load target data')
     console.error('Error loading initial data:', error)
   } finally {
     loading.value = false
+  }
+}
+
+// Navigation Guard
+onBeforeRouteLeave((to, from, next) => {
+  const currentDataStr = JSON.stringify(buildTargetData())
+  
+  if (initialDataStr.value && initialDataStr.value !== currentDataStr) {
+    showUnsavedChangesModal.value = true
+    pendingRoute.value = to
+    next(false)
+  } else {
+    next()
+  }
+})
+
+function onStay() {
+  showUnsavedChangesModal.value = false
+  pendingRoute.value = null
+}
+
+function onDiscard() {
+  showUnsavedChangesModal.value = false
+  // Update initial data to match current so the guard doesn't trigger again
+  initialDataStr.value = JSON.stringify(buildTargetData())
+  if (pendingRoute.value) {
+    router.push(pendingRoute.value)
   }
 }
 
@@ -285,7 +317,7 @@ function buildTargetData() {
 
   // Apply to all member flag
   if (isTargetMember.value) {
-    data.target.apply_to_all_member = applyToAllMember.value
+    data.target.apply_to_members = applyToAllMember.value
   }
 
   // Type-specific data
@@ -419,6 +451,9 @@ async function onSubmit() {
     }
 
     toast.success('The target has been updated.')
+    // Update initial data to avoid AYS on successful save
+    initialDataStr.value = JSON.stringify(buildTargetData())
+    
     setTimeout(() => {
       router.push({ name: 'client', params: { id: clientId.value, tab: 'targets' } })
     }, 1000)
@@ -996,6 +1031,25 @@ function onApplyPromptSuccessMetric(val: string) {
       <AppButton class="w-full" @click="onApplyPromptSuccessMetric(selectedPromptSuccessMetric)">
         Apply
       </AppButton>
+    </div>
+  </AppActionSheet>
+
+  <!-- Unsaved Changes AYS Modal -->
+  <AppActionSheet :show="showUnsavedChangesModal" @close="onStay">
+    <div class="space-y-6 pb-4 pt-2">
+      <div class="flex flex-col items-center justify-center space-y-2 text-center">
+        <div class="text-xl font-bold text-slate-10">Unsaved changes</div>
+        <div class="text-base text-slate-8">Are you sure you want to leave this page?</div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <AppButton class="w-full" kind="plain" @click="onDiscard">
+          <span class="text-base font-semibold text-light-purple-6">Discard change</span>
+        </AppButton>
+        <AppButton class="w-full" @click="onStay">
+          Stay
+        </AppButton>
+      </div>
     </div>
   </AppActionSheet>
 </template>
