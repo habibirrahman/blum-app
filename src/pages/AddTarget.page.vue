@@ -412,7 +412,7 @@ const onAddTarget = async () => {
     @reset="onResetCurriculum"
   />
   <AppActionSheet :show="showMethods" @close="showMethods = false">
-    <div class="space-y-4">
+    <div>
       <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Data Collection Method</div>
         <div class="cursor-pointer" @click="showMethods = false">

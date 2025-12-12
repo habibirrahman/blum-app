@@ -355,7 +355,7 @@ const onCreateSession = async () => {
   </div>
 
   <AppActionSheet :show="showStatus" @close="showStatus = false">
-    <div class="space-y-4">
+    <div>
       <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Statuses</div>
         <div class="cursor-pointer" @click="showStatus = false">
@@ -390,7 +390,7 @@ const onCreateSession = async () => {
   </AppActionSheet>
 
   <AppActionSheet :show="showSort" @close="showSort = false">
-    <div class="space-y-4">
+    <div>
       <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">

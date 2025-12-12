@@ -227,7 +227,7 @@ const onOpenSession = (session: Session) => {
   </div>
 
   <AppActionSheet :show="showSort" @close="showSort = false">
-    <div class="space-y-4">
+    <div>
       <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">

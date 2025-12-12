@@ -83,7 +83,7 @@ const onApplyCurriculum = () => {
 
 <template>
   <AppActionSheet :show="show" @close="emit('close')">
-    <div class="space-y-4">
+    <div>
       <div class="sticky top-0 z-10 w-full py-3 space-y-3 bg-white">
         <div class="flex items-center justify-between w-full">
           <div class="text-xl font-semibold">Curriculum</div>

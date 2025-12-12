@@ -962,7 +962,7 @@ function onApplyPromptSuccessMetric(val: string) {
 
   <!-- Status Action Sheet -->
   <AppActionSheet :show="showStatus" @close="showStatus = false">
-    <div class="space-y-4">
+    <div>
       <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Status</div>
         <div class="cursor-pointer" @click="showStatus = false">
@@ -1003,7 +1003,7 @@ function onApplyPromptSuccessMetric(val: string) {
 
   <!-- Prompt Level Action Sheet -->
   <AppActionSheet :show="showPromptLevel" @close="showPromptLevel = false">
-    <div class="space-y-4">
+    <div>
       <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
         <div class="text-xl font-semibold">Prompt</div>
         <div class="cursor-pointer" @click="showPromptLevel = false">

@@ -36,9 +36,9 @@ const emit = defineEmits<Emits>()
       leave="transition ease-in-out duration-300 transform"
       leave-from="-translate-y-0"
       leave-to="translate-y-full"
-      class="fixed bottom-0 left-0 w-screen"
+      class="fixed bottom-0 left-0 w-screen px-safe py-safe"
     >
-      <div class="bg-white rounded-t-2xl px-safe py-safe">
+      <div class="bg-white rounded-t-2xl">
         <div class="no-scrollbar max-h-[80vh] overflow-y-auto px-4">
           <slot />
         </div>

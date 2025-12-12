@@ -59,7 +59,7 @@ const onEdit = () => {}
         <div class="h-[38px] w-1/3 shrink-0 animate-pulse rounded bg-slate-3"></div>
       </div>
     </div>
-    <div v-else class="space-y-4">
+    <div v-else>
       <div class="sticky top-0 z-10 flex flex-col w-full gap-2 py-3 bg-white">
         <div class="flex">
           <AppChip :chip="target?.status" />
