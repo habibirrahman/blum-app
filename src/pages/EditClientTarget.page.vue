@@ -367,6 +367,10 @@ function buildTargetData() {
     if (isPromptingCustom.value) {
       data.target.success_metric = successMetric.value
     }
+
+    if (isGroup.value) {
+      data.target.success_metric = clientStore.target?.success_metric
+    }
   }
 
   // Probing
