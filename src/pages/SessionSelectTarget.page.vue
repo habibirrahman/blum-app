@@ -200,8 +200,10 @@ const onAddCheckedTargets = async () => {
   }
 
   toast.success(`${checkedTargetIds.value.length} target(s) has been successfully added`)
+
+  const routeName = route.query.after_submit?.toString() || 'session-draft'
   router.push({
-    name: 'session-draft',
+    name: routeName,
     params: { slug: data.slug },
     query: { redirect: `/pre-session-record/${data.slug}` }
   })
@@ -354,7 +356,7 @@ const onAddCheckedTargets = async () => {
       <!-- <AppPagination
         :page="page"
         :per_page="perPage"
-        :total_count="filteredTargetsCount"
+        :total_count="clientStore.targets_count"
         @change="page = $event"
       /> -->
     </div>

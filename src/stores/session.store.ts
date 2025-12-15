@@ -854,7 +854,7 @@ export const useSessionStore = defineStore('session', {
     },
     async getSessionMeasurements({ id }: { id: Session['id'] }): Promise<ResponseSchema> {
       if (!id) return { success: false, data: null }
-      this.session_measurements = this.session?.measurements || []
+      // this.session_measurements = this.session?.measurements || []
 
       const app = useAppStore()
       if (!app.network_status.connected) {

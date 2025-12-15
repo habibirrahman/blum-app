@@ -195,7 +195,10 @@ const onCreateSession = async () => {
     router.push({
       name: 'session-select-target',
       params: { slug: data.slug },
-      query: { redirect: `/clients/${clientStore.client?.id}/sessions-draft` }
+      query: {
+        redirect: `/clients/${clientStore.client?.id}/sessions-draft`,
+        after_submit: `pre-session-record`
+      }
     })
   } catch (error) {
     createLoading.value = false

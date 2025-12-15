@@ -313,7 +313,7 @@ const onDeleteMeasurements = async () => {
   <div
     v-if="!sessionLoading"
     class="fixed z-[9] w-screen bg-prim-3 transition-all duration-500 px-safe pb-safe"
-    :class="[showReviewMode || !isMeasurementCollapsed ? '-bottom-36' : 'bottom-0']"
+    :class="[!isMeasurementCollapsed ? '-bottom-36' : 'bottom-0']"
   >
     <div class="flex items-center w-full h-16 gap-6 px-4">
       <div class="relative" @click="showReviewMode = !showReviewMode">
@@ -342,7 +342,10 @@ const onDeleteMeasurements = async () => {
         :to="{
           name: 'session-select-target',
           params: { slug: sessionStore.session?.slug },
-          query: { redirect: `/sessions/${sessionStore.session?.slug}` }
+          query: {
+            redirect: `/sessions/${sessionStore.session?.slug}`,
+            after_submit: `session-draft`
+          }
         }"
       >
         <AppButton class="w-full">
