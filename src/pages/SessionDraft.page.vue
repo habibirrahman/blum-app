@@ -32,7 +32,7 @@ async function fetchSession() {
   updateLoading.value = false
   if (!success) return
 
-  redirect.value = route.query.redirect?.toString() || `/clients/${data?.client_id}/sessions-draft`
+  redirect.value = route.query.redirect?.toString() || `/pre-session-record/${data?.slug}`
 }
 
 async function fetchMeasurements() {
@@ -244,7 +244,7 @@ const onDeleteMeasurements = async () => {
       </div>
       <div
         v-else-if="!sessionStore.session_measurements.length"
-        class="flex h-[calc(100vh/2)] flex-col items-center justify-center px-4 text-center text-sm text-dark-purple-1"
+        class="flex h-[calc(50vh)] flex-col items-center justify-center px-4 text-center text-dark-purple-1"
       >
         <div>Whoops, no targets here!</div>
         <div>Add targets before kick off your session.</div>

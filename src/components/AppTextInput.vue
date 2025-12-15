@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 
 interface Props {
@@ -13,11 +13,11 @@ interface Props {
   suffix_icon?: string
   suffix_text?: string
   borderless?: boolean
-  customHeigth?: string
+  rows?: number
 }
 
 const model = defineModel({ type: String || Number })
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   type: 'text',
   placeholder: '',
   disabled: false,
@@ -26,10 +26,18 @@ withDefaults(defineProps<Props>(), {
   suffix_icon: '',
   suffix_text: '',
   borderless: false,
-  customHeigth: 'h-full'
+  rows: 4
 })
 
 const openPassword = ref<boolean>(false)
+const minHeight = computed(() => {
+  if (props.type === 'textarea') {
+    const padding = props.borderless ? 8 : 16
+    return props.rows! * 24 + padding + 'px'
+  }
+  return 'auto'
+})
+
 </script>
 
 <template>
@@ -46,19 +54,20 @@ const openPassword = ref<boolean>(false)
       v-if="type === 'textarea'"
       :id="name"
       :name="name"
+      :rows="rows"
       :placeholder="placeholder"
       :disabled="disabled"
       v-model="model"
-      class="group h-full w-full rounded text-[16px] outline-none ring-offset-2 transition-all focus:outline-none"
+      class="field-sizing-content group w-full resize-none rounded text-[16px] outline-none ring-offset-2 transition-all focus:outline-none"
       :class="{
         'focus:ring-2': !disabled,
         'bg-slate-2': disabled,
         'border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2': !error,
         'border-tomato-7 focus:ring-tomato-2': error,
         'border px-4 py-2': !borderless,
-        '!border-none px-0 py-1 focus:!ring-0': borderless,
-        [customHeigth]: true
+        '!border-none px-0 py-1 focus:!ring-0': borderless
       }"
+      :style="{ minHeight }"
     ></textarea>
     <input
       v-else

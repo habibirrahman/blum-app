@@ -118,7 +118,7 @@ const onOpenSession = (session: Session) => {
   router.push({
     name: 'session-record',
     params: { slug: session?.slug },
-    query: { redirect: `/client/${route.params.id}/${route.params.tab}` }
+    query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
   })
 }
 </script>

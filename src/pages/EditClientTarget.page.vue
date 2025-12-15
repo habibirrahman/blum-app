@@ -139,12 +139,12 @@ const isPromptingCustom = computed(
 const useActionRecommendations = computed(() => !isSbtType.value && !isGroup.value)
 
 const useSuccessMetric = computed(() => {
-  if (isGroup.value) return false;
-  
-  return (!isSbtType.value &&
-    !isColdProbeType.value &&
-    !isPromptingType.value) ||
-    isPromptingCustom.value;
+  if (isGroup.value) return false
+
+  return (
+    (!isSbtType.value && !isColdProbeType.value && !isPromptingType.value) ||
+    isPromptingCustom.value
+  )
 })
 
 const useProbing = computed(() => isPercentageType.value || isTrialByTrialType.value)
@@ -582,8 +582,8 @@ function onApplyPromptSuccessMetric(val: string) {
           name="description"
           label="Description"
           type="textarea"
+          :rows="isGroup ? 10 : 4"
           v-model="description"
-          :custom-heigth="isGroup ? 'h-[10rem]': 'h-full'"
         />
 
         <!-- Divider for Prompting Types -->

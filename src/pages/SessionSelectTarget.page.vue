@@ -23,6 +23,7 @@ const clientStore = useClientStore()
 const sessionStore = useSessionStore()
 
 const redirect = ref<string>('')
+const afterCommit = ref<string>('')
 
 onMounted(async () => {
   const app = document.getElementById('app')
@@ -56,7 +57,8 @@ async function fetchSession() {
     return
   }
 
-  redirect.value = route.query.redirect?.toString() || `/clients/${data?.client_id}/sessions-draft`
+  redirect.value = route.query.redirect?.toString() || `/pre-session-record/${data?.slug}`
+  afterCommit.value = route.query.after_submit?.toString() || 'pre-session-record'
 
   addedTargetIds.value = sessionStore.session_measurements.map((i) => i.target_id)
 }
@@ -201,11 +203,9 @@ const onAddCheckedTargets = async () => {
 
   toast.success(`${checkedTargetIds.value.length} target(s) has been successfully added`)
 
-  const routeName = route.query.after_submit?.toString() || 'session-draft'
   router.push({
-    name: routeName,
-    params: { slug: data.slug },
-    query: { redirect: `/pre-session-record/${data.slug}` }
+    name: afterCommit.value,
+    params: { slug: data.slug }
   })
 }
 </script>

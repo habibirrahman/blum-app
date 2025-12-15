@@ -37,6 +37,7 @@ async function fetchComments() {
     document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
   }, 100)
 }
+
 async function fetchSession() {
   const slug = route.params?.slug as string
   sessionLoading.value = true
@@ -171,6 +172,7 @@ const onStartSession = () => {
         <AppButton><Icon icon="ph:pencil" /></AppButton>
       </RouterLink>
     </div>
+    {{ redirect }}
   </div>
 
   <div
@@ -263,7 +265,7 @@ const onStartSession = () => {
       </div>
       <div
         v-else-if="!sessionStore.session_measurements.length"
-        class="flex h-[calc(100vh/2)] flex-col items-center justify-center px-4 text-center text-sm text-dark-purple-1"
+        class="flex h-[calc(50vh)] flex-col items-center justify-center px-4 text-center text-dark-purple-1"
       >
         <div>Whoops, no targets here!</div>
         <div>Add targets before kick off your session.</div>
