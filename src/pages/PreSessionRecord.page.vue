@@ -172,7 +172,6 @@ const onStartSession = () => {
         <AppButton><Icon icon="ph:pencil" /></AppButton>
       </RouterLink>
     </div>
-    {{ redirect }}
   </div>
 
   <div
