@@ -246,7 +246,8 @@ const onSaveComment = async () => {
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
     measurement: { comment: commentInput.value },
-    data_result: { ...props.measurement, comment: commentInput.value }
+    data_result: { ...props.measurement, comment: commentInput.value },
+    is_comment: true
   }
 
   commentLoading.value = true
@@ -316,6 +317,7 @@ const currentLapTime = computed<string>(() => {
 })
 
 const generateLaps = (results: Measurement['results']) => {
+  if (props.is_running) return
   laps.value = []
   lastLapTime.value = null
   lastTimer.value = null

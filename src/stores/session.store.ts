@@ -64,6 +64,8 @@ export interface UpdateMeasurementParams {
   id: Measurement['id']
   measurement: Measurement
   data_result: Measurement
+  //
+  is_comment?: boolean
 }
 export interface ResolveAllMeasurementsParams {
   params: {
@@ -782,9 +784,15 @@ export const useSessionStore = defineStore('session', {
       this.sessions = [data, ...this.sessions]
       this.syncSessionStore()
     },
-    setSessionMeasurement(data: Measurement) {
+    setSessionMeasurement(data: Measurement, is_comment?: boolean) {
       const idx = this.session_measurements.findIndex((i) => i.target?.id === data.target?.id)
-      if (idx > -1) this.session_measurements[idx] = data
+      if (idx > -1) {
+        if (is_comment) {
+          this.session_measurements[idx].comment = data.comment
+        } else {
+          this.session_measurements[idx] = data
+        }
+      }
       this.syncSessionStore()
     },
 
@@ -1090,7 +1098,7 @@ export const useSessionStore = defineStore('session', {
         })
     },
 
-    async updateMeasurement({ id, measurement, data_result }: UpdateMeasurementParams) {
+    async updateMeasurement({ id, measurement, data_result, is_comment }: UpdateMeasurementParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {
         console.log(data_result)
@@ -1099,7 +1107,7 @@ export const useSessionStore = defineStore('session', {
       return axios
         .patch(`/api/v1/measurements/${id}`, { measurement })
         .then(async ({ data }) => {
-          this.setSessionMeasurement(data)
+          this.setSessionMeasurement(data, is_comment)
 
           // record session activities
           await this.addSessionActivity({

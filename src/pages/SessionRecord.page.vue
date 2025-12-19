@@ -131,7 +131,6 @@ watch(
 
     if (isConnected && !wasConnected) {
       console.log('[Session Page] Network reconnected')
-      sessionLoading.value = true
 
       // Show syncing notification if there are pending items
       if (sessionStore.pending_progress.length > 0) {

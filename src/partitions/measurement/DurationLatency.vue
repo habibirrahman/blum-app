@@ -96,7 +96,11 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
 <template>
   <div v-if="!reset_confirmation" class="flex flex-col justify-between flex-grow h-full gap-2">
-    <div v-if="update_loading || lap_loading" class="absolute z-10 bottom-4 right-4">
+    <div
+      v-if="update_loading || lap_loading"
+      class="absolute z-10"
+      :class="[is_collapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
+    >
       <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
