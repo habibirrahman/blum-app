@@ -232,7 +232,7 @@ const onOpenSession = (session: Session) => {
         name="query"
         placeholder="Search draft by client name or ID"
         v-model="query"
-        suffix_icon="ph:magnifying-glass"
+        suffix-icon="ph:magnifying-glass"
       />
     </div>
     <div class="pl-4">
@@ -318,8 +318,8 @@ const onOpenSession = (session: Session) => {
     </div>
     <AppPagination
       :page="page"
-      :per_page="perPage"
-      :total_count="sessionStore.sessions_count"
+      :per-page="perPage"
+      :total-count="sessionStore.sessions_count"
       @change="page = $event"
     />
   </div>

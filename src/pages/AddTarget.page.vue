@@ -162,13 +162,13 @@ onMounted(() => {
   fetchCurriculums()
 })
 
-const onCheckCurriculum = (val: number) => {
-  if (selectCurriculums.value.includes(val)) {
-    selectCurriculums.value = selectCurriculums.value.filter((i) => i !== val)
-  } else {
-    selectCurriculums.value = [...selectCurriculums.value, val]
-  }
-}
+// const onCheckCurriculum = (val: number) => {
+//   if (selectCurriculums.value.includes(val)) {
+//     selectCurriculums.value = selectCurriculums.value.filter((i) => i !== val)
+//   } else {
+//     selectCurriculums.value = [...selectCurriculums.value, val]
+//   }
+// }
 const onResetCurriculum = () => {
   curriculums.value = []
   selectCurriculums.value = []
@@ -256,7 +256,7 @@ const onAddTarget = async () => {
           name="query"
           placeholder="Search target by name"
           v-model="query"
-          suffix_icon="ph:magnifying-glass"
+          suffix-icon="ph:magnifying-glass"
         />
       </div>
       <div class="pl-4">
@@ -377,7 +377,7 @@ const onAddTarget = async () => {
     </div>
     <AppPagination
       :page="page"
-      :total_count="appStore.total_center_targets"
+      :total-count="appStore.total_center_targets"
       @change="page = $event"
     />
   </div>

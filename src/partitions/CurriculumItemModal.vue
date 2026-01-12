@@ -95,7 +95,7 @@ const onApplyCurriculum = () => {
           name="query"
           placeholder="Search curriculum"
           v-model="curriculumQuery"
-          suffix_icon="ph:magnifying-glass"
+          suffix-icon="ph:magnifying-glass"
         />
       </div>
 

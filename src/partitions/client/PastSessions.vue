@@ -143,7 +143,7 @@ const onOpenSession = (session: Session) => {
         name="query"
         placeholder="Search session by therapist name or ID"
         v-model="query"
-        suffix_icon="ph:magnifying-glass"
+        suffix-icon="ph:magnifying-glass"
       />
     </div>
     <div class="pl-4">
@@ -220,8 +220,8 @@ const onOpenSession = (session: Session) => {
     </div>
     <AppPagination
       :page="page"
-      :per_page="perPage"
-      :total_count="clientStore.past_sessions_count"
+      :per-page="perPage"
+      :total-count="clientStore.past_sessions_count"
       @change="page = $event"
     />
   </div>

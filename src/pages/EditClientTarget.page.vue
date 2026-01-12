@@ -619,7 +619,7 @@ function onApplyPromptSuccessMetric(val: string) {
             label="Minimum attempts per session"
             required
             placeholder="Type goal"
-            suffix_text="attempt(s)"
+            suffix-text="attempt(s)"
             v-model="goal"
             type="number"
             inputmode="numeric"
@@ -637,7 +637,7 @@ function onApplyPromptSuccessMetric(val: string) {
             label="Goal"
             required
             placeholder="1-100"
-            suffix_text="percent (%)"
+            suffix-text="percent (%)"
             v-model="goal"
             type="number"
             inputmode="numeric"
@@ -667,7 +667,7 @@ function onApplyPromptSuccessMetric(val: string) {
           label="Duration"
           required
           placeholder="Minimum 5 minutes"
-          suffix_text="Minutes"
+          suffix-text="Minutes"
           v-model="duration"
           :error="
             Number(duration) < MIN_DURATION
@@ -685,7 +685,7 @@ function onApplyPromptSuccessMetric(val: string) {
           label="Goal"
           required
           placeholder="1-100"
-          suffix_text="percent (%)"
+          suffix-text="percent (%)"
           v-model="goal"
           :error="
             Number(goal) > MAX_PERCENTAGE
@@ -703,7 +703,7 @@ function onApplyPromptSuccessMetric(val: string) {
           label="Goal"
           required
           placeholder="Target goal"
-          suffix_text="attempt(s) per session"
+          suffix-text="attempt(s) per session"
           v-model="goal"
           type="number"
           inputmode="numeric"
@@ -716,7 +716,7 @@ function onApplyPromptSuccessMetric(val: string) {
           label="Goal"
           required
           placeholder="1-100"
-          suffix_text="Percent (%)"
+          suffix-text="Percent (%)"
           v-model="goal"
           :error="
             Number(goal) > MAX_PERCENTAGE
@@ -734,7 +734,7 @@ function onApplyPromptSuccessMetric(val: string) {
           label="Goal"
           required
           placeholder="1-100"
-          suffix_text="Percent (%)"
+          suffix-text="Percent (%)"
           v-model="goal"
           :error="
             Number(goal) > MAX_PERCENTAGE
@@ -828,7 +828,7 @@ function onApplyPromptSuccessMetric(val: string) {
         v-model="probingTrial"
         type="number"
         inputmode="numeric"
-        suffix_text="trials"
+        suffix-text="trials"
         :disabled="!probingEnabled"
       />
 
@@ -839,7 +839,7 @@ function onApplyPromptSuccessMetric(val: string) {
         v-model="probingGoal"
         type="number"
         inputmode="numeric"
-        suffix_text="percent (%)"
+        suffix-text="percent (%)"
         :disabled="!probingEnabled"
       />
     </div>

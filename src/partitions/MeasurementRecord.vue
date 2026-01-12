@@ -32,28 +32,28 @@ const sessionStore = useSessionStore()
 interface Props {
   measurement: Measurement
   counter?: number
-  is_collapsed?: boolean
-  review_mode?: boolean
-  is_running?: boolean
-  is_disabled_action?: boolean
+  isCollapsed?: boolean
+  reviewMode?: boolean
+  isRunning?: boolean
+  isDisabledAction?: boolean
   useLock?: boolean
   isChecked?: boolean
 }
 interface Emits {
-  (e: 'toggle-updated', payload: { id: Measurement['id']; updated: boolean }): void
-  (e: 'toggle-running'): void
-  (e: 'toggle-saved', payload: { id: Measurement['id']; saved: boolean }): void
-  (e: 'toggle-collapsed', bool: boolean): void
-  (e: 'fetch-session'): void
-  (e: 'check-completed-cold-probe', payload: { id: Measurement['id']; isCompleted: boolean }): void
-  (e: 'toggle-lock'): void
-  (e: 'toggle-check'): void
-  (e: 'after-commit'): void
+  (e: 'toggleUpdated', payload: { id: Measurement['id']; updated: boolean }): void
+  (e: 'toggleRunning'): void
+  (e: 'toggleSaved', payload: { id: Measurement['id']; saved: boolean }): void
+  (e: 'toggleCollapsed', bool: boolean): void
+  (e: 'fetchSession'): void
+  (e: 'checkCompletedColdProbe', payload: { id: Measurement['id']; isCompleted: boolean }): void
+  (e: 'toggleLock'): void
+  (e: 'toggleCheck'): void
+  (e: 'afterCommit'): void
 }
 const props = withDefaults(defineProps<Props>(), {
   counter: 0,
-  is_collapsed: false,
-  review_mode: false
+  isCollapsed: false,
+  reviewMode: false
 })
 const emit = defineEmits<Emits>()
 
@@ -126,7 +126,7 @@ const measurementType = computed<MeasurementType | TargetType | ''>(() => {
 
 const display = ref<'target' | 'description' | 'comment'>('target')
 watch(
-  () => props.is_collapsed || props.review_mode,
+  () => props.isCollapsed || props.reviewMode,
   (val) => {
     if (val) display.value = 'target'
   }
@@ -217,8 +217,8 @@ const onDrop = async (bool: boolean) => {
     return
   }
   isDropped.value = data.is_dropped
-  if (data.is_dropped && props.is_running) {
-    emit('toggle-running')
+  if (data.is_dropped && props.isRunning) {
+    emit('toggleRunning')
   }
   // Force the cold probe to be marked as completed if is_dropped is true
   if (data.is_dropped && props.measurement.type?.includes('ColdProbe')) {
@@ -226,11 +226,11 @@ const onDrop = async (bool: boolean) => {
   }
 }
 const handleCompletedColdProbe = (isCompleted: boolean) => {
-  emit('check-completed-cold-probe', { id: props.measurement.id, isCompleted })
+  emit('checkCompletedColdProbe', { id: props.measurement.id, isCompleted })
 }
 
 const onToggleUpdated = (updated: boolean) => {
-  emit('toggle-updated', { id: props.measurement.id, updated })
+  emit('toggleUpdated', { id: props.measurement.id, updated })
 }
 
 // comment property
@@ -273,14 +273,20 @@ const onSaveComment = async () => {
 }
 
 // duration property
+interface DurationLap {
+  lapNumber: number
+  time: string
+  seconds: number
+}
+
 const durationCounter = ref<number>(0)
-const isStarted = ref<boolean>(false)
+const isDurationLatencyStarted = ref<boolean>(false)
 const durationInterval = ref<any>(null)
-const updateLoading = ref<boolean>(false)
+const isDurationLatencyLoading = ref<boolean>(false)
 const lapLoading = ref<boolean>(false)
-const laps = ref<any[]>([])
-const lastLapTime = ref<any>(null)
-const lastTimer = ref<any>(null)
+const laps = ref<DurationLap[]>([])
+const lastLapTime = ref<string | null>(null)
+const lastTimer = ref<string | null>(null)
 const resetConfirmation = ref<boolean>(false)
 const lapTimer = ref<number>(0)
 
@@ -317,7 +323,7 @@ const currentLapTime = computed<string>(() => {
 })
 
 const generateLaps = (results: Measurement['results']) => {
-  if (props.is_running) return
+  if (props.isRunning) return
   laps.value = []
   lastLapTime.value = null
   lastTimer.value = null
@@ -349,15 +355,21 @@ const generateLaps = (results: Measurement['results']) => {
     lastLapTime.value = laps.value[laps.value.length - 1].time
   }
 }
+
 const onStartDurationTimer = () => {
   durationInterval.value = setInterval(() => {
     durationCounter.value++
     lapTimer.value++
   }, 1000)
 }
-const onToggleTimer = async () => {
-  if (!isStarted.value) {
-    isStarted.value = true
+
+// Toggle timer start/stop
+const onToggleDurationLatencyTimer = async () => {
+  if (isDurationLatencyLoading.value) return
+
+  if (!isDurationLatencyStarted.value) {
+    // Start timer
+    isDurationLatencyStarted.value = true
     onStartDurationTimer()
     if (laps.value.length === 0) {
       const lapTime = currentLapTime.value
@@ -367,7 +379,7 @@ const onToggleTimer = async () => {
         seconds: lapTimer.value
       })
     }
-    emit('toggle-running')
+    emit('toggleRunning')
 
     const finalResults = Object.fromEntries(
       laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
@@ -405,7 +417,7 @@ const onToggleTimer = async () => {
       last_data: { ...props.measurement }
     }
 
-    updateLoading.value = true
+    isDurationLatencyLoading.value = true
 
     // record session activities
     await sessionStore.addSessionActivity({
@@ -418,7 +430,7 @@ const onToggleTimer = async () => {
     })
 
     const { data } = await sessionStore.updateMeasurementResults(params)
-    updateLoading.value = false
+    isDurationLatencyLoading.value = false
 
     // if (!success) {
     //   resumeTimerFromString(capturedDurationTime, capturedLapTime)
@@ -427,12 +439,14 @@ const onToggleTimer = async () => {
     // }
 
     generateLaps(data.results)
-    isStarted.value = false
-    emit('toggle-running')
+    isDurationLatencyStarted.value = false
+    emit('toggleRunning')
   }
 }
 const onRecordLap = async () => {
-  if (!isStarted.value || lapLoading.value) return
+  if ((!isDurationLatencyStarted.value && !laps.value.length) || lapLoading.value) {
+    return
+  }
 
   // const capturedDurationTime = timerRunning.value
   const capturedLapTime = currentLapTime.value
@@ -487,7 +501,12 @@ const onRecordLap = async () => {
 
   // Mulai timer lagi
   generateLaps(data.results)
-  startTimerAfterLap()
+
+  if (!isDurationLatencyStarted.value) {
+    onToggleDurationLatencyTimer()
+  } else {
+    startTimerAfterLap()
+  }
   lapLoading.value = false
 }
 
@@ -550,7 +569,7 @@ const onResetLaps = async () => {
 
 // prompting & sbt property
 const onToggleSaved = (saved: boolean) => {
-  emit('toggle-saved', { id: props.measurement.id, saved })
+  emit('toggleSaved', { id: props.measurement.id, saved })
 }
 const promptingPrompts = computed(() => {
   console.log('[promptingPrompts] measurementResults.value', measurementResults.value)
@@ -608,26 +627,26 @@ const taskAnalysisPrompts = computed(() => {
   <div
     class="relative transition-all rounded shrink-0"
     :class="{
-      'h-[600px] w-[320px]': !is_collapsed,
-      'h-[160px] w-full': is_collapsed,
+      'h-[600px] w-[320px]': !isCollapsed,
+      'h-[160px] w-full': isCollapsed,
       'border border-light-purple-5 shadow-[4px_4px_4px_4px_#D6C7E066]': isChecked
     }"
   >
     <div
-      v-if="review_mode && measurement.is_fixed"
+      v-if="reviewMode && measurement.is_fixed"
       class="absolute left-0 flex items-center justify-center w-16 h-16 bg-white rounded-full -top-6"
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
     <div
       class="flex flex-col h-full"
-      :class="{ 'pointer-events-none': review_mode && sessionStore.session?.status !== 'draft' }"
+      :class="{ 'pointer-events-none': reviewMode && sessionStore.session?.status !== 'draft' }"
     >
       <div
         class="h-[6px] w-full shrink-0 rounded-t"
         :style="{ backgroundColor: measurement.target?.curriculum_color }"
       ></div>
-      <div v-if="!is_collapsed" id="measurememt-header">
+      <div v-if="!isCollapsed" id="measurememt-header">
         <div
           v-if="sessionStore.session?.status === 'draft'"
           class="flex items-center justify-between w-full px-2 h-9 shrink-0 bg-prim-2"
@@ -635,18 +654,18 @@ const taskAnalysisPrompts = computed(() => {
           <div
             v-if="useLock"
             class="flex items-center justify-center transition-all bg-white rounded h-7 w-7"
-            @click="emit('toggle-lock')"
+            @click="emit('toggleLock')"
           >
             <Icon icon="ph:lock-open-fill" class="text-2xl text-light-purple-5" />
           </div>
           <div v-else></div>
 
-          <div :class="[review_mode ? 'relative right-4 top-4' : '']">
+          <div :class="[reviewMode ? 'relative right-4 top-4' : '']">
             <AppCheckInput
               :name="`check-${measurement.id}`"
               :checked="isChecked"
-              :class="[review_mode ? 'scale-150' : '']"
-              @change.stop="emit('toggle-check')"
+              :class="[reviewMode ? 'scale-150' : '']"
+              @change.stop="emit('toggleCheck')"
             />
           </div>
         </div>
@@ -688,9 +707,9 @@ const taskAnalysisPrompts = computed(() => {
         v-else
         id="measurememt-body"
         class="flex flex-col h-full gap-2 px-4 pb-3 bg-white rounded-b"
-        :class="[is_collapsed ? 'pt-3' : 'no-scrollbar overflow-y-auto']"
+        :class="[isCollapsed ? 'pt-3' : 'no-scrollbar overflow-y-auto']"
       >
-        <div v-if="!is_collapsed" id="card-title" class="pt-3">
+        <div v-if="!isCollapsed" id="card-title" class="pt-3">
           <div v-if="measurement.target?.is_group" class="flex items-center gap-2">
             <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
             <div
@@ -728,7 +747,7 @@ const taskAnalysisPrompts = computed(() => {
             class="flex flex-col items-center justify-center flex-grow min-h-full gap-4"
           >
             <Icon icon="solar:clipboard-remove-bold" class="w-20 h-20 text-tulip-6" />
-            <div v-if="!is_collapsed" class="space-y-2 w-72">
+            <div v-if="!isCollapsed" class="space-y-2 w-72">
               <div class="font-semibold text-center">Entry not recorded</div>
               <div class="text-sm text-center text-slate-8">
                 This entry will not be saved when the Session ends. Toggle back to save this entry
@@ -739,7 +758,7 @@ const taskAnalysisPrompts = computed(() => {
           <div v-else :key="`measurement-card-${cardId}`" class="w-full h-full">
             <!-- Tambahkan sync status indicator (optional) -->
             <div
-              v-if="sessionStore.session?.status === 'ongoing' && hasPendingSync && !is_collapsed"
+              v-if="sessionStore.session?.status === 'ongoing' && hasPendingSync && !isCollapsed"
               class="flex"
             >
               <div class="px-2 py-1 text-xs rounded bg-tulip-1 text-tulip-7">
@@ -750,65 +769,66 @@ const taskAnalysisPrompts = computed(() => {
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
               :measurement="measurement"
-              :measurement_results="measurementResults"
-              :is_started="isStarted"
+              :measurement-results="measurementResults"
+              :is-started="isDurationLatencyStarted"
               :timer="timerRunning"
-              :update_loading="updateLoading"
-              :lap_loading="lapLoading"
+              :update-loading="isDurationLatencyLoading"
+              :lap-loading="lapLoading"
               :laps="laps"
-              :current_lap_time="currentLapTime"
-              :is_collapsed="is_collapsed"
-              :reset_confirmation="resetConfirmation"
-              :is_disabled_action="is_disabled_action"
-              @toggle-timer="onToggleTimer"
+              :current-lap-time="currentLapTime"
+              :is-collapsed="isCollapsed"
+              :reset-confirmation="resetConfirmation"
+              :is-disabled-action="isDisabledAction"
+              @toggle-timer="onToggleDurationLatencyTimer"
               @record-lap="onRecordLap"
               @reset-laps-confirm="resetConfirmation = true"
               @reset-laps-cancel="resetConfirmation = false"
-              @fetch-session="emit('fetch-session')"
+              @generate-laps="generateLaps"
+              @fetch-session="emit('fetchSession')"
               @reset-laps="onResetLaps"
             />
             <Frequency
               v-if="measurementType.includes('Frequency')"
               :measurement="measurement"
-              :measurement_results="measurementResults"
-              :is_collapsed="is_collapsed"
+              :measurement-results="measurementResults"
+              :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetch-session')"
+              @fetch-session="emit('fetchSession')"
             />
             <PartialIntervalRecording
               v-if="measurementType.includes('Pir')"
               :measurement="measurement"
-              :measurement_results="measurementResults"
+              :measurement-results="measurementResults"
               :counter="counter"
-              :is_collapsed="is_collapsed"
-              @fetch-session="emit('fetch-session')"
+              :is-collapsed="isCollapsed"
+              @fetch-session="emit('fetchSession')"
             />
             <Percentage
               v-if="measurementType.includes('Percentage')"
               :measurement="measurement"
-              :measurement_results="measurementResults"
-              :is_collapsed="is_collapsed"
+              :measurement-results="measurementResults"
+              :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetch-session')"
-              @after-commit="emit('after-commit')"
+              @fetch-session="emit('fetchSession')"
+              @after-commit="emit('afterCommit')"
             />
             <TrialByTrial
               v-if="measurementType.includes('TrialByTrial')"
               :measurement="measurement"
-              :measurement_results="measurementResults"
-              :is_collapsed="is_collapsed"
+              :measurement-results="measurementResults"
+              :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetch-session')"
-              @after-commit="emit('after-commit')"
+              @fetch-session="emit('fetchSession')"
+              @after-commit="emit('afterCommit')"
             />
             <Probing
               v-if="measurementType.includes('Probing')"
               :measurement="measurement"
-              :measurement_results="measurementResults"
-              :is_collapsed="is_collapsed"
-              @toggle-collapsed="emit('toggle-collapsed', $event)"
-              @fetch-session="emit('fetch-session')"
-              @after-commit="emit('after-commit')"
+              :measurement-results="measurementResults"
+              :is-collapsed="isCollapsed"
+              @toggle-collapsed="emit('toggleCollapsed', $event)"
+              @fetch-session="emit('fetchSession')"
+              @after-commit="emit('afterCommit')"
             />
             <Prompting
               v-if="
@@ -817,11 +837,11 @@ const taskAnalysisPrompts = computed(() => {
                 !measurement.target?.is_group
               "
               :measurement="measurement"
-              :measurement_results="measurementResults"
+              :measurement-results="measurementResults"
               :target="measurement?.target"
-              :is_collapsed="is_collapsed"
+              :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetch-session')"
+              @fetch-session="emit('fetchSession')"
             />
             <TaskAnalysis
               v-if="
@@ -830,36 +850,36 @@ const taskAnalysisPrompts = computed(() => {
                 measurement.target?.is_group
               "
               :measurement="measurement"
-              :measurement_results="measurementResults"
+              :measurement-results="measurementResults"
               :target="measurement?.target"
-              :is_collapsed="is_collapsed"
+              :is-collapsed="isCollapsed"
               @toggle-saved="onToggleSaved($event)"
-              @fetch-session="emit('fetch-session')"
+              @fetch-session="emit('fetchSession')"
             />
             <SkillBasedTreatment
               v-if="measurementType.includes('Sbt') && measurement?.target"
               :measurement="measurement"
-              :measurement_results="measurementResults"
+              :measurement-results="measurementResults"
               :target="measurement?.target"
-              :is_collapsed="is_collapsed"
+              :is-collapsed="isCollapsed"
               @toggle-saved="onToggleSaved($event)"
-              @fetch-session="emit('fetch-session')"
+              @fetch-session="emit('fetchSession')"
             />
             <ColdProbe
               v-if="measurementType.includes('ColdProbe') && measurement?.target"
               :measurement="measurement"
-              :measurement_results="measurementResults"
+              :measurement-results="measurementResults"
               :target="measurement?.target"
-              :is_collapsed="is_collapsed"
+              :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetch-session')"
+              @fetch-session="emit('fetchSession')"
               @check-completed-cold-probe="handleCompletedColdProbe"
             />
           </div>
           <div
-            v-if="is_collapsed"
+            v-if="isCollapsed"
             class="flex items-center justify-center w-8 rounded-full shrink-0 bg-slate-4"
-            @click="emit('toggle-collapsed', false)"
+            @click="emit('toggleCollapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
           </div>

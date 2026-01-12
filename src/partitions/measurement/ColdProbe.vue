@@ -10,15 +10,15 @@ const sessionStore = useSessionStore()
 
 interface Props {
   measurement: Measurement
-  measurement_results: Measurement['results']
-  is_collapsed: boolean
+  measurementResults: Measurement['results']
+  isCollapsed: boolean
   target: Target
 }
 
 interface Emits {
-  (e: 'toggle-updated', value: boolean): void
-  (e: 'check-completed-cold-probe', value: boolean): void
-  (e: 'fetch-session'): void
+  (e: 'toggleUpdated', value: boolean): void
+  (e: 'checkCompletedColdProbe', value: boolean): void
+  (e: 'fetchSession'): void
 }
 
 const props = defineProps<Props>()
@@ -41,27 +41,27 @@ const isCompletedColdProbe = computed<boolean>(() => {
 
 onMounted(() => {
   if (props.target.cold_probe_format === 'classic') {
-    if (props.measurement_results) {
+    if (props.measurementResults) {
       singleVariableResult.value = {
-        yes: props.measurement_results.score === '100',
-        no: props.measurement_results.score === '0'
+        yes: props.measurementResults.score === '100',
+        no: props.measurementResults.score === '0'
       }
     }
   } else if (props.target.cold_probe_format === 'custom') {
-    if (props.measurement_results && Object.keys(props.measurement_results).length > 0) {
-      allResults.value = { ...props.measurement_results }
-      for (const id in props.measurement_results) {
-        const result = props.measurement_results[id]
+    if (props.measurementResults && Object.keys(props.measurementResults).length > 0) {
+      allResults.value = { ...props.measurementResults }
+      for (const id in props.measurementResults) {
+        const result = props.measurementResults[id]
         multipleVariableResult.value[id] = result.score === 100 ? 'yes' : 'no'
       }
     }
-    emit('check-completed-cold-probe', isCompletedColdProbe.value)
+    emit('checkCompletedColdProbe', isCompletedColdProbe.value)
   }
 })
 
 const onClickSingleVariable = async (value: 'yes' | 'no') => {
   if (sessionStore.session?.status !== 'ongoing') return
-  emit('toggle-updated', true)
+  emit('toggleUpdated', true)
   singleVariableResult.value = {
     yes: value === 'yes',
     no: value === 'no'
@@ -117,13 +117,13 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
 
 const onClickMultipleVariable = async (id: number, value: 'yes' | 'no') => {
   if (sessionStore.session?.status !== 'ongoing') return
-  emit('toggle-updated', true)
+  emit('toggleUpdated', true)
   loadingMultiple.value[id] = true
   multipleVariableResult.value[id] = value
 
   try {
     await saveMultipleVariableResult(id, value)
-    emit('check-completed-cold-probe', isCompletedColdProbe.value)
+    emit('checkCompletedColdProbe', isCompletedColdProbe.value)
   } catch (error) {
     console.log('🚀 ~ onClickMultipleVariable ~ error:', error)
   } finally {
@@ -184,21 +184,21 @@ const isLoading = computed(() => {
     <div
       v-if="isLoading"
       class="absolute z-10"
-      :class="[is_collapsed ? 'right-16 top-4' : 'bottom-4 right-4']"
+      :class="[isCollapsed ? 'right-16 top-4' : 'bottom-4 right-4']"
     >
       <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <div
       class="flex items-center content-center justify-center h-full"
-      :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
+      :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 ps-3': isCollapsed }"
     >
       <div class="">
         <div class="flex flex-col items-center gap-3" v-if="target.cold_probe_format === 'classic'">
           <div class="text-sm text-slate-7">Probe</div>
           <div
             class="flex gap-2"
-            :class="{ 'flex-row-reverse': is_collapsed, 'flex-col': !is_collapsed }"
+            :class="{ 'flex-row-reverse': isCollapsed, 'flex-col': !isCollapsed }"
           >
             <div
               class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-all duration-300 border-2 rounded-full"
@@ -258,16 +258,16 @@ const isLoading = computed(() => {
         >
           <div v-for="(variable, index) in target.target_variables" :key="variable.id">
             <div class="flex flex-col items-center gap-3">
-              <div :class="{ 'pl-1 pr-4': !is_collapsed }">
+              <div :class="{ 'pl-1 pr-4': !isCollapsed }">
                 <div class="text-sm text-slate-7">{{ variable.code }}</div>
               </div>
               <div
                 class="flex gap-2"
                 :class="{
                   'border-r-2':
-                    index !== (target.target_variables ?? []).length - 1 && !is_collapsed,
-                  'flex-row': is_collapsed,
-                  'flex-col pl-1 pr-4': !is_collapsed
+                    index !== (target.target_variables ?? []).length - 1 && !isCollapsed,
+                  'flex-row': isCollapsed,
+                  'flex-col pl-1 pr-4': !isCollapsed
                 }"
               >
                 <!-- YES BUTTON -->

@@ -255,8 +255,8 @@ const onDeleteMeasurements = async () => {
           :key="measurement.id"
           :id="`measurement-record-${measurement.id}`"
           :measurement="measurement"
-          :review_mode="showReviewMode"
-          is_disabled_action
+          :review-mode="showReviewMode"
+          is-disabled-action
           :use-lock="!fixedMeasurement"
           :is-checked="checkedMeasurementIds.includes(measurement.id)"
           @toggle-lock="onChangeLockedCard(measurement, true)"
@@ -293,10 +293,10 @@ const onDeleteMeasurements = async () => {
       </div>
       <MeasurementRecord
         :measurement="fixedMeasurement"
-        :is_collapsed="isMeasurementCollapsed"
-        is_disabled_action
-        @toggle-collapsed="isMeasurementCollapsed = $event"
+        :is-collapsed="isMeasurementCollapsed"
+        is-disabled-action
         :is-checked="checkedMeasurementIds.includes(fixedMeasurement.id)"
+        @toggle-collapsed="isMeasurementCollapsed = $event"
         @toggle-check="onCheckMeasurement(fixedMeasurement.id)"
         @after-commit="fetchMeasurements"
       />

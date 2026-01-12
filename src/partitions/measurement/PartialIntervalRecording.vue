@@ -10,12 +10,12 @@ const toast = useToast()
 
 interface Props {
   measurement: Measurement
-  measurement_results: Measurement['results']
+  measurementResults: Measurement['results']
   counter: number
-  is_collapsed: boolean
+  isCollapsed: boolean
 }
 interface Emits {
-  (e: 'fetch-session'): void
+  (e: 'fetchSession'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 defineEmits<Emits>()
@@ -25,7 +25,7 @@ const intervalRound = computed<number>(() => {
   if (!props.measurement.target || !intervalCount) {
     return 1
   }
-  const duration = Object.keys(props.measurement_results).length * intervalCount
+  const duration = Object.keys(props.measurementResults).length * intervalCount
   return duration / intervalCount
 })
 const currentInterval = computed<number>(() => {
@@ -38,18 +38,18 @@ const currentInterval = computed<number>(() => {
   return interval > intervalRound.value ? intervalRound.value : interval
 })
 const scoreInInterval = computed<number>(() => {
-  if (!props.measurement_results) return 0
-  if (!props.measurement_results[currentInterval.value - 1]) return 0
-  return props.measurement_results[currentInterval.value - 1]
+  if (!props.measurementResults) return 0
+  if (!props.measurementResults[currentInterval.value - 1]) return 0
+  return props.measurementResults[currentInterval.value - 1]
 })
 const totalScore = computed<number>(() => {
-  if (!props.measurement_results) return 0
-  const results: number[] = Object.values(props.measurement_results)
+  if (!props.measurementResults) return 0
+  const results: number[] = Object.values(props.measurementResults)
   return results.reduce((a, b) => a + b, 0) || 0
 })
 const percentageScore = computed<number>(() => {
-  if (!props.measurement_results) return 0
-  const res = Object.values(props.measurement_results).filter((a: any) => a)
+  if (!props.measurementResults) return 0
+  const res = Object.values(props.measurementResults).filter((a: any) => a)
   return Math.floor((res.length / intervalRound.value) * 100)
 })
 
@@ -57,7 +57,7 @@ const scoreLoading = ref<boolean>(false)
 
 const onAddScore = async () => {
   const interval = currentInterval.value - 1
-  const finalResults = props.measurement_results
+  const finalResults = props.measurementResults
   finalResults[interval] = finalResults[interval] + 1
 
   const params: UpdateMeasurementResultsParams = {
@@ -95,18 +95,18 @@ const onAddScore = async () => {
     <div
       v-if="scoreLoading"
       class="absolute z-10"
-      :class="[is_collapsed ? 'right-16 top-4' : 'bottom-28 right-4']"
+      :class="[isCollapsed ? 'right-16 top-4' : 'bottom-28 right-4']"
     >
       <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <div
       class="flex flex-wrap items-center content-center flex-grow h-full transition-all gap-x-3 gap-y-4"
-      :class="{ 'justify-center': !is_collapsed, 'justify-between': is_collapsed }"
+      :class="{ 'justify-center': !isCollapsed, 'justify-between': isCollapsed }"
     >
-      <div v-if="is_collapsed"></div>
+      <div v-if="isCollapsed"></div>
       <div
-        v-if="is_collapsed"
+        v-if="isCollapsed"
         class="flex flex-col items-center justify-between gap-2 text-slate-7"
       >
         <div class="text-[32px] font-bold">{{ totalScore }}</div>
@@ -116,17 +116,17 @@ const onAddScore = async () => {
         class="flex items-center justify-center transition-all rounded-full shrink-0 bg-light-purple-5"
         :class="{
           'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing',
-          'h-[200px] w-[200px]': !is_collapsed,
-          'h-[120px] w-[120px]': is_collapsed
+          'h-[200px] w-[200px]': !isCollapsed,
+          'h-[120px] w-[120px]': isCollapsed
         }"
         @click="onAddScore()"
       >
         <div class="text-sm font-semibold text-white">Incident</div>
       </div>
-      <div v-if="is_collapsed"></div>
+      <div v-if="isCollapsed"></div>
     </div>
 
-    <div v-if="!is_collapsed" class="pb-3 space-y-1 text-xs font-medium shrink-0 text-slate-7">
+    <div v-if="!isCollapsed" class="pb-3 space-y-1 text-xs font-medium shrink-0 text-slate-7">
       <div class="flex items-center justify-between">
         <div>Interval</div>
         <div>{{ currentInterval }} / {{ intervalRound }}</div>

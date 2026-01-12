@@ -13,13 +13,13 @@ const toast = useToast()
 
 interface Props {
   measurement: Measurement
-  measurement_results: Measurement['results']
-  is_collapsed: boolean
+  measurementResults: Measurement['results']
+  isCollapsed: boolean
 }
 interface Emits {
-  (e: 'toggle-updated', bool: boolean): void
-  (e: 'fetch-session'): void
-  (e: 'after-commit'): void
+  (e: 'toggleUpdated', bool: boolean): void
+  (e: 'fetchSession'): void
+  (e: 'afterCommit'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -27,12 +27,12 @@ const emit = defineEmits<Emits>()
 const results = ref<Measurement['results']>({})
 
 onMounted(() => {
-  results.value = { ...props.measurement_results }
+  results.value = { ...props.measurementResults }
 })
 
 const page = ref<number>(1)
 watch(
-  () => props.is_collapsed,
+  () => props.isCollapsed,
   () => {
     setTimeout(() => {
       const el = `${props.measurement.id}-percentage-boxes-${1}`
@@ -47,7 +47,7 @@ const onScroll = (e: any) => {
   if (page.value !== current) page.value = current
 }
 
-const perPage = computed<number>(() => (props.is_collapsed ? 5 : 30))
+const perPage = computed<number>(() => (props.isCollapsed ? 5 : 30))
 interface PercentageBox {
   key: number | string
   value: null | boolean
@@ -83,9 +83,9 @@ watch(
   () => percentageLoadingBox.value,
   (val) => {
     if (val === null) {
-      emit('toggle-updated', true)
+      emit('toggleUpdated', true)
     } else {
-      emit('toggle-updated', false)
+      emit('toggleUpdated', false)
     }
   }
 )
@@ -208,7 +208,7 @@ const onChangeProbing = async () => {
     }
   }
   setTimeout(() => {
-    emit('after-commit')
+    emit('afterCommit')
     switchLoading.value = false
   }, 300)
 }
@@ -219,7 +219,7 @@ const onChangeProbing = async () => {
     <div
       v-if="percentageLoadingBox !== null"
       class="absolute z-10"
-      :class="[is_collapsed ? 'right-16 top-4' : 'bottom-20 right-4']"
+      :class="[isCollapsed ? 'right-16 top-4' : 'bottom-20 right-4']"
     >
       <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
@@ -238,8 +238,8 @@ const onChangeProbing = async () => {
           <div
             class="flex flex-wrap items-start content-center justify-center transition-all max-w-72"
             :class="{
-              'gap-x-4 gap-y-4': !is_collapsed,
-              'gap-x-2 gap-y-2': is_collapsed
+              'gap-x-4 gap-y-4': !isCollapsed,
+              'gap-x-2 gap-y-2': isCollapsed
             }"
           >
             <div
@@ -264,7 +264,7 @@ const onChangeProbing = async () => {
       </div>
     </div>
 
-    <div class="pb-3 space-y-2 shrink-0" :class="{ '-translate-y-2': is_collapsed }">
+    <div class="pb-3 space-y-2 shrink-0" :class="{ '-translate-y-2': isCollapsed }">
       <div class="flex items-center justify-center h-2 gap-2">
         <div
           v-for="n in pageCount"
@@ -275,7 +275,7 @@ const onChangeProbing = async () => {
       </div>
 
       <div
-        v-if="!is_collapsed"
+        v-if="!isCollapsed"
         class="flex items-center justify-center gap-2 text-xs font-medium text-center text-slate-7"
       >
         <div>Goal: {{ measurement.target?.goal }}%</div>

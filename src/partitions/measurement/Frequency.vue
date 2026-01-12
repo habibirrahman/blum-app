@@ -12,12 +12,12 @@ const toast = useToast()
 
 interface Props {
   measurement: Measurement
-  measurement_results: Measurement['results']
-  is_collapsed: boolean
+  measurementResults: Measurement['results']
+  isCollapsed: boolean
 }
 interface Emits {
-  (e: 'toggle-updated', bool: boolean): void
-  (e: 'fetch-session'): void
+  (e: 'toggleUpdated', bool: boolean): void
+  (e: 'fetchSession'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -33,15 +33,15 @@ watch(
   () => scoreLoading.value,
   (val) => {
     if (!val) {
-      emit('toggle-updated', true)
+      emit('toggleUpdated', true)
     } else {
-      emit('toggle-updated', false)
+      emit('toggleUpdated', false)
     }
   }
 )
 
 const onSaveScore = debounce(async function (score: number) {
-  const finalScore = props.measurement_results.score + score
+  const finalScore = props.measurementResults.score + score
 
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
@@ -89,14 +89,14 @@ const onChangeScore = async (score: number) => {
     <div
       v-if="scoreLoading"
       class="absolute z-10"
-      :class="[is_collapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
+      :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
       <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <div
       class="flex flex-wrap items-center content-center justify-center flex-grow h-full gap-x-3 gap-y-4"
-      :class="{ 'scale-90': is_collapsed }"
+      :class="{ 'scale-90': isCollapsed }"
     >
       <div class="space-y-1">
         <div
@@ -128,7 +128,7 @@ const onChangeScore = async (score: number) => {
       </div>
     </div>
 
-    <div v-if="!is_collapsed" class="pb-3 text-xs font-medium text-center shrink-0 text-slate-7">
+    <div v-if="!isCollapsed" class="pb-3 text-xs font-medium text-center shrink-0 text-slate-7">
       Goal: {{ measurement.target?.goal }} attempt(s) per session
     </div>
   </div>

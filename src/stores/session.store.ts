@@ -3,6 +3,8 @@ import axios, { isAxiosError } from 'axios'
 import { getStorage, setStorage } from '@/plugins/preferences.plugin'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getErrorMessage, getRandomString, onlyUniqueId } from '@/lib/func'
+import { Preferences } from '@capacitor/preferences'
+
 import type {
   Session,
   Comment,
@@ -16,19 +18,19 @@ import type {
 interface SessionPendingProgress {
   key: string
   name:
-    | 'update_measurement'
-    | 'update_measurement_result'
-    | 'create_comment'
-    | 'update_comment'
-    | 'delete_comment'
-    | 'duplicate_images'
+  | 'update_measurement'
+  | 'update_measurement_result'
+  | 'create_comment'
+  | 'update_comment'
+  | 'delete_comment'
+  | 'duplicate_images'
   params:
-    | UpdateMeasurementParams
-    | UpdateMeasurementResultsParams
-    | CreateSessionCommentParams
-    | UpdateSessionCommentParams
-    | DeleteSessionCommentParams
-    | DuplicateImagesToClientDocumentParams
+  | UpdateMeasurementParams
+  | UpdateMeasurementResultsParams
+  | CreateSessionCommentParams
+  | UpdateSessionCommentParams
+  | DeleteSessionCommentParams
+  | DuplicateImagesToClientDocumentParams
   timestamp?: number
   retryCount?: number
   lastError?: string
@@ -509,7 +511,6 @@ export const useSessionStore = defineStore('session', {
      */
     async clearAllMeasurementBackups(): Promise<{ success: boolean; count: number }> {
       try {
-        const { Preferences } = await import('@capacitor/preferences')
         const { keys } = await Preferences.keys()
 
         const backupKeys = keys.filter((key) => key.startsWith('measurement_backup_'))
@@ -535,8 +536,6 @@ export const useSessionStore = defineStore('session', {
       measurementIds: number[]
     ): Promise<{ success: boolean; count: number }> {
       try {
-        const { Preferences } = await import('@capacitor/preferences')
-
         console.log(`[clearSessionMeasurementBackups] Clearing ${measurementIds.length} backup(s)`)
 
         for (const id of measurementIds) {
@@ -557,7 +556,6 @@ export const useSessionStore = defineStore('session', {
      */
     async clearOldBackups(olderThanDays: number = 7): Promise<{ success: boolean; count: number }> {
       try {
-        const { Preferences } = await import('@capacitor/preferences')
         const { keys } = await Preferences.keys()
 
         const backupKeys = keys.filter((key) => key.startsWith('measurement_backup_'))
@@ -590,7 +588,6 @@ export const useSessionStore = defineStore('session', {
      */
     async clearSyncedBackups(): Promise<{ success: boolean; count: number }> {
       try {
-        const { Preferences } = await import('@capacitor/preferences')
         const { keys } = await Preferences.keys()
 
         const backupKeys = keys.filter((key) => key.startsWith('measurement_backup_'))
@@ -617,7 +614,6 @@ export const useSessionStore = defineStore('session', {
 
     async clearSessionActivities() {
       try {
-        const { Preferences } = await import('@capacitor/preferences')
         const { keys } = await Preferences.keys()
 
         // Filter keys yang mengandung 'session_activities_'
@@ -668,7 +664,6 @@ export const useSessionStore = defineStore('session', {
       totalSize: number // Approximate in bytes
     }> {
       try {
-        const { Preferences } = await import('@capacitor/preferences')
         const { keys } = await Preferences.keys()
 
         const backupKeys = keys.filter((key) => key.startsWith('measurement_backup_'))
@@ -730,7 +725,6 @@ export const useSessionStore = defineStore('session', {
      */
     async listAllBackups(): Promise<string[]> {
       try {
-        const { Preferences } = await import('@capacitor/preferences')
         const { keys } = await Preferences.keys()
         return keys.filter((key) => key.startsWith('measurement_backup_'))
       } catch (error) {

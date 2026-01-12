@@ -7,6 +7,7 @@ import type { Target } from '@/lib/types'
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useClientStore } from '@/stores/client.store'
+
 interface Props {
   showDetails: boolean
   loading: boolean

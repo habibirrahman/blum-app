@@ -165,7 +165,7 @@ const onToggleGroup = (id: Target['id']) => {
         name="query"
         placeholder="Search target by name"
         v-model="query"
-        suffix_icon="ph:magnifying-glass"
+        suffix-icon="ph:magnifying-glass"
       />
       <RouterLink :to="{ name: 'new-client-target', params: { id: clientStore.client?.id } }">
         <AppButton class="flex-shrink-0"><Icon icon="ph:plus-bold" /></AppButton>
@@ -277,8 +277,8 @@ const onToggleGroup = (id: Target['id']) => {
     </div>
     <AppPagination
       :page="page"
-      :per_page="perPage"
-      :total_count="clientStore.targets_count"
+      :per-page="perPage"
+      :total-count="clientStore.targets_count"
       @change="page = $event"
     />
   </div>

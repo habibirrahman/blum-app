@@ -183,7 +183,7 @@ onMounted(() => {
         name="query"
         placeholder="Search client by name"
         v-model="query"
-        suffix_icon="ph:magnifying-glass"
+        suffix-icon="ph:magnifying-glass"
       />
     </div>
     <div class="pl-4">
@@ -296,8 +296,8 @@ onMounted(() => {
     </div>
     <AppPagination
       :page="page"
-      :per_page="perPage"
-      :total_count="clientStore.clients_count"
+      :per-page="perPage"
+      :total-count="clientStore.clients_count"
       @change="page = $event"
     />
   </div>

@@ -4,8 +4,8 @@ import { Icon } from '@iconify/vue'
 
 interface Props {
   page: number
-  per_page?: number
-  total_count: number
+  perPage?: number
+  totalCount: number
   disabled?: boolean
 }
 interface Emits {
@@ -13,13 +13,13 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  per_page: 25,
+  perPage: 25,
   disabled: false
 })
 const emit = defineEmits<Emits>()
 
 const pages = computed<(number | null)[]>(() => {
-  const count = Math.ceil(props.total_count / props.per_page)
+  const count = Math.ceil(props.totalCount / props.perPage)
   if (count <= 7) {
     const p = []
     for (let i = 1; i <= count; i++) {
@@ -56,7 +56,7 @@ const pages = computed<(number | null)[]>(() => {
 </script>
 
 <template>
-  <div v-if="total_count > per_page" class="flex items-center justify-center gap-2 px-4 py-4">
+  <div v-if="totalCount > perPage" class="flex items-center justify-center gap-2 px-4 py-4">
     <div
       class="flex items-center justify-center text-xl transition-all rounded h-7 w-7 shrink-0"
       :class="{

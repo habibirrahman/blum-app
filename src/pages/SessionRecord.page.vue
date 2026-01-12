@@ -37,11 +37,11 @@ const pendingSyncStats = computed(() => sessionStore.pendingSyncStats)
 
 interface FetchSessionProps {
   first?: boolean
-  is_swiped?: boolean
+  isSwipe?: boolean
 }
 
 // Improved syncSession dengan proper feedback
-async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false }) {
+async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) {
   if (!appStore.network_status.connected) {
     console.log('[syncSession] Skipped - offline')
     return
@@ -58,7 +58,7 @@ async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false
 
   if (!success) return
 
-  if (is_swiped && appStore.network_status.connected) {
+  if (isSwipe && appStore.network_status.connected) {
     if (data && data.succeeded > 0) {
       toast.success(`${data.succeeded} item(s) synced`)
     } else {
@@ -68,7 +68,7 @@ async function syncSession({ is_swiped }: FetchSessionProps = { is_swiped: false
 }
 
 async function fetchSession(
-  { first, is_swiped }: FetchSessionProps = { first: false, is_swiped: false }
+  { first, isSwipe }: FetchSessionProps = { first: false, isSwipe: false }
 ) {
   const slug = route.params?.slug as string
   const { success, data } = await sessionStore.getSession({ slug })
@@ -83,7 +83,7 @@ async function fetchSession(
     : 0
 
   if (session.status === 'ongoing') {
-    if (is_swiped && appStore.network_status.connected) {
+    if (isSwipe && appStore.network_status.connected) {
       toast.success('Results are now up-to-date!')
     }
     counter.value = recordingTime
@@ -145,7 +145,7 @@ watch(
         timestamp: new Date().toISOString()
       })
 
-      await syncSession({ is_swiped: true })
+      await syncSession({ isSwipe: true })
     }
   }
 )
@@ -206,7 +206,7 @@ const scrollListener = async (e: any) => {
         notes: `Refresh session (swipe up)`,
         timestamp: new Date().toISOString()
       })
-      await fetchSession({ is_swiped: true })
+      await fetchSession({ isSwipe: true })
 
       isRefreshing.value = false
       cycleLoading.value = false
@@ -869,15 +869,15 @@ const duplicateImageCommentsToClientDocument = async () => {
           :id="`measurement-record-${measurement.id}`"
           :measurement="measurement"
           :counter="counter"
-          :review_mode="showReviewMode"
-          :is_disabled_action="isDisabledAction"
-          :is_running="runningDurationIds.includes(measurement.id)"
+          :review-mode="showReviewMode"
+          :is-disabled-action="isDisabledAction"
+          :is-running="runningDurationIds.includes(measurement.id)"
           @toggle-updated="onToggleUpdatedMeasurment($event)"
           @toggle-running="onToggleRunningDuration(measurement)"
           @toggle-saved="onToggleSavedSbt($event)"
           @check-completed-cold-probe="handleCompletedColdProbe"
           @click="onFocusMeasurement(measurement, true)"
-          @fetch-session="fetchSession({ first: false, is_swiped: false })"
+          @fetch-session="fetchSession({ first: false, isSwipe: false })"
         />
       </div>
     </div>
@@ -905,15 +905,15 @@ const duplicateImageCommentsToClientDocument = async () => {
       <MeasurementRecord
         :measurement="fixedMeasurement"
         :counter="counter"
-        :is_collapsed="isMeasurementCollapsed"
-        :is_disabled_action="isDisabledAction"
-        :is_running="runningDurationIds.includes(fixedMeasurement.id)"
+        :is-collapsed="isMeasurementCollapsed"
+        :is-disabled-action="isDisabledAction"
+        :is-running="runningDurationIds.includes(fixedMeasurement.id)"
         @toggle-updated="onToggleUpdatedMeasurment($event)"
         @toggle-running="onToggleRunningDuration(fixedMeasurement)"
         @toggle-saved="onToggleSavedSbt($event)"
         @toggle-collapsed="isMeasurementCollapsed = $event"
         @check-completed-cold-probe="handleCompletedColdProbe"
-        @fetch-session="fetchSession({ first: false, is_swiped: false })"
+        @fetch-session="fetchSession({ first: false, isSwipe: false })"
       />
       <div
         v-if="!isMeasurementCollapsed"

@@ -1,38 +1,103 @@
 <script setup lang="ts">
-import { useSessionStore } from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import type { Measurement } from '@/lib/types'
 import AppButton from '@/components/AppButton.vue'
 import { Icon } from '@iconify/vue/dist/iconify.js'
+import { computed, ref } from 'vue'
+import AppActionSheet from '@/components/AppActionSheet.vue'
+import AppTimeInput from '@/components/AppTimeInput.vue'
 
 const sessionStore = useSessionStore()
 
+interface DurationLap {
+  lapNumber: number
+  time: string
+  seconds: number
+}
+
 interface Props {
   measurement: Measurement
-  measurement_results: Measurement['results']
-  is_started: boolean
+  measurementResults: Measurement['results']
+  isStarted: boolean
   timer: string
-  update_loading: boolean
-  is_collapsed: boolean
-  laps: { lapNumber: number; time: string }[]
-  lap_loading: boolean
-  current_lap_time: string
-  reset_confirmation: boolean
-  is_disabled_action?: boolean
+  updateLoading: boolean
+  isCollapsed: boolean
+  laps: DurationLap[]
+  lapLoading: boolean
+  currentLapTime: string
+  resetConfirmation: boolean
+  isDisabledAction?: boolean
 }
 interface Emits {
-  (e: 'toggle-timer'): void
-  (e: 'record-lap'): void
-  (e: 'reset-laps-confirm'): void
-  (e: 'reset-laps-cancel'): void
-  (e: 'reset-laps'): void
-  (e: 'fetch-session'): void
+  (e: 'toggleTimer'): void
+  (e: 'recordLap'): void
+  (e: 'resetLapsConfirm'): void
+  (e: 'resetLapsCancel'): void
+  (e: 'resetLaps'): void
+  (e: 'generateLaps', laps: DurationLap[]): void
+  (e: 'fetchSession'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
+const submitLoading = ref<boolean>(false)
+const isOpenEdit = ref<boolean>(false)
+const editLapNumber = ref<number>(0)
+const editLapInput = ref<string>('')
+
+const onOpenEdit = (lap: DurationLap) => {
+  editLapNumber.value = lap.lapNumber
+  editLapInput.value = lap.time
+  isOpenEdit.value = true
+}
+
+const lapLength = computed(() => {
+  return props.laps?.length || 0
+})
+
+const onUpdateLap = async () => {
+  console.log('updating lap', editLapNumber.value, editLapInput.value)
+
+  const [h, m, s] = editLapInput.value.split(':').map(Number)
+  const inSeconds = h * 3600 + m * 60 + s || 0 // Fallback to 0 if NaN
+
+  const laps = [...props.laps]
+  laps[editLapNumber.value].time = editLapInput.value
+  laps[editLapNumber.value].seconds = inSeconds
+
+  const finalResults = Object.fromEntries(
+    laps.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
+  )
+
+  const params: UpdateMeasurementResultsParams = {
+    id: props.measurement.id,
+    measurement: { results: finalResults },
+    data_result: { ...props.measurement, results: finalResults },
+    last_data: { ...props.measurement }
+  }
+
+  submitLoading.value = true
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `duration_update_lap`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    params: { measurement: { results: finalResults } },
+    notes: `Target: ${props.measurement.target?.name}`,
+    timestamp: new Date().toISOString()
+  })
+
+  const { data } = await sessionStore.updateMeasurementResults(params)
+  submitLoading.value = false
+
+  emit('generateLaps', data.results)
+  isOpenEdit.value = false
+}
+
 const getTextColorClass = (lap: { lapNumber: number; time: string }) => {
-  if (props.is_started && lap.lapNumber === props.laps.length - 1) {
-    const timeToCheck = props.current_lap_time
+  if (props.isStarted && lap.lapNumber === lapLength.value - 1) {
+    const timeToCheck = props.currentLapTime
 
     if (props.measurement.target?.success_metric === 'less than goal') {
       return isTimeSuccessful(timeToCheck, 'less') ? 'text-grass-7' : 'text-tomato-7'
@@ -95,25 +160,24 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 </script>
 
 <template>
-  <div v-if="!reset_confirmation" class="flex flex-col justify-between flex-grow h-full gap-2">
+  <!-- duration latency -->
+  <div v-if="!resetConfirmation" class="flex flex-col justify-between flex-grow h-full gap-2">
     <div
-      v-if="update_loading || lap_loading"
+      v-if="updateLoading || lapLoading"
       class="absolute z-10"
-      :class="[is_collapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
+      :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
       <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <div
       class="flex flex-col items-center content-center justify-center flex-grow h-full transition-all gap-x-3"
-      :class="{ 'gap-y-4': !is_collapsed, 'gap-y-2 ps-3': is_collapsed }"
+      :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 ps-3': isCollapsed }"
     >
-      <div v-if="is_collapsed" class="font-semibold text-slate-7">
-        Lap {{ laps && laps.length ? laps.length : 1 }}
-      </div>
+      <div v-if="isCollapsed" class="font-semibold text-slate-7">Lap {{ lapLength }}</div>
       <div
         class="grid grid-cols-5 items-center text-3xl text-[32px] font-bold transition-all"
-        :class="{ 'text-slate-6': !is_started, 'text-slate-8': is_started }"
+        :class="{ 'text-slate-6': !isStarted, 'text-slate-8': isStarted }"
       >
         <div class="flex justify-center">{{ timer.split(':')[0] }}</div>
         <div class="flex justify-center pb-2">:</div>
@@ -124,85 +188,90 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
       <div class="flex items-center w-full gap-3">
         <AppButton
-          v-if="is_started || (!is_started && laps && laps.length === 0)"
-          class="w-2/4 rounded-full"
+          class="rounded-full grow"
           :class="{
             'pointer-events-none': sessionStore.session?.status !== 'ongoing'
           }"
           color="prim"
-          :loading="lap_loading"
-          :disabled="!is_started || is_disabled_action"
-          @click="$emit('record-lap')"
+          :loading="lapLoading"
+          :disabled="(!isStarted && !lapLength) || isDisabledAction"
+          @click="$emit('recordLap')"
         >
-          Lap
+          <Icon icon="ph:plus-bold" class="text-lg" />
+          <span>Lap</span>
         </AppButton>
         <AppButton
-          v-if="!is_started && laps && laps.length > 0"
-          class="w-2/4 rounded-full"
+          class="rounded-full grow"
+          :class="{
+            'pointer-events-none': sessionStore.session?.status !== 'ongoing'
+          }"
+          :color="isStarted ? 'tomato' : 'grass'"
+          :loading="updateLoading"
+          :disabled="isStarted ? false : isDisabledAction"
+          @click="emit('toggleTimer')"
+        >
+          {{ isStarted ? 'Stop' : lapLength > 0 ? 'Resume' : 'Start' }}
+        </AppButton>
+        <AppButton
+          v-if="!isStarted && lapLength > 0"
+          class="rounded-full"
           :class="{
             'pointer-events-none': sessionStore.session?.status !== 'ongoing'
           }"
           color="prim"
-          :disabled="is_disabled_action"
-          @click="$emit('reset-laps-confirm')"
+          :disabled="isDisabledAction"
+          @click="$emit('resetLapsConfirm')"
         >
-          Reset
-        </AppButton>
-        <AppButton
-          class="w-2/4 rounded-full"
-          :class="{
-            'pointer-events-none': sessionStore.session?.status !== 'ongoing'
-          }"
-          :color="is_started ? 'tomato' : 'grass'"
-          :loading="update_loading"
-          :disabled="is_started ? false : is_disabled_action"
-          @click="emit('toggle-timer')"
-        >
-          {{ is_started ? 'Stop' : 'Start' }}
+          <Icon icon="ph:arrow-clockwise-bold" class="text-lg" />
         </AppButton>
       </div>
 
       <div
-        v-if="laps.length > 0 && !is_collapsed"
+        v-if="lapLength > 0 && !isCollapsed"
         class="w-full mt-2 overflow-scroll"
-        style="max-height: calc(100vh - 10rem); scrollbar-width: none"
+        :style="{
+          maxHeight: 'calc(100vh - 10rem)',
+          scrollbarWidth: 'none'
+        }"
       >
         <div
           v-for="lap in laps.slice().sort((a, b) => b.lapNumber - a.lapNumber)"
           :key="lap.lapNumber + 1"
+          class="flex items-center justify-between gap-2 border-b border-slate-4"
         >
-          <div
-            v-if="measurement.target?.success_metric === 'less than goal'"
-            class="flex justify-between py-2 pb-2 border-b"
-          >
+          <div class="flex justify-between w-full gap-2 py-2">
             <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
             <div :class="getTextColorClass(lap)" class="font-semibold">
-              {{ is_started && lap.lapNumber === laps.length - 1 ? current_lap_time : lap.time }}
+              {{ isStarted && lap.lapNumber === lapLength - 1 ? currentLapTime : lap.time }}
             </div>
           </div>
-          <div
-            class="flex justify-between py-2 pb-2 border-b"
-            v-if="measurement.target?.success_metric === 'equal to or greater than goal'"
+
+          <AppButton
+            v-if="!isStarted && sessionStore.session?.status === 'ongoing'"
+            kind="plain"
+            @click="onOpenEdit(lap)"
           >
-            <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
-            <div :class="getTextColorClass(lap)" class="font-semibold">
-              {{ is_started && lap.lapNumber === laps.length - 1 ? current_lap_time : lap.time }}
-            </div>
-          </div>
+            <Icon icon="ph:pencil-simple-bold" />
+          </AppButton>
         </div>
       </div>
     </div>
 
     <div
-      v-if="!is_collapsed && !reset_confirmation"
+      v-if="!isCollapsed && !resetConfirmation"
       class="pb-3 text-xs font-medium text-center shrink-0 text-slate-7"
     >
-      Goal: {{ measurement.target?.goal_time }}
+      Goal:
+      {{ measurement.target?.success_metric === 'equal to or greater than goal' ? '≥' : '' }}
+      {{ measurement.target?.success_metric === 'less than goal' ? '<' : '' }}
+      {{ measurement.target?.goal_time }}
     </div>
   </div>
+  <!-- end duration latency -->
 
+  <!-- confirm reset laps -->
   <div
-    v-if="reset_confirmation"
+    v-if="resetConfirmation"
     class="flex flex-col items-center justify-center flex-grow h-full gap-2"
   >
     <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
@@ -211,8 +280,36 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
       recover previous data.
     </div>
     <div class="flex items-center justify-center w-full gap-2 pr-2">
-      <AppButton kind="plain" class="w-2/4" @click="$emit('reset-laps-cancel')">Cancel</AppButton>
-      <AppButton class="w-2/4" color="tomato-7" @click="$emit('reset-laps')">Reset</AppButton>
+      <AppButton kind="plain" class="w-2/4" @click="$emit('resetLapsCancel')">Cancel</AppButton>
+      <AppButton class="w-2/4" color="tomato-7" @click="$emit('resetLaps')">Reset</AppButton>
     </div>
   </div>
+  <!-- end confirm reset laps -->
+
+  <!-- edit lap modal -->
+  <AppActionSheet :show="isOpenEdit" @close="isOpenEdit = false">
+    <div class="flex flex-col w-full gap-4 py-3">
+      <div class="text-xl font-semibold text-left">Edit lap {{ measurement.target?.name }}</div>
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <div class="text-sm font-semibold text-slate-8">
+            {{ measurement.target?.curriculum_name }}
+          </div>
+          <div class="text-base font-semibold text-slate-10">{{ measurement.target?.name }}</div>
+        </div>
+        <AppTimeInput
+          :label="`Lap ${editLapNumber + 1}`"
+          :name="`lap-${editLapNumber + 1}`"
+          v-model="editLapInput"
+          format="hms"
+          :disabled="submitLoading"
+        />
+      </div>
+      <div class="grid items-center grid-cols-2 gap-4">
+        <AppButton kind="plain" @click="isOpenEdit = false">Cancel</AppButton>
+        <AppButton :loading="submitLoading" @click="onUpdateLap">Save</AppButton>
+      </div>
+    </div>
+  </AppActionSheet>
+  <!-- end edit lap modal -->
 </template>

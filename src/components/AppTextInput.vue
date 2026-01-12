@@ -10,8 +10,8 @@ interface Props {
   disabled?: boolean
   required?: boolean
   error?: string | boolean
-  suffix_icon?: string
-  suffix_text?: string
+  suffixIcon?: string
+  suffixText?: string
   borderless?: boolean
   rows?: number
 }
@@ -23,8 +23,8 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   required: false,
   error: false,
-  suffix_icon: '',
-  suffix_text: '',
+  suffixIcon: '',
+  suffixText: '',
   borderless: false,
   rows: 4
 })
@@ -85,7 +85,7 @@ const minHeight = computed(() => {
         'border-tomato-7 focus:ring-tomato-2': error,
         'border py-2': !borderless,
         'border-none px-0 py-1 focus:ring-0': borderless,
-        'pr-10': type === 'password' || suffix_icon
+        'pr-10': type === 'password' || suffixIcon
       }"
     />
 
@@ -97,15 +97,15 @@ const minHeight = computed(() => {
       @click.prevent="openPassword = !openPassword"
     />
     <div
-      v-if="suffix_text"
+      v-if="suffixText"
       class="absolute right-2 cursor-pointer text-[16px] text-slate-7"
       :class="[label ? 'top-[30px]' : 'top-1.5']"
     >
-      {{ suffix_text }}
+      {{ suffixText }}
     </div>
     <Icon
-      v-if="suffix_icon"
-      :icon="suffix_icon"
+      v-if="suffixIcon"
+      :icon="suffixIcon"
       class="absolute text-2xl cursor-pointer right-2 text-slate-7"
       :class="[label ? 'top-[30px]' : 'top-1.5']"
     />

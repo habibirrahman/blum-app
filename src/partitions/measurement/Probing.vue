@@ -21,13 +21,13 @@ const toast = useToast()
 
 interface Props {
   measurement: Measurement
-  measurement_results: Measurement['results']
-  is_collapsed: boolean
+  measurementResults: Measurement['results']
+  isCollapsed: boolean
 }
 interface Emits {
-  (e: 'toggle-collapsed', bool: boolean): void
-  (e: 'fetch-session'): void
-  (e: 'after-commit'): void
+  (e: 'toggleCollapsed', bool: boolean): void
+  (e: 'fetchSession'): void
+  (e: 'afterCommit'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -35,7 +35,7 @@ const emit = defineEmits<Emits>()
 const showPopup = ref<boolean>(false)
 const popupTimeout = ref<any>(null)
 const onDisplayPopup = () => {
-  if (!props.is_collapsed) return
+  if (!props.isCollapsed) return
   showPopup.value = true
   clearTimeout(popupTimeout.value)
   popupTimeout.value = setTimeout(() => {
@@ -45,7 +45,7 @@ const onDisplayPopup = () => {
 
 const page = ref<number>(1)
 watch(
-  () => props.is_collapsed,
+  () => props.isCollapsed,
   () => {
     setTimeout(() => {
       const el = `${props.measurement.id}-probing-circle-${1}`
@@ -57,14 +57,14 @@ watch(
 const onScroll = (e: any) => {
   onDisplayPopup()
   const left = e.currentTarget.scrollLeft
-  const w = props.is_collapsed ? 256 : 320 - 32
+  const w = props.isCollapsed ? 256 : 320 - 32
   const current = Math.floor(left / w) + 1
   if (page.value !== current) page.value = current
 }
 
 const perPage = computed<number>(() => 20)
 const pageCount = computed<number>(() => {
-  const results = Object.keys(props.measurement_results).length || 0
+  const results = Object.keys(props.measurementResults).length || 0
   const trial = props.measurement.target?.probing_number_of_trial || 0
   let circles = results || trial
   // if (!props.measurement.submitted_at && circles >= trial) {
@@ -77,7 +77,7 @@ interface ProbingCircle {
   value: boolean | 'empty' | 'removing'
 }
 const probingCirclesPages = computed<ProbingCircle[][]>(() => {
-  const results = props.measurement_results
+  const results = props.measurementResults
   const trial = props.measurement.target?.probing_number_of_trial || 0
   const circles: ProbingCircle[] = []
   for (let idx = 0; idx < trial; idx++) {
@@ -101,7 +101,7 @@ const probingCirclesPages = computed<ProbingCircle[][]>(() => {
   return res
 })
 const probingScore = computed<number>(() => {
-  const results = props.measurement_results
+  const results = props.measurementResults
   const trials = Object.values(results).length
   const totalSuccess = Object.values(results).filter((i) => i).length
   return (totalSuccess / trials) * 100 || 0
@@ -115,7 +115,7 @@ const removeProbingLoading = ref<boolean>(false)
 const onAdd = async (bool: boolean) => {
   onDisplayPopup()
 
-  const finalResults = props.measurement_results
+  const finalResults = props.measurementResults
   const length = Object.keys(finalResults).length
 
   finalResults[length] = bool
@@ -158,7 +158,7 @@ const onAdd = async (bool: boolean) => {
 const onRemove = async (circle: ProbingCircle) => {
   onDisplayPopup()
 
-  const lastResults = props.measurement_results
+  const lastResults = props.measurementResults
   lastResults[circle.key] = 'removing'
 
   const finalResults: Record<string, boolean> = {}
@@ -206,7 +206,7 @@ const onRemove = async (circle: ProbingCircle) => {
 
 const showPanel = ref<boolean>(false)
 watch(showPanel, (val) => {
-  if (val) emit('toggle-collapsed', !val)
+  if (val) emit('toggleCollapsed', !val)
 })
 const isProbingPassed = ref<boolean>(false)
 const showCelebration = ref<boolean>(false)
@@ -387,7 +387,7 @@ const onSave = async () => {
   const { success, message } = await sessionStore.updateMeasurementMarkProbing(params)
   saveLoading.value = false
   if (!success) {
-    emit('fetch-session')
+    emit('fetchSession')
     toast.error(message)
     return
   }
@@ -450,7 +450,7 @@ const onChangeToPercentage = async () => {
     }
   }
   setTimeout(async () => {
-    emit('after-commit')
+    emit('afterCommit')
     switchLoading.value = false
   }, 300)
 }
@@ -461,16 +461,16 @@ const onChangeToPercentage = async () => {
     <div
       class="flex flex-col items-center content-center justify-center flex-grow gap-2 transition-all"
       :class="{
-        'h-full w-full': !is_collapsed,
+        'h-full w-full': !isCollapsed,
         'absolute left-1/2 mb-2 w-64 -translate-x-1/2 rounded border border-prim-3 bg-white py-3':
-          is_collapsed,
-        'bottom-full opacity-100': is_collapsed && (showPopup || probingLoading),
-        '-z[1] bottom-0 opacity-0': is_collapsed && !showPopup
+          isCollapsed,
+        'bottom-full opacity-100': isCollapsed && (showPopup || probingLoading),
+        '-z[1] bottom-0 opacity-0': isCollapsed && !showPopup
       }"
     >
       <div
         class="flex gap-4 pb-4 overflow-x-auto snap-x snap-mandatory scroll-smooth"
-        :class="{ 'w-[calc(320px-32px)] ': !is_collapsed, 'w-64': is_collapsed }"
+        :class="{ 'w-[calc(320px-32px)] ': !isCollapsed, 'w-64': isCollapsed }"
         @scroll="onScroll"
       >
         <div
@@ -478,7 +478,7 @@ const onChangeToPercentage = async () => {
           :key="`${measurement.id}-probing-circle-${idx + 1}`"
           :id="`${measurement.id}-probing-circle-${idx + 1}`"
           class="flex justify-center shrink-0 snap-start"
-          :class="{ 'w-[calc(320px-32px)] ': !is_collapsed, 'w-64': is_collapsed }"
+          :class="{ 'w-[calc(320px-32px)] ': !isCollapsed, 'w-64': isCollapsed }"
         >
           <div
             class="flex flex-wrap items-start content-center justify-center max-w-64 gap-x-2 gap-y-2"
@@ -510,7 +510,7 @@ const onChangeToPercentage = async () => {
           </div>
         </div>
       </div>
-      <div v-if="is_collapsed" class="flex items-center justify-center h-2 gap-2">
+      <div v-if="isCollapsed" class="flex items-center justify-center h-2 gap-2">
         <div
           v-for="n in pageCount"
           :key="n"
@@ -518,19 +518,19 @@ const onChangeToPercentage = async () => {
           class="w-2 h-2 transition-all rounded-full"
         ></div>
       </div>
-      <div v-if="measurement.submitted_at && !is_collapsed" class="flex justify-center w-60">
+      <div v-if="measurement.submitted_at && !isCollapsed" class="flex justify-center w-60">
         <AppChip :chip="measurement.marked_as" />
       </div>
     </div>
 
-    <div class="pb-3 space-y-2 shrink-0" :class="{ 'relative z-[1] h-full': is_collapsed }">
+    <div class="pb-3 space-y-2 shrink-0" :class="{ 'relative z-[1] h-full': isCollapsed }">
       <div
-        v-if="measurement.submitted_at && is_collapsed"
+        v-if="measurement.submitted_at && isCollapsed"
         class="absolute flex justify-center -translate-x-1/2 -top-1 left-1/2"
       >
         <AppChip :chip="measurement.marked_as" />
       </div>
-      <div v-if="!is_collapsed" class="flex items-center justify-center h-2 gap-2 mb-4">
+      <div v-if="!isCollapsed" class="flex items-center justify-center h-2 gap-2 mb-4">
         <div
           v-for="n in pageCount"
           :key="n"
@@ -538,10 +538,10 @@ const onChangeToPercentage = async () => {
           class="w-2 h-2 transition-all rounded-full"
         ></div>
       </div>
-      <div class="flex flex-col" :class="{ 'gap-4': !is_collapsed, 'gap-0 pt-2': is_collapsed }">
+      <div class="flex flex-col" :class="{ 'gap-4': !isCollapsed, 'gap-0 pt-2': isCollapsed }">
         <div
           class="flex items-center justify-center"
-          :class="{ 'scale-90 gap-3': is_collapsed, 'gap-4': !is_collapsed }"
+          :class="{ 'scale-90 gap-3': isCollapsed, 'gap-4': !isCollapsed }"
         >
           <div
             class="flex items-center justify-center w-20 h-20 transition-all rounded-full shrink-0"
@@ -570,7 +570,7 @@ const onChangeToPercentage = async () => {
           <div
             v-if="
               !measurement.submitted_at &&
-              Object.keys(measurement_results).length >=
+              Object.keys(measurementResults).length >=
                 (measurement.target?.probing_number_of_trial || 0)
             "
             class="flex items-center justify-center w-20 h-20 rounded-full shrink-0 bg-light-purple-5"
@@ -580,14 +580,14 @@ const onChangeToPercentage = async () => {
           </div>
         </div>
       </div>
-      <div v-if="!is_collapsed" class="flex items-center gap-2 text-xs font-medium text-slate-7">
+      <div v-if="!isCollapsed" class="flex items-center gap-2 text-xs font-medium text-slate-7">
         <div class="w-9 shrink-0">Score</div>
         <div class="h-4 px-2 rounded-full bg-lime-2 text-lime-7">
           {{ probingScore.toFixed(0) }}%
         </div>
       </div>
 
-      <div v-if="!is_collapsed" class="flex items-center gap-2 text-xs font-medium text-slate-7">
+      <div v-if="!isCollapsed" class="flex items-center gap-2 text-xs font-medium text-slate-7">
         <div class="w-9 shrink-0">Goal</div>
         <div>
           score ≥ {{ measurement.target?.probing_goal }}% in minimum

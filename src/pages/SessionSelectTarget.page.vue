@@ -229,7 +229,7 @@ const onAddCheckedTargets = async () => {
           name="query"
           placeholder="Search target by name"
           v-model="query"
-          suffix_icon="ph:magnifying-glass"
+          suffix-icon="ph:magnifying-glass"
           class="flex-grow"
         />
       </div>
@@ -355,8 +355,8 @@ const onAddCheckedTargets = async () => {
 
       <!-- <AppPagination
         :page="page"
-        :per_page="perPage"
-        :total_count="clientStore.targets_count"
+        :per-page="perPage"
+        :total-count="clientStore.targets_count"
         @change="page = $event"
       /> -->
     </div>

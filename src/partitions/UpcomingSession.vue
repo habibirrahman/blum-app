@@ -8,7 +8,7 @@ interface Props {
   title: string
 }
 
-const props = withDefaults(defineProps<Props>(), {})
+withDefaults(defineProps<Props>(), {})
 
 const appStore = useAppStore()
 </script>
@@ -18,7 +18,7 @@ const appStore = useAppStore()
     class="h-20 w-56 shrink-0 snap-start space-y-1.5 rounded bg-white p-2"
     :style="{ boxShadow: '2px 2px 0px 0px #0000001A' }"
   >
-    <div class="truncate text-sm font-semibold text-dark-purple-1">
+    <div class="text-sm font-semibold truncate text-dark-purple-1">
       {{ title }}
     </div>
     <div class="flex items-center gap-1.5 text-xs text-light-purple-4">
@@ -30,16 +30,16 @@ const appStore = useAppStore()
     <div class="flex items-center gap-1.5 text-xs text-light-purple-4">
       <Icon icon="ph:door" />
       <div
-        class="max-w-20 truncate"
+        class="truncate max-w-20"
         v-if="appStore.account?.center_enable_branch && session.appointment?.room?.branch"
       >
         {{ session.appointment?.room?.branch?.name }}
       </div>
       <div
         v-if="appStore.account?.center_enable_branch && session.appointment?.room?.branch"
-        class="h-1 w-1 shrink-0 rounded bg-light-purple-4"
+        class="w-1 h-1 rounded shrink-0 bg-light-purple-4"
       ></div>
-      <div class="max-w-20 truncate">
+      <div class="truncate max-w-20">
         {{ session.appointment?.room?.name }}
       </div>
     </div>

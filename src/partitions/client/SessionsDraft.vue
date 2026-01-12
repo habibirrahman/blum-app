@@ -259,7 +259,7 @@ const onCreateSession = async () => {
         name="query"
         placeholder="Search draft by client name or ID"
         v-model="query"
-        suffix_icon="ph:magnifying-glass"
+        suffix-icon="ph:magnifying-glass"
         class="flex-grow"
       />
       <AppButton :loading="createLoading" @click="onCreateSession">
@@ -351,8 +351,8 @@ const onCreateSession = async () => {
     </div>
     <AppPagination
       :page="page"
-      :per_page="perPage"
-      :total_count="clientStore.draft_sessions_count"
+      :per-page="perPage"
+      :total-count="clientStore.draft_sessions_count"
       @change="page = $event"
     />
   </div>

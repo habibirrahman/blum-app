@@ -16,9 +16,9 @@ const toast = useToast()
 
 interface Props {
   measurement: Measurement
-  measurement_results: Measurement['results']
+  measurementResults: Measurement['results']
   target: Target
-  is_collapsed: boolean
+  isCollapsed: boolean
 }
 interface Emits {
   (e: 'toggle-updated', bool: boolean): void
@@ -30,10 +30,10 @@ const emit = defineEmits<Emits>()
 const results = ref<Measurement['results']>({})
 
 onMounted(() => {
-  results.value = { ...props.measurement_results }
+  results.value = { ...props.measurementResults }
 })
 watch(
-  () => props.measurement_results,
+  () => props.measurementResults,
   (val) => {
     results.value = { ...val }
   }
@@ -41,7 +41,7 @@ watch(
 
 const page = ref<number>(1)
 watch(
-  () => props.is_collapsed,
+  () => props.isCollapsed,
   () => {
     setTimeout(() => {
       const el = `${props.measurement.id}-prompt-boxes-${1}`
@@ -56,7 +56,7 @@ const onScroll = (e: any) => {
   if (page.value !== current) page.value = current
 }
 
-const perPage = computed<number>(() => (props.is_collapsed ? 3 : 9))
+const perPage = computed<number>(() => (props.isCollapsed ? 3 : 9))
 const pageCount = computed<number>(() => {
   const res = Object.keys(results.value) || []
   const boxes = res.filter((i) => results.value[i].enabled).length
@@ -186,7 +186,7 @@ const onChangeScore = async (prompt: any, score: number) => {
   }
 
   // save state
-  const gapScore = newScore - props.measurement_results[prompt.key].score
+  const gapScore = newScore - props.measurementResults[prompt.key].score
   scoreLoadingBox.value = prompt.key
   typeLoadingBox.value = score
 
@@ -201,7 +201,7 @@ const onChangeScore = async (prompt: any, score: number) => {
     timestamp: new Date().toISOString()
   })
 
-  onSaveScore(prompt.key, props.measurement_results[prompt.key], gapScore)
+  onSaveScore(prompt.key, props.measurementResults[prompt.key], gapScore)
 }
 
 interface Prompt {
@@ -231,7 +231,7 @@ watch(
   (val) => {
     if (!val) return
 
-    const results = props.measurement_results
+    const results = props.measurementResults
     const keys = Object.keys(results)
     if (keys && keys.length) {
       const n = keys.map((i) => ({ ...results[i], key: i })).sort((a, b) => a.position - b.position)
@@ -270,7 +270,7 @@ const onSavePrompts = async () => {
     <div
       v-if="scoreLoadingBox !== null"
       class="absolute z-10"
-      :class="[is_collapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
+      :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
       <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
@@ -288,7 +288,7 @@ const onSavePrompts = async () => {
         >
           <div
             class="flex w-[calc(240px+24px)] flex-wrap content-center items-start justify-center gap-x-3 gap-y-4"
-            :class="{ '-translate-y-1 scale-75': is_collapsed }"
+            :class="{ '-translate-y-1 scale-75': isCollapsed }"
           >
             <div v-for="prompt in promptBoxes" :key="prompt.id" class="space-y-1">
               <div
@@ -331,7 +331,7 @@ const onSavePrompts = async () => {
       </div>
     </div>
 
-    <div class="pb-3 space-y-2 shrink-0" :class="{ '-translate-y-4': is_collapsed }">
+    <div class="pb-3 space-y-2 shrink-0" :class="{ '-translate-y-4': isCollapsed }">
       <div class="flex items-center justify-center h-2 gap-2">
         <div
           v-for="n in pageCount"
@@ -340,7 +340,7 @@ const onSavePrompts = async () => {
           class="w-2 h-2 transition-all rounded-full"
         ></div>
       </div>
-      <div v-if="!is_collapsed">
+      <div v-if="!isCollapsed">
         <div
           v-if="measurement?.target?.prompting_format === 'classic'"
           class="text-xs font-medium text-center text-slate-7"
