@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useSlots } from 'vue'
 import { Icon } from '@iconify/vue'
 
 interface Props {
@@ -29,6 +29,11 @@ const props = withDefaults(defineProps<Props>(), {
   rows: 4
 })
 
+const slots = useSlots()
+/**
+ * caption: text under the field
+ */
+
 const openPassword = ref<boolean>(false)
 const minHeight = computed(() => {
   if (props.type === 'textarea') {
@@ -37,7 +42,6 @@ const minHeight = computed(() => {
   }
   return 'auto'
 })
-
 </script>
 
 <template>
@@ -110,5 +114,8 @@ const minHeight = computed(() => {
       :class="[label ? 'top-[30px]' : 'top-1.5']"
     />
     <div v-if="error" class="mt-1 text-sm text-tomato-7">{{ error === true ? '' : error }}</div>
+    <div v-if="slots.caption" class="mt-1 text-sm text-slate-7">
+      <slot name="caption"></slot>
+    </div>
   </label>
 </template>

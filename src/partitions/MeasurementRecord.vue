@@ -932,6 +932,9 @@ const taskAnalysisPrompts = computed(() => {
               <div v-if="measurement.target?.type === 'Target::Frequency'" class="space-y-0.5">
                 <div>Goal: {{ measurement.target.goal }} attempt(s) per session</div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
+                <div v-if="measurement.target.frequency_format === 'custom'">
+                  Duration: {{ measurement.duration }} minute(s)
+                </div>
               </div>
               <div v-if="measurement.target?.type === 'Target::Prompting'" class="space-y-0.5">
                 <div class="capitalize">Format: {{ measurement.target?.prompting_format }}</div>

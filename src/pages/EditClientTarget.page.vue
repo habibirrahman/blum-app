@@ -127,6 +127,14 @@ const isPromptingType = computed(() => targetType.value.includes('Prompting'))
 const isSbtType = computed(() => targetType.value.includes('Sbt'))
 const isColdProbeType = computed(() => targetType.value.includes('ColdProbe'))
 
+// const isFrequencyClassic = computed(
+//   () => isFrequencyType.value && clientStore.target?.frequency_format === 'classic'
+// )
+
+const isFrequencyCustom = computed(
+  () => isFrequencyType.value && clientStore.target?.frequency_format === 'custom'
+)
+
 const isPromptingClassic = computed(
   () => isPromptingType.value && clientStore.target?.prompting_format === 'classic'
 )
@@ -185,6 +193,9 @@ const isDisabledSubmit = computed(() => {
 
   if (isFrequencyType.value) {
     if (!goal.value || !successMetric.value) return true
+    if (isFrequencyCustom.value) {
+      if (!duration.value) return true
+    }
   }
 
   if (isPromptingType.value) {
@@ -352,6 +363,9 @@ function buildTargetData() {
       goal: Number(goal.value),
       success_metric: successMetric.value
     })
+    if (isFrequencyCustom.value) {
+      data.target.duration = Number(duration.value)
+    }
   }
 
   if (isPromptingType.value) {
@@ -787,6 +801,25 @@ function onApplyPromptSuccessMetric(val: string) {
           type="number"
           inputmode="numeric"
         />
+
+        <!-- Frequency (custom) Duration -->
+        <AppTextInput
+          v-if="isFrequencyCustom"
+          name="duration"
+          label="Duration"
+          required
+          placeholder="Minimum 1 minute"
+          suffix-text="Minutes"
+          v-model="duration"
+          :error="Number(duration) < 1 ? `Duration must be at least ${1} minutes.` : ''"
+          type="number"
+          inputmode="numeric"
+        >
+          <template #caption>
+            This duration will be used as the <b>denominator</b> when calculating the frequency
+            rate.
+          </template>
+        </AppTextInput>
 
         <!-- Apply to All Member Checkbox -->
         <div v-if="isTargetMember" class="flex items-center gap-3">

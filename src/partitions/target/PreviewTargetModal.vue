@@ -170,6 +170,13 @@ const onEdit = () => {}
             <div class="text-xs text-slate-8">Success metric:</div>
             <div class="text-sm capitalize-first">{{ target?.success_metric }}</div>
           </div>
+          <div
+            v-if="target.frequency_format === 'custom'"
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
+          >
+            <div class="text-xs text-slate-8">Duration:</div>
+            <div class="text-sm capitalize-first">{{ target?.duration }} minute(s)</div>
+          </div>
         </div>
         <div v-if="target?.type === 'Target::Prompting'" class="flex flex-col">
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">

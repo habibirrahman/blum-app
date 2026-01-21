@@ -189,6 +189,7 @@ export interface Measurement {
   type?: MeasurementType
   marked_as?: TargetStatus
   position?: number
+  duration?: number
   results?: any
   comment?: string
   is_fixed?: boolean
@@ -223,6 +224,7 @@ export type TargetType =
   | 'Target::Sbt'
   | 'Target::TrialByTrial'
 export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued'
+export type TargetFrequencyFormat = 'classic' | 'custom'
 export type TargetPromptingFormat = 'classic' | 'custom'
 export type TargetColdProbeFormat = 'classic' | 'custom'
 export interface Target {
@@ -230,6 +232,7 @@ export interface Target {
   action_recommendations?: ActionRecommendation[]
   type?: TargetType
   status?: TargetStatus
+  frequency_format?: TargetFrequencyFormat
   prompting_format?: TargetPromptingFormat
   cold_probe_format?: TargetColdProbeFormat
 
