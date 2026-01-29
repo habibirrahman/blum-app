@@ -163,6 +163,7 @@ const isNearEnd = computed<boolean>(() => {
 // - custom_start: when recording_started_at is set
 const isRecordingActive = computed<boolean>(() => {
   if (isFinished.value) return false
+  if (isOvertimePending.value) return false
   if (props.measurement?.target?.interval_start_timing === 'custom_start') {
     return !!props.measurement.recording_started_at
   }
@@ -447,7 +448,7 @@ const onAddScore = async () => {
       <div class="flex flex-col items-center justify-center flex-grow gap-4 py-6">
         <div class="flex flex-col gap-2 text-center">
           <div class="font-semibold text-slate-10">Stop recording?</div>
-          <div class="text-sm text-slate-6">
+          <div class="text-sm text-slate-8">
             Recording can't be resumed after it's stopped for this session.
           </div>
         </div>
@@ -588,7 +589,7 @@ const onAddScore = async () => {
       <!-- Main Interaction Area - Desktop (Centered Layout) -->
       <div
         v-if="!isCollapsed"
-        class="flex flex-wrap items-center content-center justify-center h-full transition-all duration-300 gap-x-3 gap-y-4"
+        class="flex flex-col items-center content-center justify-center h-full transition-all duration-300 gap-y-4"
       >
         <!-- Pending Start -->
         <AppButton
