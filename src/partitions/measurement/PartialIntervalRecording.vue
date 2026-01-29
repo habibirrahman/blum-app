@@ -101,7 +101,7 @@ const currentInterval = computed<number>(() => {
 const displayCurrentInterval = computed<number>(() => {
   // Get actual interval count from results
   const resultsCount = props.measurementResults ? Object.keys(props.measurementResults).length : 0
-
+  console.log('[props.measurementResults]', props.measurementResults)
   if (isOvertimeRunning.value) {
     // During overtime, show actual interval count (can exceed intervalRound)
     return Math.max(currentInterval.value, resultsCount)
@@ -274,7 +274,7 @@ watch(
   () => isNearEnd.value,
   (val) => {
     if (val && !nearEndToastShown.value) {
-      const message = `<b>Last interval!</b> <br /> 5 minutes before ${props.measurement?.target?.name} duration end`
+      const message = `Last interval! 5 minutes before ${props.measurement?.target?.name} duration end`
       toast.warning(message)
       nearEndToastShown.value = true
     }
@@ -384,9 +384,23 @@ const onStopOvertime = async () => {
   }
 }
 const onAddScore = async () => {
-  const interval = currentInterval.value - 1
-  const finalResults = props.measurementResults
-  finalResults[interval] = finalResults[interval] + 1
+  if (sessionStore.session?.status !== 'ongoing') return
+  if (scoreLoading.value) return
+
+  const interval = displayCurrentInterval.value - 1
+  const intervalKey = interval.toString()
+
+  // Check if interval index exists in results
+  // If not (overtime scenario), initialize it first
+  let finalResults = props.measurementResults || {}
+  let actionLabel = `pir_incident`
+  if (!(intervalKey in finalResults)) {
+    // Initialize new interval index with 0
+    finalResults = { ...finalResults, [intervalKey]: 0 }
+    actionLabel = `pir_incident_in_overtime`
+  } else {
+    finalResults[intervalKey] = finalResults[intervalKey] + 1
+  }
 
   const params: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
@@ -399,7 +413,7 @@ const onAddScore = async () => {
 
   // record session activities
   await sessionStore.addSessionActivity({
-    action_label: `pir_incident`,
+    action_label: actionLabel,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     api: `PATCH /api/v1/measurements/${props.measurement.id}`,
@@ -592,7 +606,7 @@ const onAddScore = async () => {
           class="w-48 h-48 rounded-full"
           disabled
         >
-          <div class="flex flex-col">
+          <div class="flex flex-col gap-1">
             <div class="text-5xl font-bold">{{ lastIntervalScore }}</div>
             <div class="font-semibold">Incident(s)</div>
           </div>
@@ -608,7 +622,7 @@ const onAddScore = async () => {
           }"
           @click="onAddScore"
         >
-          <div class="flex flex-col">
+          <div class="flex flex-col gap-1">
             <div class="text-5xl font-bold">{{ scoreInInterval }}</div>
             <div class="font-semibold">Incident(s)</div>
           </div>
