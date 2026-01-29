@@ -761,7 +761,7 @@ onMounted(async () => {
       <div
         class="absolute bottom-2 left-0 right-0 z-10 flex items-center justify-between bg-[#1d2939] p-6 pb-safe"
       >
-        <AppButton @click="discardPhoto" color="gray" class="w-16 h-16 rounded-full">
+        <AppButton @click="discardPhoto" color="slate" class="w-16 h-16 rounded-full">
           <Icon icon="line-md:close" class="text-4xl" />
         </AppButton>
 
@@ -769,7 +769,7 @@ onMounted(async () => {
           :loading="cameraLoading"
           :disabled="cameraLoading"
           @click="usePhoto"
-          color="gray"
+          color="slate"
           class="w-16 h-16 rounded-full"
         >
           <Icon icon="ph:check" class="text-4xl" />

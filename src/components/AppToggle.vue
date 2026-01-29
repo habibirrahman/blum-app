@@ -25,7 +25,7 @@ const emit = defineEmits<Emits>()
     class="relative flex items-center w-8 h-4 transition-all border rounded-full shrink-0"
     :class="[
       checked
-        ? `border-transparent ${color === 'lime' ? ' bg-lime-7' : 'bg-light-purple-3'} `
+        ? `border-transparent ${color === 'lime' ? ' bg-lime-7' : 'bg-light-purple-5'} `
         : 'border-slate-5 bg-slate-4',
       disabled || loading ? 'pointer-events-none' : 'cursor-pointer',
       disabled ? '!grayscale opacity-50' : ''

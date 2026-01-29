@@ -188,11 +188,11 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
       <div class="flex items-center w-full gap-3">
         <AppButton
-          class="rounded-full grow"
+          class="grow rounded-full !bg-prim-2"
           :class="{
             'pointer-events-none': sessionStore.session?.status !== 'ongoing'
           }"
-          color="prim"
+          kind="plain"
           :loading="lapLoading"
           :disabled="(!isStarted && !lapLength) || isDisabledAction"
           @click="$emit('recordLap')"
@@ -202,9 +202,11 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
         </AppButton>
         <AppButton
           class="rounded-full grow"
-          :class="{
-            'pointer-events-none': sessionStore.session?.status !== 'ongoing'
-          }"
+          :class="[
+            sessionStore.session?.status !== 'ongoing' ? 'pointer-events-none' : '',
+            isStarted ? '!bg-tomato-2' : '!bg-grass-2'
+          ]"
+          kind="plain"
           :color="isStarted ? 'tomato' : 'grass'"
           :loading="updateLoading"
           :disabled="isStarted ? false : isDisabledAction"
@@ -214,11 +216,11 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
         </AppButton>
         <AppButton
           v-if="!isStarted && lapLength > 0"
-          class="rounded-full"
+          class="rounded-full !bg-prim-2"
           :class="{
             'pointer-events-none': sessionStore.session?.status !== 'ongoing'
           }"
-          color="prim"
+          kind="plain"
           :disabled="isDisabledAction"
           @click="$emit('resetLapsConfirm')"
         >
@@ -280,8 +282,8 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
       recover previous data.
     </div>
     <div class="flex items-center justify-center w-full gap-2 pr-2">
-      <AppButton kind="plain" class="w-2/4" @click="$emit('resetLapsCancel')">Cancel</AppButton>
-      <AppButton class="w-2/4" color="tomato-7" @click="$emit('resetLaps')">Reset</AppButton>
+      <AppButton class="w-2/4" kind="plain" @click="$emit('resetLapsCancel')">Cancel</AppButton>
+      <AppButton class="w-2/4" color="tomato" @click="$emit('resetLaps')">Reset</AppButton>
     </div>
   </div>
   <!-- end confirm reset laps -->

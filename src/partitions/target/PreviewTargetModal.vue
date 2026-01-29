@@ -160,6 +160,22 @@ const onEdit = () => {}
             <div class="text-xs text-slate-8">Success metric:</div>
             <div class="text-sm capitalize-first">{{ target?.success_metric }}</div>
           </div>
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
+            <div class="text-xs text-slate-8">Interval start timing:</div>
+            <div class="text-sm">
+              <span v-if="target?.interval_start_timing === 'start_with_session'">
+                Start with session
+              </span>
+              <span v-if="target?.interval_start_timing === 'custom_start'">Custom start</span>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
+            <div class="text-xs text-slate-8">Overtime handling:</div>
+            <div class="text-sm">
+              <span v-if="target?.allow_overtime_recording"> Allow overtime recording </span>
+              <span v-else>Planned duration</span>
+            </div>
+          </div>
         </div>
         <div v-if="target?.type === 'Target::Frequency'" class="flex flex-col">
           <div class="flex flex-col gap-1 py-3 border-b border-slate-3">

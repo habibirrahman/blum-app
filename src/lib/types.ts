@@ -184,21 +184,32 @@ export type MeasurementType =
   | 'Measurement::Prompting'
   | 'Measurement::Sbt'
   | 'Measurement::TrialByTrial'
+export type DurationArray = [number, string]
 export interface Measurement {
   id?: number
   type?: MeasurementType
   marked_as?: TargetStatus
+
   position?: number
   duration?: number
+  overtime_duration?: DurationArray | number
+
   results?: any
+
   comment?: string
+
   is_fixed?: boolean
   is_dropped?: boolean
   visible?: boolean
-  deleted_at?: string
+
+  recording_started_at?: string
+  overtime_started_at?: string
+  overtime_ended_at?: string
   submitted_at?: string
+  deleted_at?: string
   created_at?: string
   updated_at?: string
+
   session_id?: Session['id']
   target_id?: Target['id']
   target?: Target
@@ -227,6 +238,7 @@ export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | '
 export type TargetFrequencyFormat = 'classic' | 'custom'
 export type TargetPromptingFormat = 'classic' | 'custom'
 export type TargetColdProbeFormat = 'classic' | 'custom'
+export type TargetIntervalStartTiming = 'start_with_session' | 'custom_start'
 export interface Target {
   id?: number
   action_recommendations?: ActionRecommendation[]
@@ -235,6 +247,8 @@ export interface Target {
   frequency_format?: TargetFrequencyFormat
   prompting_format?: TargetPromptingFormat
   cold_probe_format?: TargetColdProbeFormat
+
+  interval_start_timing?: TargetIntervalStartTiming
 
   name?: string
   description?: string
@@ -257,6 +271,7 @@ export interface Target {
   probing_enable?: boolean
   is_group?: boolean
   enable_problem_behavior?: boolean
+  allow_overtime_recording?: boolean
 
   date_introduce?: string
   date_mastered?: string

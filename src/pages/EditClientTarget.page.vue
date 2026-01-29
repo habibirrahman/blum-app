@@ -71,11 +71,15 @@ const showPromptLevel = ref(false)
 const selectedPromptSuccessMetric = ref('')
 
 // Goal and metrics
-const successMetric = ref('')
 const goal = ref('')
-const timeInput = ref(DEFAULT_TIME)
+const goalTime = ref(DEFAULT_TIME)
 const duration = ref('')
-const number_of_trial = ref('')
+const numberOfTrial = ref('')
+const successMetric = ref('')
+
+// PIR setting
+const intervalStartTiming = ref('')
+const allowOvertimeRecording = ref(false)
 
 // Probing
 const probingEnabled = ref(false)
@@ -164,18 +168,13 @@ const isDisabledSubmit = computed(() => {
 
   // Type-specific validation
   if (isPercentageType.value || isTrialByTrialType.value) {
-    if (!successMetric.value || !goal.value || !number_of_trial.value) return true
+    if (!successMetric.value || !goal.value || !numberOfTrial.value) return true
     if (Number(goal.value) > MAX_PERCENTAGE) return true
     if (probingEnabled.value && (!probingGoal.value || !probingTrial.value)) return true
   }
 
   if (isDurationType.value || isLatencyType.value) {
-    if (
-      timeInput.value === DEFAULT_TIME ||
-      !timeInput.value ||
-      !successMetric.value ||
-      !goal.value
-    ) {
+    if (goalTime.value === DEFAULT_TIME || !goalTime.value || !successMetric.value || !goal.value) {
       return true
     }
   }
@@ -185,7 +184,8 @@ const isDisabledSubmit = computed(() => {
       Number(duration.value) < MIN_DURATION ||
       !duration.value ||
       !goal.value ||
-      !successMetric.value
+      !successMetric.value ||
+      !intervalStartTiming.value
     ) {
       return true
     }
@@ -296,10 +296,13 @@ function initializeFormData(curriculums: Curriculum[]) {
   }
 
   // Type-specific fields
-  duration.value = target.duration?.toString() || ''
   goal.value = target.goal?.toString() || ''
-  number_of_trial.value = target.number_of_trial?.toString() || ''
-  timeInput.value = target.goal_time || DEFAULT_TIME
+  goalTime.value = target.goal_time || DEFAULT_TIME
+  duration.value = target.duration?.toString() || ''
+  numberOfTrial.value = target.number_of_trial?.toString() || ''
+
+  intervalStartTiming.value = target.interval_start_timing || ''
+  allowOvertimeRecording.value = target.allow_overtime_recording || false
 
   // Probing
   if (useProbing.value) {
@@ -338,14 +341,14 @@ function buildTargetData() {
     Object.assign(data.target, {
       success_metric: successMetric.value,
       goal: Number(goal.value),
-      number_of_trial: Number(number_of_trial.value)
+      number_of_trial: Number(numberOfTrial.value)
     })
   }
 
   if (isDurationType.value || isLatencyType.value) {
     Object.assign(data.target, {
       success_metric: successMetric.value,
-      goal_time: timeInput.value
+      goal_time: goalTime.value
     })
   }
 
@@ -354,7 +357,9 @@ function buildTargetData() {
       duration: Number(duration.value),
       goal: Number(goal.value),
       success_metric: successMetric.value,
-      interval: clientStore.target?.interval
+      interval: clientStore.target?.interval,
+      interval_start_timing: intervalStartTiming.value,
+      allow_overtime_recording: allowOvertimeRecording.value
     })
   }
 
@@ -661,7 +666,7 @@ function onApplyPromptSuccessMetric(val: string) {
         <!-- Duration/Latency Time Input -->
         <AppInputTime
           v-if="isDurationType || isLatencyType"
-          v-model="timeInput"
+          v-model="goalTime"
           name="duration"
           label="Goal time (hours/minutes/seconds)"
           format="hms"
@@ -760,8 +765,8 @@ function onApplyPromptSuccessMetric(val: string) {
         />
 
         <!-- Success Metric Radio Buttons -->
-        <div v-if="useSuccessMetric">
-          <div class="mb-1 text-sm font-medium text-slate-8">
+        <div v-if="useSuccessMetric" class="space-y-2">
+          <div class="text-sm font-medium text-slate-8">
             <span>Success metric</span>
             <span class="ml-1 text-tomato-7">*</span>
           </div>
@@ -797,7 +802,7 @@ function onApplyPromptSuccessMetric(val: string) {
           name="number_of_trial"
           label="Minimum number of trials"
           required
-          v-model="number_of_trial"
+          v-model="numberOfTrial"
           type="number"
           inputmode="numeric"
         />
@@ -820,6 +825,57 @@ function onApplyPromptSuccessMetric(val: string) {
             rate.
           </template>
         </AppTextInput>
+
+        <!-- PIR Interval start timing -->
+        <div v-if="isPirType" class="space-y-2">
+          <div class="text-sm font-medium text-slate-8">
+            <span>Interval start timing</span>
+            <span class="ml-1 text-tomato-7">*</span>
+          </div>
+          <div class="text-xs text-slate-7">Choose how intervals begin during the session.</div>
+
+          <div class="flex items-center gap-2">
+            <input
+              type="radio"
+              name="interval_start_timing"
+              :checked="intervalStartTiming === 'start_with_session'"
+              value="start_with_session"
+              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              @click="intervalStartTiming = 'start_with_session'"
+            />
+            <label class="w-full text-sm">Start with session</label>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              type="radio"
+              name="interval_start_timing"
+              :checked="intervalStartTiming === 'custom_start'"
+              value="custom_start"
+              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              @click="intervalStartTiming = 'custom_start'"
+            />
+            <label class="w-full text-sm">Custom start</label>
+          </div>
+        </div>
+
+        <!-- PIR Allow overtime recording -->
+        <div v-if="isPirType" class="space-y-2">
+          <div class="text-sm font-medium text-slate-8">
+            <span>Overtime handling</span>
+          </div>
+          <div class="text-xs text-slate-7">
+            Configure whether recording continues after the planned duration ends.
+          </div>
+
+          <div class="flex items-center gap-2">
+            <AppToggle
+              name="allow_overtime_recording"
+              :checked="allowOvertimeRecording"
+              @change="allowOvertimeRecording = !allowOvertimeRecording"
+            />
+            <div class="text-sm">Allow overtime recording</div>
+          </div>
+        </div>
 
         <!-- Apply to All Member Checkbox -->
         <div v-if="isTargetMember" class="flex items-center gap-3">

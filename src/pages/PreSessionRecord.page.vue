@@ -340,6 +340,22 @@ const onStartSession = () => {
                 <div>Interval: {{ measurement.target.interval }} minute(s)</div>
                 <div>Duration: {{ measurement.target.duration }} minute(s)</div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
+                <div>
+                  Interval start timing:
+                  <span v-if="measurement.target?.interval_start_timing === 'start_with_session'">
+                    start with session
+                  </span>
+                  <span v-if="measurement.target?.interval_start_timing === 'custom_start'">
+                    custom start
+                  </span>
+                </div>
+                <div>
+                  Overtime handling:
+                  <span v-if="measurement.target?.allow_overtime_recording">
+                    allow overtime recording
+                  </span>
+                  <span v-else>planned duration</span>
+                </div>
               </div>
               <div v-if="measurement.target?.type === 'Target::Frequency'" class="space-y-0.5">
                 <div>Goal: {{ measurement.target.goal }} attempt(s) per session</div>

@@ -728,8 +728,17 @@ const taskAnalysisPrompts = computed(() => {
                 {{ measurement.target?.curriculum_name }}
               </div>
               <div v-if="measurementType.includes('Probing')" class="shrink-0">
-                <div class="px-2 text-sm font-semibold rounded-full bg-lime-2 text-lime-7">
+                <div
+                  class="flex items-center h-6 px-2 text-xs font-semibold rounded-full bg-lime-2 text-lime-7"
+                >
                   Probing
+                </div>
+              </div>
+              <div v-if="measurement.target?.allow_overtime_recording" class="shrink-0">
+                <div
+                  class="flex items-center h-6 px-2 text-xs rounded-full bg-slate-3 text-slate-8"
+                >
+                  Overtime on
                 </div>
               </div>
             </div>

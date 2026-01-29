@@ -4,7 +4,7 @@ import { computed } from 'vue'
 interface Props {
   type?: 'button' | 'submit'
   kind?: 'primary' | 'outline' | 'plain'
-  color?: 'purple' | 'lime' | 'teal' | 'grass' | 'tomato' | 'prim' | 'tomato-7' | 'gray'
+  color?: 'purple' | 'lime' | 'teal' | 'grass' | 'tomato' | 'slate'
   size?: 'sm' | 'base' | 'lg'
   disabled?: boolean
   loading?: boolean
@@ -51,6 +51,7 @@ const currentClass = computed<string>(() => {
 </template>
 
 <style>
+/* PRIMARY */
 .app-button-primary {
   &.app-button-purple {
     @apply border-light-purple-5 bg-light-purple-5 text-white;
@@ -71,40 +72,28 @@ const currentClass = computed<string>(() => {
     }
   }
   &.app-button-grass {
-    @apply border-grass-2 bg-grass-2 text-grass-7;
+    @apply border-grass-7 bg-grass-7 text-white;
     &.app-button-loading {
       @apply border-grass-10 bg-grass-10;
     }
   }
   &.app-button-tomato {
-    @apply border-tomato-2 bg-tomato-2 text-tomato-7;
+    @apply border-tomato-7 bg-tomato-7 text-white;
     &.app-button-loading {
-      @apply border-tomato-5 bg-tomato-5;
+      @apply border-tomato-10 bg-tomato-10;
     }
   }
-  &.app-button-tomato-7 {
-    @apply border-tomato-7 bg-tomato-7 text-pure-white;
+  &.app-button-slate {
+    @apply border-slate-7 bg-slate-7 text-white;
     &.app-button-loading {
-      @apply border-pure-white bg-pure-white;
-    }
-  }
-  &.app-button-prim {
-    @apply border-prim-2 bg-prim-2 text-light-purple-5;
-    &.app-button-loading {
-      @apply border-prim-5 bg-prim-5;
+      @apply border-slate-10 bg-slate-10;
     }
   }
   &.app-button-disabled {
     @apply border-slate-4 bg-slate-4 text-slate-6;
   }
-  &.app-button-gray {
-    @apply border-[#606974] bg-[#606974] text-white;
-    &.app-button-loading {
-      @apply border-slate-5 bg-slate-5;
-    }
-  }
 }
-/*  */
+/* OUTLINE */
 .app-button-outline {
   @apply border-slate-5 bg-white;
   &.app-button-purple {
@@ -125,11 +114,29 @@ const currentClass = computed<string>(() => {
       @apply border-teal-10 text-teal-10;
     }
   }
+  &.app-button-grass {
+    @apply text-grass-7;
+    &.app-button-loading {
+      @apply border-grass-10 text-grass-10;
+    }
+  }
+  &.app-button-tomato {
+    @apply text-tomato-7;
+    &.app-button-loading {
+      @apply border-tomato-10 text-tomato-10;
+    }
+  }
+  &.app-button-slate {
+    @apply text-slate-7;
+    &.app-button-loading {
+      @apply border-slate-10 text-slate-10;
+    }
+  }
   &.app-button-disabled {
     @apply border-slate-4 bg-slate-2 text-slate-6;
   }
 }
-/*  */
+/* PLAIN */
 .app-button-plain {
   @apply border-transparent bg-transparent;
   &.app-button-purple {
@@ -148,6 +155,24 @@ const currentClass = computed<string>(() => {
     @apply text-teal-7;
     &.app-button-loading {
       @apply text-teal-10;
+    }
+  }
+  &.app-button-grass {
+    @apply text-grass-7;
+    &.app-button-loading {
+      @apply text-grass-10;
+    }
+  }
+  &.app-button-tomato {
+    @apply text-tomato-7;
+    &.app-button-loading {
+      @apply text-tomato-10;
+    }
+  }
+  &.app-button-slate {
+    @apply text-slate-7;
+    &.app-button-loading {
+      @apply text-slate-10;
     }
   }
   &.app-button-disabled {
