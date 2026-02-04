@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
@@ -13,6 +13,7 @@ const toast = useToast()
 interface Props {
   measurement: Measurement
   measurementResults: Measurement['results']
+  counter: number
   isCollapsed: boolean
 }
 interface Emits {
@@ -23,11 +24,21 @@ const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
 const currentScore = ref<number>(0)
-onMounted(() => {
-  currentScore.value = props.measurement?.results?.score || 0
+const scoreLoading = ref<boolean>(false)
+
+const durationInMinutes = computed(() => {
+  if (!props.measurement) return 0
+  return props.measurement.duration || props.measurement?.target?.duration || 0
 })
 
-const scoreLoading = ref<boolean>(false)
+const isDisabled = computed(() => {
+  if (!props.measurement) return false
+  if (!props.measurement.target) return false
+  if (!durationInMinutes.value) return false
+  if (props.measurement.target.frequency_format !== 'custom') return false
+
+  return props.counter > durationInMinutes.value * 60
+})
 
 watch(
   () => scoreLoading.value,
@@ -39,6 +50,10 @@ watch(
     }
   }
 )
+
+onMounted(() => {
+  currentScore.value = props.measurement?.results?.score || 0
+})
 
 const onSaveScore = debounce(async function (score: number) {
   const finalScore = props.measurementResults.score + score
@@ -63,6 +78,8 @@ const onSaveScore = debounce(async function (score: number) {
 }, 1000)
 
 const onChangeScore = async (score: number) => {
+  if (isDisabled.value) return
+
   // change state
   currentScore.value += score
 
@@ -98,12 +115,20 @@ const onChangeScore = async (score: number) => {
       class="flex flex-wrap items-center content-center justify-center flex-grow h-full gap-x-3 gap-y-4"
       :class="{ 'scale-90': isCollapsed }"
     >
-      <div class="space-y-1">
+      <div
+        class="space-y-1"
+        :title="
+          isDisabled ? `The selected duration has ended, no additional frequency can be added.` : ''
+        "
+      >
         <div
-          class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] bg-light-purple-5 text-4xl font-bold text-white transition-all"
-          :class="{
-            'pointer-events-none': scoreLoading || sessionStore.session?.status !== 'ongoing'
-          }"
+          class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] text-4xl font-bold transition-all"
+          :class="[
+            scoreLoading || sessionStore.session?.status !== 'ongoing' || isDisabled
+              ? 'pointer-events-none'
+              : '',
+            isDisabled ? 'bg-slate-4 text-slate-6' : 'bg-light-purple-5 text-white'
+          ]"
           @click="onChangeScore(1)"
         >
           <div v-if="currentScore">{{ currentScore }}</div>
@@ -113,7 +138,10 @@ const onChangeScore = async (score: number) => {
           class="flex items-center justify-center h-5 border rounded border-slate-5 bg-pure-white"
           :class="{
             'pointer-events-none':
-              scoreLoading || !currentScore || sessionStore.session?.status !== 'ongoing'
+              scoreLoading ||
+              !currentScore ||
+              sessionStore.session?.status !== 'ongoing' ||
+              isDisabled
           }"
           @click="onChangeScore(-1)"
         >

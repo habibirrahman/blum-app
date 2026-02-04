@@ -791,6 +791,7 @@ const taskAnalysisPrompts = computed(() => {
               v-if="measurementType.includes('Frequency')"
               :measurement="measurement"
               :measurement-results="measurementResults"
+              :counter="counter"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetchSession')"
