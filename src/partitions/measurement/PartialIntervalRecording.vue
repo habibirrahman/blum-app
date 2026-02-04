@@ -285,6 +285,17 @@ watch(
     }
   }
 )
+// Watch for interval changes to auto-initialize new intervals with 0
+watch(
+  () => currentInterval.value,
+  (newInterval, oldInterval) => {
+    // Only initialize if recording is active and it's a new interval
+    if (isRecordingActive.value && newInterval !== oldInterval && newInterval > 0) {
+      initializeIntervalIfNeeded(newInterval - 1)
+    }
+  },
+  { immediate: false }
+)
 
 /** METHODS */
 const formatTime = (seconds: number): string => {
@@ -334,10 +345,31 @@ const onStartRecording = async () => {
 }
 const onStartOvertime = async () => {
   const now = new Date().toISOString()
+
+  // Initialize first overtime interval with 0
+  // The first overtime interval index is intervalRound (e.g., if duration has 2 intervals, overtime starts at index 2)
+  const firstOvertimeIntervalIndex = intervalRound.value
+  const currentResults = props.measurementResults || {}
+
+  // Fill any missing intervals up to and including the first overtime interval
+  const newResults = { ...currentResults }
+  for (let i = 0; i <= firstOvertimeIntervalIndex; i++) {
+    if (!(i.toString() in newResults)) {
+      newResults[i.toString()] = 0
+    }
+  }
+
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
-    measurement: { overtime_started_at: now },
-    data_result: { ...props.measurement, overtime_started_at: now }
+    measurement: {
+      overtime_started_at: now,
+      results: newResults
+    },
+    data_result: {
+      ...props.measurement,
+      overtime_started_at: now,
+      results: newResults
+    }
   }
 
   // record session activities
@@ -359,6 +391,9 @@ const onStartOvertime = async () => {
 }
 const onStopOvertime = async () => {
   stopOvertimeConfirmation.value = false
+
+  // Initialize current interval if not exists before stopping
+  await initializeIntervalIfNeeded(displayCurrentInterval.value - 1)
 
   const now = new Date().toISOString()
   const params: UpdateMeasurementParams = {
@@ -382,6 +417,37 @@ const onStopOvertime = async () => {
   if (!success) {
     toast.error(message)
     return
+  }
+}
+// Initialize a specific interval index with 0 if it doesn't exist
+const initializeIntervalIfNeeded = async (intervalIndex: number) => {
+  const currentResults = props.measurementResults || {}
+  const intervalKey = intervalIndex.toString()
+
+  if (!(intervalKey in currentResults)) {
+    const newResults = { ...currentResults, [intervalKey]: 0 }
+
+    const params: UpdateMeasurementParams = {
+      id: props.measurement.id,
+      measurement: { results: newResults },
+      data_result: { ...props.measurement, results: newResults }
+    }
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `measurement_pir_initialize_interval`,
+      recordable: 'Measurement',
+      recordable_id: props.measurement.id,
+      api: `PATCH /api/v1/measurements/${props.measurement.id}`,
+      params: { measurement: params.measurement },
+      notes: `Target: ${props.measurement.target?.name}`,
+      timestamp: new Date().toISOString()
+    })
+
+    const { success, message } = await sessionStore.updateMeasurement(params)
+    if (!success) {
+      toast.error(message)
+      return
+    }
   }
 }
 const onAddScore = async () => {
