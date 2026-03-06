@@ -312,7 +312,7 @@ const recordingTime = computed<string>(() => {
 })
 
 const updatingMeasurementIds = ref<Measurement['id'][]>([])
-const onToggleUpdatedMeasurment = (payload: { id: Measurement['id']; updated: boolean }) => {
+const onToggleUpdatedMeasurement = (payload: { id: Measurement['id']; updated: boolean }) => {
   if (payload.updated) {
     updatingMeasurementIds.value = updatingMeasurementIds.value.filter((i) => i !== payload.id)
   } else {
@@ -742,9 +742,9 @@ const duplicateImageCommentsToClientDocument = async () => {
 <template>
   <div class="sticky top-0 z-[10] flex h-14 shrink-0 items-center gap-3 bg-white px-4">
     <!-- Tambahkan pending sync indicator -->
-    <div class="flex items-center gap-2">
+    <div class="flex gap-2 items-center">
       <div
-        class="flex items-center justify-center w-8 h-8 text-xs font-semibold transition-all border rounded shrink-0"
+        class="flex justify-center items-center w-8 h-8 text-xs font-semibold rounded border transition-all shrink-0"
         :class="{
           'border-prim-3 bg-prim-1 text-light-purple-4': !showReviewMode,
           'border-light-purple-3 bg-light-purple-1 text-dark-purple-4': showReviewMode
@@ -757,7 +757,7 @@ const duplicateImageCommentsToClientDocument = async () => {
       <!-- Pending sync indicator -->
       <div v-if="hasPendingSync && !sessionLoading" class="flex">
         <div
-          class="flex items-center h-6 gap-1 px-2 text-xs rounded-full bg-tulip-1 text-tulip-7"
+          class="flex gap-1 items-center px-2 h-6 text-xs rounded-full bg-tulip-1 text-tulip-7"
           :title="`${pendingSyncStats.total} item(s) pending sync`"
         >
           <Icon icon="ph:cloud-arrow-up" class="text-sm animate-pulse" />
@@ -766,25 +766,25 @@ const duplicateImageCommentsToClientDocument = async () => {
       </div>
 
       <div
-        class="relative flex items-center justify-center w-8 h-8 rounded shrink-0"
+        class="flex relative justify-center items-center w-8 h-8 rounded shrink-0"
         @click="showSessionComments = true"
       >
         <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
         <div
-          class="absolute w-2 h-2 transition-all rounded-full right-1 top-1 bg-light-purple-5"
+          class="absolute top-1 right-1 w-2 h-2 rounded-full transition-all bg-light-purple-5"
           :class="[sessionStore.session_comments?.length ? 'opacity-100' : 'opacity-0']"
         ></div>
       </div>
     </div>
 
-    <div class="flex items-center justify-end w-full gap-2">
+    <div class="flex gap-2 justify-end items-center w-full">
       <div class="text-xs font-medium text-slate-6">ID {{ sessionStore.session?.id }}</div>
       <div
-        class="w-2 h-2 transition-all rounded-full shrink-0"
+        class="w-2 h-2 rounded-full transition-all shrink-0"
         :class="{ 'bg-tomato-7': counter % 2 === 0, 'bg-slate-6': counter % 2 === 1 }"
       ></div>
       <div
-        class="grid items-center w-16 grid-cols-5 text-xs font-semibold transition-all text-slate-8"
+        class="grid grid-cols-5 items-center w-16 text-xs font-semibold transition-all text-slate-8"
       >
         <div class="flex justify-center">{{ recordingTime.split(':')[0] }}</div>
         <div class="flex justify-center">:</div>
@@ -811,14 +811,14 @@ const duplicateImageCommentsToClientDocument = async () => {
     class="fixed left-1/2 z-[9] -translate-x-1/2 transition-all pt-safe"
     :class="{ 'top-[60px]': cycleLoading, '-top-[60px]': !cycleLoading }"
   >
-    <div class="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow">
+    <div class="flex justify-center items-center w-10 h-10 bg-white rounded-full shadow">
       <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
   </div>
 
   <div
     v-if="!sessionLoading && sessionStore.session?.status === 'ongoing'"
-    class="flex items-end justify-center px-4 text-sm font-semibold text-center h-28 bg-prim-3 text-light-purple-5"
+    class="flex justify-center items-end px-4 h-28 text-sm font-semibold text-center bg-prim-3 text-light-purple-5"
   >
     <div v-if="runningDurationIds.length">
       <div>Can't refresh while the timer is running.</div>
@@ -838,13 +838,13 @@ const duplicateImageCommentsToClientDocument = async () => {
   >
     <div
       v-if="showReviewMode"
-      class="flex items-end justify-center w-full px-4 pt-4 pb-2 text-sm font-semibold text-center bg-prim-3 text-light-purple-5"
+      class="flex justify-center items-end px-4 pt-4 pb-2 w-full text-sm font-semibold text-center bg-prim-3 text-light-purple-5"
     >
       <div class="truncapy-3 space-y-3te">{{ sessionStore.session?.client?.name }}</div>
     </div>
     <div
       id="container-record-measurement"
-      class="flex flex-wrap justify-center w-full gap-4 px-4 py-4 transition-all duration-500"
+      class="flex flex-wrap gap-4 justify-center px-4 py-4 w-full transition-all duration-500"
       :class="{
         'origin-top scale-50 object-top': showReviewMode,
         'min-w-[calc((320px*2)+(16px*3))]': showReviewMode,
@@ -855,7 +855,7 @@ const duplicateImageCommentsToClientDocument = async () => {
         '2xl:min-w-[calc((320px*9)+(16px*10))]': showReviewMode
       }"
     >
-      <div v-if="sessionLoading" class="flex flex-wrap justify-center w-full gap-4">
+      <div v-if="sessionLoading" class="flex flex-wrap gap-4 justify-center w-full">
         <div
           v-for="n in 8"
           :key="n"
@@ -872,7 +872,7 @@ const duplicateImageCommentsToClientDocument = async () => {
           :review-mode="showReviewMode"
           :is-disabled-action="isDisabledAction"
           :is-running="runningDurationIds.includes(measurement.id)"
-          @toggle-updated="onToggleUpdatedMeasurment($event)"
+          @toggle-updated="onToggleUpdatedMeasurement($event)"
           @toggle-running="onToggleRunningDuration(measurement)"
           @toggle-saved="onToggleSavedSbt($event)"
           @check-completed-cold-probe="handleCompletedColdProbe"
@@ -896,7 +896,7 @@ const duplicateImageCommentsToClientDocument = async () => {
           !isMeasurementCollapsed
       }"
     >
-      <div v-if="!isMeasurementCollapsed" class="flex flex-col items-center gap-1">
+      <div v-if="!isMeasurementCollapsed" class="flex flex-col gap-1 items-center">
         <Icon icon="ph:lock-fill" class="text-2xl text-center text-prim-5" />
         <div class="text-xs font-medium text-center text-prim-5">
           You're viewing a locked target.
@@ -908,7 +908,7 @@ const duplicateImageCommentsToClientDocument = async () => {
         :is-collapsed="isMeasurementCollapsed"
         :is-disabled-action="isDisabledAction"
         :is-running="runningDurationIds.includes(fixedMeasurement.id)"
-        @toggle-updated="onToggleUpdatedMeasurment($event)"
+        @toggle-updated="onToggleUpdatedMeasurement($event)"
         @toggle-running="onToggleRunningDuration(fixedMeasurement)"
         @toggle-saved="onToggleSavedSbt($event)"
         @toggle-collapsed="isMeasurementCollapsed = $event"
@@ -930,10 +930,10 @@ const duplicateImageCommentsToClientDocument = async () => {
     class="fixed z-[9] w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
     :class="{ 'bottom-0': !showReviewMode, '-bottom-36': showReviewMode }"
   >
-    <div class="flex items-center h-16 gap-6 pl-4 grow">
+    <div class="flex gap-6 items-center pl-4 h-16 grow">
       <div class="relative" @click="showReviewMode = !showReviewMode">
         <div
-          class="flex items-center justify-center w-8 h-10 text-xs font-semibold bg-white rounded text-dark-purple-1"
+          class="flex justify-center items-center w-8 h-10 text-xs font-semibold bg-white rounded text-dark-purple-1"
         >
           {{ sessionStore.session_measurements.length }}
         </div>
@@ -943,13 +943,13 @@ const duplicateImageCommentsToClientDocument = async () => {
         ></div>
       </div>
       <div
-        class="flex items-center gap-2 py-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth"
+        class="flex overflow-x-auto gap-2 items-center py-3 pr-4 snap-x snap-mandatory scroll-smooth"
       >
         <div
           v-for="opt in sessionStore.session_measurements"
           :key="opt.id"
           :id="`measurement-nav-${opt.id}`"
-          class="flex items-center h-8 px-3 text-xs font-medium transition-all border rounded-full cursor-pointer max-w-32 shrink-0 snap-start"
+          class="flex items-center px-3 h-8 text-xs font-medium rounded-full border transition-all cursor-pointer max-w-32 shrink-0 snap-start"
           :class="[
             focusMeasurement === opt.id
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -966,7 +966,7 @@ const duplicateImageCommentsToClientDocument = async () => {
   <SessionComments :show="showSessionComments" @close="showSessionComments = false" />
 
   <AppActionSheet :show="showOffline" @close="showOffline = false">
-    <div class="flex flex-col items-center gap-4 py-3">
+    <div class="flex flex-col gap-4 items-center py-3">
       <div class="text-xl font-semibold text-center">Oops! You're offline</div>
       <div class="text-sm text-center">
         Your connection is lost. You can keep tracking data, but you'll need to go online to end the
@@ -979,22 +979,22 @@ const duplicateImageCommentsToClientDocument = async () => {
   </AppActionSheet>
 
   <AppActionSheet :show="showEndSession" @close="showEndSession = false">
-    <div v-if="endSessionStatus === 'normal'" class="flex flex-col items-center gap-4 py-3">
+    <div v-if="endSessionStatus === 'normal'" class="flex flex-col gap-4 items-center py-3">
       <div class="text-xl font-semibold text-center">End this session?</div>
       <div class="text-sm text-center">
         Are you sure you want to end this session? Make sure you've reviewed all data before
         finalizing.
       </div>
-      <div class="grid w-full grid-cols-2 gap-2">
+      <div class="grid grid-cols-2 gap-2 w-full">
         <AppButton kind="plain" @click="showEndSession = false">Cancel</AppButton>
         <AppButton :loading="endSessionLoading" @click="onEndSession">End now</AppButton>
       </div>
     </div>
-    <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4 py-3">
+    <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col gap-4 items-center py-3">
       <div class="text-xl font-semibold text-center">Session can't be ended</div>
-      <div class="flex flex-col w-full gap-2">
+      <div class="flex flex-col gap-2 w-full">
         <div class="text-sm">You can't end the session because of the following reason(s):</div>
-        <div class="w-full pl-4 pr-4 text-sm text-left">
+        <div class="pr-4 pl-4 w-full text-sm text-left">
           <ul class="list-disc">
             <li v-for="(text, idx) in groupReasons" :key="idx">{{ text }}</li>
           </ul>
@@ -1005,7 +1005,7 @@ const duplicateImageCommentsToClientDocument = async () => {
         Back to session
       </AppButton>
     </div>
-    <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col items-center gap-4 py-3">
+    <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col gap-4 items-center py-3">
       <div class="text-xl font-semibold text-center">It seems you haven't recorded any data</div>
       <img
         alt="measurement_droped"
@@ -1043,13 +1043,13 @@ const duplicateImageCommentsToClientDocument = async () => {
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
     <div class="sticky top-0 z-[10] flex h-14 shrink-0 grow items-center gap-3 bg-white px-4">
-      <div class="flex items-center justify-center w-8 h-8 rounded shrink-0 bg-orange-3">
+      <div class="flex justify-center items-center w-8 h-8 rounded shrink-0 bg-orange-3">
         <Icon icon="ph:seal-warning-fill" class="text-2xl text-orange-6" />
       </div>
       <div class="text-2xl text-[22px] font-bold">Passing success metric</div>
     </div>
     <div class="flex flex-col gap-3 px-4 grow">
-      <div class="flex items-center gap-1">
+      <div class="flex gap-1 items-center">
         <AppChip chip="in_progress" />
         <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
         <AppChip chip="mastered" />
@@ -1082,7 +1082,7 @@ const duplicateImageCommentsToClientDocument = async () => {
       </div>
     </div>
     <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
-      <div class="flex items-center h-16 px-4 grow">
+      <div class="flex items-center px-4 h-16 grow">
         <AppButton class="w-full" :loading="exitSessionLoading" @click="onExitSession">
           Close session
         </AppButton>

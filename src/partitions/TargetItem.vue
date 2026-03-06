@@ -13,7 +13,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'toggleCheck'): void
+  (e: 'toggle-check'): void
   (e: 'open'): void
 }
 
@@ -27,7 +27,7 @@ withDefaults(defineProps<Props>(), {
 
 const handleCheckboxClick = (event: Event) => {
   event.stopPropagation()
-  emit('toggleCheck')
+  emit('toggle-check')
 }
 
 const handleOpenDetail = () => {
@@ -38,7 +38,7 @@ const handleOpenDetail = () => {
 <template>
   <div class="flex h-[154px] border-l-[6px]" :style="{ borderColor: target.curriculum_color }">
     <div
-      class="flex flex-1 cursor-pointer flex-col justify-center gap-1.5 truncate px-4"
+      class="flex flex-col flex-1 gap-1.5 justify-center px-4 truncate cursor-pointer"
       @click="handleOpenDetail"
     >
       <div v-if="showStatus" class="flex">
@@ -60,7 +60,7 @@ const handleOpenDetail = () => {
 
     <div
       v-if="isChecked !== undefined && useAction"
-      class="flex items-center justify-end pr-4 shrink-0"
+      class="flex justify-end items-center pr-4 shrink-0"
     >
       <AppCheckInput
         :name="`check-${target.id}`"

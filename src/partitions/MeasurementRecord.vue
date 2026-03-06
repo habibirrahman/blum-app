@@ -40,15 +40,15 @@ interface Props {
   isChecked?: boolean
 }
 interface Emits {
-  (e: 'toggleUpdated', payload: { id: Measurement['id']; updated: boolean }): void
-  (e: 'toggleRunning'): void
-  (e: 'toggleSaved', payload: { id: Measurement['id']; saved: boolean }): void
-  (e: 'toggleCollapsed', bool: boolean): void
-  (e: 'fetchSession'): void
-  (e: 'checkCompletedColdProbe', payload: { id: Measurement['id']; isCompleted: boolean }): void
-  (e: 'toggleLock'): void
-  (e: 'toggleCheck'): void
-  (e: 'afterCommit'): void
+  (e: 'toggle-updated', payload: { id: Measurement['id']; updated: boolean }): void
+  (e: 'toggle-running'): void
+  (e: 'toggle-saved', payload: { id: Measurement['id']; saved: boolean }): void
+  (e: 'toggle-collapsed', bool: boolean): void
+  (e: 'fetch-session'): void
+  (e: 'check-completed-cold-probe', payload: { id: Measurement['id']; isCompleted: boolean }): void
+  (e: 'toggle-lock'): void
+  (e: 'toggle-check'): void
+  (e: 'after-commit'): void
 }
 const props = withDefaults(defineProps<Props>(), {
   counter: 0,
@@ -218,7 +218,7 @@ const onDrop = async (bool: boolean) => {
   }
   isDropped.value = data.is_dropped
   if (data.is_dropped && props.isRunning) {
-    emit('toggleRunning')
+    emit('toggle-running')
   }
   // Force the cold probe to be marked as completed if is_dropped is true
   if (data.is_dropped && props.measurement.type?.includes('ColdProbe')) {
@@ -226,11 +226,11 @@ const onDrop = async (bool: boolean) => {
   }
 }
 const handleCompletedColdProbe = (isCompleted: boolean) => {
-  emit('checkCompletedColdProbe', { id: props.measurement.id, isCompleted })
+  emit('check-completed-cold-probe', { id: props.measurement.id, isCompleted })
 }
 
 const onToggleUpdated = (updated: boolean) => {
-  emit('toggleUpdated', { id: props.measurement.id, updated })
+  emit('toggle-updated', { id: props.measurement.id, updated })
 }
 
 // comment property
@@ -379,7 +379,7 @@ const onToggleDurationLatencyTimer = async () => {
         seconds: lapTimer.value
       })
     }
-    emit('toggleRunning')
+    emit('toggle-running')
 
     const finalResults = Object.fromEntries(
       laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
@@ -440,7 +440,7 @@ const onToggleDurationLatencyTimer = async () => {
 
     generateLaps(data.results)
     isDurationLatencyStarted.value = false
-    emit('toggleRunning')
+    emit('toggle-running')
   }
 }
 const onRecordLap = async () => {
@@ -569,7 +569,7 @@ const onResetLaps = async () => {
 
 // prompting & sbt property
 const onToggleSaved = (saved: boolean) => {
-  emit('toggleSaved', { id: props.measurement.id, saved })
+  emit('toggle-saved', { id: props.measurement.id, saved })
 }
 const promptingPrompts = computed(() => {
   console.log('[promptingPrompts] measurementResults.value', measurementResults.value)
@@ -625,7 +625,7 @@ const taskAnalysisPrompts = computed(() => {
 
 <template>
   <div
-    class="relative transition-all rounded shrink-0"
+    class="relative rounded transition-all shrink-0"
     :class="{
       'h-[600px] w-[320px]': !isCollapsed,
       'h-[160px] w-full': isCollapsed,
@@ -634,7 +634,7 @@ const taskAnalysisPrompts = computed(() => {
   >
     <div
       v-if="reviewMode && measurement.is_fixed"
-      class="absolute left-0 flex items-center justify-center w-16 h-16 bg-white rounded-full -top-6"
+      class="flex absolute left-0 -top-6 justify-center items-center w-16 h-16 bg-white rounded-full"
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
@@ -649,12 +649,12 @@ const taskAnalysisPrompts = computed(() => {
       <div v-if="!isCollapsed" id="measurememt-header">
         <div
           v-if="sessionStore.session?.status === 'draft'"
-          class="flex items-center justify-between w-full px-2 h-9 shrink-0 bg-prim-2"
+          class="flex justify-between items-center px-2 w-full h-9 shrink-0 bg-prim-2"
         >
           <div
             v-if="useLock"
-            class="flex items-center justify-center transition-all bg-white rounded h-7 w-7"
-            @click="emit('toggleLock')"
+            class="flex justify-center items-center w-7 h-7 bg-white rounded transition-all"
+            @click="emit('toggle-lock')"
           >
             <Icon icon="ph:lock-open-fill" class="text-2xl text-light-purple-5" />
           </div>
@@ -665,26 +665,26 @@ const taskAnalysisPrompts = computed(() => {
               :name="`check-${measurement.id}`"
               :checked="isChecked"
               :class="[reviewMode ? 'scale-150' : '']"
-              @change.stop="emit('toggleCheck')"
+              @change.stop="emit('toggle-check')"
             />
           </div>
         </div>
-        <div v-else class="flex items-center justify-between w-full px-4 h-9 shrink-0 bg-prim-2">
+        <div v-else class="flex justify-between items-center px-4 w-full h-9 shrink-0 bg-prim-2">
           <div
-            class="flex items-center justify-center w-6 h-6 transition-all rounded"
+            class="flex justify-center items-center w-6 h-6 rounded transition-all"
             :class="{ 'bg-white': display === 'description' }"
             @click="onChangeDisplay('description')"
           >
             <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
           </div>
           <div
-            class="relative flex items-center justify-center w-6 h-6 transition-all rounded"
+            class="flex relative justify-center items-center w-6 h-6 rounded transition-all"
             :class="{ 'bg-white': display === 'comment' }"
             @click="onChangeDisplay('comment')"
           >
             <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
             <div
-              class="absolute w-2 h-2 transition-all rounded-full right-px top-px bg-light-purple-5"
+              class="absolute top-px right-px w-2 h-2 rounded-full transition-all bg-light-purple-5"
               :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
             ></div>
           </div>
@@ -700,28 +700,28 @@ const taskAnalysisPrompts = computed(() => {
         </div>
       </div>
 
-      <div v-if="cardLoading" class="flex flex-col items-center justify-center h-full bg-white">
+      <div v-if="cardLoading" class="flex flex-col justify-center items-center h-full bg-white">
         <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
       </div>
       <div
         v-else
         id="measurememt-body"
-        class="flex flex-col h-full gap-2 px-4 pb-3 bg-white rounded-b"
+        class="flex flex-col gap-2 px-4 pb-3 h-full bg-white rounded-b"
         :class="[isCollapsed ? 'pt-3' : 'no-scrollbar overflow-y-auto']"
       >
         <div v-if="!isCollapsed" id="card-title" class="pt-3">
-          <div v-if="measurement.target?.is_group" class="flex items-center gap-2">
+          <div v-if="measurement.target?.is_group" class="flex gap-2 items-center">
             <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
             <div
               class="text-sm font-semibold text-slate-9"
-              :class="{ 'truncate ': display === 'target' || display === 'comment' }"
+              :class="{ 'line-clamp-2': display === 'target' || display === 'comment' }"
             >
               {{ measurement.target?.name }}
             </div>
           </div>
           <div v-else class="flex flex-col gap-1">
             <div
-              class="flex items-center gap-x-2"
+              class="flex gap-x-2 items-center"
               :class="{ 'flex-wrap': display === 'target' || display === 'comment' }"
             >
               <div class="text-sm font-semibold text-slate-7">
@@ -729,14 +729,14 @@ const taskAnalysisPrompts = computed(() => {
               </div>
               <div v-if="measurementType.includes('Probing')" class="shrink-0">
                 <div
-                  class="flex items-center h-6 px-2 text-xs font-semibold rounded-full bg-lime-2 text-lime-7"
+                  class="flex items-center px-2 h-6 text-xs font-semibold rounded-full bg-lime-2 text-lime-7"
                 >
                   Probing
                 </div>
               </div>
               <div v-if="measurement.target?.allow_overtime_recording" class="shrink-0">
                 <div
-                  class="flex items-center h-6 px-2 text-xs rounded-full bg-slate-3 text-slate-8"
+                  class="flex items-center px-2 h-6 text-xs rounded-full bg-slate-3 text-slate-8"
                 >
                   Overtime on
                 </div>
@@ -744,16 +744,16 @@ const taskAnalysisPrompts = computed(() => {
             </div>
             <div
               class="text-sm font-semibold text-slate-9"
-              :class="{ 'truncate ': display === 'target' || display === 'comment' }"
+              :class="{ 'line-clamp-2': display === 'target' || display === 'comment' }"
             >
               {{ measurement.target?.name }}
             </div>
           </div>
         </div>
-        <div v-if="display === 'target'" class="flex h-full gap-3">
+        <div v-if="display === 'target'" class="flex gap-3 h-full">
           <div
             v-if="isDropped"
-            class="flex flex-col items-center justify-center flex-grow min-h-full gap-4"
+            class="flex flex-col flex-grow gap-4 justify-center items-center min-h-full"
           >
             <Icon icon="solar:clipboard-remove-bold" class="w-20 h-20 text-tulip-6" />
             <div v-if="!isCollapsed" class="space-y-2 w-72">
@@ -793,7 +793,7 @@ const taskAnalysisPrompts = computed(() => {
               @reset-laps-confirm="resetConfirmation = true"
               @reset-laps-cancel="resetConfirmation = false"
               @generate-laps="generateLaps"
-              @fetch-session="emit('fetchSession')"
+              @fetch-session="emit('fetch-session')"
               @reset-laps="onResetLaps"
             />
             <Frequency
@@ -803,7 +803,7 @@ const taskAnalysisPrompts = computed(() => {
               :counter="counter"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetchSession')"
+              @fetch-session="emit('fetch-session')"
             />
             <PartialIntervalRecording
               v-if="measurementType.includes('Pir')"
@@ -811,7 +811,8 @@ const taskAnalysisPrompts = computed(() => {
               :measurement-results="measurementResults"
               :counter="counter"
               :is-collapsed="isCollapsed"
-              @fetch-session="emit('fetchSession')"
+              @toggle-updated="onToggleUpdated($event)"
+              @fetch-session="emit('fetch-session')"
             />
             <Percentage
               v-if="measurementType.includes('Percentage')"
@@ -819,8 +820,8 @@ const taskAnalysisPrompts = computed(() => {
               :measurement-results="measurementResults"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetchSession')"
-              @after-commit="emit('afterCommit')"
+              @fetch-session="emit('fetch-session')"
+              @after-commit="emit('after-commit')"
             />
             <TrialByTrial
               v-if="measurementType.includes('TrialByTrial')"
@@ -828,17 +829,17 @@ const taskAnalysisPrompts = computed(() => {
               :measurement-results="measurementResults"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetchSession')"
-              @after-commit="emit('afterCommit')"
+              @fetch-session="emit('fetch-session')"
+              @after-commit="emit('after-commit')"
             />
             <Probing
               v-if="measurementType.includes('Probing')"
               :measurement="measurement"
               :measurement-results="measurementResults"
               :is-collapsed="isCollapsed"
-              @toggle-collapsed="emit('toggleCollapsed', $event)"
-              @fetch-session="emit('fetchSession')"
-              @after-commit="emit('afterCommit')"
+              @toggle-collapsed="emit('toggle-collapsed', $event)"
+              @fetch-session="emit('fetch-session')"
+              @after-commit="emit('after-commit')"
             />
             <Prompting
               v-if="
@@ -851,7 +852,7 @@ const taskAnalysisPrompts = computed(() => {
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetchSession')"
+              @fetch-session="emit('fetch-session')"
             />
             <TaskAnalysis
               v-if="
@@ -864,7 +865,7 @@ const taskAnalysisPrompts = computed(() => {
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
               @toggle-saved="onToggleSaved($event)"
-              @fetch-session="emit('fetchSession')"
+              @fetch-session="emit('fetch-session')"
             />
             <SkillBasedTreatment
               v-if="measurementType.includes('Sbt') && measurement?.target"
@@ -873,7 +874,7 @@ const taskAnalysisPrompts = computed(() => {
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
               @toggle-saved="onToggleSaved($event)"
-              @fetch-session="emit('fetchSession')"
+              @fetch-session="emit('fetch-session')"
             />
             <ColdProbe
               v-if="measurementType.includes('ColdProbe') && measurement?.target"
@@ -882,14 +883,14 @@ const taskAnalysisPrompts = computed(() => {
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetchSession')"
+              @fetch-session="emit('fetch-session')"
               @check-completed-cold-probe="handleCompletedColdProbe"
             />
           </div>
           <div
             v-if="isCollapsed"
-            class="flex items-center justify-center w-8 rounded-full shrink-0 bg-slate-4"
-            @click="emit('toggleCollapsed', false)"
+            class="flex justify-center items-center w-8 rounded-full shrink-0 bg-slate-4"
+            @click="emit('toggle-collapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
           </div>
@@ -899,11 +900,11 @@ const taskAnalysisPrompts = computed(() => {
             <!-- target information -->
             <div
               v-if="measurement.target?.is_group"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               <div>Grouped targets - {{ getTargetType(measurement.target?.type) }}</div>
             </div>
-            <div class="space-y-0.5 text-wrap text-sm text-slate-8">
+            <div class="space-y-0.5 text-sm text-wrap text-slate-8">
               <div v-if="!measurement.target?.is_group">
                 {{ getTargetType(measurement.target?.type) }}
               </div>
@@ -979,7 +980,7 @@ const taskAnalysisPrompts = computed(() => {
             <!-- probing -->
             <div
               v-if="measurementType.includes('Probing')"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               <div>Probing activated</div>
               <div>
@@ -993,7 +994,7 @@ const taskAnalysisPrompts = computed(() => {
             </div>
             <!-- end probing -->
             <!-- target description -->
-            <div class="space-y-0.5 text-wrap text-sm text-slate-8">
+            <div class="space-y-0.5 text-sm text-wrap text-slate-8">
               <div v-if="!measurement.target?.description" class="italic">No description</div>
               <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
@@ -1001,7 +1002,7 @@ const taskAnalysisPrompts = computed(() => {
             <!-- last past line -->
             <div
               v-if="measurement.target?.last_phase_line"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               Data from this session will be added to the
               <span class="font-semibold">{{ measurement.target.last_phase_line?.label }}</span>
@@ -1099,9 +1100,9 @@ const taskAnalysisPrompts = computed(() => {
             type="textarea"
             placeholder="Type your comment here..."
             v-model="commentInput"
-            class="h-full mt-2"
+            class="mt-2 h-full"
           />
-          <div class="sticky z-10 w-full py-3 bg-white -bottom-3">
+          <div class="sticky -bottom-3 z-10 py-3 w-full bg-white">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"

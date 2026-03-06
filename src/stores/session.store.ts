@@ -875,7 +875,7 @@ export const useSessionStore = defineStore('session', {
             return { ...prev, ...data }
           })
 
-          // ini sering race condition jika dipanggil bersaman
+          // ini sering race condition jika dipanggil bersamaan
           setState({...this.state, ...data})
           **/
 
@@ -910,7 +910,7 @@ export const useSessionStore = defineStore('session', {
             return { ...prev, ...data }
           })
 
-          // ini sering race condition jika dipanggil bersaman
+          // ini sering race condition jika dipanggil bersamaan
           setState({...this.state, ...data})
           **/
           return { success: true, data }

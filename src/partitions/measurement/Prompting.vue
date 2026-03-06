@@ -197,7 +197,7 @@ const onChangeScore = async (prompt: any, score: number) => {
     recordable_id: props.measurement.id,
     api: `PATCH /api/v1/measurements/${props.measurement.id}`,
     params: { measurement: { results: results.value } },
-    notes: `Target: ${props.measurement.target?.name} [${prompt.key}: ${newScore}]`,
+    notes: `Target: ${props.measurement.target?.name} [${prompt.key} ${prompt.name}: ${newScore}]`,
     timestamp: new Date().toISOString()
   })
 

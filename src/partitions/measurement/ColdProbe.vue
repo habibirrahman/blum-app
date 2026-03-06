@@ -16,9 +16,9 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'toggleUpdated', value: boolean): void
-  (e: 'checkCompletedColdProbe', value: boolean): void
-  (e: 'fetchSession'): void
+  (e: 'toggle-updated', value: boolean): void
+  (e: 'check-completed-cold-probe', value: boolean): void
+  (e: 'fetch-session'): void
 }
 
 const props = defineProps<Props>()
@@ -55,13 +55,13 @@ onMounted(() => {
         multipleVariableResult.value[id] = result.score === 100 ? 'yes' : 'no'
       }
     }
-    emit('checkCompletedColdProbe', isCompletedColdProbe.value)
+    emit('check-completed-cold-probe', isCompletedColdProbe.value)
   }
 })
 
 const onClickSingleVariable = async (value: 'yes' | 'no') => {
   if (sessionStore.session?.status !== 'ongoing') return
-  emit('toggleUpdated', true)
+  emit('toggle-updated', true)
   singleVariableResult.value = {
     yes: value === 'yes',
     no: value === 'no'
@@ -117,13 +117,13 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
 
 const onClickMultipleVariable = async (id: number, value: 'yes' | 'no') => {
   if (sessionStore.session?.status !== 'ongoing') return
-  emit('toggleUpdated', true)
+  emit('toggle-updated', true)
   loadingMultiple.value[id] = true
   multipleVariableResult.value[id] = value
 
   try {
     await saveMultipleVariableResult(id, value)
-    emit('checkCompletedColdProbe', isCompletedColdProbe.value)
+    emit('check-completed-cold-probe', isCompletedColdProbe.value)
   } catch (error) {
     console.log('🚀 ~ onClickMultipleVariable ~ error:', error)
   } finally {
@@ -180,7 +180,7 @@ const isLoading = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col justify-center flex-grow h-full">
+  <div class="flex flex-col flex-grow justify-center h-full">
     <div
       v-if="isLoading"
       class="absolute z-10"
@@ -190,18 +190,18 @@ const isLoading = computed(() => {
     </div>
 
     <div
-      class="flex items-center content-center justify-center h-full"
+      class="flex justify-center content-center items-center h-full"
       :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 ps-3': isCollapsed }"
     >
       <div class="">
-        <div class="flex flex-col items-center gap-3" v-if="target.cold_probe_format === 'classic'">
+        <div class="flex flex-col gap-3 items-center" v-if="target.cold_probe_format === 'classic'">
           <div class="text-sm text-slate-7">Probe</div>
           <div
             class="flex gap-2"
             :class="{ 'flex-row-reverse': isCollapsed, 'flex-col': !isCollapsed }"
           >
             <div
-              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-all duration-300 border-2 rounded-full"
+              class="flex relative flex-shrink-0 justify-center items-center w-16 h-16 rounded-full border-2 transition-all duration-300"
               :class="{
                 'border-dotted ': !loading.yes,
                 'border-lime-5 bg-lime-5': loading.yes || singleVariableResult.yes,
@@ -226,7 +226,7 @@ const isLoading = computed(() => {
               </div>
             </div>
             <div
-              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-all duration-300 border-2 rounded-full"
+              class="flex relative flex-shrink-0 justify-center items-center w-16 h-16 rounded-full border-2 transition-all duration-300"
               :class="{
                 'border-dotted': !loading.no,
                 'border-red-cherry bg-red-cherry': loading.no || singleVariableResult.no,
@@ -253,11 +253,11 @@ const isLoading = computed(() => {
           </div>
         </div>
         <div
-          class="flex items-center justify-center gap-3"
+          class="flex gap-3 justify-center items-center"
           v-if="target.cold_probe_format === 'custom'"
         >
           <div v-for="(variable, index) in target.target_variables" :key="variable.id">
-            <div class="flex flex-col items-center gap-3">
+            <div class="flex flex-col gap-3 items-center">
               <div :class="{ 'pl-1 pr-4': !isCollapsed }">
                 <div class="text-sm text-slate-7">{{ variable.code }}</div>
               </div>
@@ -272,7 +272,7 @@ const isLoading = computed(() => {
               >
                 <!-- YES BUTTON -->
                 <div
-                  class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-all duration-300 border-2 rounded-full"
+                  class="flex relative flex-shrink-0 justify-center items-center w-16 h-16 rounded-full border-2 transition-all duration-300"
                   :class="{
                     'border-dotted': !loadingMultiple[variable?.id ?? ''],
                     'border-lime-5 bg-lime-5':
@@ -306,7 +306,7 @@ const isLoading = computed(() => {
 
                 <!-- NO BUTTON -->
                 <div
-                  class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-all duration-300 border-2 rounded-full"
+                  class="flex relative flex-shrink-0 justify-center items-center w-16 h-16 rounded-full border-2 transition-all duration-300"
                   :class="{
                     'border-dotted': !loadingMultiple[variable?.id ?? ''],
                     'border-red-cherry bg-red-cherry':

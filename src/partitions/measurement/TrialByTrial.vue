@@ -19,9 +19,9 @@ interface Props {
   isCollapsed: boolean
 }
 interface Emits {
-  (e: 'toggleUpdated', bool: boolean): void
-  (e: 'fetchSession'): void
-  (e: 'afterCommit'): void
+  (e: 'toggle-updated', bool: boolean): void
+  (e: 'fetch-session'): void
+  (e: 'after-commit'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -91,9 +91,9 @@ watch(
   () => percentageLoadingBox.value,
   (val) => {
     if (val === null) {
-      emit('toggleUpdated', true)
+      emit('toggle-updated', true)
     } else {
-      emit('toggleUpdated', false)
+      emit('toggle-updated', false)
     }
   }
 )
@@ -302,14 +302,14 @@ const onChangeProbing = async () => {
     }
   }
   setTimeout(() => {
-    emit('afterCommit')
+    emit('after-commit')
     switchLoading.value = false
   }, 300)
 }
 </script>
 
 <template>
-  <div class="flex flex-col justify-between flex-grow h-full gap-2">
+  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
     <div
       v-if="percentageLoadingBox !== null"
       class="absolute z-10"
@@ -318,7 +318,7 @@ const onChangeProbing = async () => {
       <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
-    <div class="flex items-center content-center justify-center flex-grow h-full">
+    <div class="flex flex-grow justify-center content-center items-center h-full">
       <div
         class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
         @scroll="onScroll"
@@ -330,7 +330,7 @@ const onChangeProbing = async () => {
           class="flex w-[calc(320px-32px)] shrink-0 snap-start justify-center"
         >
           <div
-            class="flex flex-wrap items-start content-center justify-center py-2 transition-all max-w-72"
+            class="flex flex-wrap justify-center content-center items-start py-2 transition-all max-w-72"
             :class="{
               'gap-x-4 gap-y-4': !isCollapsed,
               'gap-x-2 gap-y-2': isCollapsed
@@ -339,14 +339,14 @@ const onChangeProbing = async () => {
             <div v-for="box in percentageBoxes" :key="box.key" class="relative">
               <div
                 v-if="box.removeable"
-                class="absolute -right-1.5 -top-1.5 z-10 flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-tomato-7 text-white hover:bg-tomato-9"
+                class="flex absolute -top-1.5 -right-1.5 z-10 flex-shrink-0 justify-center items-center w-3 h-3 text-white rounded-full cursor-pointer bg-tomato-7 hover:bg-tomato-9"
                 :class="{ 'pointer-events-none opacity-50': !app.network_status.connected }"
                 @click="onRemoveBox(box)"
               >
                 <Icon icon="ph:x" class="w-2 h-2 text-white" />
               </div>
               <div
-                class="flex items-center justify-center w-10 h-10 text-2xl transition-all border rounded shrink-0"
+                class="flex justify-center items-center w-10 h-10 text-2xl rounded border transition-all shrink-0"
                 :class="{
                   'pointer-events-none':
                     (percentageLoadingBox && percentageLoadingBox !== box.key) ||
@@ -368,18 +368,18 @@ const onChangeProbing = async () => {
     </div>
 
     <div class="pb-3 space-y-2 shrink-0" :class="{ '-translate-y-2': isCollapsed }">
-      <div class="flex items-center justify-center h-2 gap-2">
+      <div class="flex gap-2 justify-center items-center h-2">
         <div
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="w-2 h-2 transition-all rounded-full"
+          class="w-2 h-2 rounded-full transition-all"
         ></div>
       </div>
 
       <div v-if="!isCollapsed" class="z-10 text-center">
         <div
-          class="flex items-center justify-center gap-2 text-xs font-medium text-center text-slate-7"
+          class="flex gap-2 justify-center items-center text-xs font-medium text-center text-slate-7"
         >
           <div>Goal: {{ measurement.target?.goal }}%</div>
           <div>Score: {{ percentageScore.toFixed(0) }}%</div>
@@ -391,10 +391,10 @@ const onChangeProbing = async () => {
 
       <div
         v-if="sessionStore.session?.status === 'draft' && measurement?.target?.probing_enable"
-        class="z-10 flex items-center justify-between w-full px-4 py-2 rounded-full bg-lime-2"
+        class="flex z-10 justify-between items-center px-4 py-2 w-full rounded-full bg-lime-2"
       >
         <div class="text-sm font-semibold text-lime-7">Set as probing</div>
-        <div class="flex items-center gap-1">
+        <div class="flex gap-1 items-center">
           <Icon
             v-if="switchLoading"
             icon="mingcute:loading-fill"

@@ -29,13 +29,13 @@ interface Props {
   isDisabledAction?: boolean
 }
 interface Emits {
-  (e: 'toggleTimer'): void
-  (e: 'recordLap'): void
-  (e: 'resetLapsConfirm'): void
-  (e: 'resetLapsCancel'): void
-  (e: 'resetLaps'): void
-  (e: 'generateLaps', laps: DurationLap[]): void
-  (e: 'fetchSession'): void
+  (e: 'toggle-timer'): void
+  (e: 'record-lap'): void
+  (e: 'reset-laps-confirm'): void
+  (e: 'reset-laps-cancel'): void
+  (e: 'reset-laps'): void
+  (e: 'generate-laps', laps: DurationLap[]): void
+  (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -91,7 +91,7 @@ const onUpdateLap = async () => {
   const { data } = await sessionStore.updateMeasurementResults(params)
   submitLoading.value = false
 
-  emit('generateLaps', data.results)
+  emit('generate-laps', data.results)
   isOpenEdit.value = false
 }
 
@@ -161,7 +161,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
 <template>
   <!-- duration latency -->
-  <div v-if="!resetConfirmation" class="flex flex-col justify-between flex-grow h-full gap-2">
+  <div v-if="!resetConfirmation" class="flex flex-col flex-grow gap-2 justify-between h-full">
     <div
       v-if="updateLoading || lapLoading"
       class="absolute z-10"
@@ -171,7 +171,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
     </div>
 
     <div
-      class="flex flex-col items-center content-center justify-center flex-grow h-full transition-all gap-x-3"
+      class="flex flex-col flex-grow gap-x-3 justify-center content-center items-center h-full transition-all"
       :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 ps-3': isCollapsed }"
     >
       <div v-if="isCollapsed" class="font-semibold text-slate-7">Lap {{ lapLength }}</div>
@@ -186,7 +186,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
         <div class="flex justify-center">{{ timer.split(':')[2] }}</div>
       </div>
 
-      <div class="flex items-center w-full gap-3">
+      <div class="flex gap-3 items-center w-full">
         <AppButton
           class="grow rounded-full !bg-prim-2"
           :class="{
@@ -195,7 +195,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           kind="plain"
           :loading="lapLoading"
           :disabled="(!isStarted && !lapLength) || isDisabledAction"
-          @click="$emit('recordLap')"
+          @click="$emit('record-lap')"
         >
           <Icon icon="ph:plus-bold" class="text-lg" />
           <span>Lap</span>
@@ -210,7 +210,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           :color="isStarted ? 'tomato' : 'grass'"
           :loading="updateLoading"
           :disabled="isStarted ? false : isDisabledAction"
-          @click="emit('toggleTimer')"
+          @click="emit('toggle-timer')"
         >
           {{ isStarted ? 'Stop' : lapLength > 0 ? 'Resume' : 'Start' }}
         </AppButton>
@@ -222,7 +222,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           }"
           kind="plain"
           :disabled="isDisabledAction"
-          @click="$emit('resetLapsConfirm')"
+          @click="$emit('reset-laps-confirm')"
         >
           <Icon icon="ph:arrow-clockwise-bold" class="text-lg" />
         </AppButton>
@@ -230,7 +230,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
       <div
         v-if="lapLength > 0 && !isCollapsed"
-        class="w-full mt-2 overflow-scroll"
+        class="overflow-scroll mt-2 w-full"
         :style="{
           maxHeight: 'calc(100vh - 10rem)',
           scrollbarWidth: 'none'
@@ -239,9 +239,9 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
         <div
           v-for="lap in laps.slice().sort((a, b) => b.lapNumber - a.lapNumber)"
           :key="lap.lapNumber + 1"
-          class="flex items-center justify-between gap-2 border-b border-slate-4"
+          class="flex gap-2 justify-between items-center border-b border-slate-4"
         >
-          <div class="flex justify-between w-full gap-2 py-2">
+          <div class="flex gap-2 justify-between py-2 w-full">
             <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
             <div :class="getTextColorClass(lap)" class="font-semibold">
               {{ isStarted && lap.lapNumber === lapLength - 1 ? currentLapTime : lap.time }}
@@ -274,23 +274,23 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
   <!-- confirm reset laps -->
   <div
     v-if="resetConfirmation"
-    class="flex flex-col items-center justify-center flex-grow h-full gap-2"
+    class="flex flex-col flex-grow gap-2 justify-center items-center h-full"
   >
     <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
     <div class="text-center text-slate-8">
       This will clear all existing lap records and begin again from Lap 1. You won't be able to
       recover previous data.
     </div>
-    <div class="flex items-center justify-center w-full gap-2 pr-2">
-      <AppButton class="w-2/4" kind="plain" @click="$emit('resetLapsCancel')">Cancel</AppButton>
-      <AppButton class="w-2/4" color="tomato" @click="$emit('resetLaps')">Reset</AppButton>
+    <div class="flex gap-2 justify-center items-center pr-2 w-full">
+      <AppButton class="w-2/4" kind="plain" @click="$emit('reset-laps-cancel')">Cancel</AppButton>
+      <AppButton class="w-2/4" color="tomato" @click="$emit('reset-laps')">Reset</AppButton>
     </div>
   </div>
   <!-- end confirm reset laps -->
 
   <!-- edit lap modal -->
   <AppActionSheet :show="isOpenEdit" @close="isOpenEdit = false">
-    <div class="flex flex-col w-full gap-4 py-3">
+    <div class="flex flex-col gap-4 py-3 w-full">
       <div class="text-xl font-semibold text-left">Edit lap {{ measurement.target?.name }}</div>
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1">
@@ -307,7 +307,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           :disabled="submitLoading"
         />
       </div>
-      <div class="grid items-center grid-cols-2 gap-4">
+      <div class="grid grid-cols-2 gap-4 items-center">
         <AppButton kind="plain" @click="isOpenEdit = false">Cancel</AppButton>
         <AppButton :loading="submitLoading" @click="onUpdateLap">Save</AppButton>
       </div>

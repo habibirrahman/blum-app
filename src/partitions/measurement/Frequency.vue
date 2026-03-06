@@ -17,8 +17,8 @@ interface Props {
   isCollapsed: boolean
 }
 interface Emits {
-  (e: 'toggleUpdated', bool: boolean): void
-  (e: 'fetchSession'): void
+  (e: 'toggle-updated', bool: boolean): void
+  (e: 'fetch-session'): void
 }
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
@@ -44,9 +44,9 @@ watch(
   () => scoreLoading.value,
   (val) => {
     if (!val) {
-      emit('toggleUpdated', true)
+      emit('toggle-updated', true)
     } else {
-      emit('toggleUpdated', false)
+      emit('toggle-updated', false)
     }
   }
 )
@@ -102,7 +102,7 @@ const onChangeScore = async (score: number) => {
 </script>
 
 <template>
-  <div class="flex flex-col justify-between flex-grow h-full gap-2">
+  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
     <div
       v-if="scoreLoading"
       class="absolute z-10"
@@ -112,7 +112,7 @@ const onChangeScore = async (score: number) => {
     </div>
 
     <div
-      class="flex flex-wrap items-center content-center justify-center flex-grow h-full gap-x-3 gap-y-4"
+      class="flex flex-wrap flex-grow gap-x-3 gap-y-4 justify-center content-center items-center h-full"
       :class="{ 'scale-90': isCollapsed }"
     >
       <div
@@ -135,7 +135,7 @@ const onChangeScore = async (score: number) => {
           <Icon v-else icon="stash:plus-solid" class="text-5xl" />
         </div>
         <div
-          class="flex items-center justify-center h-5 border rounded border-slate-5 bg-pure-white"
+          class="flex justify-center items-center h-5 rounded border border-slate-5 bg-pure-white"
           :class="{
             'pointer-events-none':
               scoreLoading ||
@@ -160,13 +160,13 @@ const onChangeScore = async (score: number) => {
       v-if="!isCollapsed"
       class="pb-3 space-y-2 text-xs font-medium text-center shrink-0 text-slate-7"
     >
-      <div class="flex items-center justify-between">
+      <div class="flex justify-between items-center">
         <div>Goal</div>
         <div>{{ measurement.target?.goal }} attempt(s)</div>
       </div>
       <div
         v-if="measurement.target?.frequency_format === 'custom'"
-        class="flex items-center justify-between"
+        class="flex justify-between items-center"
       >
         <div>Duration</div>
         <div>{{ measurement.duration }} minute(s)</div>
