@@ -644,6 +644,44 @@ const checkActionRecommendations = async () => {
   }
 }
 
+const isOpenMastered = ref<boolean>(true)
+const isOpenMaintenance = ref<boolean>(true)
+
+const masteredRecommendations = computed(() => {
+  return sessionStore.session_recommendations.filter((r) => r.recommended_action === 'mastered')
+})
+
+const maintenanceRecommendations = computed(() => {
+  return sessionStore.session_recommendations.filter(
+    (r) => r.recommended_action === 'maintenance' || r.recommended_action?.includes('maintenance')
+  )
+})
+
+const failedMaintenanceTargets = computed(() => {
+  // Logic from blubridge to check if maintenance failed:
+  // Usually if recommended_action is 'maintenance_failed' or action_recommendations.passed is false
+  return maintenanceRecommendations.value.filter((r: any) => {
+    // If we have explicit maintenance_state.has_failures
+    if (r.maintenance_state && r.maintenance_state.has_failures !== undefined) {
+      return r.maintenance_state.has_failures === true
+    }
+    // Alternatively, fallback to `!r.passed` or checking `recommended_action`
+    if (r.recommended_action === 'maintenance_failed') return true
+    return r.passed === false
+  })
+})
+
+const passedMaintenanceTargets = computed(() => {
+  return maintenanceRecommendations.value.filter((r: any) => {
+    // If we have explicit maintenance_state.has_failures
+    if (r.maintenance_state && r.maintenance_state.has_failures !== undefined) {
+      return r.maintenance_state.has_failures === false
+    }
+    if (r.recommended_action === 'maintenance_failed') return false
+    return r.passed === true
+  })
+})
+
 const generateSuccessMetric = (target?: Target) => {
   if (!target) return ''
   let prefix = ''
@@ -1046,37 +1084,162 @@ const duplicateImageCommentsToClientDocument = async () => {
       <div class="flex justify-center items-center w-8 h-8 rounded shrink-0 bg-orange-3">
         <Icon icon="ph:seal-warning-fill" class="text-2xl text-orange-6" />
       </div>
-      <div class="text-2xl text-[22px] font-bold">Passing success metric</div>
+      <div class="text-2xl text-[22px] font-bold">Action recommendation</div>
     </div>
-    <div class="flex flex-col gap-3 px-4 grow">
-      <div class="flex gap-1 items-center">
-        <AppChip chip="in_progress" />
-        <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
-        <AppChip chip="mastered" />
-      </div>
-      <div class="text-sm text-slate-8">
-        The following targets have reached their success criteria. Please go to the
+    <div class="flex overflow-y-auto flex-col gap-3 px-4 pb-4 grow">
+      <div class="pt-2 text-sm text-slate-8">
+        The following targets are the targets that meet the criteria for recommendation. Please go
+        to the
         <span class="font-semibold">'Recommendation'</span>
         tab on the web version to proceed with the next steps.
       </div>
-      <div>
-        <div
-          v-for="recommendation in sessionStore.session_recommendations"
-          :key="recommendation.id"
-          class="flex flex-col gap-2 py-3 border-b border-slate-3"
-        >
-          <div class="text-sm font-semibold">{{ recommendation.target?.name }}</div>
-          <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
-            <div class="truncate">Success metric</div>
-            <div class="truncate">{{ generateSuccessMetric(recommendation.target) }}</div>
+
+      <!-- MASTERED -->
+      <div
+        class="flex flex-col mt-2 rounded border border-slate-3"
+        v-if="masteredRecommendations.length"
+      >
+        <div v-if="masteredRecommendations.length" class="flex flex-col">
+          <div
+            class="flex justify-between items-center px-4 py-3 cursor-pointer select-none"
+            @click="isOpenMastered = !isOpenMastered"
+          >
+            <div class="text-sm font-bold">Mastered</div>
+            <Icon :icon="isOpenMastered ? 'ph:caret-up' : 'ph:caret-down'" class="text-xl" />
           </div>
-          <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
-            <div class="truncate">Total successful sessions</div>
-            <div class="truncate">{{ recommendation.target?.total_success }} session(s)</div>
+
+          <div v-if="isOpenMastered" class="flex flex-col px-4 pb-2">
+            <div class="flex gap-1 items-center pb-3">
+              <AppChip chip="in_progress" />
+              <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
+              <AppChip chip="mastered" />
+            </div>
+
+            <div
+              v-for="(recommendation, index) in masteredRecommendations"
+              :key="recommendation.id"
+              class="flex flex-col gap-2 py-3"
+              :class="{ 'border-b border-slate-3': index !== masteredRecommendations.length - 1 }"
+            >
+              <div class="text-sm font-semibold">{{ recommendation.target?.name }}</div>
+              <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+                <div class="truncate">Success metric</div>
+                <div class="truncate">{{ generateSuccessMetric(recommendation.target) }}</div>
+              </div>
+              <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+                <div class="flex truncate">Total successful sessions</div>
+                <div class="truncate">
+                  {{
+                    recommendation.target?.total_success || recommendation.total_success || 0
+                  }}
+                  session(s)
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+                <div class="flex truncate">Number of consecutive success</div>
+                <div class="truncate">
+                  {{
+                    recommendation.target?.consecutive_success ||
+                    recommendation.consecutive_success ||
+                    0
+                  }}
+                  times
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
-            <div class="truncate">Number of consecutive success</div>
-            <div class="truncate">{{ recommendation.target?.consecutive_success }} session(s)</div>
+        </div>
+      </div>
+
+      <!-- MAINTENANCE -->
+      <div
+        class="flex flex-col mt-2 mb-24 rounded border border-slate-3"
+        v-if="maintenanceRecommendations.length"
+      >
+        <div v-if="maintenanceRecommendations.length" class="flex flex-col">
+          <div
+            class="flex justify-between items-center px-4 py-3 cursor-pointer select-none"
+            @click="isOpenMaintenance = !isOpenMaintenance"
+          >
+            <div class="text-sm font-bold">Maintenance</div>
+            <Icon :icon="isOpenMaintenance ? 'ph:caret-up' : 'ph:caret-down'" class="text-xl" />
+          </div>
+
+          <div v-if="isOpenMaintenance" class="flex flex-col px-4 pb-2">
+            <!-- For failed targets -->
+            <template v-if="failedMaintenanceTargets.length">
+              <div class="flex gap-1 items-center pt-1 pb-3">
+                <AppChip chip="mastered" />
+                <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
+                <AppChip chip="in_progress" />
+              </div>
+
+              <div
+                v-for="(recommendation, index) in failedMaintenanceTargets"
+                :key="recommendation.id"
+                class="flex flex-col gap-2 py-3"
+                :class="{
+                  'border-b border-slate-3':
+                    index !== failedMaintenanceTargets.length - 1 ||
+                    passedMaintenanceTargets.length > 0
+                }"
+              >
+                <div class="text-sm font-semibold">{{ recommendation.target?.name }}</div>
+                <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+                  <div class="flex items-center">Success metric</div>
+                  <div class="truncate">{{ generateSuccessMetric(recommendation.target) }}</div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+                  <div class="flex items-center">Result</div>
+                  <div class="flex">
+                    <div
+                      class="flex items-center gap-1 rounded border border-rose-3 bg-white px-1.5 py-[2px] text-rose-6"
+                      style="border-radius: 100px"
+                    >
+                      <Icon icon="ph:x-circle-fill" />
+                      <span class="text-[10px] font-bold leading-[14px]">Failed</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- For passed targets -->
+            <template v-if="passedMaintenanceTargets.length">
+              <div
+                class="flex gap-1 items-center pb-3"
+                :class="{ 'pt-4': failedMaintenanceTargets.length > 0 }"
+              >
+                <AppChip chip="mastered" />
+              </div>
+
+              <div
+                v-for="(recommendation, index) in passedMaintenanceTargets"
+                :key="recommendation.id"
+                class="flex flex-col gap-2 py-3"
+                :class="{
+                  'border-b border-slate-3': index !== passedMaintenanceTargets.length - 1
+                }"
+              >
+                <div class="text-sm font-semibold">{{ recommendation.target?.name }}</div>
+                <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+                  <div class="flex items-center">Success metric</div>
+                  <div class="truncate">{{ generateSuccessMetric(recommendation.target) }}</div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+                  <div class="flex items-center">Result</div>
+                  <div class="flex">
+                    <div
+                      class="flex items-center gap-1 rounded border border-lime-3 bg-white px-1.5 py-[2px] text-lime-6"
+                      style="border-radius: 100px"
+                    >
+                      <Icon icon="ph:check-circle-fill" />
+                      <span class="text-[10px] font-bold leading-[14px]">passed</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
