@@ -425,6 +425,23 @@ export const useClientStore = defineStore('client', {
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }
         })
+    },
+
+    async bulkUpdateActionRecommendations({
+      data
+    }: {
+      data: ActionRecommendation[]
+    }): Promise<ResponseSchema> {
+      return axios
+        .patch(`/api/v1/action_recommendations/bulk_update`, {
+          action_recommendations: data
+        })
+        .then(async ({ data }) => {
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
     }
   }
 })

@@ -5,7 +5,7 @@ import AppChip from '@/components/AppChip.vue'
 import AppInputTime from '@/components/AppTimeInput.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import AppToggle from '@/components/AppToggle.vue'
-import { type Curriculum, type TargetStatus } from '@/lib/types'
+import { type ActionRecommendation, type Curriculum, type TargetStatus } from '@/lib/types'
 import CurriculumItemModal from '@/partitions/CurriculumItemModal.vue'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
@@ -87,10 +87,20 @@ const probingTrial = ref('')
 const probingGoal = ref('')
 
 // Action recommendations
+
+// mastered
+const masteredActionId = ref<ActionRecommendation['id']>(0)
 const totalSuccessChecked = ref(false)
 const consecutiveSuccessChecked = ref(false)
 const totalSuccessInput = ref(0)
 const consecutiveSuccessInput = ref(0)
+
+// activate_next_target
+const nextTargetActionId = ref<ActionRecommendation['id']>(0)
+const nextTargetChecked = ref(false)
+const nextTargetDetails = computed(() => {
+  return clientStore.target?.progression?.next_target
+})
 
 // Other
 const applyToAllMember = ref(true)
@@ -277,16 +287,30 @@ function initializeFormData(curriculums: Curriculum[]) {
 
   // Action recommendations
   if (useActionRecommendations.value) {
-    const actionRec = target.action_recommendations?.[0]
-    if (actionRec) {
-      if (actionRec.total_success !== null) {
+    masteredActionId.value = 0
+    nextTargetActionId.value = 0
+
+    const masteredAction = target.action_recommendations?.find(
+      (i) => i.recommended_action === 'mastered'
+    )
+    if (masteredAction) {
+      masteredActionId.value = masteredAction.id
+      if (masteredAction.total_success !== null) {
         totalSuccessChecked.value = true
-        totalSuccessInput.value = actionRec.total_success as number
+        totalSuccessInput.value = masteredAction.total_success as number
       }
-      if (actionRec.consecutive_success !== null) {
+      if (masteredAction.consecutive_success !== null) {
         consecutiveSuccessChecked.value = true
-        consecutiveSuccessInput.value = actionRec.consecutive_success as number
+        consecutiveSuccessInput.value = masteredAction.consecutive_success as number
       }
+    }
+
+    const nextTargetAction = target.action_recommendations?.find(
+      (i) => i.recommended_action === 'activate_next_target'
+    )
+    if (nextTargetAction) {
+      nextTargetActionId.value = nextTargetAction.id
+      nextTargetChecked.value = nextTargetAction.is_enabled || false
     }
   }
 
@@ -418,23 +442,51 @@ function buildTargetData() {
 async function handleActionRecommendations() {
   if (!useActionRecommendations.value || isTargetMember.value) return
 
-  const actionRecData = {
-    target_id: targetId.value,
-    id: clientStore.target?.action_recommendations?.[0]?.id,
-    total_success: totalSuccessChecked.value ? totalSuccessInput.value : undefined,
-    consecutive_success: consecutiveSuccessChecked.value
-      ? consecutiveSuccessInput.value
-      : undefined,
-    recommended_action: 'mastered' as const
+  // prepare data for action recommendations
+  const masteredAction = {
+    id: masteredActionId.value,
+    data: {
+      target_id: targetId.value,
+      total_success: totalSuccessChecked.value ? totalSuccessInput.value : undefined,
+      consecutive_success: consecutiveSuccessChecked.value
+        ? consecutiveSuccessInput.value
+        : undefined,
+      recommended_action: 'mastered'
+    } as ActionRecommendation
   }
 
-  if (!actionRecData.id) {
-    await clientStore.createActionRecommendation({ data: actionRecData })
-  } else {
-    await clientStore.updateActionRecommendation({
-      id: actionRecData.id,
-      data: actionRecData
-    })
+  const nextTargetAction = {
+    id: nextTargetActionId.value,
+    data: {
+      target_id: targetId.value,
+      is_enabled: nextTargetChecked.value,
+      recommended_action: 'activate_next_target'
+    } as ActionRecommendation
+  }
+
+  // hasn't mastered target recommendation -- so create new one
+  if (!masteredAction.id) {
+    await clientStore.createActionRecommendation({ data: masteredAction.data })
+  }
+
+  // hasn't activate next target recommendation -- so create new one
+  if (!nextTargetAction.id) {
+    await clientStore.createActionRecommendation({ data: nextTargetAction.data })
+  }
+
+  // has mastered target recommendation -- so update it
+  // mastered recommendation is primary action for target, so it will always have id
+  if (masteredAction.id) {
+    const payload = {
+      data: [{ id: masteredAction.id, ...masteredAction.data }]
+    }
+
+    // has activate next target recommendation -- so update it
+    if (nextTargetActionId.value) {
+      payload.data.push({ id: nextTargetActionId.value, ...nextTargetAction.data })
+    }
+
+    await clientStore.bulkUpdateActionRecommendations(payload)
   }
 }
 
@@ -500,9 +552,16 @@ function onApplyStatus(val: TargetStatus) {
   showStatus.value = false
 }
 
-function onChangeToggle(val: { totalSuccessChecked: boolean; consecutiveSuccessChecked: boolean }) {
+function onChangeSuccessMetrics(val: {
+  totalSuccessChecked: boolean
+  consecutiveSuccessChecked: boolean
+}) {
   totalSuccessChecked.value = val.totalSuccessChecked
   consecutiveSuccessChecked.value = val.consecutiveSuccessChecked
+}
+
+function onChangeNextTarget(val: boolean) {
+  nextTargetChecked.value = val
 }
 
 function onApplyPromptSuccessMetric(val: string) {
@@ -513,9 +572,9 @@ function onApplyPromptSuccessMetric(val: string) {
 
 <template>
   <!-- Header -->
-  <div class="sticky top-0 z-10 flex items-center gap-3 px-4 pt-3 pb-3 bg-white">
+  <div class="sticky top-0 z-10 flex items-center gap-3 bg-white px-4 pb-3 pt-3">
     <RouterLink :to="{ name: 'client', params: { id: clientId, tab: 'targets' } }">
-      <div class="flex items-center justify-center w-8 h-8 rounded-full cursor-pointer bg-slate-2">
+      <div class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-2">
         <Icon icon="tabler:chevron-left" class="text-2xl text-slate-7" />
       </div>
     </RouterLink>
@@ -523,25 +582,25 @@ function onApplyPromptSuccessMetric(val: string) {
   </div>
 
   <!-- Main Content -->
-  <div class="w-full h-full p-4 space-y-5 min-h-svh bg-prim-3">
+  <div class="h-full min-h-svh w-full space-y-5 bg-prim-3 p-4">
     <!-- Target/Group Details Section -->
-    <div class="p-4 space-y-4 bg-white rounded">
+    <div class="space-y-4 rounded bg-white p-4">
       <!-- Section Header -->
       <div
         v-if="!isGroup"
         @click="isCloseTargetDetails = !isCloseTargetDetails"
-        class="flex items-center justify-between cursor-pointer"
-        :class="{ 'border-b border-slate-3 pb-2': !isCloseTargetDetails }"
+        class="flex cursor-pointer items-center justify-between"
+        :class="{ 'border-b border-slate-4 pb-2': !isCloseTargetDetails }"
       >
         <div class="text-sm font-semibold text-slate-10">Target details</div>
         <Icon
           icon="ph:caret-up-bold"
-          class="w-5 h-5 transition-transform text-slate-10"
+          class="h-5 w-5 text-slate-10 transition-transform"
           :class="{ 'rotate-180': isCloseTargetDetails }"
         />
       </div>
 
-      <div v-if="isGroup" class="flex items-center justify-between pb-2 border-b border-slate-3">
+      <div v-if="isGroup" class="flex items-center justify-between border-b border-slate-4 pb-2">
         <div class="text-sm font-semibold text-slate-10">Group details</div>
       </div>
 
@@ -558,11 +617,11 @@ function onApplyPromptSuccessMetric(val: string) {
           </div>
           <div
             @click="showCurriculum = true"
-            class="flex items-center justify-between px-4 py-2 bg-white border rounded cursor-pointer border-slate-4"
+            class="flex cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-4 py-2"
           >
             <div class="flex items-center gap-2 truncate">
               <div
-                class="flex-shrink-0 w-6 h-6 rounded-full"
+                class="h-6 w-6 flex-shrink-0 rounded-full"
                 :style="{ backgroundColor: selectedCurriculum?.color }"
               />
               <div class="truncate text-[16px] text-slate-10">
@@ -574,7 +633,7 @@ function onApplyPromptSuccessMetric(val: string) {
         </div>
 
         <!-- Curriculum Change Warning -->
-        <div v-if="isTargetMember" class="flex items-center gap-2 p-2 rounded bg-cornflower-2">
+        <div v-if="isTargetMember" class="flex items-center gap-2 rounded bg-cornflower-2 p-2">
           <Icon icon="material-symbols:info" class="text-lg text-cornflower-8" />
           <div class="text-xs text-cornflower-8">
             Changing the curriculum will apply it to all targets in this grouped target.
@@ -589,7 +648,7 @@ function onApplyPromptSuccessMetric(val: string) {
           </div>
           <div
             @click="showStatus = true"
-            class="flex items-center justify-between px-4 py-2 bg-white border rounded cursor-pointer border-slate-4"
+            class="flex cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-4 py-2"
           >
             <AppChip :chip="status as TargetStatus" />
             <Icon icon="ph:caret-down" class="text-2xl text-slate-8" />
@@ -619,14 +678,14 @@ function onApplyPromptSuccessMetric(val: string) {
             number of times.
           </div>
 
-          <div class="pt-2 pb-2">
+          <div class="pb-2 pt-2">
             <div class="mb-1 text-sm font-medium text-slate-8">
               <span>Prompt level</span>
               <span class="ml-1 text-tomato-7">*</span>
             </div>
             <div
               @click="showPromptLevel = true"
-              class="flex items-center justify-between px-4 py-2 bg-white border rounded cursor-pointer border-slate-4"
+              class="flex cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-4 py-2"
             >
               <div class="text-[16px]">{{ selectedPromptSuccessMetric }}</div>
               <Icon icon="ph:caret-down" class="text-2xl text-slate-8" />
@@ -771,13 +830,13 @@ function onApplyPromptSuccessMetric(val: string) {
             <span class="ml-1 text-tomato-7">*</span>
           </div>
 
-          <div v-if="!isLatencyType" class="flex items-center gap-2 mb-3">
+          <div v-if="!isLatencyType" class="mb-3 flex items-center gap-2">
             <input
               type="radio"
               name="success_metric"
               :checked="successMetric === 'equal to or greater than goal'"
               value="equal to or greater than goal"
-              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="successMetric = 'equal to or greater than goal'"
             />
             <label class="w-full text-sm">Equal to or greater than goal</label>
@@ -789,7 +848,7 @@ function onApplyPromptSuccessMetric(val: string) {
               name="success_metric"
               :checked="successMetric === 'less than goal'"
               value="less than goal"
-              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="successMetric = 'less than goal'"
             />
             <label class="w-full text-sm">Less than goal</label>
@@ -840,7 +899,7 @@ function onApplyPromptSuccessMetric(val: string) {
               name="interval_start_timing"
               :checked="intervalStartTiming === 'start_with_session'"
               value="start_with_session"
-              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="intervalStartTiming = 'start_with_session'"
             />
             <label class="w-full text-sm">Start with session</label>
@@ -851,7 +910,7 @@ function onApplyPromptSuccessMetric(val: string) {
               name="interval_start_timing"
               :checked="intervalStartTiming === 'custom_start'"
               value="custom_start"
-              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="intervalStartTiming = 'custom_start'"
             />
             <label class="w-full text-sm">Custom start</label>
@@ -884,7 +943,7 @@ function onApplyPromptSuccessMetric(val: string) {
             name="applyToAllMember"
             id="applyToAllMember"
             :checked="applyToAllMember"
-            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="applyToAllMember = !applyToAllMember"
           />
           <label for="applyToAllMember" class="w-full text-sm">
@@ -895,8 +954,8 @@ function onApplyPromptSuccessMetric(val: string) {
     </div>
 
     <!-- Probing Section -->
-    <div v-if="useProbing" class="p-4 space-y-4 bg-white rounded">
-      <div class="flex items-center justify-between pb-2 border-b border-slate-3">
+    <div v-if="useProbing" class="space-y-4 rounded bg-white p-4">
+      <div class="flex items-center justify-between border-b border-slate-4 pb-2">
         <div class="text-sm font-semibold text-slate-10">Probing</div>
         <AppToggle
           name="use_probing"
@@ -934,106 +993,160 @@ function onApplyPromptSuccessMetric(val: string) {
     </div>
 
     <!-- Action Recommendations Section -->
-    <div v-if="useActionRecommendations" class="p-4 space-y-3 bg-white rounded">
+    <div v-if="useActionRecommendations" class="space-y-3 rounded bg-white p-4">
       <div
         @click="isCloseActionRecommendation = !isCloseActionRecommendation"
-        class="flex items-center justify-between cursor-pointer"
-        :class="{ 'border-b border-slate-3 pb-2': !isCloseActionRecommendation }"
+        class="flex cursor-pointer items-center justify-between"
       >
         <div class="flex items-center gap-2">
-          <div class="p-1 rounded bg-orange-3">
+          <div class="rounded bg-orange-3 p-1">
             <Icon icon="mynaui:info-waves-solid" class="rotate-180 text-[20px] text-[#FD853A]" />
           </div>
           <div class="text-sm font-semibold text-slate-10">Action recommendations</div>
         </div>
         <Icon
           icon="ph:caret-up-bold"
-          class="w-5 h-5 transition-transform text-slate-10"
+          class="h-5 w-5 text-slate-10 transition-transform"
           :class="{ 'rotate-180': isCloseActionRecommendation }"
         />
       </div>
 
       <div v-if="!isCloseActionRecommendation" class="space-y-2">
-        <div class="text-sm font-semibold text-slate-10">Passing success metric</div>
-        <div class="text-xs text-slate-8">Updating the current target's status from</div>
+        <!-- mastered action recommendation -->
+        <div class="space-y-2 border-t border-slate-4 py-2">
+          <div class="text-sm font-semibold text-slate-10">Passing success metric</div>
+          <div class="text-xs text-slate-8">Updating the current target's status from</div>
 
-        <div class="flex items-center gap-2">
-          <AppChip chip="in_progress" />
-          <div class="text-sm text-slate-8">to</div>
-          <AppChip chip="mastered" />
-        </div>
+          <div class="flex items-center gap-2">
+            <AppChip chip="in_progress" />
+            <div class="text-sm text-slate-8">to</div>
+            <AppChip chip="mastered" />
+          </div>
 
-        <!-- Total Success -->
-        <div class="flex items-center gap-2 pt-2">
-          <AppToggle
-            name="total_success"
-            :checked="totalSuccessChecked"
-            @change="
-              onChangeToggle({
-                totalSuccessChecked: !totalSuccessChecked,
-                consecutiveSuccessChecked
-              })
-            "
-          />
-          <div class="text-xs font-semibold text-slate-9">Total success</div>
-        </div>
+          <!-- total success -->
+          <div class="flex items-center gap-2 pt-2">
+            <AppToggle
+              name="total_success"
+              :checked="totalSuccessChecked"
+              @change="
+                onChangeSuccessMetrics({
+                  totalSuccessChecked: !totalSuccessChecked,
+                  consecutiveSuccessChecked
+                })
+              "
+            />
+            <div class="text-xs font-semibold text-slate-9">Total success</div>
+          </div>
 
-        <div class="text-xs font-medium text-slate-8">
-          Receive a recommendation after completing at least
-        </div>
+          <div class="text-xs font-medium text-slate-8">
+            Receive a recommendation after completing at least
+          </div>
 
-        <div class="flex items-center gap-2 pt-2">
-          <input
-            type="number"
-            pattern="[0-9]*"
-            inputmode="numeric"
-            min="1"
-            v-model="totalSuccessInput"
-            :disabled="!totalSuccessChecked"
-            :class="{ 'opacity-50': !totalSuccessChecked }"
-            class="h-8 w-10 appearance-none rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] focus:border-light-purple-5 focus:ring-light-purple-2"
-          />
-          <div class="text-xs text-slate-8">successful session(s).</div>
-        </div>
+          <div class="flex items-center gap-2 pt-2">
+            <input
+              type="number"
+              pattern="[0-9]*"
+              inputmode="numeric"
+              min="1"
+              v-model="totalSuccessInput"
+              :disabled="!totalSuccessChecked"
+              :class="{ 'opacity-50': !totalSuccessChecked }"
+              class="h-8 w-16 appearance-none rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] focus:border-light-purple-5 focus:ring-light-purple-2"
+            />
+            <div class="text-xs text-slate-8">successful session(s).</div>
+          </div>
+          <!-- end total success -->
 
-        <!-- Consecutive Success -->
-        <div class="flex items-center gap-2 pt-2">
-          <AppToggle
-            name="consecutive_success"
-            :checked="consecutiveSuccessChecked"
-            @change="
-              onChangeToggle({
-                consecutiveSuccessChecked: !consecutiveSuccessChecked,
-                totalSuccessChecked
-              })
-            "
-          />
-          <div class="text-xs font-semibold text-slate-9">Consecutive success</div>
-        </div>
+          <!-- consecutive success -->
+          <div class="flex items-center gap-2 pt-2">
+            <AppToggle
+              name="consecutive_success"
+              :checked="consecutiveSuccessChecked"
+              @change="
+                onChangeSuccessMetrics({
+                  consecutiveSuccessChecked: !consecutiveSuccessChecked,
+                  totalSuccessChecked
+                })
+              "
+            />
+            <div class="text-xs font-semibold text-slate-9">Consecutive success</div>
+          </div>
 
-        <div class="text-xs font-medium text-slate-8">
-          Receive a recommendation only if the session is successful for
-        </div>
+          <div class="text-xs font-medium text-slate-8">
+            Receive a recommendation only if the session is successful for
+          </div>
 
-        <div class="flex items-center gap-2 pt-2">
-          <input
-            type="number"
-            pattern="[0-9]*"
-            inputmode="numeric"
-            v-model="consecutiveSuccessInput"
-            min="2"
-            :disabled="!consecutiveSuccessChecked"
-            :class="{ 'opacity-50': !consecutiveSuccessChecked }"
-            class="h-8 w-10 appearance-none rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] focus:border-light-purple-5 focus:ring-light-purple-2"
-          />
-          <div class="text-xs text-slate-8">consecutive session(s).</div>
+          <div class="flex items-center gap-2 pt-2">
+            <input
+              type="number"
+              pattern="[0-9]*"
+              inputmode="numeric"
+              v-model="consecutiveSuccessInput"
+              min="2"
+              :disabled="!consecutiveSuccessChecked"
+              :class="{ 'opacity-50': !consecutiveSuccessChecked }"
+              class="h-8 w-16 appearance-none rounded border border-slate-4 px-2 text-center outline-none [-webkit-appearance:none] focus:border-light-purple-5 focus:ring-light-purple-2"
+            />
+            <div class="text-xs text-slate-8">consecutive session(s).</div>
+          </div>
+          <!-- end consecutive success -->
         </div>
+        <!-- end mastered action recommendation -->
+
+        <!-- activate next target recommendation -->
+        <div class="space-y-2 border-t border-slate-4 py-2">
+          <div class="flex items-center gap-2">
+            <AppToggle
+              name="next_target"
+              :checked="nextTargetChecked"
+              @change="onChangeNextTarget(!nextTargetChecked)"
+            />
+            <div class="text-sm font-semibold text-slate-10">Next target recommendation</div>
+          </div>
+          <div class="text-xs text-slate-8">
+            <span>When this target is mastered, </span>
+            <span v-if="nextTargetDetails">
+              updating next target
+              <span class="font-semibold">{{ nextTargetDetails.name + ' ' }}</span>
+            </span>
+            <span v-else>the next target </span>
+            <span>will be recommended to change from </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <AppChip chip="pending" />
+            <div class="text-sm text-slate-8">to</div>
+            <AppChip chip="in_progress" />
+          </div>
+
+          <div v-if="nextTargetDetails?.status === 'create'" class="text-xs italic text-slate-8">
+            The next target hasn't been imported yet. You can import it after this target is
+            mastered or now.
+          </div>
+
+          <div class="flex gap-2 rounded bg-cornflower-2 px-3 py-2">
+            <Icon icon="ph:info-fill" class="text-2xl text-cornflower-8" />
+            <div class="text-sm text-cornflower-8">
+              <span v-if="!clientStore.target?.parent_id">
+                This setting is available only when creating a target in the Databank.
+              </span>
+              <span v-else-if="!nextTargetDetails">
+                There is no next target that will be activated once this target has mastered. This
+                setting is only available for targets in Databank.
+              </span>
+              <span v-else>
+                Target progression is managed in the Repository. To create or modify the next
+                target, update the progression there.
+              </span>
+            </div>
+          </div>
+        </div>
+        <!-- end activate next target recommendation -->
       </div>
     </div>
   </div>
 
   <!-- Submit Button -->
-  <div class="sticky bottom-0 px-4 py-3 bg-white">
+  <div class="sticky bottom-0 bg-white px-4 py-3">
     <AppButton
       class="w-full"
       @click="onSubmit"
@@ -1048,8 +1161,8 @@ function onApplyPromptSuccessMetric(val: string) {
   <CurriculumItemModal
     :show="showCurriculum"
     :reset-able="false"
-    :curriculum-options="curriculumOptions"
-    :selected-curriculum="[selectedCurriculum?.value as number]"
+    :options="curriculumOptions"
+    :selected="[selectedCurriculum?.value as number]"
     :use-multiple-select="false"
     @close="showCurriculum = false"
     @apply="onApplyCurriculum($event[0])"
@@ -1058,7 +1171,7 @@ function onApplyPromptSuccessMetric(val: string) {
   <!-- Status Action Sheet -->
   <AppActionSheet :show="showStatus" @close="showStatus = false">
     <div>
-      <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Status</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -1069,9 +1182,9 @@ function onApplyPromptSuccessMetric(val: string) {
         <div
           v-for="opt in STATUS_OPTIONS"
           :key="opt.value"
-          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-4"
         >
-          <label :for="`status_${opt.value}`" class="w-full text-sm cursor-pointer">
+          <label :for="`status_${opt.value}`" class="w-full cursor-pointer text-sm">
             <div class="w-fit">
               <AppChip :chip="opt.value" />
             </div>
@@ -1082,13 +1195,13 @@ function onApplyPromptSuccessMetric(val: string) {
             :id="`status_${opt.value}`"
             :checked="selectStatus === opt.value"
             :value="opt.value"
-            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="selectStatus = opt.value"
           />
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 grid w-full grid-cols-1 gap-2 py-3 bg-white">
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-1 gap-2 bg-white py-3">
         <AppButton class="w-full" @click="onApplyStatus(selectStatus as TargetStatus)">
           Apply
         </AppButton>
@@ -1099,7 +1212,7 @@ function onApplyPromptSuccessMetric(val: string) {
   <!-- Prompt Level Action Sheet -->
   <AppActionSheet :show="showPromptLevel" @close="showPromptLevel = false">
     <div>
-      <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Prompt</div>
         <div class="cursor-pointer" @click="showPromptLevel = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -1110,9 +1223,9 @@ function onApplyPromptSuccessMetric(val: string) {
         <div
           v-for="opt in promptSuccessMetricOptions"
           :key="opt.value"
-          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-4"
         >
-          <label :for="`prompt_${opt.value}`" class="w-full text-sm cursor-pointer">
+          <label :for="`prompt_${opt.value}`" class="w-full cursor-pointer text-sm">
             {{ opt.label }}
           </label>
           <input
@@ -1121,13 +1234,13 @@ function onApplyPromptSuccessMetric(val: string) {
             :id="`prompt_${opt.value}`"
             :checked="selectedPromptSuccessMetric === opt.value"
             :value="opt.value"
-            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="selectedPromptSuccessMetric = opt.value"
           />
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 grid w-full grid-cols-1 gap-2 py-3 bg-white">
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-1 gap-2 bg-white py-3">
         <AppButton class="w-full" @click="onApplyPromptSuccessMetric(selectedPromptSuccessMetric)">
           Apply
         </AppButton>
@@ -1137,7 +1250,7 @@ function onApplyPromptSuccessMetric(val: string) {
 
   <!-- Unsaved Changes AYS Modal -->
   <AppActionSheet :show="showUnsavedChangesModal" @close="onStay">
-    <div class="py-3 space-y-6">
+    <div class="space-y-6 py-3">
       <div class="flex flex-col items-center justify-center space-y-2 text-center">
         <div class="text-xl font-bold text-slate-10">Unsaved changes</div>
         <div class="text-base text-slate-8">Are you sure you want to leave this page?</div>
@@ -1145,7 +1258,7 @@ function onApplyPromptSuccessMetric(val: string) {
 
       <div class="flex items-center gap-3">
         <AppButton class="w-full" kind="plain" @click="onDiscard">
-          <span class="text-base font-semibold text-light-purple-6">Discard change</span>
+          <span class="text-light-purple-6 text-base font-semibold">Discard change</span>
         </AppButton>
         <AppButton class="w-full" @click="onStay"> Stay </AppButton>
       </div>

@@ -1191,14 +1191,24 @@ const duplicateImageCommentsToClientDocument = async () => {
                 <div class="text-sm font-semibold">{{ recommendation.target?.name }}</div>
                 <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
                   <div class="flex items-center">Success metric</div>
-                  <div class="truncate">{{ generateSuccessMetric(recommendation.target) }}</div>
+
+                  <div v-if="recommendation.target?.type_name === 'Cold Probe'" class="flex">
+                    <div
+                      class="border-success-2 text-success flex w-max items-center gap-1 rounded-full border bg-white px-2 py-0.5"
+                    >
+                      <Icon icon="ph:check-circle-fill" />
+                      <span class="text-[10px] font-bold leading-[14px]">Passed</span>
+                    </div>
+                  </div>
+                  <div v-else class="truncate">
+                    {{ generateSuccessMetric(recommendation.target) }}
+                  </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
                   <div class="flex items-center">Result</div>
                   <div class="flex">
                     <div
-                      class="flex items-center gap-1 rounded border border-rose-3 bg-white px-1.5 py-[2px] text-rose-6"
-                      style="border-radius: 100px"
+                      class="flex w-max items-center gap-1 rounded-full border border-rose-3 bg-white px-1.5 py-[2px] text-rose-6"
                     >
                       <Icon icon="ph:x-circle-fill" />
                       <span class="text-[10px] font-bold leading-[14px]">Failed</span>

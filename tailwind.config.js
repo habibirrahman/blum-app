@@ -153,7 +153,22 @@ export default {
           1: '#F2FBF9'
         },
         // curriculum
-        'red-cherry': '#FF4447'
+        'red-cherry': '#FF4447',
+        // semantic
+        success: {
+          DEFAULT: '#4B810E',
+          4: '#71C115',
+          3: '#A0D663',
+          2: '#D0EAB1',
+          1: '#F2FFE3'
+        },
+        info: {
+          DEFAULT: '#00638B',
+          4: '#0095D1',
+          3: '#55B8E0',
+          2: '#AADCF0',
+          1: '#CCEAF6'
+        }
       }
     }
   },

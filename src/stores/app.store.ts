@@ -219,6 +219,35 @@ export const useAppStore = defineStore('app', {
         .catch(({ response }) => {
           return { success: false, data: null, message: response?.data?.error }
         })
+    },
+
+    async actionGet({ url, options }: { url: string; options?: any }): Promise<ResponseSchema> {
+      if (!this.network_status.connected) {
+        // return { success: true, data: this.target }
+      }
+
+      return axios
+        .get(url, options)
+        .then(async ({ data }) => {
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async actionPost({ url, params }: { url: string; params?: unknown }): Promise<ResponseSchema> {
+      if (!this.network_status.connected) {
+        // return { success: true, data: this.target }
+      }
+
+      return axios
+        .post(url, params)
+        .then(async ({ data }) => {
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
     }
   }
 })

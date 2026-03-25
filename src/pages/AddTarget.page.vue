@@ -4,7 +4,7 @@ import AppButton from '@/components/AppButton.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import TargetItemLoader from '@/components/skeletons/TargetItemLoader.vue'
-import type { Client, Target, TargetType } from '@/lib/types'
+import type { Client, Progression, Target, TargetType } from '@/lib/types'
 import TargetItem from '@/partitions/TargetItem.vue'
 import { useAppStore } from '@/stores/app.store'
 import { Icon } from '@iconify/vue'
@@ -15,6 +15,7 @@ import { useClientStore } from '@/stores/client.store'
 import { useToast } from 'vue-toastification'
 import CurriculumItemModal from '@/partitions/CurriculumItemModal.vue'
 import { useRouter } from 'vue-router'
+import ProgressionItemModal from '@/partitions/ProgressionItemModal.vue'
 
 interface Curriculum {
   id: number
@@ -31,8 +32,10 @@ const clientStore = useClientStore()
 
 const submitLoading = ref<boolean>(false)
 const targetLoading = ref<boolean>(false)
-const CurriculumLoading = ref<boolean>(false)
+const curriculumLoading = ref<boolean>(false)
+const progressionLoading = ref<boolean>(false)
 const showCurriculums = ref<boolean>(false)
+const showProgressions = ref<boolean>(false)
 const showMethods = ref<boolean>(false)
 const showDetails = ref<boolean>(false)
 
@@ -57,6 +60,10 @@ const methodOptions: { value: TargetType; label: string }[] = [
 const curriculums = ref<number[]>([])
 const selectCurriculums = ref<number[]>([])
 const curriculumOptions = ref<{ value: number; label: string; color: string }[]>([])
+
+const progressions = ref<number[]>([])
+const selectProgressions = ref<number[]>([])
+const progressionOptions = ref<{ value: number; label: string; color: string }[]>([])
 
 const loading = ref<boolean>(false)
 const page = ref<number>(1)
@@ -83,9 +90,16 @@ const curriculumQueryTimeout = ref<any>(null)
 watch(curriculumQuery, () => {
   clearTimeout(curriculumQueryTimeout.value)
   curriculumQueryTimeout.value = setTimeout(() => {
-    loading.value = true
-    page.value = 1
     fetchCurriculums()
+  }, 1500)
+})
+
+const progressionQuery = ref<string>('')
+const progressionQueryTimeout = ref<any>(null)
+watch(progressionQuery, () => {
+  clearTimeout(progressionQueryTimeout.value)
+  progressionQueryTimeout.value = setTimeout(() => {
+    fetchProgression()
   }, 1500)
 })
 
@@ -94,12 +108,19 @@ const params = computed<string>(() => {
   if (query.value) p += `&query=${query.value}`
   if (methods.value.length) p += `&type=${methods.value.join(',')}`
   if (curriculums.value.length) p += `&curriculum_ids=${curriculums.value.join(',')}`
+  if (progressions.value.length) p += `&progression_ids=${progressions.value.join(',')}`
   return p
 })
 
 const curriculumParams = computed<string>(() => {
   let p = `?sort=name_asc`
   if (curriculumQuery.value) p += `&query=${curriculumQuery.value}`
+  return p
+})
+
+const progressionParams = computed<string>(() => {
+  let p = `?sort=name_asc`
+  if (progressionQuery.value) p += `&query=${progressionQuery.value}`
   return p
 })
 
@@ -143,9 +164,9 @@ async function fetchTargets() {
 }
 
 async function fetchCurriculums() {
-  CurriculumLoading.value = true
+  curriculumLoading.value = true
   const { success, data } = await appStore.getCurriculums({ params: curriculumParams.value })
-  CurriculumLoading.value = false
+  curriculumLoading.value = false
   if (!success) {
     document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
     return
@@ -156,19 +177,32 @@ async function fetchCurriculums() {
     color: c.color
   }))
 }
+async function fetchProgression() {
+  if (!clientStore.client?.center_id) return
+
+  const payload = {
+    url: `api/v1/centers/${clientStore.client?.center_id}/progressions${progressionParams.value}`
+  }
+
+  progressionLoading.value = true
+  const { success, data } = await appStore.actionGet(payload)
+  progressionLoading.value = false
+  if (!success) {
+    document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
+    return
+  }
+  progressionOptions.value = data.data.map((p: Progression) => ({
+    value: p.id,
+    label: p.name
+  }))
+}
 
 onMounted(() => {
   fetchTargets()
   fetchCurriculums()
+  fetchProgression()
 })
 
-// const onCheckCurriculum = (val: number) => {
-//   if (selectCurriculums.value.includes(val)) {
-//     selectCurriculums.value = selectCurriculums.value.filter((i) => i !== val)
-//   } else {
-//     selectCurriculums.value = [...selectCurriculums.value, val]
-//   }
-// }
 const onResetCurriculum = () => {
   curriculums.value = []
   selectCurriculums.value = []
@@ -179,6 +213,20 @@ const onResetCurriculum = () => {
 const onApplyCurriculum = (values: number[]) => {
   curriculums.value = values
   showCurriculums.value = false
+  page.value = 1
+  fetchTargets()
+}
+
+const onResetProgression = () => {
+  progressions.value = []
+  selectProgressions.value = []
+  showProgressions.value = false
+  page.value = 1
+  fetchTargets()
+}
+const onApplyProgression = (values: number[]) => {
+  progressions.value = values
+  showProgressions.value = false
   page.value = 1
   fetchTargets()
 }
@@ -240,17 +288,17 @@ const onAddTarget = async () => {
 
 <template>
   <div class="sticky top-0 z-10 bg-white">
-    <div class="flex items-center gap-3 px-4 h-14">
+    <div class="flex h-14 items-center gap-3 px-4">
       <RouterLink :to="{ name: 'client', params: { id: clientStore.client?.id, tab: 'targets' } }">
         <div
-          class="flex items-center justify-center w-8 h-8 rounded-full cursor-pointer bg-slate-2"
+          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-2"
         >
           <Icon icon="tabler:chevron-left" class="text-2xl text-slate-7" />
         </div>
       </RouterLink>
       <div class="text-[22px] font-bold text-slate-10">Add from databank</div>
     </div>
-    <div class="pt-3 space-y-3 bg-white">
+    <div class="space-y-3 bg-white pt-3">
       <div class="px-4">
         <AppTextInput
           name="query"
@@ -260,9 +308,9 @@ const onAddTarget = async () => {
         />
       </div>
       <div class="pl-4">
-        <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
+        <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
           <div
-            class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
+            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
             :class="[
               curriculums.length
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -273,14 +321,14 @@ const onAddTarget = async () => {
             <span>Curriculum</span>
             <span
               v-if="curriculums.length > 0"
-              class="flex items-center justify-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
+              class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
             >
               {{ curriculums.length }}
             </span>
             <Icon icon="ph:caret-down" class="text-base text-slate-8" />
           </div>
           <div
-            class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
+            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
             :class="[
               methods.length
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -291,9 +339,27 @@ const onAddTarget = async () => {
             <span>Method</span>
             <span
               v-if="methods.length > 0"
-              class="flex items-center justify-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
+              class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
             >
               {{ methods.length }}
+            </span>
+            <Icon icon="ph:caret-down" class="text-base text-slate-8" />
+          </div>
+          <div
+            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+            :class="[
+              progressions.length
+                ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
+                : 'border-slate-4 bg-white'
+            ]"
+            @click="showProgressions = true"
+          >
+            <span>Progression</span>
+            <span
+              v-if="progressions.length > 0"
+              class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+            >
+              {{ progressions.length }}
             </span>
             <Icon icon="ph:caret-down" class="text-base text-slate-8" />
           </div>
@@ -303,7 +369,7 @@ const onAddTarget = async () => {
   </div>
   <div v-if="loading">
     <div class="px-4 pt-2">
-      <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
+      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
     </div>
     <div class="px-4">
       <TargetItemLoader v-for="n in perPage" :key="n" />
@@ -326,7 +392,7 @@ const onAddTarget = async () => {
         type="checkbox"
         :checked="isAllChecked"
         @change="toggleCheckAll"
-        class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+        class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
       />
     </div>
     <div>
@@ -336,25 +402,25 @@ const onAddTarget = async () => {
             class="flex h-[154px] cursor-pointer flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-4"
           >
             <div class="flex items-center justify-between">
-              <div @click="onOpenTarget(target)" class="text-xs truncate text-slate-8">
+              <div @click="onOpenTarget(target)" class="truncate text-xs text-slate-8">
                 {{ target.curriculum_name }}
               </div>
               <input
                 type="checkbox"
                 :checked="targets.includes(target.id as number)"
                 @change="toggleTarget(target.id as number)"
-                class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+                class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               />
             </div>
             <div @click="onOpenTarget(target)" class="flex items-center gap-2">
-              <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
+              <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
               <div class="text-sm font-semibold text-slate-10">
                 {{ target.name }}
               </div>
             </div>
             <div
               @click="onOpenTarget(target)"
-              class="text-xs whitespace-pre-line line-clamp-3 text-slate-8"
+              class="line-clamp-3 whitespace-pre-line text-xs text-slate-8"
             >
               {{ target.description }}
             </div>
@@ -382,8 +448,8 @@ const onAddTarget = async () => {
     />
   </div>
 
-  <div class="fixed bottom-0 z-20 w-full px-4 bg-pure-white pb-safe">
-    <div class="flex items-center w-full h-16">
+  <div class="fixed bottom-0 z-20 w-full bg-pure-white px-4 pb-safe">
+    <div class="flex h-16 w-full items-center">
       <AppButton
         class="grow"
         :loading="submitLoading"
@@ -404,16 +470,29 @@ const onAddTarget = async () => {
 
   <CurriculumItemModal
     :show="showCurriculums"
-    :curriculum-options="curriculumOptions"
-    :selected-curriculum="curriculums"
+    :options="curriculumOptions"
+    :selected="curriculums"
     :use-multiple-select="true"
+    @set-query="curriculumQuery = $event"
     @close="showCurriculums = false"
     @apply="onApplyCurriculum($event)"
     @reset="onResetCurriculum"
   />
+
+  <ProgressionItemModal
+    :show="showProgressions"
+    :options="progressionOptions"
+    :selected="progressions"
+    :use-multiple-select="true"
+    @set-query="progressionQuery = $event"
+    @close="showProgressions = false"
+    @apply="onApplyProgression($event)"
+    @reset="onResetProgression"
+  />
+
   <AppActionSheet :show="showMethods" @close="showMethods = false">
     <div>
-      <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Data Collection Method</div>
         <div class="cursor-pointer" @click="showMethods = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -423,9 +502,9 @@ const onAddTarget = async () => {
         <div
           v-for="opt in methodOptions"
           :key="opt.value"
-          class="flex items-center justify-between w-full gap-4 border-b h-14 border-slate-3"
+          class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
         >
-          <label :for="`method_filter_${opt.value}`" class="w-full text-sm truncate">
+          <label :for="`method_filter_${opt.value}`" class="w-full truncate text-sm">
             {{ opt.label }}
           </label>
           <input
@@ -434,12 +513,12 @@ const onAddTarget = async () => {
             :id="`method_filter_${opt.value}`"
             :checked="selectMethods.includes(opt.value)"
             :value="opt.value"
-            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="onCheckMethod(opt.value)"
           />
         </div>
       </div>
-      <div class="sticky bottom-0 z-10 grid w-full grid-cols-2 gap-2 py-3 bg-white">
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-2 gap-2 bg-white py-3">
         <AppButton kind="plain" @click="onResetMethod">Reset</AppButton>
         <AppButton @click="onApplyMethod">Apply</AppButton>
       </div>

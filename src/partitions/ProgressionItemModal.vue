@@ -30,7 +30,7 @@ const emit = defineEmits<Emits>()
 const queryState = ref<string>('')
 const selectedState = ref<number[]>([...props.selected])
 
-// Computed untuk filter curriculum berdasarkan query
+// Computed untuk filter progression berdasarkan query
 const filteredOptions = computed(() => {
   if (!queryState.value.trim()) {
     return props.options
@@ -91,14 +91,14 @@ const onApply = () => {
     <div>
       <div class="sticky top-0 z-10 w-full space-y-3 bg-white py-3">
         <div class="flex w-full items-center justify-between">
-          <div class="text-xl font-semibold">Curriculum</div>
+          <div class="text-xl font-semibold">Progression</div>
           <div class="cursor-pointer" @click="emit('close')">
             <Icon icon="ph:x" class="text-2xl" />
           </div>
         </div>
         <AppTextInput
           name="query"
-          placeholder="Search curriculum"
+          placeholder="Search progression"
           v-model="queryState"
           suffix-icon="ph:magnifying-glass"
         />
@@ -112,7 +112,7 @@ const onApply = () => {
         >
           <div class="text-center">
             <Icon icon="ph:magnifying-glass" class="mx-auto mb-2 text-4xl" />
-            <p>No curriculum found</p>
+            <p>No progression found</p>
           </div>
         </div>
 
@@ -121,13 +121,7 @@ const onApply = () => {
           :key="opt.value"
           class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
         >
-          <div
-            class="h-6 w-6 flex-shrink-0 rounded-full"
-            :style="{
-              backgroundColor: opt.color
-            }"
-          ></div>
-          <label :for="`curriculum_filter_${opt.value}`" class="grow truncate text-sm">
+          <label :for="`progression_filter_${opt.value}`" class="grow truncate text-sm">
             {{ opt.label }}
           </label>
 
@@ -135,8 +129,8 @@ const onApply = () => {
           <input
             v-if="useMultipleSelect"
             type="checkbox"
-            :name="`curriculum_filter_${opt.value}`"
-            :id="`curriculum_filter_${opt.value}`"
+            :name="`progression_filter_${opt.value}`"
+            :id="`progression_filter_${opt.value}`"
             :checked="selectedState.includes(opt.value)"
             :value="opt.value"
             class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
@@ -147,8 +141,8 @@ const onApply = () => {
           <input
             v-else
             type="radio"
-            name="curriculum_filter"
-            :id="`curriculum_filter_${opt.value}`"
+            name="progression_filter"
+            :id="`progression_filter_${opt.value}`"
             :checked="selectedState.includes(opt.value)"
             :value="opt.value"
             class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"

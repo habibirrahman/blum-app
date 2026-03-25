@@ -252,6 +252,7 @@ export interface Target {
 
   name?: string
   description?: string
+  simplified_description?: string
   goal_time?: string
   success_metric?: string
   type_name?: string
@@ -266,15 +267,23 @@ export interface Target {
   duration?: number
   total_success?: number
   consecutive_success?: number
+  position?: number
+  total_entries?: number
 
   completed?: boolean
   probing_enable?: boolean
   is_group?: boolean
   enable_problem_behavior?: boolean
   allow_overtime_recording?: boolean
+  in_maintenance?: boolean
+  has_ongoing_session?: boolean
 
   date_introduce?: string
   date_mastered?: string
+  progress_date?: string
+  achieved_date?: string
+  maintenance_start_at?: string
+  lost_skill_date?: string
   created_at?: string
   updated_at?: string
   deleted_at?: string
@@ -296,8 +305,24 @@ export interface Target {
   target_problem_behaviors?: TargetProblemBehavior[]
   target_variables?: TargetVariable[]
 
-  group_id?: GroupTarget['id']
-  group?: GroupTarget
+  parent_id?: Target['id']
+  group_id?: Target['id']
+  group?: {
+    id?: Target['id']
+    name?: Target['name']
+  }
+
+  progression?: {
+    next_target?: {
+      id?: Target['id']
+      name?: Target['name']
+      status?: 'activate' | 'create'
+    }
+    progression_id?: Progression['id']
+    progression_name?: Progression['name']
+    progressions?: Progression[]
+  }
+  progressions?: Progression[]
 }
 
 export interface Prompt {
@@ -359,19 +384,45 @@ export interface Curriculum {
   name?: string
 }
 
+export type RecommendedActionType = 'mastered' | 'activate_next_target' | 'maintenance'
+
 export interface ActionRecommendation {
   id?: number
   total_success?: number
   consecutive_success?: number
-  recommended_action?: string
+  recommended_action?: RecommendedActionType
   visible?: boolean
   passed?: boolean
+  is_enabled?: boolean
+  accepted_at?: string,
+  accepted_by_id?: User['id'],
   latest_session_by?: User
   target_id?: Target['id']
   target?: Target
 }
 
-export interface GroupTarget {
+export interface ProgressionStep {
   id?: number
+  target_id?: Target['id']
+  position?: number
+  is_last?: boolean
+  target?: {
+    id?: Target['id']
+    name?: Target['name']
+    curriculum_name?: Curriculum['name']
+    curriculum_color?: Curriculum['color']
+    type?: TargetType
+    node_role?: 'entry' | 'exit' | 'bridge'
+  }
+}
+
+export interface Progression {
+  id?: number
+  center_id?: number
   name?: string
+  description?: string
+  created_at?: string
+  updated_at?: string
+  number_of_steps?: number
+  progression_steps?: ProgressionStep[]
 }
