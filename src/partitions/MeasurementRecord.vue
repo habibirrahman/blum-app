@@ -24,6 +24,7 @@ import ColdProbe from './measurement/ColdProbe.vue'
 import TaskAnalysis from './measurement/TaskAnalysis.vue'
 import { useAppStore } from '@/stores/app.store'
 import AppCheckInput from '@/components/AppCheckInput.vue'
+import moment from 'moment'
 
 const toast = useToast()
 const appStore = useAppStore()
@@ -320,6 +321,23 @@ const currentLapTime = computed<string>(() => {
   const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
 
   return `${hours}:${minutes}:${seconds}`
+})
+
+const isMaintenanceDisplayable = computed<boolean>(() => {
+  const target = props.measurement.target
+  if (!target || !target.in_maintenance) return false
+  if (!target.maintenance_next_date) return false
+
+  const nextDate = moment(new Date(target.maintenance_next_date))
+  const today = moment().startOf('day')
+
+  if (nextDate.isSameOrBefore(today, 'day') && target.maintenance_status === 'overdue') {
+    return true
+  }
+  if (nextDate.isSame(today, 'day')) {
+    return true
+  }
+  return false
 })
 
 const generateLaps = (results: Measurement['results']) => {
@@ -726,6 +744,13 @@ const taskAnalysisPrompts = computed(() => {
             >
               <div class="text-sm font-semibold text-slate-7">
                 {{ measurement.target?.curriculum_name }}
+              </div>
+              <div v-if="isMaintenanceDisplayable" class="shrink-0">
+                <div
+                  class="flex items-center px-2 h-6 text-xs font-semibold rounded-full bg-orange-2 text-orange-7"
+                >
+                  {{ measurement.target?.maintenance_badge || 'Maintenance' }}
+                </div>
               </div>
               <div v-if="measurementType.includes('Probing')" class="shrink-0">
                 <div

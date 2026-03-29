@@ -9,6 +9,8 @@ import moment from 'moment'
 import { useAppStore } from '@/stores/app.store'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import CommentItem from '@/partitions/CommentItem.vue'
+import UpcomingMaintenanceModal from '@/partitions/session/UpcomingMaintenanceModal.vue'
+import type { Target } from '@/lib/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -96,6 +98,22 @@ const scheduleDetails = computed<Schedule[]>(() => [
   }
 ])
 
+const isMaintenanceDisplayable = (target?: Target) => {
+  if (!target || !target.in_maintenance) return false
+  if (!target.maintenance_next_date) return false
+
+  const nextDate = moment(new Date(target.maintenance_next_date))
+  const today = moment().startOf('day')
+
+  if (nextDate.isSameOrBefore(today, 'day') && target.maintenance_status === 'overdue') {
+    return true
+  }
+  if (nextDate.isSame(today, 'day')) {
+    return true
+  }
+  return false
+}
+
 const showActionBeforeLunch = ref<boolean>(false)
 const isLunchBeforeSchedule = ref<boolean>(false)
 const isLunchNotAssigned = ref<boolean>(false)
@@ -116,13 +134,39 @@ const lunchDetails = computed<Schedule[]>(() => [
   },
   { icon: 'ph:user', label: sessionStore.session?.appointment?.user?.name }
 ])
-const onLaunchSession = async () => {
+const upcomingMaintenanceOpened = ref(false)
+const upcomingMaintenanceTargets = computed<Target[]>(() => {
+  return sessionStore.session_measurements
+    .map(m => m.target)
+    .filter(t => t && t.in_maintenance && t.maintenance_status === 'scheduled') as Target[]
+})
+
+const doLaunchSession = async () => {
   startSessionLoading.value = true
   const { success } = await sessionStore.startSession()
   startSessionLoading.value = false
   if (!success) return
   showActionBeforeLunch.value = false
   router.push({ name: 'session-record', params: { slug: sessionStore.session?.slug } })
+}
+
+const onLaunchSession = () => {
+  showActionBeforeLunch.value = false
+  if (upcomingMaintenanceTargets.value.length > 0) {
+    upcomingMaintenanceOpened.value = true
+  } else {
+    doLaunchSession()
+  }
+}
+
+const onUpcomingMaintenanceSubmit = () => {
+  upcomingMaintenanceOpened.value = false
+  doLaunchSession()
+}
+
+const onUpcomingMaintenanceClose = () => {
+  upcomingMaintenanceOpened.value = false
+  doLaunchSession()
 }
 const onStartSession = () => {
   isLunchBeforeSchedule.value = false
@@ -150,9 +194,9 @@ const onStartSession = () => {
 
 <template>
   <div class="sticky top-0 z-10 bg-white">
-    <div class="flex items-center justify-between gap-4 px-4 h-14">
-      <div class="flex items-center gap-3 truncate">
-        <RouterLink :to="redirect" class="flex items-center justify-center w-8 h-8 shrink-0">
+    <div class="flex gap-4 justify-between items-center px-4 h-14">
+      <div class="flex gap-3 items-center truncate">
+        <RouterLink :to="redirect" class="flex justify-center items-center w-8 h-8 shrink-0">
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </RouterLink>
         <div class="space-y-1">
@@ -187,16 +231,16 @@ const onStartSession = () => {
     <div v-if="isScheduled" class="flex flex-col">
       <div class="py-3 text-xs text-center text-slate-7">This session is scheduled:</div>
       <div class="pl-4">
-        <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
+        <div class="flex overflow-x-auto gap-2 pr-4 pb-3 snap-x snap-mandatory scroll-smooth">
           <div
             v-for="(item, idx) in scheduleDetails"
             :key="item.title"
             class="flex gap-2 snap-start"
           >
-            <div v-if="idx > 0" class="h-10 w-0.5 shrink-0 bg-slate-3"></div>
-            <div class="flex items-center h-10 gap-2">
+            <div v-if="idx > 0" class="w-0.5 h-10 shrink-0 bg-slate-3"></div>
+            <div class="flex gap-2 items-center h-10">
               <div
-                class="flex items-center justify-center rounded h-7 w-7 shrink-0 bg-light-purple-1"
+                class="flex justify-center items-center w-7 h-7 rounded shrink-0 bg-light-purple-1"
               >
                 <Icon :icon="item.icon" class="text-light-purple-4" />
               </div>
@@ -211,7 +255,7 @@ const onStartSession = () => {
     </div>
     <div class="py-6 space-y-6">
       <div v-if="sessionLoading">
-        <div class="w-64 h-4 rounded-full shrink-0 animate-pulse bg-prim-1"></div>
+        <div class="w-64 h-4 rounded-full animate-pulse shrink-0 bg-prim-1"></div>
       </div>
       <div
         v-else-if="sessionStore.session_measurements.length"
@@ -222,12 +266,12 @@ const onStartSession = () => {
 
       <div v-if="commentsLoading" class="px-4 space-y-2">
         <div class="flex h-[30px] items-center justify-center">
-          <div class="w-32 h-4 rounded-full shrink-0 animate-pulse bg-prim-1"></div>
+          <div class="w-32 h-4 rounded-full animate-pulse shrink-0 bg-prim-1"></div>
         </div>
         <div
           v-for="n in 2"
           :key="n"
-          class="w-full h-32 rounded shrink-0 animate-pulse bg-prim-1"
+          class="w-full h-32 rounded animate-pulse shrink-0 bg-prim-1"
         ></div>
       </div>
       <div v-else-if="sessionStore.session_comments.length" class="px-4 space-y-2">
@@ -243,7 +287,7 @@ const onStartSession = () => {
             :class="{ 'rotate-180': !showComments }"
           />
         </div>
-        <div class="space-y-2 overflow-hidden transition-all" :class="{ 'h-0': !showComments }">
+        <div class="overflow-hidden space-y-2 transition-all" :class="{ 'h-0': !showComments }">
           <CommentItem
             v-for="comment in sessionStore.session_comments"
             :key="comment.id"
@@ -254,12 +298,12 @@ const onStartSession = () => {
 
       <div v-if="sessionLoading" class="px-4 space-y-2">
         <div class="flex h-[30px] items-center justify-center">
-          <div class="w-32 h-4 rounded-full shrink-0 animate-pulse bg-prim-1"></div>
+          <div class="w-32 h-4 rounded-full animate-pulse shrink-0 bg-prim-1"></div>
         </div>
         <div
           v-for="n in 8"
           :key="n"
-          class="w-full h-32 rounded shrink-0 animate-pulse bg-prim-1"
+          class="w-full h-32 rounded animate-pulse shrink-0 bg-prim-1"
         ></div>
       </div>
       <div
@@ -277,7 +321,7 @@ const onStartSession = () => {
         <div
           v-for="measurement in sessionStore.session_measurements"
           :key="measurement.id"
-          class="w-full bg-white border rounded border-prim-4"
+          class="w-full bg-white rounded border border-prim-4"
           :style="{
             boxShadow: '4px 4px 0px 0px #D6C7E066'
           }"
@@ -292,7 +336,7 @@ const onStartSession = () => {
             :style="{ backgroundColor: measurement.target?.curriculum_color }"
           ></div>
           <div class="px-4 py-3 space-y-2">
-            <div v-if="measurement.target?.is_group" class="flex items-center gap-2">
+            <div v-if="measurement.target?.is_group" class="flex gap-2 items-center">
               <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
               <div class="text-sm font-semibold text-slate-9">
                 {{ measurement.target?.name }}
@@ -307,11 +351,11 @@ const onStartSession = () => {
             <!-- target information -->
             <div
               v-if="measurement.target?.is_group"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               <div>Grouped targets - {{ getTargetType(measurement.target?.type) }}</div>
             </div>
-            <div v-else class="space-y-0.5 text-wrap text-sm text-slate-8">
+            <div v-else class="space-y-0.5 text-sm text-wrap text-slate-8">
               <div>{{ getTargetType(measurement?.target?.type) }}</div>
               <div
                 v-if="
@@ -410,11 +454,11 @@ const onStartSession = () => {
             <!-- probing -->
             <div
               v-if="measurement.type === 'Measurement::Probing'"
-              class="h-0.5 w-full shrink-0 bg-slate-3"
+              class="w-full h-0.5 shrink-0 bg-slate-3"
             ></div>
             <div
               v-if="measurement.type === 'Measurement::Probing'"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               <div>Probing activated</div>
               <div>
@@ -428,8 +472,8 @@ const onStartSession = () => {
             </div>
             <!-- end probing -->
             <!-- target description -->
-            <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
-            <div class="space-y-0.5 text-wrap text-sm text-slate-8">
+            <div class="w-full h-0.5 shrink-0 bg-slate-3"></div>
+            <div class="space-y-0.5 text-sm text-wrap text-slate-8">
               <div v-if="!measurement.target?.description" class="italic">No description</div>
               <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
@@ -437,14 +481,53 @@ const onStartSession = () => {
             <!-- last phase line -->
             <div
               v-if="measurement.target?.last_phase_line"
-              class="h-0.5 w-full shrink-0 bg-slate-3"
+              class="w-full h-0.5 shrink-0 bg-slate-3"
             ></div>
             <div
-              v-if="measurement.target?.last_phase_line"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              v-if="measurement.target?.last_phase_line && !measurement.target?.in_maintenance"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               Data from this session will be added to the
               <span class="font-semibold">{{ measurement.target.last_phase_line?.label }}</span>
+              phase.
+            </div>
+            <div
+              v-if="
+                measurement.target?.last_phase_line &&
+                measurement.target?.in_maintenance &&
+                isMaintenanceDisplayable(measurement.target)
+              "
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
+            >
+              Data from this session will be added to the
+              <span class="font-semibold"
+                >{{ measurement.target.last_phase_line?.label }} ({{
+                  displayDate({
+                    date: measurement.target.last_phase_line?.date,
+                    format: 'DD MMM YY'
+                  })
+                }})</span
+              >
+              phase.
+            </div>
+            <div
+              v-if="
+                !measurement.target?.last_phase_line &&
+                measurement.target?.in_maintenance &&
+                isMaintenanceDisplayable(measurement.target)
+              "
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
+            >
+              Data from this session will be added to the
+              <span class="font-semibold">Maintenance</span>
+              phase.
+            </div>
+            <div
+              v-if="!isMaintenanceDisplayable(measurement.target)"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
+            >
+              Data from this session will be added to the
+              <span class="font-semibold">Teaching</span>
               phase.
             </div>
             <!-- end last phase line -->
@@ -545,14 +628,14 @@ const onStartSession = () => {
   </div>
 
   <AppActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
-    <div class="flex flex-col items-center gap-4 py-3">
+    <div class="flex flex-col gap-4 items-center py-3">
       <div
         v-if="actionBeforeLunchStatus === 'before_schedule'"
-        class="flex flex-col items-center gap-4"
+        class="flex flex-col gap-4 items-center"
       >
         <div class="text-xl font-semibold text-center">Session launch before schedule</div>
         <div class="text-sm text-center">This session is scheduled for:</div>
-        <div class="flex flex-wrap justify-center w-full gap-3">
+        <div class="flex flex-wrap gap-3 justify-center w-full">
           <div
             v-for="item in lunchDetails"
             :key="item.icon"
@@ -566,7 +649,7 @@ const onStartSession = () => {
       </div>
       <div
         v-if="actionBeforeLunchStatus === 'not_assigned'"
-        class="flex flex-col items-center gap-4"
+        class="flex flex-col gap-4 items-center"
       >
         <div class="text-xl font-semibold text-center">You're not assigned to this session</div>
         <div class="text-sm text-center">
@@ -575,7 +658,7 @@ const onStartSession = () => {
           you wish to proceed?
         </div>
       </div>
-      <div v-if="actionBeforeLunchStatus === 'both'" class="flex flex-col items-center gap-4">
+      <div v-if="actionBeforeLunchStatus === 'both'" class="flex flex-col gap-4 items-center">
         <div class="text-xl font-semibold text-center">Early start for unassigned session</div>
         <div class="text-sm text-center">
           The session scheduled for
@@ -591,10 +674,18 @@ const onStartSession = () => {
           early and not assigned to you. Are you sure you want to start?
         </div>
       </div>
-      <div class="grid w-full grid-cols-2 gap-2">
+      <div class="grid grid-cols-2 gap-2 w-full">
         <AppButton kind="plain" @click="showActionBeforeLunch = false">Cancel</AppButton>
         <AppButton :loading="startSessionLoading" @click="onLaunchSession">Proceed</AppButton>
       </div>
     </div>
   </AppActionSheet>
+
+  <UpcomingMaintenanceModal
+    v-if="upcomingMaintenanceOpened"
+    v-bind:targets="upcomingMaintenanceTargets"
+    v-bind:session-id="sessionStore.session?.id || ''"
+    @close="onUpcomingMaintenanceClose"
+    @submit="onUpcomingMaintenanceSubmit"
+  />
 </template>

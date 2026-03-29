@@ -9,7 +9,7 @@ interface DisplayDate {
 
 export const displayDate = ({ date, format = 'DD/MM/YYYY', empty = '' }: DisplayDate): string => {
   if (!date) return empty
-  return moment(date).format(format)
+  return moment(new Date(date)).format(format)
 }
 
 export const getMeasurementType = (type?: MeasurementType): string => {

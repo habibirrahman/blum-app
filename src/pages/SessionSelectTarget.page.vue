@@ -212,9 +212,9 @@ const onAddCheckedTargets = async () => {
 
 <template>
   <div class="sticky top-0 z-10 bg-white">
-    <div class="flex items-center justify-between gap-4 px-4 h-14">
-      <div class="flex items-center gap-3 truncate">
-        <RouterLink :to="redirect" class="flex items-center justify-center w-8 h-8 shrink-0">
+    <div class="flex gap-4 justify-between items-center px-4 h-14">
+      <div class="flex gap-3 items-center truncate">
+        <RouterLink :to="redirect" class="flex justify-center items-center w-8 h-8 shrink-0">
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </RouterLink>
         <div class="truncate text-[22px] text-xl font-bold">Select targets</div>
@@ -223,8 +223,8 @@ const onAddCheckedTargets = async () => {
   </div>
 
   <div>
-    <div class="sticky z-10 pt-3 space-y-3 bg-white top-14">
-      <div class="flex items-center gap-4 px-4">
+    <div class="sticky top-14 z-10 pt-3 space-y-3 bg-white">
+      <div class="flex gap-4 items-center px-4">
         <AppTextInput
           name="query"
           placeholder="Search target by name"
@@ -234,9 +234,9 @@ const onAddCheckedTargets = async () => {
         />
       </div>
       <div class="pl-4">
-        <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
+        <div class="flex overflow-x-auto gap-2 pr-4 pb-3 snap-x snap-mandatory scroll-smooth">
           <div
-            class="flex items-center h-8 px-3 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
+            class="flex items-center px-3 h-8 text-xs font-medium rounded-full border transition-all cursor-pointer shrink-0 snap-start"
             :class="[
               selected
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -250,7 +250,7 @@ const onAddCheckedTargets = async () => {
           <div
             v-for="opt in statusOptions"
             :key="opt.value"
-            class="flex items-center h-8 px-3 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
+            class="flex items-center px-3 h-8 text-xs font-medium rounded-full border transition-all cursor-pointer shrink-0 snap-start"
             :class="[
               statuses.includes(opt.value)
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -266,7 +266,7 @@ const onAddCheckedTargets = async () => {
 
     <div v-if="targetsLoading">
       <div class="px-4 pt-2">
-        <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
+        <div class="w-24 h-4 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
       </div>
       <div class="px-4">
         <TargetItemLoader v-for="n in perPage" :key="n" />
@@ -274,7 +274,7 @@ const onAddCheckedTargets = async () => {
     </div>
     <div
       v-else-if="!filteredTargetsCount"
-      class="flex items-center justify-center w-full h-64 px-4"
+      class="flex justify-center items-center px-4 w-full h-64"
     >
       <div v-if="statuses.length" class="text-sm text-center text-slate-8">
         Oops! No targets fit your filter criteria. Try changing the filter to find more results!
@@ -290,7 +290,7 @@ const onAddCheckedTargets = async () => {
       </div>
     </div>
     <div v-else class="mb-24">
-      <div class="flex items-center justify-between px-4 pt-2 text-xs text-slate-7">
+      <div class="flex justify-between items-center px-4 pt-2 text-xs text-slate-7">
         <div v-if="selected" class="h-5">
           <span>Showing </span>
           <span> {{ checkedTargetIds.length }} </span>
@@ -326,8 +326,8 @@ const onAddCheckedTargets = async () => {
                 />
               </div>
 
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
+              <div class="flex justify-between items-center">
+                <div class="flex gap-2 items-center">
                   <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
                   <div class="text-sm font-semibold text-slate-10">
                     {{ target.name }}
@@ -346,6 +346,7 @@ const onAddCheckedTargets = async () => {
             v-else
             :target="target"
             use-action
+            show-badge
             :is-checked="checkedTargetIds.includes(target.id)"
             @toggle-check="onCheckTarget(target.id)"
             @click="onOpenTarget($event, target)"
@@ -362,7 +363,7 @@ const onAddCheckedTargets = async () => {
     </div>
   </div>
 
-  <div class="fixed bottom-0 z-20 w-full px-4 bg-pure-white pb-safe">
+  <div class="fixed bottom-0 z-20 px-4 w-full bg-pure-white pb-safe">
     <div class="flex items-center w-full h-16">
       <AppButton
         class="grow"

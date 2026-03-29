@@ -3,6 +3,9 @@ import type { Target } from '@/lib/types'
 import AppChip from '@/components/AppChip.vue'
 import { getTargetType } from '@/lib/func'
 import AppCheckInput from '@/components/AppCheckInput.vue'
+import { Icon } from '@iconify/vue'
+import { computed } from 'vue'
+import moment from 'moment'
 
 interface Props {
   target: Target
@@ -10,6 +13,7 @@ interface Props {
   showStatus?: boolean
   isChecked?: boolean
   useAction?: boolean
+  showBadge?: boolean
 }
 
 interface Emits {
@@ -19,10 +23,11 @@ interface Emits {
 
 const emit = defineEmits<Emits>()
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   showType: false,
   showStatus: true,
-  isChecked: false
+  isChecked: false,
+  showBadge: false
 })
 
 const handleCheckboxClick = (event: Event) => {
@@ -33,6 +38,29 @@ const handleCheckboxClick = (event: Event) => {
 const handleOpenDetail = () => {
   emit('open')
 }
+
+const maintenanceBadgeColor = computed<string>(() => {
+  if (!props.target.in_maintenance || !props.target.maintenance_next_date) return 'info'
+  const nextDate = moment(new Date(props.target.maintenance_next_date))
+  const today = moment().startOf('day')
+  if (nextDate.isSameOrBefore(today, 'day') && props.target.maintenance_status === 'overdue') {
+    return 'text-tomato-7'
+  }
+  return 'text-info'
+})
+
+const maintenanceBadgeText = computed<string>(() => {
+  if (!props.target.in_maintenance || !props.target.maintenance_next_date) return ''
+  const nextDate = moment(new Date(props.target.maintenance_next_date))
+  const today = moment().startOf('day')
+  if (nextDate.isSameOrBefore(today, 'day') && props.target.maintenance_status === 'overdue') {
+    return `Maintenance overdue on ${nextDate.format('DD MMM YY')}`
+  }
+  if (nextDate.isSame(today, 'day')) {
+    return 'Maintenance due today'
+  }
+  return `Maintenance on ${nextDate.format('DD MMM YY')}`
+})
 </script>
 
 <template>
@@ -41,8 +69,11 @@ const handleOpenDetail = () => {
       class="flex flex-col flex-1 gap-1.5 justify-center px-4 truncate cursor-pointer"
       @click="handleOpenDetail"
     >
-      <div v-if="showStatus" class="flex">
+      <div v-if="showStatus" class="flex gap-2 items-center">
         <AppChip :chip="target.status" />
+        <div v-if="showBadge && target.in_maintenance" class="p-1 rounded bg-orange-3">
+          <Icon icon="mynaui:info-waves-solid" class="text-orange-6" />
+        </div>
       </div>
       <div class="text-xs truncate text-slate-8">
         {{ target.curriculum_name }}
@@ -55,6 +86,14 @@ const handleOpenDetail = () => {
       </div>
       <div v-if="showType" class="text-xs font-medium text-slate-8">
         {{ getTargetType(target.type) }}
+      </div>
+
+      <div
+        v-if="target.in_maintenance && target.maintenance_next_date"
+        class="flex gap-1 items-center pointer-events-none"
+      >
+        <Icon icon="circum:calendar" :class="maintenanceBadgeColor"/>
+        <div class="mt-0.5 text-xs" :class="maintenanceBadgeColor" v-html="maintenanceBadgeText"></div>
       </div>
     </div>
 

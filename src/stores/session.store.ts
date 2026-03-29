@@ -62,6 +62,10 @@ export interface AddMultipleTargetSessionParams {
   id: Session['id']
   target_ids: Target['id'][]
 }
+export interface AdvanceMaintenanceSessionParams {
+  id: Session['id']
+  target_ids: Target['id'][]
+}
 export interface UpdateMeasurementParams {
   id: Measurement['id']
   measurement: Measurement
@@ -1084,6 +1088,19 @@ export const useSessionStore = defineStore('session', {
         })
         .then((response) => {
           this.setSession(response.data)
+          return { success: true, data: response.data, message: '' }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
+    async advanceMaintenanceSession({ id, target_ids }: AdvanceMaintenanceSessionParams) {
+      return axios
+        .post(`/api/v1/sessions/${id}/advance_maintenance`, {
+          target_ids
+        })
+        .then((response) => {
           return { success: true, data: response.data, message: '' }
         })
         .catch((error) => {

@@ -269,6 +269,9 @@ export interface Target {
   consecutive_success?: number
   position?: number
   total_entries?: number
+  maintenance_next_date?: string
+  maintenance_status?: 'overdue' | 'due' | 'scheduled'
+  maintenance_badge?: string
 
   completed?: boolean
   probing_enable?: boolean
@@ -277,6 +280,7 @@ export interface Target {
   allow_overtime_recording?: boolean
   in_maintenance?: boolean
   has_ongoing_session?: boolean
+  last_maintenance_session_result?: any
 
   date_introduce?: string
   date_mastered?: string
@@ -298,6 +302,7 @@ export interface Target {
     label?: string
     color?: string
     description?: string
+    date?: string
   }
   prompts?: Prompt[]
   target_tasks?: TargetTask[]
@@ -399,6 +404,8 @@ export interface ActionRecommendation {
   latest_session_by?: User
   target_id?: Target['id']
   target?: Target
+  maintenance_config?: any
+  maintenance_state?: any
 }
 
 export interface ProgressionStep {
