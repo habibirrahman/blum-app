@@ -791,6 +791,7 @@ export const useSessionStore = defineStore('session', {
           this.session_measurements[idx].comment = data.comment
         } else {
           this.session_measurements[idx] = data
+          // force new reference
           this.session_measurements = [...this.session_measurements]
         }
       }
