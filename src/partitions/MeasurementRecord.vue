@@ -625,7 +625,7 @@ const taskAnalysisPrompts = computed(() => {
 
 <template>
   <div
-    class="relative rounded transition-all shrink-0"
+    class="relative shrink-0 rounded transition-all"
     :class="{
       'h-[600px] w-[320px]': !isCollapsed,
       'h-[160px] w-full': isCollapsed,
@@ -634,12 +634,12 @@ const taskAnalysisPrompts = computed(() => {
   >
     <div
       v-if="reviewMode && measurement.is_fixed"
-      class="flex absolute left-0 -top-6 justify-center items-center w-16 h-16 bg-white rounded-full"
+      class="absolute -top-6 left-0 flex h-16 w-16 items-center justify-center rounded-full bg-white"
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
     <div
-      class="flex flex-col h-full"
+      class="flex h-full flex-col"
       :class="{ 'pointer-events-none': reviewMode && sessionStore.session?.status !== 'draft' }"
     >
       <div
@@ -649,11 +649,11 @@ const taskAnalysisPrompts = computed(() => {
       <div v-if="!isCollapsed" id="measurememt-header">
         <div
           v-if="sessionStore.session?.status === 'draft'"
-          class="flex justify-between items-center px-2 w-full h-9 shrink-0 bg-prim-2"
+          class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-2"
         >
           <div
             v-if="useLock"
-            class="flex justify-center items-center w-7 h-7 bg-white rounded transition-all"
+            class="flex h-7 w-7 items-center justify-center rounded bg-white transition-all"
             @click="emit('toggle-lock')"
           >
             <Icon icon="ph:lock-open-fill" class="text-2xl text-light-purple-5" />
@@ -669,22 +669,22 @@ const taskAnalysisPrompts = computed(() => {
             />
           </div>
         </div>
-        <div v-else class="flex justify-between items-center px-4 w-full h-9 shrink-0 bg-prim-2">
+        <div v-else class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-4">
           <div
-            class="flex justify-center items-center w-6 h-6 rounded transition-all"
+            class="flex h-6 w-6 items-center justify-center rounded transition-all"
             :class="{ 'bg-white': display === 'description' }"
             @click="onChangeDisplay('description')"
           >
             <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
           </div>
           <div
-            class="flex relative justify-center items-center w-6 h-6 rounded transition-all"
+            class="relative flex h-6 w-6 items-center justify-center rounded transition-all"
             :class="{ 'bg-white': display === 'comment' }"
             @click="onChangeDisplay('comment')"
           >
             <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
             <div
-              class="absolute top-px right-px w-2 h-2 rounded-full transition-all bg-light-purple-5"
+              class="absolute right-px top-px h-2 w-2 rounded-full bg-light-purple-5 transition-all"
               :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
             ></div>
           </div>
@@ -700,18 +700,18 @@ const taskAnalysisPrompts = computed(() => {
         </div>
       </div>
 
-      <div v-if="cardLoading" class="flex flex-col justify-center items-center h-full bg-white">
-        <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <div v-if="cardLoading" class="flex h-full flex-col items-center justify-center bg-white">
+        <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
       </div>
       <div
         v-else
         id="measurememt-body"
-        class="flex flex-col gap-2 px-4 pb-3 h-full bg-white rounded-b"
+        class="flex h-full flex-col gap-2 rounded-b bg-white px-4 pb-3"
         :class="[isCollapsed ? 'pt-3' : 'no-scrollbar overflow-y-auto']"
       >
         <div v-if="!isCollapsed" id="card-title" class="pt-3">
-          <div v-if="measurement.target?.is_group" class="flex gap-2 items-center">
-            <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
+          <div v-if="measurement.target?.is_group" class="flex items-center gap-2">
+            <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
             <div
               class="text-sm font-semibold text-slate-9"
               :class="{ 'line-clamp-2': display === 'target' || display === 'comment' }"
@@ -721,7 +721,7 @@ const taskAnalysisPrompts = computed(() => {
           </div>
           <div v-else class="flex flex-col gap-1">
             <div
-              class="flex gap-x-2 items-center"
+              class="flex items-center gap-x-2"
               :class="{ 'flex-wrap': display === 'target' || display === 'comment' }"
             >
               <div class="text-sm font-semibold text-slate-7">
@@ -729,14 +729,14 @@ const taskAnalysisPrompts = computed(() => {
               </div>
               <div v-if="measurementType.includes('Probing')" class="shrink-0">
                 <div
-                  class="flex items-center px-2 h-6 text-xs font-semibold rounded-full bg-lime-2 text-lime-7"
+                  class="flex h-6 items-center rounded-full bg-lime-2 px-2 text-xs font-semibold text-lime-7"
                 >
                   Probing
                 </div>
               </div>
               <div v-if="measurement.target?.allow_overtime_recording" class="shrink-0">
                 <div
-                  class="flex items-center px-2 h-6 text-xs rounded-full bg-slate-3 text-slate-8"
+                  class="flex h-6 items-center rounded-full bg-slate-3 px-2 text-xs text-slate-8"
                 >
                   Overtime on
                 </div>
@@ -750,27 +750,27 @@ const taskAnalysisPrompts = computed(() => {
             </div>
           </div>
         </div>
-        <div v-if="display === 'target'" class="flex gap-3 h-full">
+        <div v-if="display === 'target'" class="flex h-full gap-3">
           <div
             v-if="isDropped"
-            class="flex flex-col flex-grow gap-4 justify-center items-center min-h-full"
+            class="flex min-h-full flex-grow flex-col items-center justify-center gap-4"
           >
-            <Icon icon="solar:clipboard-remove-bold" class="w-20 h-20 text-tulip-6" />
-            <div v-if="!isCollapsed" class="space-y-2 w-72">
-              <div class="font-semibold text-center">Entry not recorded</div>
-              <div class="text-sm text-center text-slate-8">
+            <Icon icon="solar:clipboard-remove-bold" class="h-20 w-20 text-tulip-6" />
+            <div v-if="!isCollapsed" class="w-72 space-y-2">
+              <div class="text-center font-semibold">Entry not recorded</div>
+              <div class="text-center text-sm text-slate-8">
                 This entry will not be saved when the Session ends. Toggle back to save this entry
                 recording.
               </div>
             </div>
           </div>
-          <div v-else :key="`measurement-card-${cardId}`" class="w-full h-full">
+          <div v-else :key="`measurement-card-${cardId}`" class="h-full w-full">
             <!-- Tambahkan sync status indicator (optional) -->
             <div
               v-if="sessionStore.session?.status === 'ongoing' && hasPendingSync && !isCollapsed"
               class="flex"
             >
-              <div class="px-2 py-1 text-xs rounded bg-tulip-1 text-tulip-7">
+              <div class="rounded bg-tulip-1 px-2 py-1 text-xs text-tulip-7">
                 {{ syncStatusText }}
               </div>
             </div>
@@ -788,6 +788,7 @@ const taskAnalysisPrompts = computed(() => {
               :is-collapsed="isCollapsed"
               :reset-confirmation="resetConfirmation"
               :is-disabled-action="isDisabledAction"
+              @toggle-updated="onToggleUpdated($event)"
               @toggle-timer="onToggleDurationLatencyTimer"
               @record-lap="onRecordLap"
               @reset-laps-confirm="resetConfirmation = true"
@@ -837,6 +838,7 @@ const taskAnalysisPrompts = computed(() => {
               :measurement="measurement"
               :measurement-results="measurementResults"
               :is-collapsed="isCollapsed"
+              @toggle-updated="onToggleUpdated($event)"
               @toggle-collapsed="emit('toggle-collapsed', $event)"
               @fetch-session="emit('fetch-session')"
               @after-commit="emit('after-commit')"
@@ -864,6 +866,7 @@ const taskAnalysisPrompts = computed(() => {
               :measurement-results="measurementResults"
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
+              @toggle-updated="onToggleUpdated($event)"
               @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
             />
@@ -873,6 +876,7 @@ const taskAnalysisPrompts = computed(() => {
               :measurement-results="measurementResults"
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
+              @toggle-updated="onToggleUpdated($event)"
               @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
             />
@@ -889,7 +893,7 @@ const taskAnalysisPrompts = computed(() => {
           </div>
           <div
             v-if="isCollapsed"
-            class="flex justify-center items-center w-8 rounded-full shrink-0 bg-slate-4"
+            class="flex w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
             @click="emit('toggle-collapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
@@ -900,11 +904,11 @@ const taskAnalysisPrompts = computed(() => {
             <!-- target information -->
             <div
               v-if="measurement.target?.is_group"
-              class="space-y-0.5 text-sm text-wrap text-slate-8"
+              class="space-y-0.5 text-wrap text-sm text-slate-8"
             >
               <div>Grouped targets - {{ getTargetType(measurement.target?.type) }}</div>
             </div>
-            <div class="space-y-0.5 text-sm text-wrap text-slate-8">
+            <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div v-if="!measurement.target?.is_group">
                 {{ getTargetType(measurement.target?.type) }}
               </div>
@@ -980,7 +984,7 @@ const taskAnalysisPrompts = computed(() => {
             <!-- probing -->
             <div
               v-if="measurementType.includes('Probing')"
-              class="space-y-0.5 text-sm text-wrap text-slate-8"
+              class="space-y-0.5 text-wrap text-sm text-slate-8"
             >
               <div>Probing activated</div>
               <div>
@@ -994,7 +998,7 @@ const taskAnalysisPrompts = computed(() => {
             </div>
             <!-- end probing -->
             <!-- target description -->
-            <div class="space-y-0.5 text-sm text-wrap text-slate-8">
+            <div class="space-y-0.5 text-wrap text-sm text-slate-8">
               <div v-if="!measurement.target?.description" class="italic">No description</div>
               <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
@@ -1002,7 +1006,7 @@ const taskAnalysisPrompts = computed(() => {
             <!-- last past line -->
             <div
               v-if="measurement.target?.last_phase_line"
-              class="space-y-0.5 text-sm text-wrap text-slate-8"
+              class="space-y-0.5 text-wrap text-sm text-slate-8"
             >
               Data from this session will be added to the
               <span class="font-semibold">{{ measurement.target.last_phase_line?.label }}</span>
@@ -1012,7 +1016,7 @@ const taskAnalysisPrompts = computed(() => {
             <!-- sbt -->
             <div v-if="measurement.target?.type === 'Target::Sbt'">
               <!-- sbt taks -->
-              <div class="py-3 space-y-3 border-t-2 border-slate-4">
+              <div class="space-y-3 border-t-2 border-slate-4 py-3">
                 <div
                   v-for="taskCode in measurement.target?.target_tasks"
                   :key="taskCode.id"
@@ -1021,13 +1025,13 @@ const taskAnalysisPrompts = computed(() => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ taskCode.code }} - {{ taskCode.title }}
                   </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
+                  <div class="whitespace-pre-line text-sm text-slate-8">
                     {{ taskCode.description }}
                   </div>
                 </div>
               </div>
               <!-- sbt problem behavior -->
-              <div class="py-3 space-y-3 border-t-2 border-slate-4">
+              <div class="space-y-3 border-t-2 border-slate-4 py-3">
                 <div
                   v-for="problemBehavior in measurement.target?.target_problem_behaviors"
                   :key="problemBehavior.id"
@@ -1036,7 +1040,7 @@ const taskAnalysisPrompts = computed(() => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
+                  <div class="whitespace-pre-line text-sm text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>
@@ -1046,7 +1050,7 @@ const taskAnalysisPrompts = computed(() => {
             <!-- group targets -->
             <div v-if="measurement.target?.is_group">
               <!-- group targets members -->
-              <div class="py-3 space-y-3 border-t-2 border-slate-4">
+              <div class="space-y-3 border-t-2 border-slate-4 py-3">
                 <div
                   v-for="member in measurement.used_targets"
                   :key="member.target_id"
@@ -1055,13 +1059,13 @@ const taskAnalysisPrompts = computed(() => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ member.target_code }} - {{ member.target_name }}
                   </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
+                  <div class="whitespace-pre-line text-sm text-slate-8">
                     {{ member.description }}
                   </div>
                 </div>
               </div>
               <!-- group targets problem behavior -->
-              <div class="py-3 space-y-3 border-t-2 border-slate-4">
+              <div class="space-y-3 border-t-2 border-slate-4 py-3">
                 <div
                   v-for="problemBehavior in measurement.target?.target_problem_behaviors"
                   :key="problemBehavior.id"
@@ -1070,7 +1074,7 @@ const taskAnalysisPrompts = computed(() => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
+                  <div class="whitespace-pre-line text-sm text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>
@@ -1090,7 +1094,7 @@ const taskAnalysisPrompts = computed(() => {
         >
           <div
             v-if="sessionStore.session?.status !== 'ongoing'"
-            class="pt-3 text-sm text-wrap text-slate-8"
+            class="text-wrap pt-3 text-sm text-slate-8"
           >
             {{ measurement.comment || '-' }}
           </div>
@@ -1102,7 +1106,7 @@ const taskAnalysisPrompts = computed(() => {
             v-model="commentInput"
             class="mt-2 h-full"
           />
-          <div class="sticky -bottom-3 z-10 py-3 w-full bg-white">
+          <div class="sticky -bottom-3 z-10 w-full bg-white py-3">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"
