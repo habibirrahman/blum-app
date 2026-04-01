@@ -774,7 +774,10 @@ export const useSessionStore = defineStore('session', {
     setSession(data: Session) {
       this.session = data
       const idx = this.sessions.findIndex((i) => i.id === data.id)
-      if (idx > -1) this.sessions[idx] = data
+      if (idx > -1) {
+        this.sessions[idx] = data
+        this.sessions = [...this.sessions] // force new reference
+      }
       this.syncSessionStore()
     },
     addSession(data: Session) {
@@ -783,12 +786,17 @@ export const useSessionStore = defineStore('session', {
       this.syncSessionStore()
     },
     setSessionMeasurement(data: Measurement, is_comment?: boolean) {
-      const idx = this.session_measurements.findIndex((i) => i.target?.id === data.target?.id)
+      // by id, fallback use target.id
+      const idx = this.session_measurements.findIndex(
+        (i) => i.id === data.id || i.target?.id === data.target?.id
+      )
       if (idx > -1) {
         if (is_comment) {
           this.session_measurements[idx].comment = data.comment
         } else {
           this.session_measurements[idx] = data
+          // force new reference
+          this.session_measurements = [...this.session_measurements]
         }
       }
       this.syncSessionStore()
@@ -805,7 +813,10 @@ export const useSessionStore = defineStore('session', {
     },
     setSessionComment(data: Comment) {
       const idx = this.session_comments.findIndex((i) => i.id === data.id)
-      if (idx > -1) this.session_comments[idx] = data
+      if (idx > -1) {
+        this.session_comments[idx] = data
+        this.session_comments = [...this.session_comments] // force new reference
+      }
       this.syncSessionStore()
     },
     removeSessionComment(id: Comment['id']) {
@@ -1572,6 +1583,7 @@ export const useSessionStore = defineStore('session', {
               retryCount: 0
             })
           }
+
         } else {
           type CreateParams = CreateSessionCommentParams
           const idx = this.pending_progress.findIndex((i) => {
@@ -1586,6 +1598,7 @@ export const useSessionStore = defineStore('session', {
             this.pending_progress[idx].params = newParams
             this.pending_progress[idx].timestamp = Date.now()
           }
+
         }
         this.setSessionComment(data_result)
         return { success: true, data: data_result }
@@ -1671,6 +1684,7 @@ export const useSessionStore = defineStore('session', {
               retryCount: 0
             })
           }
+
         } else {
           const arr = this.pending_progress.filter((i) => {
             return (i.params as CreateSessionCommentParams).data_result.id !== comment_id

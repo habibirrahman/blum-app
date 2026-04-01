@@ -3,7 +3,7 @@ import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/s
 import type { Measurement } from '@/lib/types'
 import AppButton from '@/components/AppButton.vue'
 import { Icon } from '@iconify/vue/dist/iconify.js'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppTimeInput from '@/components/AppTimeInput.vue'
 
@@ -29,6 +29,7 @@ interface Props {
   isDisabledAction?: boolean
 }
 interface Emits {
+  (e: 'toggle-updated', bool: boolean): void
   (e: 'toggle-timer'): void
   (e: 'record-lap'): void
   (e: 'reset-laps-confirm'): void
@@ -44,6 +45,17 @@ const submitLoading = ref<boolean>(false)
 const isOpenEdit = ref<boolean>(false)
 const editLapNumber = ref<number>(0)
 const editLapInput = ref<string>('')
+
+watch(
+  () => submitLoading.value,
+  (val) => {
+    if (!val) {
+      emit('toggle-updated', true)
+    } else {
+      emit('toggle-updated', false)
+    }
+  }
+)
 
 const onOpenEdit = (lap: DurationLap) => {
   editLapNumber.value = lap.lapNumber
@@ -161,17 +173,17 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
 <template>
   <!-- duration latency -->
-  <div v-if="!resetConfirmation" class="flex flex-col flex-grow gap-2 justify-between h-full">
+  <div v-if="!resetConfirmation" class="flex h-full flex-grow flex-col justify-between gap-2">
     <div
       v-if="updateLoading || lapLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
 
     <div
-      class="flex flex-col flex-grow gap-x-3 justify-center content-center items-center h-full transition-all"
+      class="flex h-full flex-grow flex-col content-center items-center justify-center gap-x-3 transition-all"
       :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 ps-3': isCollapsed }"
     >
       <div v-if="isCollapsed" class="font-semibold text-slate-7">Lap {{ lapLength }}</div>
@@ -186,7 +198,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
         <div class="flex justify-center">{{ timer.split(':')[2] }}</div>
       </div>
 
-      <div class="flex gap-3 items-center w-full">
+      <div class="flex w-full items-center gap-3">
         <AppButton
           class="grow rounded-full !bg-prim-2"
           :class="{
@@ -201,7 +213,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           <span>Lap</span>
         </AppButton>
         <AppButton
-          class="rounded-full grow"
+          class="grow rounded-full"
           :class="[
             sessionStore.session?.status !== 'ongoing' ? 'pointer-events-none' : '',
             isStarted ? '!bg-tomato-2' : '!bg-grass-2'
@@ -230,7 +242,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
       <div
         v-if="lapLength > 0 && !isCollapsed"
-        class="overflow-scroll mt-2 w-full"
+        class="mt-2 w-full overflow-scroll"
         :style="{
           maxHeight: 'calc(100vh - 10rem)',
           scrollbarWidth: 'none'
@@ -239,9 +251,9 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
         <div
           v-for="lap in laps.slice().sort((a, b) => b.lapNumber - a.lapNumber)"
           :key="lap.lapNumber + 1"
-          class="flex gap-2 justify-between items-center border-b border-slate-4"
+          class="flex items-center justify-between gap-2 border-b border-slate-4"
         >
-          <div class="flex gap-2 justify-between py-2 w-full">
+          <div class="flex w-full justify-between gap-2 py-2">
             <div :class="getTextColorClass(lap)">{{ `Lap ${lap.lapNumber + 1}` }}</div>
             <div :class="getTextColorClass(lap)" class="font-semibold">
               {{ isStarted && lap.lapNumber === lapLength - 1 ? currentLapTime : lap.time }}
@@ -261,7 +273,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
     <div
       v-if="!isCollapsed && !resetConfirmation"
-      class="pb-3 text-xs font-medium text-center shrink-0 text-slate-7"
+      class="shrink-0 pb-3 text-center text-xs font-medium text-slate-7"
     >
       Goal:
       {{ measurement.target?.success_metric === 'equal to or greater than goal' ? '≥' : '' }}
@@ -274,14 +286,14 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
   <!-- confirm reset laps -->
   <div
     v-if="resetConfirmation"
-    class="flex flex-col flex-grow gap-2 justify-center items-center h-full"
+    class="flex h-full flex-grow flex-col items-center justify-center gap-2"
   >
     <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
     <div class="text-center text-slate-8">
       This will clear all existing lap records and begin again from Lap 1. You won't be able to
       recover previous data.
     </div>
-    <div class="flex gap-2 justify-center items-center pr-2 w-full">
+    <div class="flex w-full items-center justify-center gap-2 pr-2">
       <AppButton class="w-2/4" kind="plain" @click="$emit('reset-laps-cancel')">Cancel</AppButton>
       <AppButton class="w-2/4" color="tomato" @click="$emit('reset-laps')">Reset</AppButton>
     </div>
@@ -290,8 +302,8 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
 
   <!-- edit lap modal -->
   <AppActionSheet :show="isOpenEdit" @close="isOpenEdit = false">
-    <div class="flex flex-col gap-4 py-3 w-full">
-      <div class="text-xl font-semibold text-left">Edit lap {{ measurement.target?.name }}</div>
+    <div class="flex w-full flex-col gap-4 py-3">
+      <div class="text-left text-xl font-semibold">Edit lap {{ measurement.target?.name }}</div>
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1">
           <div class="text-sm font-semibold text-slate-8">
@@ -307,7 +319,7 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
           :disabled="submitLoading"
         />
       </div>
-      <div class="grid grid-cols-2 gap-4 items-center">
+      <div class="grid grid-cols-2 items-center gap-4">
         <AppButton kind="plain" @click="isOpenEdit = false">Cancel</AppButton>
         <AppButton :loading="submitLoading" @click="onUpdateLap">Save</AppButton>
       </div>

@@ -583,6 +583,11 @@ const onKeepActiveAndEndSession = () => {
 const onEndSession = async () => {
   endSessionLoading.value = true
 
+  // ✅ Resolve semua pending dulu sebelum end session
+  if (sessionStore.pending_progress.length > 0) {
+    await sessionStore.resolvePendingProgress()
+  }
+
   const measurements = sessionStore.session_measurements || []
   const payload: ResolveAllMeasurementsParams = {
     params: measurements?.map((i) => {

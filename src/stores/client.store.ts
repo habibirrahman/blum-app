@@ -98,7 +98,10 @@ export const useClientStore = defineStore('client', {
     setClient(data: Client) {
       this.client = data
       const idx = this.clients.findIndex((i) => i.id === data.id)
-      if (idx > -1) this.clients[idx] = data
+      if (idx > -1) {
+        this.clients[idx] = data
+        this.clients = [...this.clients] // force new reference
+      }
       this.syncClientStore()
     },
     //
