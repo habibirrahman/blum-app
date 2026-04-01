@@ -586,23 +586,25 @@ const onEndSession = async () => {
   const measurements = sessionStore.session_measurements || []
   const payload: ResolveAllMeasurementsParams = {
     params: measurements?.map((i) => {
-      let results: Measurement['results'] = {}
+      /** skip checking results normalize -- to temporarily skip missing data */
 
-      if (i.type === 'Measurement::Sbt') {
-        const res = Object.values(i.results).filter(
-          (i: any) => Number(i.prompt_id) && Number(i.target_task_id)
-        )
-        results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
-      } else if (i.type === 'Measurement::Prompting' && i.target?.is_group) {
-        const res = Object.values(i.results).filter(
-          (i: any) => Number(i.prompt_id) && Number(i.target_id)
-        )
-        results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
-      } else {
-        results = { ...i.results }
-      }
+      // let results: Measurement['results'] = {}
 
-      return { id: i.id, results }
+      // if (i.type === 'Measurement::Sbt') {
+      //   const res = Object.values(i.results).filter(
+      //     (i: any) => Number(i.prompt_id) && Number(i.target_task_id)
+      //   )
+      //   results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
+      // } else if (i.type === 'Measurement::Prompting' && i.target?.is_group) {
+      //   const res = Object.values(i.results).filter(
+      //     (i: any) => Number(i.prompt_id) && Number(i.target_id)
+      //   )
+      //   results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
+      // } else {
+      //   results = { ...i.results }
+      // }
+
+      return { id: i.id, results: i.results }
     })
   }
 
