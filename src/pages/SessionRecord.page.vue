@@ -689,6 +689,18 @@ const passedMaintenanceTargets = computed(() => {
   })
 })
 
+const passedContinueMaintenanceTargets = computed(() => {
+  return passedMaintenanceTargets.value.filter((r: any) => {
+    return !!r.maintenance_state?.next_date
+  })
+})
+
+const passedCompleteMaintenanceTargets = computed(() => {
+  return passedMaintenanceTargets.value.filter((r: any) => {
+    return !r.maintenance_state?.next_date
+  })
+})
+
 const generateSuccessMetric = (target?: Target) => {
   if (!target) return ''
   let prefix = ''
@@ -1203,8 +1215,8 @@ const duplicateImageCommentsToClientDocument = async () => {
                     <div
                       class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
                     >
-                      <Icon icon="ph:check-circle-fill" />
-                      <span class="text-[10px] font-bold leading-[14px]">Passed</span>
+                      <Icon icon="ph:check-circle-fill" class="text-success-4" />
+                      <span class="text-[10px] font-medium leading-[14px]">Passed</span>
                     </div>
                   </div>
                   <div v-else class="truncate">
@@ -1215,47 +1227,112 @@ const duplicateImageCommentsToClientDocument = async () => {
                   <div class="flex items-center">Result</div>
                   <div class="flex">
                     <div
-                      class="flex w-max items-center gap-1 rounded-full border border-rose-3 bg-white px-1.5 py-[2px] text-rose-6"
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-[#F4BFBA] text-[#932A20]"
                     >
-                      <Icon icon="ph:x-circle-fill" />
-                      <span class="text-[10px] font-bold leading-[14px]">Failed</span>
+                      <Icon icon="ph:x-circle-fill" class="text-[#DD3F30]"/>
+                      <span class="text-[10px] font-medium leading-[14px]">Failed</span>
                     </div>
                   </div>
                 </div>
               </div>
             </template>
 
-            <!-- For passed targets -->
-            <template v-if="passedMaintenanceTargets.length">
+            <!-- For passed targets (continue next maintenance) -->
+            <template v-if="passedContinueMaintenanceTargets.length">
               <div
                 class="flex gap-1 items-center pb-3"
                 :class="{ 'pt-4': failedMaintenanceTargets.length > 0 }"
               >
                 <AppChip chip="mastered" />
+                <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
+                <span class="text-sm font-medium text-slate-7">Continue next maintenance</span>
               </div>
 
               <div
-                v-for="(recommendation, index) in passedMaintenanceTargets"
+                v-for="(recommendation, index) in passedContinueMaintenanceTargets"
                 :key="recommendation.id"
                 class="flex flex-col gap-2 py-3"
                 :class="{
-                  'border-b border-slate-3': index !== passedMaintenanceTargets.length - 1
+                  'border-b border-slate-3':
+                    index !== passedContinueMaintenanceTargets.length - 1 ||
+                    passedCompleteMaintenanceTargets.length > 0
                 }"
               >
                 <div class="text-sm font-semibold">{{ recommendation.target?.name }}</div>
                 <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
                   <div class="flex items-center">Success metric</div>
-                  <div class="truncate">{{ generateSuccessMetric(recommendation.target) }}</div>
+                  <div v-if="recommendation.target?.type_name === 'Cold Probe'" class="flex">
+                    <div
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
+                    >
+                      <Icon icon="ph:check-circle-fill" class="text-success-4" />
+                      <span class="text-[10px] font-medium leading-[14px]">Passed</span>
+                    </div>
+                  </div>
+                  <div v-else class="truncate">
+                    {{ generateSuccessMetric(recommendation.target) }}
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+                  <div class="flex items-center">Result</div>
+                  <div class="flex">
+                   <div
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
+                    >
+                      <Icon icon="ph:check-circle-fill" class="text-success-4"/>
+                      <span class="text-[10px] font-medium leading-[14px]">Passed</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- For passed targets (maintenance complete) -->
+            <template v-if="passedCompleteMaintenanceTargets.length">
+              <div
+                class="flex gap-1 items-center pb-3"
+                :class="{
+                  'pt-4':
+                    failedMaintenanceTargets.length > 0 ||
+                    passedContinueMaintenanceTargets.length > 0
+                }"
+              >
+                <AppChip chip="mastered" />
+                <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
+                <span class="text-sm font-medium text-slate-7">Maintenance complete</span>
+              </div>
+
+              <div
+                v-for="(recommendation, index) in passedCompleteMaintenanceTargets"
+                :key="recommendation.id"
+                class="flex flex-col gap-2 py-3"
+                :class="{
+                  'border-b border-slate-3': index !== passedCompleteMaintenanceTargets.length - 1
+                }"
+              >
+                <div class="text-sm font-semibold">{{ recommendation.target?.name }}</div>
+                <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
+                  <div class="flex items-center">Success metric</div>
+                  <div v-if="recommendation.target?.type_name === 'Cold Probe'" class="flex">
+                    <div
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
+                    >
+                      <Icon icon="ph:check-circle-fill" class="text-success-4"/>
+                      <span class="text-[10px] font-medium leading-[14px]">Passed</span>
+                    </div>
+                  </div>
+                  <div v-else class="truncate">
+                    {{ generateSuccessMetric(recommendation.target) }}
+                  </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4 text-sm text-slate-8">
                   <div class="flex items-center">Result</div>
                   <div class="flex">
                     <div
-                      class="flex items-center gap-1 rounded border border-lime-3 bg-white px-1.5 py-[2px] text-lime-6"
-                      style="border-radius: 100px"
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
                     >
-                      <Icon icon="ph:check-circle-fill" />
-                      <span class="text-[10px] font-bold leading-[14px]">passed</span>
+                      <Icon icon="ph:check-circle-fill" class="text-success-4"/>
+                      <span class="text-[10px] font-medium leading-[14px]">Passed</span>
                     </div>
                   </div>
                 </div>

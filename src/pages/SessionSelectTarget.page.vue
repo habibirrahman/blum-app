@@ -101,6 +101,7 @@ const statuses = ref<TargetStatus[]>(['in_progress'])
 const statusOptions: { value: TargetStatus; label: string }[] = [
   { value: 'in_progress', label: 'In acquisition' },
   { value: 'mastered', label: 'Mastered' },
+  { value: 'in_maintenance', label: 'In-maintenance' },
   { value: 'pending', label: 'Pending' },
   { value: 'paused', label: 'Pause' },
   { value: 'discontinued', label: 'Discontinued' }

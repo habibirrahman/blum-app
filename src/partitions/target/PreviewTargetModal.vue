@@ -643,7 +643,7 @@ const onImportTarget = async (targetId: Target['id']) => {
       <div class="flex sticky bottom-0 z-10 gap-2 items-center py-3 w-full bg-white">
         <AppButton kind="plain" class="w-full" @click="emit('close')">Close</AppButton>
         <RouterLink
-          v-if="editAble"
+          v-if="editAble && !target?.has_ongoing_session"
           class="w-full"
           :to="{
             name: 'edit-client-target',
@@ -655,6 +655,8 @@ const onImportTarget = async (targetId: Target['id']) => {
         >
           <AppButton class="w-full" @click="() => {}">Edit details</AppButton>
         </RouterLink>
+        <AppButton v-else-if="editAble && target?.has_ongoing_session" disabled class="w-full" @click="() => {}">Edit details</AppButton>
+
       </div>
     </div>
   </AppActionSheet>

@@ -1371,15 +1371,15 @@ function onApplyPromptSuccessMetric(val: string) {
             <!-- Approach Selection (hidden when in progress) -->
             <div v-if="!maintenanceInProgress" class="flex p-1 rounded-lg border border-slate-4 bg-slate-2">
               <div
-                class="flex justify-center items-center py-1 w-full rounded transition-all duration-300 cursor-pointer"
-                :class="maintenanceApproach === 'manual' ? 'bg-white font-medium shadow' : 'text-slate-8'"
+                class="flex justify-center items-center py-1 w-full font-semibold rounded transition-all duration-300 cursor-pointer text-slate-7"
+                :class="maintenanceApproach === 'manual' ? 'bg-white shadow' : 'text-slate-7'"
                 @click="maintenanceApproach = 'manual'"
               >
                 Manual
               </div>
               <div
-                class="flex justify-center items-center py-1 w-full rounded transition-all duration-300 cursor-pointer"
-                :class="maintenanceApproach === 'automation' ? 'bg-white font-medium shadow' : 'text-slate-8'"
+                class="flex justify-center items-center py-1 w-full font-semibold rounded transition-all duration-300 cursor-pointer text-slate-7"
+                :class="maintenanceApproach === 'automation' ? 'bg-white shadow' : 'text-slate-7'"
                 @click="maintenanceApproach = 'automation'"
               >
                 Automation

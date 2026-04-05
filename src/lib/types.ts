@@ -234,7 +234,7 @@ export type TargetType =
   | 'Target::Prompting'
   | 'Target::Sbt'
   | 'Target::TrialByTrial'
-export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued'
+export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued' | 'in_maintenance'
 export type TargetFrequencyFormat = 'classic' | 'custom'
 export type TargetPromptingFormat = 'classic' | 'custom'
 export type TargetColdProbeFormat = 'classic' | 'custom'

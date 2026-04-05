@@ -101,7 +101,7 @@ const onSubmit = async () => {
             name="select-all" 
             :checked="isAllSelected" 
             v-model:indeterminate="isIndeterminate"
-            @change.stop="toggleSelectAll" 
+            class="pointer-events-none"
           />
         </div>
 
@@ -133,11 +133,10 @@ const onSubmit = async () => {
                 <div class="text-info">{{ maintenanceDateText(target) }}</div>
               </div>
             </div>
-            <div class="shrink-0" @click.stop="toggleSelect(target.id)">
+            <div class="shrink-0 pointer-events-none">
               <AppCheckInput 
                 :name="'check-'+target.id" 
                 :checked="selectedIds.includes(target.id!)" 
-                @change.stop="toggleSelect(target.id)"
               />
             </div>
           </div>
@@ -147,7 +146,11 @@ const onSubmit = async () => {
 
       <!-- Footer -->
       <div class="fixed bottom-0 left-0 p-4 w-full bg-white border-t border-slate-3 pb-safe">
-        <div class="h-[68px]">
+        <div class="h-[130px] flex flex-col gap-5">
+          <div class="flex gap-2 items-center p-2 rounded bg-cornflower-2">
+            <Icon icon="ph:info-fill" class="w-5 h-5 text-cornflower-8" />
+            <div class="text-sm text-cornflower-8">Unselected targets will be added to the teaching phase.</div>
+          </div>
           <AppButton 
             class="w-full" 
             :disabled="selectedIds.length === 0" 
