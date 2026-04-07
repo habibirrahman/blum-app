@@ -97,7 +97,7 @@ const onChangeSelected = () => {
   }
 }
 
-const statuses = ref<TargetStatus[]>(['in_progress'])
+const statuses = ref<TargetStatus[]>(['in_progress', 'in_maintenance'])
 const statusOptions: { value: TargetStatus; label: string }[] = [
   { value: 'in_progress', label: 'In acquisition' },
   { value: 'mastered', label: 'Mastered' },

@@ -1371,14 +1371,14 @@ function onApplyPromptSuccessMetric(val: string) {
             <!-- Approach Selection (hidden when in progress) -->
             <div v-if="!maintenanceInProgress" class="flex p-1 rounded-lg border border-slate-4 bg-slate-2">
               <div
-                class="flex justify-center items-center py-1 w-full font-semibold rounded transition-all duration-300 cursor-pointer text-slate-7"
+                class="flex justify-center items-center py-1 w-full text-xs font-semibold rounded transition-all duration-300 cursor-pointer text-slate-7"
                 :class="maintenanceApproach === 'manual' ? 'bg-white shadow' : 'text-slate-7'"
                 @click="maintenanceApproach = 'manual'"
               >
                 Manual
               </div>
               <div
-                class="flex justify-center items-center py-1 w-full font-semibold rounded transition-all duration-300 cursor-pointer text-slate-7"
+                class="flex justify-center items-center py-1 w-full text-xs font-semibold rounded transition-all duration-300 cursor-pointer text-slate-7"
                 :class="maintenanceApproach === 'automation' ? 'bg-white shadow' : 'text-slate-7'"
                 @click="maintenanceApproach = 'automation'"
               >
@@ -1396,7 +1396,7 @@ function onApplyPromptSuccessMetric(val: string) {
               <div class="pt-2 space-y-1">
                 <div class="text-[13px] font-semibold text-slate-10">Recommended maintenance frequency</div>
                 <div class="flex gap-2 justify-between items-center pt-1">
-                  <span class="text-sm">Every</span>
+                  <span class="text-xs">Every</span>
                   <div class="flex gap-2">
                     <input
                       type="number"
