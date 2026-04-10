@@ -166,7 +166,6 @@ const onUpcomingMaintenanceSubmit = () => {
 
 const onUpcomingMaintenanceClose = () => {
   upcomingMaintenanceOpened.value = false
-  doLaunchSession()
 }
 const onStartSession = () => {
   isLunchBeforeSchedule.value = false
