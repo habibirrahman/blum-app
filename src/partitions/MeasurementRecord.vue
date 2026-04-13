@@ -10,7 +10,7 @@ import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import { type MeasurementType, type Measurement, type Target, type TargetType } from '@/lib/types'
 import AppToggle from '@/components/AppToggle.vue'
-import { getRandomString, getTargetType } from '@/lib/func'
+import { getRandomString, getTargetTasks, getTargetType } from '@/lib/func'
 import Prompting from './measurement/Prompting.vue'
 import Frequency from './measurement/Frequency.vue'
 import PartialIntervalRecording from './measurement/PartialIntervalRecording.vue'
@@ -747,7 +747,7 @@ const taskAnalysisPrompts = computed(() => {
               </div>
               <div v-if="isMaintenanceDisplayable" class="shrink-0">
                 <div
-                  class="flex items-center px-2 h-6 text-xs font-semibold rounded-full bg-orange-2 text-orange-7"
+                  class="flex h-6 items-center rounded-full bg-orange-2 px-2 text-xs font-semibold text-orange-7"
                 >
                   {{ measurement.target?.maintenance_badge || 'Maintenance' }}
                 </div>
@@ -1043,7 +1043,7 @@ const taskAnalysisPrompts = computed(() => {
               <!-- sbt taks -->
               <div class="space-y-3 border-t-2 border-slate-4 py-3">
                 <div
-                  v-for="taskCode in measurement.target?.target_tasks"
+                  v-for="taskCode in getTargetTasks(measurement.target)"
                   :key="taskCode.id"
                   class="space-y-1"
                 >

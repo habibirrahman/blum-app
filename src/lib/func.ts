@@ -1,5 +1,5 @@
 import moment from 'moment'
-import type { ClientDischargeReason, MeasurementType, TargetType, User } from './types'
+import type { ClientDischargeReason, MeasurementType, Target, TargetTask, TargetType, User } from './types'
 
 interface DisplayDate {
   date?: string | null
@@ -42,6 +42,13 @@ export const getTargetType = (type?: TargetType): string => {
     'Target::TrialByTrial': 'Trial-by-Trial'
   }
   return arr[type] || ''
+}
+
+export const getTargetTasks = (target?: Target): TargetTask[] => {
+  if (!target) return []
+  if (target.type !== 'Target::Sbt') return []
+  const arr = target.target_tasks || []
+  return arr.filter((i) => !i.hidden)
 }
 
 export const getClientDischargeReason = (reason?: ClientDischargeReason): string => {

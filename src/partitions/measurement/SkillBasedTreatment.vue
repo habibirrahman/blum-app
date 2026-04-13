@@ -6,6 +6,7 @@ import type { Measurement, Prompt, Target, TargetProblemBehavior, TargetTask } f
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import AppButton from '@/components/AppButton.vue'
+import { getTargetTasks } from '@/lib/func'
 
 const sessionStore = useSessionStore()
 const appStore = useAppStore()
@@ -212,7 +213,7 @@ const resetIdleTimer = () => {
 
 onMounted(async () => {
   const prompts = props.target?.prompts || []
-  const tasks = props.target?.target_tasks || []
+  const tasks = getTargetTasks(props.target)
   const problems = props.target?.target_problem_behaviors || []
   SBTPrompts.value = prompts.sort((a, b) => (b?.score || 0) - (a?.score || 0))
   SBTTaskCodes.value = tasks.sort((a, b) => (a?.position || 0) - (b?.position || 0))

@@ -353,17 +353,20 @@ export interface Prompt {
 
 export interface TargetTask {
   id?: number
+  title?: string
+  description?: string
   code?: string
   code_definition?: string
   color?: string
   date_introduce?: string
   date_mastered?: string
-  description?: string
+
   position?: number
+  hidden?: boolean
   status?: TargetStatus
+
   target_id?: Target['id']
   task_code_id?: number
-  title?: string
 }
 
 export interface TargetProblemBehavior {
