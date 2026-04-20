@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { Session } from '@/lib/types'
 import { displayDate } from '@/lib/func'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AppButton from '@/components/AppButton.vue'
 import { Icon } from '@iconify/vue/dist/iconify.js'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useSessionStore } from '@/stores/session.store'
 import { useToast } from 'vue-toastification'
+import AppTextInput from '@/components/AppTextInput.vue'
 
 interface Props {
   session: Session
@@ -34,8 +35,44 @@ const sessionDate = computed<string>(() => {
 })
 
 const showMenu = ref<boolean>(false)
+
+const showEditSessionName = ref<boolean>(false)
+const sessionName = ref<string>('')
+const editSessionNameLoading = ref<boolean>(false)
+
 const showDelete = ref<boolean>(false)
 const deleteLoading = ref<boolean>(false)
+
+watch(
+  () => showEditSessionName.value,
+  (show) => {
+    if (!show) return
+    sessionName.value = props.session.name || ''
+  }
+)
+
+const onUpdateSessionName = async () => {
+  const payload = {
+    id: props.session.id,
+    session: {
+      name: sessionName.value + ''
+    }
+  }
+
+  editSessionNameLoading.value = true
+  const { success, message } = await sessionStore.updateSession(payload)
+  editSessionNameLoading.value = false
+
+  if (!success) {
+    toast.error(message)
+    return
+  }
+
+  toast.success('Success! The session name has been updated')
+  emit('after-commit')
+  showEditSessionName.value = false
+  showMenu.value = false
+}
 
 const onDeleteSession = async () => {
   deleteLoading.value = true
@@ -47,7 +84,7 @@ const onDeleteSession = async () => {
     return
   }
 
-  toast.success(message)
+  toast.success('Success! The session has been deleted')
   emit('after-commit')
   showDelete.value = false
   showMenu.value = false
@@ -85,8 +122,12 @@ const onDeleteSession = async () => {
       </div>
     </div>
     <div class="flex flex-col gap-1.5 truncate">
-      <div class="text-xs text-slate-8">Session ID {{ session.id }}</div>
-      <div class="text-sm font-semibold truncate">{{ title }}</div>
+      <div class="text-xs text-slate-8">
+        <span v-if="!session.name">Session ID </span>
+        <span>{{ session.id }}</span>
+        <span v-if="session.name"> - {{ session.name }}</span>
+      </div>
+      <div class="truncate text-sm font-semibold">{{ title }}</div>
       <div
         v-if="!session.appointment_id && session.status === 'draft'"
         class="text-xs text-slate-7"
@@ -101,7 +142,7 @@ const onDeleteSession = async () => {
         <div class="font-medium text-slate-8">
           {{ displayDate({ date: session.appointment?.date }) }}
         </div>
-        <div class="w-1 h-1 rounded shrink-0 bg-slate-6"></div>
+        <div class="h-1 w-1 shrink-0 rounded bg-slate-6"></div>
         <div class="font-medium text-slate-8">
           {{
             `${session.appointment?.start_time_string} - ${session.appointment?.end_time_string}`
@@ -109,7 +150,7 @@ const onDeleteSession = async () => {
         </div>
       </div>
       <div v-else-if="session.status === 'ongoing'" class="flex items-center gap-1.5 text-xs">
-        <div class="font-medium truncate text-slate-8">
+        <div class="truncate font-medium text-slate-8">
           <span>In progress</span>
           <span v-if="session.user?.name"> with {{ session.user?.name }}</span>
         </div>
@@ -122,7 +163,7 @@ const onDeleteSession = async () => {
         <div class="font-medium text-slate-8">
           {{ displayDate({ date: session.end_time }) }}
         </div>
-        <div class="w-1 h-1 rounded shrink-0 bg-slate-6"></div>
+        <div class="h-1 w-1 shrink-0 rounded bg-slate-6"></div>
         <div class="font-medium text-slate-8">
           {{ displayDate({ date: session.end_time, format: 'HH:mm' }) }}
         </div>
@@ -136,7 +177,7 @@ const onDeleteSession = async () => {
       </div>
     </div>
 
-    <div v-if="session.status === 'draft'" id="action-button" class="absolute right-0 z-10 top-2">
+    <div v-if="session.status === 'draft'" id="action-button" class="absolute right-0 top-2 z-10">
       <AppButton kind="plain" @click="showMenu = true">
         <Icon icon="ph:dots-three-outline-vertical-fill" />
       </AppButton>
@@ -144,9 +185,13 @@ const onDeleteSession = async () => {
   </div>
 
   <AppActionSheet :show="showMenu" @close="showMenu = false">
-    <div class="py-3 space-y-4">
-      <div class="flex items-center justify-between w-full">
-        <div class="text-xl font-semibold text-center">Session ID {{ session.id }}</div>
+    <div class="space-y-4 py-3">
+      <div class="flex w-full items-center justify-between">
+        <div class="text-center text-xl font-semibold">
+          <span v-if="!session.name">Session ID </span>
+          <span>{{ session.id }}</span>
+          <span v-if="session.name"> - {{ session.name }}</span>
+        </div>
         <div class="cursor-pointer" @click="showMenu = false">
           <Icon icon="ph:x" class="text-2xl" />
         </div>
@@ -158,25 +203,32 @@ const onDeleteSession = async () => {
             params: { slug: session?.slug },
             query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
           }"
-          class="flex items-center w-full gap-3 border-b h-14 border-slate-3"
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
         >
           <icon icon="ph:eye" />
           <div class="text-sm text-slate-8">Preview</div>
         </RouterLink>
+        <div
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
+          @click="showEditSessionName = true"
+        >
+          <icon icon="ph:pencil-simple" />
+          <div class="text-sm text-slate-8">Edit session name</div>
+        </div>
         <RouterLink
           :to="{
             name: 'session-draft',
             params: { slug: session?.slug },
             query: { redirect: `/pre-session-record/${session?.slug}` }
           }"
-          class="flex items-center w-full gap-3 border-b h-14 border-slate-3"
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
         >
           <icon icon="ph:pencil-simple" />
-          <div class="text-sm text-slate-8">Edit</div>
+          <div class="text-sm text-slate-8">Edit session target(s)</div>
         </RouterLink>
         <div
           v-if="!session.appointment_id"
-          class="flex items-center w-full gap-3 border-b h-14 border-slate-3"
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
           @click="showDelete = true"
         >
           <icon icon="ph:trash" />
@@ -186,10 +238,23 @@ const onDeleteSession = async () => {
     </div>
   </AppActionSheet>
 
+  <AppActionSheet :show="showEditSessionName" @close="showEditSessionName = false">
+    <div class="flex flex-col gap-4 py-3">
+      <div class="text-xl font-semibold">Edit session name</div>
+
+      <AppTextInput name="session_name" placeholder="Session Name" v-model="sessionName" />
+
+      <div class="grid w-full grid-cols-2 gap-2">
+        <AppButton kind="plain" @click="showEditSessionName = false">Cancel</AppButton>
+        <AppButton :loading="editSessionNameLoading" @click="onUpdateSessionName">Update</AppButton>
+      </div>
+    </div>
+  </AppActionSheet>
+
   <AppActionSheet :show="showDelete" @close="showDelete = false">
     <div class="flex flex-col items-center gap-4 py-3">
-      <div class="text-xl font-semibold text-center">Delete the draft</div>
-      <div class="text-sm text-center">
+      <div class="text-center text-xl font-semibold">Delete the draft</div>
+      <div class="text-center text-sm">
         You are about to delete the session draft. Are you sure you want to proceed? This action is
         irreversible.
       </div>

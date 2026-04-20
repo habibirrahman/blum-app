@@ -169,18 +169,20 @@ const onDeleteMeasurements = async () => {
 
 <template>
   <div class="sticky top-0 z-10 bg-white">
-    <div class="flex items-center justify-between gap-4 px-4 h-14">
+    <div class="flex h-14 items-center justify-between gap-4 px-4">
       <div class="flex items-center gap-3 truncate">
-        <RouterLink :to="redirect" class="flex items-center justify-center w-8 h-8 shrink-0">
+        <RouterLink :to="redirect" class="flex h-8 w-8 shrink-0 items-center justify-center">
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </RouterLink>
         <div class="space-y-1">
-          <div class="font-bold truncate">
+          <div class="truncate font-bold">
             {{ sessionStore.session?.client?.name }}
           </div>
           <div class="flex items-center gap-1">
-            <div class="text-xs shrink-0 text-slate-8">
-              Session ID {{ sessionStore.session?.id }}
+            <div class="shrink-0 text-xs text-slate-8">
+              <span v-if="!sessionStore.session?.name">Session ID </span>
+              <span>{{ sessionStore.session?.id }}</span>
+              <span v-if="sessionStore.session?.name"> - {{ sessionStore.session?.name }}</span>
             </div>
             <div
               class="flex h-5 w-5 items-center justify-center rounded-full bg-[#F2FFE3]"
@@ -213,18 +215,18 @@ const onDeleteMeasurements = async () => {
     class="fixed left-1/2 z-[9] -translate-x-1/2 transition-all pt-safe"
     :class="{ 'top-[60px]': isLoading, '-top-[60px]': !isLoading }"
   >
-    <div class="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow">
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
   </div>
 
   <div
-    class="flex flex-col items-center w-full min-h-screen pt-4 bg-prim-3"
+    class="flex min-h-screen w-full flex-col items-center bg-prim-3 pt-4"
     :style="{ height: containerHeight }"
   >
     <div
       id="container-record-measurement"
-      class="flex flex-wrap justify-center w-full gap-4 px-4 py-4 transition-all duration-500"
+      class="flex w-full flex-wrap justify-center gap-4 px-4 py-4 transition-all duration-500"
       :class="{
         'origin-top scale-50 object-top': showReviewMode,
         'min-w-[calc((320px*2)+(16px*3))]': showReviewMode,
@@ -235,7 +237,7 @@ const onDeleteMeasurements = async () => {
         '2xl:min-w-[calc((320px*9)+(16px*10))]': showReviewMode
       }"
     >
-      <div v-if="sessionLoading" class="flex flex-wrap justify-center w-full gap-4">
+      <div v-if="sessionLoading" class="flex w-full flex-wrap justify-center gap-4">
         <div
           v-for="n in 8"
           :key="n"
@@ -315,10 +317,10 @@ const onDeleteMeasurements = async () => {
     class="fixed z-[9] w-screen bg-prim-3 transition-all duration-500 px-safe pb-safe"
     :class="[!isMeasurementCollapsed ? '-bottom-36' : 'bottom-0']"
   >
-    <div class="flex items-center w-full h-16 gap-6 px-4">
+    <div class="flex h-16 w-full items-center gap-6 px-4">
       <div class="relative" @click="showReviewMode = !showReviewMode">
         <div
-          class="flex items-center justify-center w-8 h-10 text-xs font-semibold bg-white rounded text-dark-purple-1"
+          class="flex h-10 w-8 items-center justify-center rounded bg-white text-xs font-semibold text-dark-purple-1"
         >
           {{ sessionStore.session_measurements.length }}
         </div>

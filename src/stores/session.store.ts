@@ -771,12 +771,13 @@ export const useSessionStore = defineStore('session', {
     // ========================================
 
     // SETTER Session and Measurement
-    setSession(data: Session) {
+    setSession(data: Session | null) {
       this.session = data
-      const idx = this.sessions.findIndex((i) => i.id === data.id)
-      if (idx > -1) {
-        this.sessions[idx] = data
-        this.sessions = [...this.sessions] // force new reference
+      const idx = this.sessions.findIndex((i) => i.id === data?.id)
+      if (idx > -1 && data) {
+        const arr = [...this.sessions]
+        arr[idx] = data
+        this.sessions = arr
       }
       this.syncSessionStore()
     },
@@ -794,9 +795,9 @@ export const useSessionStore = defineStore('session', {
         if (is_comment) {
           this.session_measurements[idx].comment = data.comment
         } else {
-          this.session_measurements[idx] = data
-          // force new reference
-          this.session_measurements = [...this.session_measurements]
+          const arr = [...this.session_measurements]
+          arr[idx] = data
+          this.session_measurements = arr
         }
       }
       this.syncSessionStore()
@@ -814,8 +815,9 @@ export const useSessionStore = defineStore('session', {
     setSessionComment(data: Comment) {
       const idx = this.session_comments.findIndex((i) => i.id === data.id)
       if (idx > -1) {
-        this.session_comments[idx] = data
-        this.session_comments = [...this.session_comments] // force new reference
+        const arr = [...this.session_comments]
+        arr[idx] = data
+        this.session_comments = arr
       }
       this.syncSessionStore()
     },
@@ -967,6 +969,19 @@ export const useSessionStore = defineStore('session', {
         .then((response) => {
           this.addSession(response.data)
           return { success: true, data: response.data, message: '' }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
+
+    async updateSession({ id, session }: { id: Session['id']; session: Partial<Session> }) {
+      return axios
+        .patch(`/api/v1/sessions/${id}`, { session })
+        .then((response) => {
+          this.setSession(response.data)
+          return { success: true, data: response.data, message: response.data.message }
         })
         .catch((error) => {
           const message = getErrorMessage(error.response?.data?.error || error?.message)

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useSessionStore } from '@/stores/session.store'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { displayDate, getTargetTasks, getTargetType } from '@/lib/func'
@@ -11,9 +11,12 @@ import AppActionSheet from '@/components/AppActionSheet.vue'
 import CommentItem from '@/partitions/CommentItem.vue'
 import UpcomingMaintenanceModal from '@/partitions/session/UpcomingMaintenanceModal.vue'
 import type { Target } from '@/lib/types'
+import { useToast } from 'vue-toastification'
+import AppTextInput from '@/components/AppTextInput.vue'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
 
@@ -28,6 +31,12 @@ const isOrphanAppointment = computed<boolean>(() => {
 const sessionLoading = ref<boolean>(false)
 const commentsLoading = ref<boolean>(false)
 const showComments = ref<boolean>(true)
+
+const showMenu = ref<boolean>(false)
+
+const showEditSessionName = ref<boolean>(false)
+const sessionName = ref<string>('')
+const editSessionNameLoading = ref<boolean>(false)
 
 async function fetchComments() {
   const id = sessionStore.session?.id
@@ -189,6 +198,36 @@ const onStartSession = () => {
   if (showAction) showActionBeforeLunch.value = true
   else onLaunchSession()
 }
+
+watch(
+  () => showEditSessionName.value,
+  (show) => {
+    if (!show) return
+    sessionName.value = sessionStore.session?.name || ''
+  }
+)
+
+const onUpdateSessionName = async () => {
+  const payload = {
+    id: sessionStore.session?.id,
+    session: {
+      name: sessionName.value || ''
+    }
+  }
+
+  editSessionNameLoading.value = true
+  const { success, message } = await sessionStore.updateSession(payload)
+  editSessionNameLoading.value = false
+
+  if (!success) {
+    toast.error(message)
+    return
+  }
+
+  toast.success('Success! The session name has been updated')
+  showEditSessionName.value = false
+  showMenu.value = false
+}
 </script>
 
 <template>
@@ -202,18 +241,18 @@ const onStartSession = () => {
           <div class="truncate font-bold">
             {{ sessionStore.session?.client?.name }}
           </div>
-          <div class="shrink-0 text-xs text-slate-8">Session ID {{ sessionStore.session?.id }}</div>
+          <div class="shrink-0 text-xs text-slate-8">
+            <span v-if="!sessionStore.session?.name">Session ID </span>
+            <span>{{ sessionStore.session?.id }}</span>
+            <span v-if="sessionStore.session?.name"> - {{ sessionStore.session?.name }}</span>
+          </div>
         </div>
       </div>
-      <RouterLink
-        :to="{
-          name: 'session-draft',
-          params: { slug: sessionStore.session?.slug },
-          query: { redirect: `/pre-session-record/${sessionStore.session?.slug}` }
-        }"
-      >
-        <AppButton><Icon icon="ph:pencil" /></AppButton>
-      </RouterLink>
+      <div class="flex items-center gap-2">
+        <AppButton @click="showMenu = true">
+          <Icon icon="ph:pencil" />
+        </AppButton>
+      </div>
     </div>
   </div>
 
@@ -687,4 +726,52 @@ const onStartSession = () => {
     @close="onUpcomingMaintenanceClose"
     @submit="onUpcomingMaintenanceSubmit"
   />
+
+  <AppActionSheet :show="showMenu" @close="showMenu = false">
+    <div class="space-y-4 py-3">
+      <div class="flex w-full items-center justify-between">
+        <div class="text-center text-xl font-semibold">
+          <span v-if="!sessionStore.session?.name">Session ID </span>
+          <span>{{ sessionStore.session?.id }}</span>
+          <span v-if="sessionStore.session?.name"> - {{ sessionStore.session?.name }}</span>
+        </div>
+        <div class="cursor-pointer" @click="showMenu = false">
+          <Icon icon="ph:x" class="text-2xl" />
+        </div>
+      </div>
+      <div>
+        <div
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
+          @click="showEditSessionName = true"
+        >
+          <icon icon="ph:pencil-simple" />
+          <div class="text-sm text-slate-8">Edit session name</div>
+        </div>
+        <RouterLink
+          :to="{
+            name: 'session-draft',
+            params: { slug: sessionStore.session?.slug },
+            query: { redirect: `/pre-session-record/${sessionStore.session?.slug}` }
+          }"
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
+        >
+          <icon icon="ph:pencil-simple" />
+          <div class="text-sm text-slate-8">Edit session target(s)</div>
+        </RouterLink>
+      </div>
+    </div>
+  </AppActionSheet>
+
+  <AppActionSheet :show="showEditSessionName" @close="showEditSessionName = false">
+    <div class="flex flex-col gap-4 py-3">
+      <div class="text-xl font-semibold">Edit session name</div>
+
+      <AppTextInput name="session_name" placeholder="Session Name" v-model="sessionName" />
+
+      <div class="grid w-full grid-cols-2 gap-2">
+        <AppButton kind="plain" @click="showEditSessionName = false">Cancel</AppButton>
+        <AppButton :loading="editSessionNameLoading" @click="onUpdateSessionName">Update</AppButton>
+      </div>
+    </div>
+  </AppActionSheet>
 </template>
