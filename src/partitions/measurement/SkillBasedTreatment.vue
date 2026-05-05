@@ -399,7 +399,7 @@ const onOpenTrialHistory = async () => {
 
   // record session activities
   await sessionStore.addSessionActivity({
-    action_label: `sbt_open_trails`,
+    action_label: `sbt_open_trials`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     notes: `Target: ${props.measurement.target?.name}`,
@@ -716,7 +716,7 @@ const onTakeNextTrial = async (payload: { isNew: boolean }) => {
 
   // record session activities
   await sessionStore.addSessionActivity({
-    action_label: `sbt_next_trail`,
+    action_label: `sbt_next_trial`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     notes: `Target: ${props.measurement.target?.name} [${newTrial.target_task_id}]`,
@@ -739,7 +739,7 @@ const onOpenEditTrial = async (key: Trial['key']) => {
 
     // record session activities
     await sessionStore.addSessionActivity({
-      action_label: `sbt_open_edit_trail`,
+      action_label: `sbt_open_edit_trial`,
       recordable: 'Measurement',
       recordable_id: props.measurement.id,
       notes: `Target: ${props.measurement.target?.name}`,
@@ -764,7 +764,7 @@ const onOpenDeleteTrial = async (key: Trial['key']) => {
 
     // record session activities
     await sessionStore.addSessionActivity({
-      action_label: `sbt_open_delete_trail`,
+      action_label: `sbt_open_delete_trial`,
       recordable: 'Measurement',
       recordable_id: props.measurement.id,
       notes: `Target: ${props.measurement.target?.name}`,
@@ -773,12 +773,12 @@ const onOpenDeleteTrial = async (key: Trial['key']) => {
   }
 }
 
-const onCancelDeleteTrail = async () => {
+const onCancelDeleteTrial = async () => {
   deleteTrialKey.value = null
 
   // record session activities
   await sessionStore.addSessionActivity({
-    action_label: `sbt_cancel_delete_trail`,
+    action_label: `sbt_cancel_delete_trial`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     notes: `Target: ${props.measurement.target?.name}`,
@@ -825,7 +825,7 @@ const onDeleteTrial = async () => {
 
   // record session activities
   await sessionStore.addSessionActivity({
-    action_label: `sbt_delete_trail`,
+    action_label: `sbt_delete_trial`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     api: `PATCH /api/v1/measurements/${props.measurement.id}`,
@@ -866,7 +866,7 @@ const onSaveEditTrial = async () => {
 
   // record session activities
   await sessionStore.addSessionActivity({
-    action_label: `sbt_update_trail`,
+    action_label: `sbt_update_trial`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     api: `PATCH /api/v1/measurements/${props.measurement.id}`,
@@ -1214,7 +1214,7 @@ const onSaveEditTrial = async () => {
               class="flex items-center gap-2"
             >
               <Icon icon="ph:check-bold" class="text-grass-6" @click="onDeleteTrial" />
-              <Icon icon="ph:x-bold" class="text-tomato-7" @click="onCancelDeleteTrail" />
+              <Icon icon="ph:x-bold" class="text-tomato-7" @click="onCancelDeleteTrial" />
             </div>
             <div
               v-else-if="sessionStore.session?.status !== 'completed'"
