@@ -332,8 +332,6 @@ watch(showReviewMode, (val) => {
 const focusMeasurement = ref<Measurement['id']>(0)
 
 const collapseTimeout = ref<number | undefined>(undefined)
-const nav1Timeout = ref<number | undefined>(undefined)
-const nav2Timeout = ref<number | undefined>(undefined)
 
 const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
   let timer = 500
@@ -359,19 +357,16 @@ const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
     if (val.is_fixed) {
       isMeasurementCollapsed.value = false
     } else {
-      nav1Timeout.value = setTimeout(() => {
-        if (isFirst) {
-          const app = document.getElementById(`app`)
-          app?.scrollTo({ top: 112, behavior: 'smooth' })
-        } else {
-          const record = document.getElementById(`measurement-record-${val.id}`)
-          record?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-        }
-      }, timer + timer)
-      nav2Timeout.value = setTimeout(() => {
-        const menu = document.getElementById(`measurement-nav-${val.id}`)
-        menu?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-      }, timer)
+      if (isFirst) {
+        const app = document.getElementById(`app`)
+        app?.scrollTo({ top: 112, behavior: 'smooth' })
+      } else {
+        const record = document.getElementById(`measurement-record-${val.id}`)
+        record?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+      }
+
+      const menu = document.getElementById(`measurement-nav-${val.id}`)
+      menu?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
     }
   }, timer)
 
@@ -379,14 +374,6 @@ const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
     if (collapseTimeout.value) {
       clearTimeout(collapseTimeout.value)
       collapseTimeout.value = undefined
-    }
-    if (nav1Timeout.value) {
-      clearTimeout(nav1Timeout.value)
-      nav1Timeout.value = undefined
-    }
-    if (nav2Timeout.value) {
-      clearTimeout(nav2Timeout.value)
-      nav2Timeout.value = undefined
     }
   }
 }
@@ -897,14 +884,6 @@ onUnmounted(() => {
   if (collapseTimeout.value) {
     clearTimeout(collapseTimeout.value)
     collapseTimeout.value = undefined
-  }
-  if (nav1Timeout.value) {
-    clearTimeout(nav1Timeout.value)
-    nav1Timeout.value = undefined
-  }
-  if (nav2Timeout.value) {
-    clearTimeout(nav2Timeout.value)
-    nav2Timeout.value = undefined
   }
   if (trunOffTimeout.value) {
     clearTimeout(trunOffTimeout.value)
