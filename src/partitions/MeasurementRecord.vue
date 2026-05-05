@@ -58,32 +58,6 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<Emits>()
 
-onMounted(async () => {
-  if (sessionStore.session?.status === 'ongoing') {
-    // Setup auto-sync (hanya sekali)
-    if (!sessionStore._autoSyncInitialized) {
-      sessionStore.setupAutoSync()
-    }
-
-    // Process pending items jika online
-    if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
-      console.log('[Component] Processing pending items on mount')
-      await sessionStore.resolvePendingProgress()
-    }
-  }
-
-  cardLoading.value = true
-  await generateResults(props.measurement.results)
-
-  isDropped.value = props.measurement.is_dropped || false
-  cardLoading.value = false
-})
-
-// Cleanup saat unmount
-onUnmounted(() => {
-  clearInterval(durationInterval.value)
-})
-
 const measurementResults = ref<Measurement['results']>(props.measurement.results)
 
 watch(
@@ -279,7 +253,7 @@ interface DurationLap {
 
 const durationCounter = ref<number>(0)
 const isDurationLatencyStarted = ref<boolean>(false)
-const durationInterval = ref<any>(null)
+const durationInterval = ref<number | undefined>(undefined)
 const isDurationLatencyLoading = ref<boolean>(false)
 const lapLoading = ref<boolean>(false)
 const laps = ref<DurationLap[]>([])
@@ -376,6 +350,13 @@ const onStartDurationTimer = () => {
     durationCounter.value++
     lapTimer.value++
   }, 1000)
+
+  return () => {
+    if (durationInterval.value) {
+      clearInterval(durationInterval.value)
+      durationInterval.value = undefined
+    }
+  }
 }
 
 // Toggle timer start/stop
@@ -414,7 +395,10 @@ const onToggleDurationLatencyTimer = async () => {
     const capturedLapTime = currentLapTime.value
     const capturedLapSeconds = lapTimer.value
 
-    clearInterval(durationInterval.value)
+    if (durationInterval.value) {
+      clearInterval(durationInterval.value)
+      durationInterval.value = undefined
+    }
 
     if (laps.value.length > 0) {
       laps.value[laps.value.length - 1].time = capturedLapTime
@@ -467,7 +451,11 @@ const onRecordLap = async () => {
   const capturedLapTime = currentLapTime.value
   const capturedLapSeconds = lapTimer.value
 
-  clearInterval(durationInterval.value)
+  if (durationInterval.value) {
+    clearInterval(durationInterval.value)
+    durationInterval.value = undefined
+  }
+
   lapLoading.value = true
 
   if (laps.value.length > 0) {
@@ -530,6 +518,13 @@ const startTimerAfterLap = () => {
     durationCounter.value++
     lapTimer.value++
   }, 1000)
+
+  return () => {
+    if (durationInterval.value) {
+      clearInterval(durationInterval.value)
+      durationInterval.value = undefined
+    }
+  }
 }
 
 // const resumeTimerFromString = (durationString: string, lapString: string) => {
@@ -635,6 +630,36 @@ const taskAnalysisPrompts = computed(() => {
       return `${prompt.name} (${score}%)`
     })
     ?.join(', ')
+})
+
+onMounted(async () => {
+  if (sessionStore.session?.status === 'ongoing') {
+    // Setup auto-sync (hanya sekali)
+    if (!sessionStore._autoSyncInitialized) {
+      sessionStore.setupAutoSync()
+    }
+
+    // Process pending items jika online
+    if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
+      console.log('[Component] Processing pending items on mount')
+      await sessionStore.resolvePendingProgress()
+    }
+  }
+
+  cardLoading.value = true
+  await generateResults(props.measurement.results)
+
+  isDropped.value = props.measurement.is_dropped || false
+  cardLoading.value = false
+})
+
+// Cleanup saat unmount
+onUnmounted(() => {
+  // Clear timeout to prevent memory leaks
+  if (durationInterval.value) {
+    clearInterval(durationInterval.value)
+    durationInterval.value = undefined
+  }
 })
 </script>
 

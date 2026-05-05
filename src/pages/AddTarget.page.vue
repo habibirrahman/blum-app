@@ -8,7 +8,7 @@ import type { Client, Progression, Target, TargetType } from '@/lib/types'
 import TargetItem from '@/partitions/TargetItem.vue'
 import { useAppStore } from '@/stores/app.store'
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import PreviewTargetModal from '@/partitions/target/PreviewTargetModal.vue'
 import { getTargetType } from '@/lib/func'
 import { useClientStore } from '@/stores/client.store'
@@ -75,32 +75,65 @@ watch(page, (val, old) => {
 })
 
 const query = ref<string>('')
-const queryTimeout = ref<any>(null)
+const queryTimeout = ref<number | undefined>(undefined)
 watch(query, () => {
-  clearTimeout(queryTimeout.value)
+  if (queryTimeout.value) {
+    clearTimeout(queryTimeout.value)
+    queryTimeout.value = undefined
+  }
+
   queryTimeout.value = setTimeout(() => {
     loading.value = true
     page.value = 1
     fetchTargets()
   }, 1500)
+
+  return () => {
+    if (queryTimeout.value) {
+      clearTimeout(queryTimeout.value)
+      queryTimeout.value = undefined
+    }
+  }
 })
 
 const curriculumQuery = ref<string>('')
-const curriculumQueryTimeout = ref<any>(null)
+const curriculumQueryTimeout = ref<number | undefined>(undefined)
 watch(curriculumQuery, () => {
-  clearTimeout(curriculumQueryTimeout.value)
+  if (curriculumQueryTimeout.value) {
+    clearTimeout(curriculumQueryTimeout.value)
+    curriculumQueryTimeout.value = undefined
+  }
+
   curriculumQueryTimeout.value = setTimeout(() => {
     fetchCurriculums()
   }, 1500)
+
+  return () => {
+    if (curriculumQueryTimeout.value) {
+      clearTimeout(curriculumQueryTimeout.value)
+      curriculumQueryTimeout.value = undefined
+    }
+  }
 })
 
 const progressionQuery = ref<string>('')
-const progressionQueryTimeout = ref<any>(null)
+const progressionQueryTimeout = ref<number | undefined>(undefined)
 watch(progressionQuery, () => {
-  clearTimeout(progressionQueryTimeout.value)
+  if (progressionQueryTimeout.value) {
+    clearTimeout(progressionQueryTimeout.value)
+    progressionQueryTimeout.value = undefined
+  }
+
   progressionQueryTimeout.value = setTimeout(() => {
     fetchProgression()
   }, 1500)
+
+  return () => {
+    if (progressionQueryTimeout.value) {
+      clearTimeout(progressionQueryTimeout.value)
+      progressionQueryTimeout.value = undefined
+    }
+  }
 })
 
 const params = computed<string>(() => {
@@ -203,6 +236,26 @@ onMounted(() => {
   fetchProgression()
 })
 
+onUnmounted(() => {
+  // Clear timeout to prevent memory leaks
+  if (queryTimeout.value) {
+    clearTimeout(queryTimeout.value)
+    queryTimeout.value = undefined
+  }
+  if (curriculumQueryTimeout.value) {
+    clearTimeout(curriculumQueryTimeout.value)
+    curriculumQueryTimeout.value = undefined
+  }
+  if (progressionQueryTimeout.value) {
+    clearTimeout(progressionQueryTimeout.value)
+    progressionQueryTimeout.value = undefined
+  }
+  if (addTargetTimeout.value) {
+    clearTimeout(addTargetTimeout.value)
+    addTargetTimeout.value = undefined
+  }
+})
+
 const onResetCurriculum = () => {
   curriculums.value = []
   selectCurriculums.value = []
@@ -265,6 +318,7 @@ const onOpenTarget = async (target: Target) => {
   targetDetails.value = data
 }
 
+const addTargetTimeout = ref<number | undefined>(undefined)
 const onAddTarget = async () => {
   submitLoading.value = true
   const data = {
@@ -280,9 +334,14 @@ const onAddTarget = async () => {
   toast.success(
     `Success! ${targets.value.length} target(s) has been added from the databank. Please note that it may take some time to complete the process.`
   )
-  setTimeout(() => {
+
+  addTargetTimeout.value = setTimeout(() => {
     router.push({ name: 'client', params: { id: clientStore.client?.id, tab: 'targets' } })
   }, 1000)
+
+  return () => {
+    clearTimeout(addTargetTimeout.value)
+  }
 }
 </script>
 

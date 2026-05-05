@@ -144,14 +144,22 @@ watch(
   }
 )
 
+const collapseTimeout = ref<number | undefined>(undefined)
 watch(
   () => props.isCollapsed,
   () => {
-    setTimeout(() => {
+    collapseTimeout.value = setTimeout(() => {
       const el = `${props.measurement.id}-sbt-prompt-boxes-${1}`
       const boxes = document.getElementById(el)
       boxes?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
     }, 300)
+
+    return () => {
+      if (collapseTimeout.value) {
+        clearTimeout(collapseTimeout.value)
+        collapseTimeout.value = undefined
+      }
+    }
   }
 )
 
@@ -192,23 +200,29 @@ watch(hasPendingSync, (isPending, wasPending) => {
 })
 
 // Auto-save timer
-let idleTimer: any = null
+const idleTimeout = ref<number | undefined>(undefined)
 const resetIdleTimer = () => {
-  clearTimeout(idleTimer)
+  if (idleTimeout.value) {
+    clearTimeout(idleTimeout.value)
+    idleTimeout.value = undefined
+  }
+
   if (sessionStore.session?.status !== 'ongoing') return
 
   // Auto-save setelah 5 detik idle
-  idleTimer = setTimeout(() => {
-    if (sessionStore.session?.status !== 'ongoing') {
-      clearTimeout(idleTimer)
-      return
-    }
-
+  idleTimeout.value = setTimeout(() => {
     if (!isSaved.value && currentTrial.value.prompt_id && !isOpenEditTrial.value) {
       console.log('[Component] Auto-saving due to idle')
       onSaveCurrentTrial()
     }
   }, 5000)
+
+  return () => {
+    if (idleTimeout.value) {
+      clearTimeout(idleTimeout.value)
+      idleTimeout.value = undefined
+    }
+  }
 }
 
 onMounted(async () => {
@@ -280,7 +294,15 @@ onMounted(async () => {
 
 // Cleanup saat unmount
 onUnmounted(() => {
-  clearTimeout(idleTimer)
+  // Clear timeout to prevent memory leaks
+  if (collapseTimeout.value) {
+    clearTimeout(collapseTimeout.value)
+    collapseTimeout.value = undefined
+  }
+  if (idleTimeout.value) {
+    clearTimeout(idleTimeout.value)
+    idleTimeout.value = undefined
+  }
 
   // Trigger sync sebelum unmount jika ada perubahan
   if (!isSaved.value && appStore.network_status.connected) {

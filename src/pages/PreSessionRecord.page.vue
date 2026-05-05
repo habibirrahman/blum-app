@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useSessionStore } from '@/stores/session.store'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { displayDate, getTargetTasks, getTargetType } from '@/lib/func'
@@ -38,17 +38,26 @@ const showEditSessionName = ref<boolean>(false)
 const sessionName = ref<string>('')
 const editSessionNameLoading = ref<boolean>(false)
 
+const fetchCommentsTimeout = ref<number | undefined>(undefined)
 async function fetchComments() {
   const id = sessionStore.session?.id
   commentsLoading.value = true
   const { success } = await sessionStore.getSessionComments({ id, filter: 'general' })
   commentsLoading.value = false
   if (!success) return
-  setTimeout(() => {
+  fetchCommentsTimeout.value = setTimeout(() => {
     document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
   }, 100)
+
+  return () => {
+    if (fetchCommentsTimeout.value) {
+      clearTimeout(fetchCommentsTimeout.value)
+      fetchCommentsTimeout.value = undefined
+    }
+  }
 }
 
+const fetchSessionTimeout = ref<number | undefined>(undefined)
 async function fetchSession() {
   const slug = route.params?.slug as string
   sessionLoading.value = true
@@ -56,10 +65,15 @@ async function fetchSession() {
   const { data, success } = await sessionStore.getSession({ slug })
   sessionLoading.value = false
   if (!success) {
-    setTimeout(() => {
+    fetchSessionTimeout.value = setTimeout(() => {
       document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
     }, 100)
-    return
+    return () => {
+      if (fetchSessionTimeout.value) {
+        clearTimeout(fetchSessionTimeout.value)
+        fetchSessionTimeout.value = undefined
+      }
+    }
   }
 
   redirect.value = route.query.redirect?.toString() || `/clients/${data?.client_id}/sessions-draft`
@@ -76,6 +90,18 @@ onMounted(async () => {
   appStore.getRunningSessions()
 
   await fetchSession()
+})
+
+onUnmounted(() => {
+  // Clear timeout to prevent memory leaks
+  if (fetchSessionTimeout.value) {
+    clearTimeout(fetchSessionTimeout.value)
+    fetchSessionTimeout.value = undefined
+  }
+  if (fetchCommentsTimeout.value) {
+    clearTimeout(fetchCommentsTimeout.value)
+    fetchCommentsTimeout.value = undefined
+  }
 })
 
 interface Schedule {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
@@ -36,14 +36,25 @@ watch(page, (val, old) => {
 })
 
 const query = ref<string>('')
-const queryTimeout = ref<any>(null)
+const queryTimeout = ref<number | undefined>(undefined)
 watch(query, () => {
-  clearTimeout(queryTimeout.value)
+  if (queryTimeout.value) {
+    clearTimeout(queryTimeout.value)
+    queryTimeout.value = undefined
+  }
+
   queryTimeout.value = setTimeout(() => {
     sessionsLoading.value = true
     page.value = 1
     fetchDraftSession()
   }, 1500)
+
+  return () => {
+    if (queryTimeout.value) {
+      clearTimeout(queryTimeout.value)
+      queryTimeout.value = undefined
+    }
+  }
 })
 
 type Date = 'days' | 'isoWeeks' | 'months' | ''
@@ -131,20 +142,42 @@ async function fetchUpcomingSessions() {
   upcomingLoading.value = false
   if (!success) return
 }
+
+const fetchDraftSessionTimeout = ref<number | undefined>(undefined)
 async function fetchDraftSession() {
   sessionsLoading.value = true
   const id = Number(route.params.id)
   const { success } = await clientStore.getClientDraftSessions({ id, params: params.value })
   sessionsLoading.value = false
   if (!success) return
-  setTimeout(() => {
+
+  fetchDraftSessionTimeout.value = setTimeout(() => {
     document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
   }, 100)
+
+  return () => {
+    if (fetchDraftSessionTimeout.value) {
+      clearTimeout(fetchDraftSessionTimeout.value)
+      fetchDraftSessionTimeout.value = undefined
+    }
+  }
 }
 
 onMounted(() => {
   fetchUpcomingSessions()
   fetchDraftSession()
+})
+
+onUnmounted(() => {
+  // Clear timeout to prevent memory leak
+  if (queryTimeout.value) {
+    clearTimeout(queryTimeout.value)
+    queryTimeout.value = undefined
+  }
+  if (fetchDraftSessionTimeout.value) {
+    clearTimeout(fetchDraftSessionTimeout.value)
+    fetchDraftSessionTimeout.value = undefined
+  }
 })
 
 const showJoinConfirmation = ref<boolean>(false)

@@ -10,7 +10,7 @@ import CurriculumItemModal from '@/partitions/CurriculumItemModal.vue'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import moment from 'moment'
@@ -111,9 +111,9 @@ const manualIntervalAmount = ref<string | number>('')
 const manualIntervalUnit = ref('days')
 const automationTotalSessions = ref('')
 const automationOnFailure = ref('restart_from_first')
-const automationSchedules = ref<{ session_order: number; interval_amount: string | number; interval_unit: string }[]>([
-  { session_order: 1, interval_amount: 1, interval_unit: 'days' }
-])
+const automationSchedules = ref<
+  { session_order: number; interval_amount: string | number; interval_unit: string }[]
+>([{ session_order: 1, interval_amount: 1, interval_unit: 'days' }])
 const maintenanceRecommendationRef = ref<ActionRecommendation | null>(null)
 const showManualUnitSheet = ref(false)
 const showScheduleUnitSheet = ref(false)
@@ -133,7 +133,10 @@ const UNIT_OPTIONS_SHORT = [
 ]
 const FAILURE_OPTIONS = [
   { value: 'restart_from_first', label: 'Restart from 1st maintenance session' },
-  { value: 'repeat_current', label: 'Retry the failed session until the success metric is successfully passed' }
+  {
+    value: 'repeat_current',
+    label: 'Retry the failed session until the success metric is successfully passed'
+  }
 ]
 
 // Other
@@ -249,11 +252,6 @@ const isDisabledSubmit = computed(() => {
   }
 
   return false
-})
-
-// ========== LIFECYCLE ==========
-onMounted(async () => {
-  await loadInitialData()
 })
 
 // ========== METHODS ==========
@@ -554,7 +552,7 @@ async function handleActionRecommendations() {
         maintenance_config: { approach: maintenanceApproach.value } as any
       } as ActionRecommendation
     }
-    
+
     if (maintenanceApproach.value === 'manual') {
       maintenanceAction.data.maintenance_config.frequency = {
         interval_amount: Number(manualIntervalAmount.value) || 1,
@@ -562,7 +560,8 @@ async function handleActionRecommendations() {
       }
       maintenanceAction.data.maintenance_config.frequency_string = `every ${manualIntervalAmount.value || 1} ${manualIntervalUnit.value}`
     } else if (maintenanceApproach.value === 'automation') {
-      maintenanceAction.data.maintenance_config.total_sessions = Number(automationTotalSessions.value) || 1
+      maintenanceAction.data.maintenance_config.total_sessions =
+        Number(automationTotalSessions.value) || 1
       maintenanceAction.data.maintenance_config.on_failure = automationOnFailure.value
       maintenanceAction.data.maintenance_config.failure_strategy = automationOnFailure.value
       maintenanceAction.data.maintenance_config.schedules = automationSchedules.value.map((s) => ({
@@ -674,11 +673,7 @@ function shouldConfirmDisableMaintenance(): boolean {
   // Check: user is disabling maintenance, target is mastered, has started records, and NOT completed
   if (maintenanceChecked.value) return false // maintenance is still enabled, no need to confirm
   const state = maintenanceRecommendationRef.value?.maintenance_state
-  if (
-    clientStore.target?.status === 'mastered' &&
-    state?.started &&
-    !state?.completed
-  ) {
+  if (clientStore.target?.status === 'mastered' && state?.started && !state?.completed) {
     return true
   }
   return false
@@ -705,6 +700,7 @@ async function onSubmit() {
   await doSubmit()
 }
 
+const submitTimeout = ref<number | undefined>(undefined)
 async function doSubmit() {
   try {
     submitLoading.value = true
@@ -726,9 +722,16 @@ async function doSubmit() {
     // Update initial data to avoid AYS on successful save
     initialDataStr.value = JSON.stringify(buildTargetData())
 
-    setTimeout(() => {
+    submitTimeout.value = setTimeout(() => {
       router.push({ name: 'client', params: { id: clientId.value, tab: 'targets' } })
     }, 1000)
+
+    return () => {
+      if (submitTimeout.value) {
+        clearTimeout(submitTimeout.value)
+        submitTimeout.value = undefined
+      }
+    }
   } catch (error) {
     toast.error('An error occurred while updating the target.')
     console.error('Error updating target:', error)
@@ -763,13 +766,26 @@ function onApplyPromptSuccessMetric(val: string) {
   selectedPromptSuccessMetric.value = val
   showPromptLevel.value = false
 }
+
+// ========== LIFECYCLE ==========
+onMounted(async () => {
+  await loadInitialData()
+})
+
+onUnmounted(() => {
+  // Clear timeout to prevent memory leaks
+  if (submitTimeout.value) {
+    clearTimeout(submitTimeout.value)
+    submitTimeout.value = undefined
+  }
+})
 </script>
 
 <template>
   <!-- Header -->
-  <div class="flex sticky top-0 z-10 gap-3 items-center px-4 pt-3 pb-3 bg-white">
+  <div class="sticky top-0 z-10 flex items-center gap-3 bg-white px-4 pb-3 pt-3">
     <RouterLink :to="{ name: 'client', params: { id: clientId, tab: 'targets' } }">
-      <div class="flex justify-center items-center w-8 h-8 rounded-full cursor-pointer bg-slate-2">
+      <div class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-2">
         <Icon icon="tabler:chevron-left" class="text-2xl text-slate-7" />
       </div>
     </RouterLink>
@@ -777,25 +793,25 @@ function onApplyPromptSuccessMetric(val: string) {
   </div>
 
   <!-- Main Content -->
-  <div class="p-4 space-y-5 w-full h-full min-h-svh bg-prim-3">
+  <div class="h-full min-h-svh w-full space-y-5 bg-prim-3 p-4">
     <!-- Target/Group Details Section -->
-    <div class="p-4 space-y-4 bg-white rounded">
+    <div class="space-y-4 rounded bg-white p-4">
       <!-- Section Header -->
       <div
         v-if="!isGroup"
         @click="isCloseTargetDetails = !isCloseTargetDetails"
-        class="flex justify-between items-center cursor-pointer"
+        class="flex cursor-pointer items-center justify-between"
         :class="{ 'border-b border-slate-4 pb-2': !isCloseTargetDetails }"
       >
         <div class="text-sm font-semibold text-slate-10">Target details</div>
         <Icon
           icon="ph:caret-up-bold"
-          class="w-5 h-5 transition-transform text-slate-10"
+          class="h-5 w-5 text-slate-10 transition-transform"
           :class="{ 'rotate-180': isCloseTargetDetails }"
         />
       </div>
 
-      <div v-if="isGroup" class="flex justify-between items-center pb-2 border-b border-slate-4">
+      <div v-if="isGroup" class="flex items-center justify-between border-b border-slate-4 pb-2">
         <div class="text-sm font-semibold text-slate-10">Group details</div>
       </div>
 
@@ -812,11 +828,11 @@ function onApplyPromptSuccessMetric(val: string) {
           </div>
           <div
             @click="showCurriculum = true"
-            class="flex justify-between items-center px-4 py-2 bg-white rounded border cursor-pointer border-slate-4"
+            class="flex cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-4 py-2"
           >
-            <div class="flex gap-2 items-center truncate">
+            <div class="flex items-center gap-2 truncate">
               <div
-                class="flex-shrink-0 w-6 h-6 rounded-full"
+                class="h-6 w-6 flex-shrink-0 rounded-full"
                 :style="{ backgroundColor: selectedCurriculum?.color }"
               />
               <div class="truncate text-[16px] text-slate-10">
@@ -828,7 +844,7 @@ function onApplyPromptSuccessMetric(val: string) {
         </div>
 
         <!-- Curriculum Change Warning -->
-        <div v-if="isTargetMember" class="flex gap-2 items-center p-2 rounded bg-cornflower-2">
+        <div v-if="isTargetMember" class="flex items-center gap-2 rounded bg-cornflower-2 p-2">
           <Icon icon="material-symbols:info" class="text-lg text-cornflower-8" />
           <div class="text-xs text-cornflower-8">
             Changing the curriculum will apply it to all targets in this grouped target.
@@ -843,7 +859,7 @@ function onApplyPromptSuccessMetric(val: string) {
           </div>
           <div
             @click="showStatus = true"
-            class="flex justify-between items-center px-4 py-2 bg-white rounded border cursor-pointer border-slate-4"
+            class="flex cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-4 py-2"
           >
             <AppChip :chip="status as TargetStatus" />
             <Icon icon="ph:caret-down" class="text-2xl text-slate-8" />
@@ -862,7 +878,7 @@ function onApplyPromptSuccessMetric(val: string) {
         <!-- Divider for Prompting Types -->
         <div
           v-if="(isPromptingClassic || isPromptingCustom) && !isGroup"
-          class="w-full h-0.5 bg-slate-3"
+          class="h-0.5 w-full bg-slate-3"
         />
 
         <!-- Classic Prompting Goal and Success Metric -->
@@ -873,14 +889,14 @@ function onApplyPromptSuccessMetric(val: string) {
             number of times.
           </div>
 
-          <div class="pt-2 pb-2">
+          <div class="pb-2 pt-2">
             <div class="mb-1 text-sm font-medium text-slate-8">
               <span>Prompt level</span>
               <span class="ml-1 text-tomato-7">*</span>
             </div>
             <div
               @click="showPromptLevel = true"
-              class="flex justify-between items-center px-4 py-2 bg-white rounded border cursor-pointer border-slate-4"
+              class="flex cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-4 py-2"
             >
               <div class="text-[16px]">{{ selectedPromptSuccessMetric }}</div>
               <Icon icon="ph:caret-down" class="text-2xl text-slate-8" />
@@ -1025,25 +1041,25 @@ function onApplyPromptSuccessMetric(val: string) {
             <span class="ml-1 text-tomato-7">*</span>
           </div>
 
-          <div v-if="!isLatencyType" class="flex gap-2 items-center mb-3">
+          <div v-if="!isLatencyType" class="mb-3 flex items-center gap-2">
             <input
               type="radio"
               name="success_metric"
               :checked="successMetric === 'equal to or greater than goal'"
               value="equal to or greater than goal"
-              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="successMetric = 'equal to or greater than goal'"
             />
             <label class="w-full text-sm">Equal to or greater than goal</label>
           </div>
 
-          <div class="flex gap-2 items-center">
+          <div class="flex items-center gap-2">
             <input
               type="radio"
               name="success_metric"
               :checked="successMetric === 'less than goal'"
               value="less than goal"
-              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="successMetric = 'less than goal'"
             />
             <label class="w-full text-sm">Less than goal</label>
@@ -1088,24 +1104,24 @@ function onApplyPromptSuccessMetric(val: string) {
           </div>
           <div class="text-xs text-slate-7">Choose how intervals begin during the session.</div>
 
-          <div class="flex gap-2 items-center">
+          <div class="flex items-center gap-2">
             <input
               type="radio"
               name="interval_start_timing"
               :checked="intervalStartTiming === 'start_with_session'"
               value="start_with_session"
-              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="intervalStartTiming = 'start_with_session'"
             />
             <label class="w-full text-sm">Start with session</label>
           </div>
-          <div class="flex gap-2 items-center">
+          <div class="flex items-center gap-2">
             <input
               type="radio"
               name="interval_start_timing"
               :checked="intervalStartTiming === 'custom_start'"
               value="custom_start"
-              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="intervalStartTiming = 'custom_start'"
             />
             <label class="w-full text-sm">Custom start</label>
@@ -1121,7 +1137,7 @@ function onApplyPromptSuccessMetric(val: string) {
             Configure whether recording continues after the planned duration ends.
           </div>
 
-          <div class="flex gap-2 items-center">
+          <div class="flex items-center gap-2">
             <AppToggle
               name="allow_overtime_recording"
               :checked="allowOvertimeRecording"
@@ -1132,13 +1148,13 @@ function onApplyPromptSuccessMetric(val: string) {
         </div>
 
         <!-- Apply to All Member Checkbox -->
-        <div v-if="isTargetMember" class="flex gap-3 items-center">
+        <div v-if="isTargetMember" class="flex items-center gap-3">
           <input
             type="checkbox"
             name="applyToAllMember"
             id="applyToAllMember"
             :checked="applyToAllMember"
-            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="applyToAllMember = !applyToAllMember"
           />
           <label for="applyToAllMember" class="w-full text-sm">
@@ -1149,8 +1165,8 @@ function onApplyPromptSuccessMetric(val: string) {
     </div>
 
     <!-- Probing Section -->
-    <div v-if="useProbing" class="p-4 space-y-4 bg-white rounded">
-      <div class="flex justify-between items-center pb-2 border-b border-slate-4">
+    <div v-if="useProbing" class="space-y-4 rounded bg-white p-4">
+      <div class="flex items-center justify-between border-b border-slate-4 pb-2">
         <div class="text-sm font-semibold text-slate-10">Probing</div>
         <AppToggle
           name="use_probing"
@@ -1188,38 +1204,38 @@ function onApplyPromptSuccessMetric(val: string) {
     </div>
 
     <!-- Action Recommendations Section -->
-    <div v-if="useActionRecommendations" class="p-4 space-y-3 bg-white rounded">
+    <div v-if="useActionRecommendations" class="space-y-3 rounded bg-white p-4">
       <div
         @click="isCloseActionRecommendation = !isCloseActionRecommendation"
-        class="flex justify-between items-center cursor-pointer"
+        class="flex cursor-pointer items-center justify-between"
       >
-        <div class="flex gap-2 items-center">
-          <div class="p-1 rounded bg-orange-3">
+        <div class="flex items-center gap-2">
+          <div class="rounded bg-orange-3 p-1">
             <Icon icon="mynaui:info-waves-solid" class="rotate-180 text-[20px] text-[#FD853A]" />
           </div>
           <div class="text-sm font-semibold text-slate-10">Action recommendations</div>
         </div>
         <Icon
           icon="ph:caret-up-bold"
-          class="w-5 h-5 transition-transform text-slate-10"
+          class="h-5 w-5 text-slate-10 transition-transform"
           :class="{ 'rotate-180': isCloseActionRecommendation }"
         />
       </div>
 
       <div v-if="!isCloseActionRecommendation" class="space-y-2">
         <!-- mastered action recommendation -->
-        <div class="py-2 space-y-2 border-t border-slate-4">
+        <div class="space-y-2 border-t border-slate-4 py-2">
           <div class="text-sm font-semibold text-slate-10">Passing success metric</div>
           <div class="text-xs text-slate-8">Updating the current target's status from</div>
 
-          <div class="flex gap-2 items-center">
+          <div class="flex items-center gap-2">
             <AppChip chip="in_progress" />
             <div class="text-sm text-slate-8">to</div>
             <AppChip chip="mastered" />
           </div>
 
           <!-- total success -->
-          <div class="flex gap-2 items-center pt-2">
+          <div class="flex items-center gap-2 pt-2">
             <AppToggle
               name="total_success"
               :checked="totalSuccessChecked"
@@ -1237,7 +1253,7 @@ function onApplyPromptSuccessMetric(val: string) {
             Receive a recommendation after completing at least
           </div>
 
-          <div class="flex gap-2 items-center pt-2">
+          <div class="flex items-center gap-2 pt-2">
             <input
               type="number"
               pattern="[0-9]*"
@@ -1253,7 +1269,7 @@ function onApplyPromptSuccessMetric(val: string) {
           <!-- end total success -->
 
           <!-- consecutive success -->
-          <div class="flex gap-2 items-center pt-2">
+          <div class="flex items-center gap-2 pt-2">
             <AppToggle
               name="consecutive_success"
               :checked="consecutiveSuccessChecked"
@@ -1271,7 +1287,7 @@ function onApplyPromptSuccessMetric(val: string) {
             Receive a recommendation only if the session is successful for
           </div>
 
-          <div class="flex gap-2 items-center pt-2">
+          <div class="flex items-center gap-2 pt-2">
             <input
               type="number"
               pattern="[0-9]*"
@@ -1289,8 +1305,8 @@ function onApplyPromptSuccessMetric(val: string) {
         <!-- end mastered action recommendation -->
 
         <!-- activate next target recommendation -->
-        <div class="py-2 space-y-2 border-t border-slate-4">
-          <div class="flex gap-2 items-center">
+        <div class="space-y-2 border-t border-slate-4 py-2">
+          <div class="flex items-center gap-2">
             <AppToggle
               name="next_target"
               :checked="nextTargetChecked"
@@ -1307,7 +1323,7 @@ function onApplyPromptSuccessMetric(val: string) {
             <span v-else>the next target </span>
             <span>will be recommended to change from </span>
           </div>
-          <div class="flex gap-2 items-center">
+          <div class="flex items-center gap-2">
             <AppChip chip="pending" />
             <div class="text-sm text-slate-8">to</div>
             <AppChip chip="in_progress" />
@@ -1318,7 +1334,7 @@ function onApplyPromptSuccessMetric(val: string) {
             mastered or now.
           </div>
 
-          <div class="flex gap-2 px-3 py-2 rounded bg-cornflower-2">
+          <div class="flex gap-2 rounded bg-cornflower-2 px-3 py-2">
             <Icon icon="ph:info-fill" class="text-2xl text-cornflower-8" />
             <div class="text-sm text-cornflower-8">
               <span v-if="!clientStore.target?.parent_id">
@@ -1338,8 +1354,8 @@ function onApplyPromptSuccessMetric(val: string) {
         <!-- end activate next target recommendation -->
 
         <!-- maintenance recommendation -->
-        <div class="py-2 space-y-4 border-t border-slate-4">
-          <div class="flex gap-2 items-center">
+        <div class="space-y-4 border-t border-slate-4 py-2">
+          <div class="flex items-center gap-2">
             <AppToggle
               name="maintenance"
               :checked="maintenanceChecked"
@@ -1351,16 +1367,13 @@ function onApplyPromptSuccessMetric(val: string) {
           <div class="text-xs text-slate-8">
             Set up a maintenance plan for a mastered target. If failed, target status will be moved
             from
-            <div class="flex gap-2 items-center mt-2">
+            <div class="mt-2 flex items-center gap-2">
               <AppChip chip="mastered" /> to <AppChip chip="in_progress" />
             </div>
           </div>
 
           <!-- maintenance in progress notice -->
-          <div
-            v-if="maintenanceInProgress"
-            class="flex gap-2 px-3 py-2 rounded bg-cornflower-2"
-          >
+          <div v-if="maintenanceInProgress" class="flex gap-2 rounded bg-cornflower-2 px-3 py-2">
             <Icon icon="ph:info-fill" class="text-2xl text-cornflower-8" />
             <div class="text-sm text-cornflower-8">
               Maintenance is already in progress. You are no longer able to change the approach.
@@ -1369,16 +1382,19 @@ function onApplyPromptSuccessMetric(val: string) {
 
           <div v-if="maintenanceChecked" class="space-y-4">
             <!-- Approach Selection (hidden when in progress) -->
-            <div v-if="!maintenanceInProgress" class="flex p-1 rounded-lg border border-slate-4 bg-slate-2">
+            <div
+              v-if="!maintenanceInProgress"
+              class="flex rounded-lg border border-slate-4 bg-slate-2 p-1"
+            >
               <div
-                class="flex justify-center items-center py-1 w-full text-xs font-semibold rounded transition-all duration-300 cursor-pointer text-slate-7"
+                class="flex w-full cursor-pointer items-center justify-center rounded py-1 text-xs font-semibold text-slate-7 transition-all duration-300"
                 :class="maintenanceApproach === 'manual' ? 'bg-white shadow' : 'text-slate-7'"
                 @click="maintenanceApproach = 'manual'"
               >
                 Manual
               </div>
               <div
-                class="flex justify-center items-center py-1 w-full text-xs font-semibold rounded transition-all duration-300 cursor-pointer text-slate-7"
+                class="flex w-full cursor-pointer items-center justify-center rounded py-1 text-xs font-semibold text-slate-7 transition-all duration-300"
                 :class="maintenanceApproach === 'automation' ? 'bg-white shadow' : 'text-slate-7'"
                 @click="maintenanceApproach = 'automation'"
               >
@@ -1390,24 +1406,29 @@ function onApplyPromptSuccessMetric(val: string) {
             <div v-if="maintenanceApproach === 'manual'" class="space-y-3">
               <div class="text-[13px] font-semibold text-slate-10">Manual approach</div>
               <div class="text-xs text-slate-8">
-                Repeat maintenance at a fixed interval with no end date. Sessions continue until the setting is turned off.
+                Repeat maintenance at a fixed interval with no end date. Sessions continue until the
+                setting is turned off.
               </div>
-              
-              <div class="pt-2 space-y-1">
-                <div class="text-[13px] font-semibold text-slate-10">Recommended maintenance frequency</div>
-                <div class="flex gap-2 justify-between items-center pt-1">
+
+              <div class="space-y-1 pt-2">
+                <div class="text-[13px] font-semibold text-slate-10">
+                  Recommended maintenance frequency
+                </div>
+                <div class="flex items-center justify-between gap-2 pt-1">
                   <span class="text-xs">Every</span>
                   <div class="flex gap-2">
                     <input
                       type="number"
                       v-model="manualIntervalAmount"
-                      class="px-2 w-32 h-10 text-sm rounded border appearance-none outline-none border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2"
+                      class="h-10 w-32 appearance-none rounded border border-slate-4 px-2 text-sm outline-none focus:border-light-purple-5 focus:ring-light-purple-2"
                     />
                     <div
                       @click="showManualUnitSheet = true"
-                      class="flex justify-between items-center px-3 h-10 bg-white rounded border cursor-pointer border-slate-4 min-w-[100px]"
+                      class="flex h-10 min-w-[100px] cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-3"
                     >
-                      <span class="text-sm">{{ UNIT_OPTIONS.find(o => o.value === manualIntervalUnit)?.label || 'Day(s)' }}</span>
+                      <span class="text-sm">{{
+                        UNIT_OPTIONS.find((o) => o.value === manualIntervalUnit)?.label || 'Day(s)'
+                      }}</span>
                       <Icon icon="ph:caret-down" class="text-slate-500" />
                     </div>
                   </div>
@@ -1420,7 +1441,8 @@ function onApplyPromptSuccessMetric(val: string) {
             <div v-if="maintenanceApproach === 'automation'" class="space-y-3">
               <div class="text-[13px] font-semibold text-slate-10">Automation approach</div>
               <div class="text-xs text-slate-8">
-                Create a predefined sequence of maintenance sessions with custom intervals between each session.
+                Create a predefined sequence of maintenance sessions with custom intervals between
+                each session.
               </div>
 
               <div class="space-y-1">
@@ -1435,41 +1457,68 @@ function onApplyPromptSuccessMetric(val: string) {
                 />
               </div>
 
-              <div class="pt-2 space-y-4">
-                <div v-for="(schedule, index) in automationSchedules" :key="index" class="space-y-2">
+              <div class="space-y-4 pt-2">
+                <div
+                  v-for="(schedule, index) in automationSchedules"
+                  :key="index"
+                  class="space-y-2"
+                >
                   <div class="text-[13px] font-semibold text-slate-10">
                     {{ ordinalSuffix(index + 1) }} maintenance schedule
                   </div>
-                  <div class="flex gap-2 items-center">
+                  <div class="flex items-center gap-2">
                     <input
                       type="number"
                       v-model="schedule.interval_amount"
                       :disabled="maintenanceSessionHasBeenRecorded(schedule)"
                       :class="{ 'opacity-50': maintenanceSessionHasBeenRecorded(schedule) }"
-                      class="px-2 w-2/4 h-10 text-sm rounded border appearance-none outline-none border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2"
+                      class="h-10 w-2/4 appearance-none rounded border border-slate-4 px-2 text-sm outline-none focus:border-light-purple-5 focus:ring-light-purple-2"
                     />
                     <div
-                      @click="() => { if (!maintenanceSessionHasBeenRecorded(schedule)) { editingScheduleIndex = index; showScheduleUnitSheet = true } }"
-                      class="flex justify-between w-2/4 items-center px-3 h-10 bg-white rounded border cursor-pointer border-slate-4 min-w-[100px]"
-                      :class="{ 'opacity-50 cursor-not-allowed': maintenanceSessionHasBeenRecorded(schedule) }"
+                      @click="
+                        () => {
+                          if (!maintenanceSessionHasBeenRecorded(schedule)) {
+                            editingScheduleIndex = index
+                            showScheduleUnitSheet = true
+                          }
+                        }
+                      "
+                      class="flex h-10 w-2/4 min-w-[100px] cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-3"
+                      :class="{
+                        'cursor-not-allowed opacity-50': maintenanceSessionHasBeenRecorded(schedule)
+                      }"
                     >
-                      <span class="text-sm">{{ UNIT_OPTIONS_SHORT.find(o => o.value === schedule.interval_unit)?.label || 'Day' }}</span>
+                      <span class="text-sm">{{
+                        UNIT_OPTIONS_SHORT.find((o) => o.value === schedule.interval_unit)?.label ||
+                        'Day'
+                      }}</span>
                       <Icon icon="ph:caret-down" class="text-slate-500" />
                     </div>
                   </div>
-                  <div class="text-xs text-slate-8" v-html="index === 0 ? baseDateText : 'after previous maintenance.'"></div>
+                  <div
+                    class="text-xs text-slate-8"
+                    v-html="index === 0 ? baseDateText : 'after previous maintenance.'"
+                  ></div>
                 </div>
               </div>
 
-              <div class="pt-2 space-y-2">
-                <div class="text-[13px] font-medium text-slate-8">When a maintenance session fails</div>
+              <div class="space-y-2 pt-2">
+                <div class="text-[13px] font-medium text-slate-8">
+                  When a maintenance session fails
+                </div>
                 <div
-                  @click="() => { if (automationSchedules.length > 1) showFailureSheet = true }"
-                  class="flex justify-between items-center px-3 w-full h-10 bg-white rounded border cursor-pointer border-slate-4"
-                  :class="{ 'opacity-50 cursor-not-allowed': automationSchedules.length === 1 }"
+                  @click="
+                    () => {
+                      if (automationSchedules.length > 1) showFailureSheet = true
+                    }
+                  "
+                  class="flex h-10 w-full cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-3"
+                  :class="{ 'cursor-not-allowed opacity-50': automationSchedules.length === 1 }"
                 >
-                  <span class="pr-2 text-sm truncate">{{ FAILURE_OPTIONS.find(o => o.value === automationOnFailure)?.label }}</span>
-                  <Icon icon="ph:caret-down" class="text-slate-500 shrink-0" />
+                  <span class="truncate pr-2 text-sm">{{
+                    FAILURE_OPTIONS.find((o) => o.value === automationOnFailure)?.label
+                  }}</span>
+                  <Icon icon="ph:caret-down" class="shrink-0 text-slate-500" />
                 </div>
               </div>
             </div>
@@ -1481,7 +1530,7 @@ function onApplyPromptSuccessMetric(val: string) {
   </div>
 
   <!-- Submit Button -->
-  <div class="sticky bottom-0 px-4 py-3 bg-white">
+  <div class="sticky bottom-0 bg-white px-4 py-3">
     <AppButton
       class="w-full"
       @click="onSubmit"
@@ -1506,7 +1555,7 @@ function onApplyPromptSuccessMetric(val: string) {
   <!-- Status Action Sheet -->
   <AppActionSheet :show="showStatus" @close="showStatus = false">
     <div>
-      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Status</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -1517,9 +1566,9 @@ function onApplyPromptSuccessMetric(val: string) {
         <div
           v-for="opt in STATUS_OPTIONS"
           :key="opt.value"
-          class="flex justify-between items-center w-full h-14 border-b border-slate-4"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-4"
         >
-          <label :for="`status_${opt.value}`" class="w-full text-sm cursor-pointer">
+          <label :for="`status_${opt.value}`" class="w-full cursor-pointer text-sm">
             <div class="w-fit">
               <AppChip :chip="opt.value" />
             </div>
@@ -1530,13 +1579,13 @@ function onApplyPromptSuccessMetric(val: string) {
             :id="`status_${opt.value}`"
             :checked="selectStatus === opt.value"
             :value="opt.value"
-            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="selectStatus = opt.value"
           />
         </div>
       </div>
 
-      <div class="grid sticky bottom-0 z-10 grid-cols-1 gap-2 py-3 w-full bg-white">
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-1 gap-2 bg-white py-3">
         <AppButton class="w-full" @click="onApplyStatus(selectStatus as TargetStatus)">
           Apply
         </AppButton>
@@ -1547,7 +1596,7 @@ function onApplyPromptSuccessMetric(val: string) {
   <!-- Prompt Level Action Sheet -->
   <AppActionSheet :show="showPromptLevel" @close="showPromptLevel = false">
     <div>
-      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Prompt</div>
         <div class="cursor-pointer" @click="showPromptLevel = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -1558,9 +1607,9 @@ function onApplyPromptSuccessMetric(val: string) {
         <div
           v-for="opt in promptSuccessMetricOptions"
           :key="opt.value"
-          class="flex justify-between items-center w-full h-14 border-b border-slate-4"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-4"
         >
-          <label :for="`prompt_${opt.value}`" class="w-full text-sm cursor-pointer">
+          <label :for="`prompt_${opt.value}`" class="w-full cursor-pointer text-sm">
             {{ opt.label }}
           </label>
           <input
@@ -1569,13 +1618,13 @@ function onApplyPromptSuccessMetric(val: string) {
             :id="`prompt_${opt.value}`"
             :checked="selectedPromptSuccessMetric === opt.value"
             :value="opt.value"
-            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="selectedPromptSuccessMetric = opt.value"
           />
         </div>
       </div>
 
-      <div class="grid sticky bottom-0 z-10 grid-cols-1 gap-2 py-3 w-full bg-white">
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-1 gap-2 bg-white py-3">
         <AppButton class="w-full" @click="onApplyPromptSuccessMetric(selectedPromptSuccessMetric)">
           Apply
         </AppButton>
@@ -1585,15 +1634,15 @@ function onApplyPromptSuccessMetric(val: string) {
 
   <!-- Unsaved Changes AYS Modal -->
   <AppActionSheet :show="showUnsavedChangesModal" @close="onStay">
-    <div class="py-3 space-y-6">
-      <div class="flex flex-col justify-center items-center space-y-2 text-center">
+    <div class="space-y-6 py-3">
+      <div class="flex flex-col items-center justify-center space-y-2 text-center">
         <div class="text-xl font-bold text-slate-10">Unsaved changes</div>
         <div class="text-base text-slate-8">Are you sure you want to leave this page?</div>
       </div>
 
-      <div class="flex gap-3 items-center">
+      <div class="flex items-center gap-3">
         <AppButton class="w-full" kind="plain" @click="onDiscard">
-          <span class="text-base font-semibold text-light-purple-6">Discard change</span>
+          <span class="text-light-purple-6 text-base font-semibold">Discard change</span>
         </AppButton>
         <AppButton class="w-full" @click="onStay"> Stay </AppButton>
       </div>
@@ -1603,7 +1652,7 @@ function onApplyPromptSuccessMetric(val: string) {
   <!-- Manual Interval Unit Action Sheet -->
   <AppActionSheet :show="showManualUnitSheet" @close="showManualUnitSheet = false">
     <div>
-      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Interval unit</div>
         <div class="cursor-pointer" @click="showManualUnitSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -1613,9 +1662,9 @@ function onApplyPromptSuccessMetric(val: string) {
         <div
           v-for="opt in UNIT_OPTIONS"
           :key="opt.value"
-          class="flex justify-between items-center w-full h-14 border-b border-slate-4"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-4"
         >
-          <label :for="`manual_unit_${opt.value}`" class="w-full text-sm cursor-pointer">
+          <label :for="`manual_unit_${opt.value}`" class="w-full cursor-pointer text-sm">
             {{ opt.label }}
           </label>
           <input
@@ -1624,8 +1673,11 @@ function onApplyPromptSuccessMetric(val: string) {
             :id="`manual_unit_${opt.value}`"
             :checked="manualIntervalUnit === opt.value"
             :value="opt.value"
-            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
-            @click="manualIntervalUnit = opt.value; showManualUnitSheet = false"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            @click="
+              manualIntervalUnit = opt.value
+              showManualUnitSheet = false
+            "
           />
         </div>
       </div>
@@ -1635,7 +1687,7 @@ function onApplyPromptSuccessMetric(val: string) {
   <!-- Schedule Interval Unit Action Sheet -->
   <AppActionSheet :show="showScheduleUnitSheet" @close="showScheduleUnitSheet = false">
     <div>
-      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Interval unit</div>
         <div class="cursor-pointer" @click="showScheduleUnitSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -1645,9 +1697,9 @@ function onApplyPromptSuccessMetric(val: string) {
         <div
           v-for="opt in UNIT_OPTIONS_SHORT"
           :key="opt.value"
-          class="flex justify-between items-center w-full h-14 border-b border-slate-4"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-4"
         >
-          <label :for="`sched_unit_${opt.value}`" class="w-full text-sm cursor-pointer">
+          <label :for="`sched_unit_${opt.value}`" class="w-full cursor-pointer text-sm">
             {{ opt.label }}
           </label>
           <input
@@ -1656,8 +1708,11 @@ function onApplyPromptSuccessMetric(val: string) {
             :id="`sched_unit_${opt.value}`"
             :checked="automationSchedules[editingScheduleIndex]?.interval_unit === opt.value"
             :value="opt.value"
-            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
-            @click="automationSchedules[editingScheduleIndex].interval_unit = opt.value; showScheduleUnitSheet = false"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            @click="
+              automationSchedules[editingScheduleIndex].interval_unit = opt.value
+              showScheduleUnitSheet = false
+            "
           />
         </div>
       </div>
@@ -1667,7 +1722,7 @@ function onApplyPromptSuccessMetric(val: string) {
   <!-- Failure Strategy Action Sheet -->
   <AppActionSheet :show="showFailureSheet" @close="showFailureSheet = false">
     <div>
-      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">When a maintenance session fails</div>
         <div class="cursor-pointer" @click="showFailureSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -1677,9 +1732,9 @@ function onApplyPromptSuccessMetric(val: string) {
         <div
           v-for="opt in FAILURE_OPTIONS"
           :key="opt.value"
-          class="flex justify-between items-center py-4 w-full border-b border-slate-4"
+          class="flex w-full items-center justify-between border-b border-slate-4 py-4"
         >
-          <label :for="`failure_${opt.value}`" class="pr-4 w-full text-sm cursor-pointer">
+          <label :for="`failure_${opt.value}`" class="w-full cursor-pointer pr-4 text-sm">
             {{ opt.label }}
           </label>
           <input
@@ -1688,8 +1743,11 @@ function onApplyPromptSuccessMetric(val: string) {
             :id="`failure_${opt.value}`"
             :checked="automationOnFailure === opt.value"
             :value="opt.value"
-            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
-            @click="automationOnFailure = opt.value; showFailureSheet = false"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            @click="
+              automationOnFailure = opt.value
+              showFailureSheet = false
+            "
           />
         </div>
       </div>
@@ -1698,24 +1756,21 @@ function onApplyPromptSuccessMetric(val: string) {
 
   <!-- Disable Maintenance Confirmation Modal -->
   <AppActionSheet :show="showDisableMaintenanceModal" @close="showDisableMaintenanceModal = false">
-    <div class="py-3 space-y-4">
+    <div class="space-y-4 py-3">
       <div class="flex flex-col items-center space-y-2 text-center">
         <div class="text-xl font-bold text-slate-10">Disable maintenance</div>
         <div class="text-sm text-slate-8">
-          This will reset the maintenance schedule and stop ongoing progress.
-          Are you sure you want to proceed?
+          This will reset the maintenance schedule and stop ongoing progress. Are you sure you want
+          to proceed?
         </div>
       </div>
 
-      <div class="flex gap-3 items-center">
+      <div class="flex items-center gap-3">
         <AppButton class="w-full" kind="plain" @click="showDisableMaintenanceModal = false">
           <span class="text-base font-semibold text-slate-8">Cancel</span>
         </AppButton>
-        <AppButton class="w-full" @click="confirmDisableMaintenance">
-          Update
-        </AppButton>
+        <AppButton class="w-full" @click="confirmDisableMaintenance"> Update </AppButton>
       </div>
     </div>
   </AppActionSheet>
-
 </template>

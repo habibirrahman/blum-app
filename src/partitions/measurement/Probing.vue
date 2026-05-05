@@ -5,7 +5,7 @@ import {
   type UpdateMeasurementMarkProbingParams,
   type UpdateMeasurementResultsParams
 } from '@/stores/session.store'
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import type { Measurement } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { TransitionRoot } from '@headlessui/vue'
@@ -38,21 +38,41 @@ const popupTimeout = ref<any>(null)
 const onDisplayPopup = () => {
   if (!props.isCollapsed) return
   showPopup.value = true
-  clearTimeout(popupTimeout.value)
+
+  if (popupTimeout.value) {
+    clearTimeout(popupTimeout.value)
+    popupTimeout.value = undefined
+  }
+
   popupTimeout.value = setTimeout(() => {
     showPopup.value = false
   }, 3000)
+
+  return () => {
+    if (popupTimeout.value) {
+      clearTimeout(popupTimeout.value)
+      popupTimeout.value = undefined
+    }
+  }
 }
 
 const page = ref<number>(1)
+const collapeTimeout = ref<number | undefined>(undefined)
 watch(
   () => props.isCollapsed,
   () => {
-    setTimeout(() => {
+    collapeTimeout.value = setTimeout(() => {
       const el = `${props.measurement.id}-probing-circle-${1}`
       const circles = document.getElementById(el)
       circles?.scrollIntoView({ behavior: 'smooth', inline: 'center' })
     }, 300)
+
+    return () => {
+      if (collapeTimeout.value) {
+        clearTimeout(collapeTimeout.value)
+        collapeTimeout.value = undefined
+      }
+    }
   }
 )
 const onScroll = (e: any) => {
@@ -222,6 +242,7 @@ watch(showPanel, (val) => {
 })
 const isProbingPassed = ref<boolean>(false)
 const showCelebration = ref<boolean>(false)
+const submitPorbingTimeout = ref<number | undefined>(undefined)
 const onSubmitProbing = async () => {
   probingAction.value = null
   showPanel.value = true
@@ -238,9 +259,16 @@ const onSubmitProbing = async () => {
 
   if (isProbingPassed.value) {
     showCelebration.value = true
-    setTimeout(() => {
+    submitPorbingTimeout.value = setTimeout(() => {
       showCelebration.value = false
     }, 2000)
+
+    return () => {
+      if (submitPorbingTimeout.value) {
+        clearTimeout(submitPorbingTimeout.value)
+        submitPorbingTimeout.value = undefined
+      }
+    }
   }
 }
 
@@ -408,6 +436,7 @@ const onSave = async () => {
 
 // draft
 const switchLoading = ref<boolean>(false)
+const changeToPercentageTimeout = ref<number | undefined>(undefined)
 const onChangeToPercentage = async () => {
   if (sessionStore.session?.status !== 'draft') return
   if (switchLoading.value) return
@@ -461,11 +490,38 @@ const onChangeToPercentage = async () => {
       return
     }
   }
-  setTimeout(async () => {
+  changeToPercentageTimeout.value = setTimeout(async () => {
     emit('after-commit')
     switchLoading.value = false
   }, 300)
+
+  return () => {
+    if (changeToPercentageTimeout.value) {
+      clearTimeout(changeToPercentageTimeout.value)
+      changeToPercentageTimeout.value = undefined
+    }
+  }
 }
+
+onUnmounted(() => {
+  // Clear timeout to prevent memory leak
+  if (popupTimeout.value) {
+    clearTimeout(popupTimeout.value)
+    popupTimeout.value = undefined
+  }
+  if (collapeTimeout.value) {
+    clearTimeout(collapeTimeout.value)
+    collapeTimeout.value = undefined
+  }
+  if (submitPorbingTimeout.value) {
+    clearTimeout(submitPorbingTimeout.value)
+    submitPorbingTimeout.value = undefined
+  }
+  if (changeToPercentageTimeout.value) {
+    clearTimeout(changeToPercentageTimeout.value)
+    changeToPercentageTimeout.value = undefined
+  }
+})
 </script>
 
 <template>

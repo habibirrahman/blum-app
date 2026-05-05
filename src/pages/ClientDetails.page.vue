@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, type RouteParamsRaw } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
@@ -45,21 +45,37 @@ const tabs = computed<Tab[]>(() => {
   ]
 })
 
+const fetchClientTimeout = ref<number | undefined>(undefined)
 async function fetchClient() {
   clientLoading.value = true
   const id = Number(route.params.id)
   const { success } = await clientStore.getClient({ id })
   clientLoading.value = false
   if (!success) return
-  setTimeout(() => {
+  fetchClientTimeout.value = setTimeout(() => {
     document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
   }, 100)
+
+  return () => {
+    if (fetchClientTimeout.value) {
+      clearTimeout(fetchClientTimeout.value)
+      fetchClientTimeout.value = undefined
+    }
+  }
 }
 
 onMounted(() => {
   appStore.getRunningSessions()
 
   fetchClient()
+})
+
+onUnmounted(() => {
+  // Clear timeout to prevent memory leaks
+  if (fetchClientTimeout.value) {
+    clearTimeout(fetchClientTimeout.value)
+    fetchClientTimeout.value = undefined
+  }
 })
 </script>
 
@@ -111,20 +127,20 @@ onMounted(() => {
       <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
       <SessionItemLoader v-for="n in 12" :key="n" />
     </div>
-    <!-- <div class="flex flex-col items-center gap-3 px-4 py-6">
+    <!-- <div class="flex flex-col gap-3 items-center px-4 py-6">
       <div class="h-[60px] w-[60px] shrink-0 animate-pulse rounded-full bg-slate-3"></div>
-      <div class="flex flex-col items-center gap-2">
-        <div class="w-56 h-6 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
-        <div class="w-24 h-6 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
-        <div class="flex items-center gap-1">
+      <div class="flex flex-col gap-2 items-center">
+        <div class="w-56 h-6 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
+        <div class="w-24 h-6 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
+        <div class="flex gap-1 items-center">
           <div v-for="n in 2" :key="n" class="w-12 h-5 rounded animate-pulse bg-slate-3"></div>
         </div>
       </div>
     </div>
     <div class="px-4">
-      <div v-for="n in 12" :key="n" class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
-        <div class="w-12 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
-        <div class="w-48 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
+      <div v-for="n in 12" :key="n" class="flex flex-col gap-1.5 py-3 border-b border-slate-3">
+        <div class="w-12 h-4 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
+        <div class="w-48 h-4 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
       </div>
     </div> -->
   </div>

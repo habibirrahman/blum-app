@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useClientStore } from '@/stores/client.store'
 import { useAppStore } from '@/stores/app.store'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { TransitionChild, TransitionRoot } from '@headlessui/vue'
 const clientStore = useClientStore()
@@ -18,7 +18,6 @@ const wasCompletedButHasFailed = computed(() => {
     (status === 'completed' && clientStore.client_target_job.total_errors) || status === 'cancelled'
   )
 })
-
 
 watch(
   () => appStore.network_status.connected,
@@ -46,10 +45,7 @@ watch(
   }
 )
 
-onMounted(() => {
-  setup(clientStore.client_target_job)
-})
-
+const setupTimeout = ref<number | undefined>(undefined)
 const setup = (val: any) => {
   const clientId = clientStore.client?.id
   if (val && val.client_id === clientId) {
@@ -57,11 +53,18 @@ const setup = (val: any) => {
       showing.value = true
     }
     if (val.status === 'completed' || val.status === 'cancelled') {
-      setTimeout(() => {
+      setupTimeout.value = setTimeout(() => {
         showing.value = false
         currentJobId.value = ''
         clientStore.client_target_job = ''
       }, 5000)
+
+      return () => {
+        if (setupTimeout.value) {
+          clearTimeout(setupTimeout.value)
+          setupTimeout.value = undefined
+        }
+      }
     }
     currentJobId.value = val.job_id
   } else {
@@ -75,6 +78,18 @@ const onCancelJob = async () => {
   await clientStore.cancelTargetJob({ data: { job_id: data.job_id } })
   cancelLoading.value = false
 }
+
+onMounted(() => {
+  setup(clientStore.client_target_job)
+})
+
+onUnmounted(() => {
+  // Clear timeout to prevent memory leaks
+  if (setupTimeout.value) {
+    clearTimeout(setupTimeout.value)
+    setupTimeout.value = undefined
+  }
+})
 </script>
 
 <template>
@@ -89,7 +104,7 @@ const onCancelJob = async () => {
     >
       <div
         v-if="clientStore.client_target_job"
-        class="flex items-center justify-between gap-2 px-2 py-1 rounded-b h-15"
+        class="h-15 flex items-center justify-between gap-2 rounded-b px-2 py-1"
         :class="[wasCompletedButHasFailed ? 'bg-[#FAEFCC]' : 'bg-[#F2FFE3]']"
       >
         <div class="flex items-center gap-2">
@@ -145,7 +160,7 @@ const onCancelJob = async () => {
               </span>
               <div
                 :class="[wasCompletedButHasFailed ? 'bg-[#9B7600]' : 'bg-[#4b810e]']"
-                class="w-1 h-1 rounded-full opacity-50"
+                class="h-1 w-1 rounded-full opacity-50"
               />
               <span
                 class="text-xs font-semibold"
@@ -166,7 +181,7 @@ const onCancelJob = async () => {
           "
         >
           <button
-            class="flex items-center justify-center px-2 border rounded outline-none h-7 border-lime-500"
+            class="flex h-7 items-center justify-center rounded border border-lime-500 px-2 outline-none"
             :class="
               cancelLoading
                 ? 'bg-grey-100 cursor-wait'

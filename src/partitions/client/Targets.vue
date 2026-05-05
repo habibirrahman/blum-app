@@ -1,6 +1,6 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
@@ -28,14 +28,25 @@ watch(page, (val, old) => {
 })
 
 const query = ref<string>('')
-const queryTimeout = ref<any>(null)
+const queryTimeout = ref<number | undefined>(undefined)
 watch(query, () => {
-  clearTimeout(queryTimeout.value)
+  if (queryTimeout.value) {
+    clearTimeout(queryTimeout.value)
+    queryTimeout.value = undefined
+  }
+
   queryTimeout.value = setTimeout(() => {
     targetsLoading.value = true
     page.value = 1
     fetchTargets()
   }, 1500)
+
+  return () => {
+    if (queryTimeout.value) {
+      clearTimeout(queryTimeout.value)
+      queryTimeout.value = undefined
+    }
+  }
 })
 
 const statuses = ref<TargetStatus[]>([])
@@ -119,6 +130,15 @@ async function fetchTargets() {
 onMounted(async () => {
   fetchTargets()
 })
+
+onUnmounted(() => {
+  // Clear timeout to prevent memory leak
+  if (queryTimeout.value) {
+    clearTimeout(queryTimeout.value)
+    queryTimeout.value = undefined
+  }
+})
+
 const showDetails = ref<boolean>(false)
 const targetLoading = ref<boolean>(false)
 const targetDetails = ref<Target | null>(null)
@@ -145,20 +165,20 @@ const onToggleGroup = (id: Target['id']) => {
 </script>
 
 <template>
-  <div class="pt-3 space-y-3 transition-all">
+  <div class="space-y-3 pt-3 transition-all">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Targets</div>
-      <div v-if="targetsLoading" class="w-6 h-6 rounded shrink-0 animate-pulse bg-slate-3"></div>
+      <div v-if="targetsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
       <div
         v-else
-        class="flex items-center justify-center h-6 px-1 text-xs font-semibold text-white rounded min-w-6 bg-light-purple-5"
+        class="flex h-6 min-w-6 items-center justify-center rounded bg-light-purple-5 px-1 text-xs font-semibold text-white"
       >
         {{ clientStore.targets_count }}
       </div>
     </div>
   </div>
 
-  <div class="pt-3 space-y-3 bg-white">
+  <div class="space-y-3 bg-white pt-3">
     <div class="flex items-center gap-3 px-4">
       <AppTextInput
         class="grow"
@@ -172,9 +192,9 @@ const onToggleGroup = (id: Target['id']) => {
       </RouterLink>
     </div>
     <div class="pl-4">
-      <div class="flex gap-2 pb-3 pr-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
+      <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
         <div
-          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all border rounded-full cursor-pointer shrink-0 snap-start"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
           :class="[
             statuses.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -184,7 +204,7 @@ const onToggleGroup = (id: Target['id']) => {
         >
           <span
             v-if="statuses.length > 1"
-            class="flex items-center justify-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
+            class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
           >
             {{ statuses.length }}
           </span>
@@ -195,7 +215,7 @@ const onToggleGroup = (id: Target['id']) => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex items-center h-8 gap-1 px-4 text-xs font-medium transition-all bg-white border rounded-full cursor-pointer shrink-0 snap-start border-slate-4"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />
@@ -210,7 +230,7 @@ const onToggleGroup = (id: Target['id']) => {
 
   <div v-if="targetsLoading">
     <div class="px-4 pt-2">
-      <div class="w-24 h-4 rounded-full shrink-0 animate-pulse bg-slate-3"></div>
+      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
     </div>
     <div class="px-4">
       <TargetItemLoader v-for="n in perPage" :key="n" />
@@ -218,15 +238,15 @@ const onToggleGroup = (id: Target['id']) => {
   </div>
   <div
     v-else-if="!clientStore.targets_count"
-    class="flex items-center justify-center w-full h-64 px-4"
+    class="flex h-64 w-full items-center justify-center px-4"
   >
-    <div v-if="statuses.length" class="text-sm text-center text-slate-8">
+    <div v-if="statuses.length" class="text-center text-sm text-slate-8">
       Oops! No targets fit your filter criteria. Try changing the filter to find more results!
     </div>
-    <div v-else-if="query" class="text-sm text-center text-slate-8">
+    <div v-else-if="query" class="text-center text-sm text-slate-8">
       Sorry, no targets match your search. Try searching with a different name.
     </div>
-    <div v-else class="text-sm text-center text-slate-8">
+    <div v-else class="text-center text-sm text-slate-8">
       Looks like there are no targets for this client. Create them and they'll show up here.
     </div>
   </div>
@@ -250,7 +270,7 @@ const onToggleGroup = (id: Target['id']) => {
             @click="onToggleGroup(target.id)"
           >
             <div @click.stop="onOpenTarget(target)" class="flex items-center gap-2">
-              <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
+              <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
               <div class="text-sm font-semibold text-slate-10">
                 {{ target.name }}
               </div>
@@ -258,7 +278,7 @@ const onToggleGroup = (id: Target['id']) => {
             <div class="flex items-center gap-2">
               <div class="text-sm text-slate-8">{{ target.members?.length }} targets</div>
               <div :class="[!isCloseGroup.includes(target.id) ? '' : 'rotate-180']">
-                <Icon icon="ph:caret-up-bold" class="w-5 h-5 text-slate-7" />
+                <Icon icon="ph:caret-up-bold" class="h-5 w-5 text-slate-7" />
               </div>
             </div>
           </div>
@@ -270,7 +290,7 @@ const onToggleGroup = (id: Target['id']) => {
               @click="onOpenTarget(member)"
             />
           </div>
-          <div class="w-full h-4 bg-slate-4"></div>
+          <div class="h-4 w-full bg-slate-4"></div>
         </div>
         <TargetItem v-else :target="target" @click="onOpenTarget(target)" />
       </div>
@@ -285,7 +305,7 @@ const onToggleGroup = (id: Target['id']) => {
 
   <AppActionSheet :show="showStatus" @close="showStatus = false">
     <div>
-      <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Statuses</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -296,9 +316,9 @@ const onToggleGroup = (id: Target['id']) => {
         <div
           v-for="opt in statusOptions"
           :key="opt.value"
-          class="flex items-center justify-between w-full gap-4 border-b h-14 border-slate-3"
+          class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
         >
-          <label :for="`status_filter_${opt.value}`" class="w-full text-sm truncate">
+          <label :for="`status_filter_${opt.value}`" class="w-full truncate text-sm">
             {{ opt.label }}
           </label>
           <input
@@ -307,13 +327,13 @@ const onToggleGroup = (id: Target['id']) => {
             :id="`status_filter_${opt.value}`"
             :checked="selectStatuses.includes(opt.value)"
             :value="opt.value"
-            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="onCheckStatus(opt.value)"
           />
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 grid w-full grid-cols-2 gap-2 py-3 bg-white">
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-2 gap-2 bg-white py-3">
         <AppButton kind="plain" @click="onResetStatus">Reset</AppButton>
         <AppButton @click="onApplyStatus">Apply</AppButton>
       </div>
@@ -322,7 +342,7 @@ const onToggleGroup = (id: Target['id']) => {
 
   <AppActionSheet :show="showSort" @close="showSort = false">
     <div>
-      <div class="sticky top-0 z-10 flex items-center justify-between w-full py-3 bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Sort by</div>
         <div class="cursor-pointer" @click="showSort = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -333,7 +353,7 @@ const onToggleGroup = (id: Target['id']) => {
         <div
           v-for="opt in sortOptions"
           :key="opt.value"
-          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
         >
           <label :for="`sort_by_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
           <input
@@ -342,13 +362,13 @@ const onToggleGroup = (id: Target['id']) => {
             :id="`sort_by_${opt.value}`"
             :checked="selectSort === opt.value"
             :value="opt.value"
-            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="selectSort = opt.value"
           />
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 grid w-full grid-cols-2 gap-2 py-3 bg-white">
+      <div class="sticky bottom-0 z-10 grid w-full grid-cols-2 gap-2 bg-white py-3">
         <AppButton kind="plain" @click="onResetSort">Reset</AppButton>
         <AppButton @click="onApplySort">Apply</AppButton>
       </div>

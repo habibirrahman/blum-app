@@ -46,9 +46,12 @@ export interface SessionStateSchema {
   sessions: Session[]
   sessions_count: number
   pending_progress: SessionPendingProgress[]
+  //
   _autoSyncInitialized?: boolean // Track auto-sync setup
   _syncDebounceTimer?: any // For debounced sync
+  _periodicCheckInterval?: number | undefined // For periodic check
 }
+
 export type SessionCommentFilter = '' | 'general' | 'assessment' | 'target' | 'mine'
 export interface CreateSessionParams {
   client_id: Client['id']
@@ -159,8 +162,10 @@ export const useSessionStore = defineStore('session', {
     sessions: [],
     sessions_count: 0,
     pending_progress: [],
+    //
     _autoSyncInitialized: false,
-    _syncDebounceTimer: null
+    _syncDebounceTimer: null,
+    _periodicCheckInterval: undefined
   }),
   getters: {
     // Getter untuk monitoring
@@ -465,13 +470,18 @@ export const useSessionStore = defineStore('session', {
     },
 
     // Setup auto-sync
-    setupAutoSync(): void {
+    setupAutoSync(): () => void {
       const app = useAppStore()
 
       // Prevent multiple setup
       if (this._autoSyncInitialized) {
         console.log('[setupAutoSync] Already initialized')
-        return
+        return () => {
+          if (this._periodicCheckInterval) {
+            clearInterval(this._periodicCheckInterval)
+            this._periodicCheckInterval = undefined
+          }
+        }
       }
 
       console.log('[setupAutoSync] Initializing auto-sync...')
@@ -480,7 +490,7 @@ export const useSessionStore = defineStore('session', {
       // Note: Ini akan di-handle di component level
 
       // Periodic sync setiap 30 detik
-      setInterval(async () => {
+      this._periodicCheckInterval = setInterval(async () => {
         if (app.network_status.connected && this.pending_progress.length > 0) {
           console.log('[setupAutoSync] Periodic sync triggered')
           await this.resolvePendingProgress()
@@ -489,17 +499,27 @@ export const useSessionStore = defineStore('session', {
 
       this._autoSyncInitialized = true
       console.log('[setupAutoSync] Auto-sync initialized')
+
+      return () => {
+        if (this._periodicCheckInterval) {
+          clearInterval(this._periodicCheckInterval)
+          this._periodicCheckInterval = undefined
+        }
+      }
     },
 
     // Manual trigger sync dengan debounce
     triggerSync(immediate = false): void {
-      if (immediate) {
+      if (this._syncDebounceTimer) {
         clearTimeout(this._syncDebounceTimer)
+        this._syncDebounceTimer = undefined
+      }
+
+      if (immediate) {
         this.resolvePendingProgress()
         return
       }
 
-      clearTimeout(this._syncDebounceTimer)
       this._syncDebounceTimer = setTimeout(() => {
         this.resolvePendingProgress()
       }, 2000) as any

@@ -42,20 +42,26 @@ watch(
   }
 )
 
+const fetchCurrentUserTimeout = ref<number | undefined>(undefined)
 async function fetchCurrentUser() {
-  setTimeout(async () => {
+  fetchCurrentUserTimeout.value = setTimeout(async () => {
     const { success } = await appStore.getAccount()
     loadingApp.value = false
     if (!success) {
       if (route.name !== 'signin') {
         router.push({ name: 'signin' })
       }
-      return
-    }
-    if (route.name === 'signin') {
+    } else if (route.name === 'signin') {
       router.push({ name: 'home' })
     }
   }, 1000)
+
+  return () => {
+    if (fetchCurrentUserTimeout.value) {
+      clearTimeout(fetchCurrentUserTimeout.value)
+      fetchCurrentUserTimeout.value = undefined
+    }
+  }
 }
 
 const networkListener = (status: any) => {
@@ -160,6 +166,12 @@ onMounted(async () => {
 
 onUnmounted(() => {
   Network.removeAllListeners()
+
+  // Clear timeout to prevent memory leaks
+  if (fetchCurrentUserTimeout.value) {
+    clearTimeout(fetchCurrentUserTimeout.value)
+    fetchCurrentUserTimeout.value = undefined
+  }
 })
 
 interface Nav {

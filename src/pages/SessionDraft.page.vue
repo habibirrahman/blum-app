@@ -43,40 +43,37 @@ async function fetchMeasurements() {
   if (!success) return
 }
 
-onMounted(async () => {
-  const app = document.getElementById('app')
-  if (app) {
-    app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
-    app.scroll({ top: 0, behavior: 'smooth' })
-  }
-
-  appStore.getRunningSessions()
-  await fetchSession()
-})
-
-onUnmounted(() => {
-  const app = document.getElementById('app')
-  if (app) {
-    app.style.backgroundColor = 'rgb(255 255 255 / var(--tw-bg-opacity))' /* #ffffff */
-  }
-})
-
 const showReviewMode = ref<boolean>(false)
 const containerHeight = ref<string>('100%')
+
+const updateCollapseTimeout = ref<number | undefined>(undefined)
+const updateHeightTimeout = ref<number | undefined>(undefined)
+
 watch(showReviewMode, (val) => {
   document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
 
-  setTimeout(() => {
+  updateCollapseTimeout.value = setTimeout(() => {
     isMeasurementCollapsed.value = true
   }, 200)
 
-  setTimeout(() => {
+  updateHeightTimeout.value = setTimeout(() => {
     const el = document.getElementById('container-record-measurement')
     let realHeight = el?.clientHeight || 0
     if (val) realHeight = realHeight / 2
     else realHeight = realHeight + 64
     containerHeight.value = `${realHeight + 44}px`
   }, 1000)
+
+  return () => {
+    if (updateCollapseTimeout.value) {
+      clearTimeout(updateCollapseTimeout.value)
+      updateCollapseTimeout.value = undefined
+    }
+    if (updateHeightTimeout.value) {
+      clearTimeout(updateHeightTimeout.value)
+      updateHeightTimeout.value = undefined
+    }
+  }
 })
 
 const normalMeasurements = computed<Measurement[]>(() => {
@@ -165,6 +162,34 @@ const onDeleteMeasurements = async () => {
     updateLoading.value = false
   }
 }
+
+onMounted(async () => {
+  const app = document.getElementById('app')
+  if (app) {
+    app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
+    app.scroll({ top: 0, behavior: 'smooth' })
+  }
+
+  appStore.getRunningSessions()
+  await fetchSession()
+})
+
+onUnmounted(() => {
+  const app = document.getElementById('app')
+  if (app) {
+    app.style.backgroundColor = 'rgb(255 255 255 / var(--tw-bg-opacity))' /* #ffffff */
+  }
+
+  // Clear timeout to prevent memory leaks
+  if (updateCollapseTimeout.value) {
+    clearTimeout(updateCollapseTimeout.value)
+    updateCollapseTimeout.value = undefined
+  }
+  if (updateHeightTimeout.value) {
+    clearTimeout(updateHeightTimeout.value)
+    updateHeightTimeout.value = undefined
+  }
+})
 </script>
 
 <template>

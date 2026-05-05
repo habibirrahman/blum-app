@@ -18,7 +18,9 @@ export interface ClientStateSchema {
   targets_count: number
   clients: Client[]
   clients_count: number
-  client_target_job: any
+  client_target_job: any,
+  //
+  _jobTimeout?: number | undefined
 }
 
 export const useClientStore = defineStore('client', {
@@ -35,7 +37,9 @@ export const useClientStore = defineStore('client', {
     targets_count: 0,
     clients: [],
     clients_count: 0,
-    client_target_job: null
+    client_target_job: null,
+    //
+    _jobTimeout: undefined,
   }),
   getters: {},
   actions: {
@@ -337,12 +341,17 @@ export const useClientStore = defineStore('client', {
           if (!response.data.job) return { success: false, data: null }
           this.client_target_job = response.data.job
           const jobStatus = response.data.job.status
+
+          if (this._jobTimeout) {
+            clearTimeout(this._jobTimeout)
+            this._jobTimeout = undefined
+          }
+
           if (jobStatus === 'in_progress' || jobStatus === 'pending') {
-            setTimeout(() => {
+            this._jobTimeout = setTimeout(() => {
               this.checkTargetJob({ data })
             }, 5000)
-          }
-          if (jobStatus === 'completed') {
+          } else if (jobStatus === 'completed') {
             const createdTargets = response.data.targets.filter(
               (target: Target) => !target.group_id
             )
@@ -353,6 +362,11 @@ export const useClientStore = defineStore('client', {
           return { success: true, data }
         })
         .catch((error) => {
+          if (this._jobTimeout) {
+            clearTimeout(this._jobTimeout)
+            this._jobTimeout = undefined
+          }
+
           const message = getErrorMessage(error.response?.data?.error || error?.message)
           return { success: false, data: null, message }
         })

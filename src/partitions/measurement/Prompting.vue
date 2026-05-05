@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Measurement, Target } from '@/lib/types'
 import { promptColors } from '@/lib/data'
 import { Icon } from '@iconify/vue'
@@ -29,9 +29,6 @@ const emit = defineEmits<Emits>()
 
 const results = ref<Measurement['results']>({})
 
-onMounted(() => {
-  results.value = { ...props.measurementResults }
-})
 watch(
   () => props.measurementResults,
   (val) => {
@@ -40,14 +37,23 @@ watch(
 )
 
 const page = ref<number>(1)
+
+const collapseTimeout = ref<number | undefined>(undefined)
 watch(
   () => props.isCollapsed,
   () => {
-    setTimeout(() => {
+    collapseTimeout.value = setTimeout(() => {
       const el = `${props.measurement.id}-prompt-boxes-${1}`
       const boxes = document.getElementById(el)
       boxes?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
     }, 300)
+
+    return () => {
+      if (collapseTimeout.value) {
+        clearTimeout(collapseTimeout.value)
+        collapseTimeout.value = undefined
+      }
+    }
   }
 )
 const onScroll = (e: any) => {
@@ -263,19 +269,31 @@ const onSavePrompts = async () => {
 
   showCustomize.value = false
 }
+
+onMounted(() => {
+  results.value = { ...props.measurementResults }
+})
+
+onUnmounted(() => {
+  // Clear timeout to prevent memory leaks
+  if (collapseTimeout.value) {
+    clearTimeout(collapseTimeout.value)
+    collapseTimeout.value = undefined
+  }
+})
 </script>
 
 <template>
-  <div class="flex flex-col justify-between flex-grow h-full gap-2">
+  <div class="flex h-full flex-grow flex-col justify-between gap-2">
     <div
       v-if="scoreLoadingBox !== null"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
 
-    <div class="flex items-center content-center justify-center flex-grow h-full">
+    <div class="flex h-full flex-grow content-center items-center justify-center">
       <div
         class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
         @scroll="onScroll"
@@ -306,12 +324,12 @@ const onSavePrompts = async () => {
                 }"
                 @click="onChangeScore(prompt, 1)"
               >
-                <div class="absolute text-xs font-semibold top-px">{{ prompt.abbreviation }}</div>
+                <div class="absolute top-px text-xs font-semibold">{{ prompt.abbreviation }}</div>
                 <div v-if="prompt.score">{{ prompt.score }}</div>
                 <Icon v-else icon="stash:plus-solid" class="text-5xl" />
               </div>
               <div
-                class="flex items-center justify-center h-5 px-5 border rounded border-slate-5 bg-pure-white"
+                class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white px-5"
                 :class="{
                   'cursor-wait':
                     (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
@@ -321,7 +339,7 @@ const onSavePrompts = async () => {
                 @click="onChangeScore(prompt, -1)"
               >
                 <div
-                  class="w-6 h-1 transition-all rounded shrink-0"
+                  class="h-1 w-6 shrink-0 rounded transition-all"
                   :class="{ 'bg-slate-5': !prompt.score, 'bg-slate-6': prompt.score }"
                 ></div>
               </div>
@@ -331,26 +349,26 @@ const onSavePrompts = async () => {
       </div>
     </div>
 
-    <div class="pb-3 space-y-2 shrink-0" :class="{ '-translate-y-4': isCollapsed }">
-      <div class="flex items-center justify-center h-2 gap-2">
+    <div class="shrink-0 space-y-2 pb-3" :class="{ '-translate-y-4': isCollapsed }">
+      <div class="flex h-2 items-center justify-center gap-2">
         <div
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="w-2 h-2 transition-all rounded-full"
+          class="h-2 w-2 rounded-full transition-all"
         ></div>
       </div>
       <div v-if="!isCollapsed">
         <div
           v-if="measurement?.target?.prompting_format === 'classic'"
-          class="text-xs font-medium text-center text-slate-7"
+          class="text-center text-xs font-medium text-slate-7"
         >
           Goal: {{ measurement.target?.goal }} attempt(s)
           {{ measurement.target?.success_metric }} prompt
         </div>
         <div
           v-if="measurement?.target?.prompting_format === 'custom'"
-          class="text-xs font-medium text-center text-slate-7"
+          class="text-center text-xs font-medium text-slate-7"
         >
           <span v-if="measurement?.target?.success_metric === 'equal to or greater than goal'">
             Goal: ≥ {{ `${measurement?.target?.goal}%` }}
@@ -375,7 +393,7 @@ const onSavePrompts = async () => {
 
   <AppActionSheet :show="showCustomize" @close="showCustomize = false">
     <div>
-      <div class="sticky top-0 z-10 flex items-center justify-between py-3 bg-white">
+      <div class="sticky top-0 z-10 flex items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Customize prompt visibility</div>
         <div class="cursor-pointer" @click="showCustomize = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -386,7 +404,7 @@ const onSavePrompts = async () => {
         <div
           v-for="prompt in defaultPrompts"
           :key="prompt.key"
-          class="flex items-center justify-between w-full border-b h-14 border-slate-3"
+          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
           :class="[
             prompt.name === measurement.target?.success_metric
               ? 'cursor-not-allowed'
@@ -394,7 +412,7 @@ const onSavePrompts = async () => {
           ]"
         >
           <div
-            class="flex items-center h-10 gap-3 truncate"
+            class="flex h-10 items-center gap-3 truncate"
             :class="{ 'pointer-events-none': prompt.name === measurement.target?.success_metric }"
             @click="onToggleEnabledPrompt(prompt)"
           >
@@ -403,12 +421,12 @@ const onSavePrompts = async () => {
               class="text-2xl"
               :style="{ color: promptColors[prompt.color].primaryColor }"
             />
-            <div class="text-sm truncate text-slate-8">
+            <div class="truncate text-sm text-slate-8">
               {{ prompt.name }}
             </div>
             <div
               v-if="prompt.name === measurement.target?.success_metric"
-              class="text-xs italic truncate text-slate-6"
+              class="truncate text-xs italic text-slate-6"
             >
               as success metric
             </div>
@@ -423,7 +441,7 @@ const onSavePrompts = async () => {
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 flex items-center justify-between py-3 bg-white">
+      <div class="sticky bottom-0 z-10 flex items-center justify-between bg-white py-3">
         <AppButton class="w-full" :loading="saveLoading" @click="onSavePrompts"> Apply </AppButton>
       </div>
     </div>

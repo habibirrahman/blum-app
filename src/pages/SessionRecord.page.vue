@@ -98,7 +98,12 @@ async function fetchSession(
 
   if (session.status === 'completed' || session.status === 'cancelled') {
     await appStore.getRunningSessions()
-    clearInterval(counterInterval.value)
+
+    if (counterInterval.value) {
+      clearInterval(counterInterval.value)
+      counterInterval.value = undefined
+    }
+
     counter.value = recordingTime
     app?.removeEventListener('scroll', scrollListener)
   }
@@ -157,7 +162,7 @@ watch(hasPendingSync, (isPending, wasPending) => {
   }
 })
 
-const scrollingTimeout = ref<any>(null)
+const scrollingTimeout = ref<number | undefined>(undefined)
 const isScrolling = ref<boolean>(false)
 
 const isDisabledAction = computed(() => {
@@ -182,7 +187,10 @@ const scrollListener = async (e: any) => {
   }
 
   let timer = 1000
-  clearTimeout(scrollingTimeout.value)
+  if (scrollingTimeout.value) {
+    clearTimeout(scrollingTimeout.value)
+    scrollingTimeout.value = undefined
+  }
 
   if (top <= 0 && runningDurationIds.value.length) {
     top = 1
@@ -216,82 +224,34 @@ const scrollListener = async (e: any) => {
     }
     isScrolling.value = false
   }, timer)
+
+  return () => {
+    if (scrollingTimeout.value) {
+      clearTimeout(scrollingTimeout.value)
+      scrollingTimeout.value = undefined
+    }
+  }
 }
 
-// Periodic check untuk stuck items
-let periodicCheckInterval: any = null
-
-onMounted(async () => {
-  const app = document.getElementById('app')
-  if (app) {
-    app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
-  }
-
-  appStore.getRunningSessions()
-  redirect.value = route.query.redirect?.toString() || '/home'
-
-  // Generate session store dari storage
-  await sessionStore.generateSessionStore()
-
-  // Setup auto-sync (hanya sekali)
-  if (!sessionStore._autoSyncInitialized) {
-    sessionStore.setupAutoSync()
-  }
-
-  // Run storage maintenance on startup
-  await sessionStore.runStorageMaintenance()
-
-  // Restore & sync pending items
-  if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
-    console.log('[Session Page] Processing pending items on mount')
-    await sessionStore.resolvePendingProgress()
-  }
-
-  await fetchSession({ first: true })
-
-  if (sessionStore.session?.status === 'ongoing') {
-    // Setup periodic check untuk stuck items
-    periodicCheckInterval = setInterval(() => {
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
-
-      const stuckItems = sessionStore.pending_progress.filter(
-        (item) => item.timestamp && item.timestamp < fiveMinutesAgo
-      )
-
-      if (stuckItems.length > 0 && appStore.network_status.connected) {
-        console.warn('[Session Page] Found stuck items, triggering sync')
-        sessionStore.triggerSync(true)
-      }
-    }, 60000) // Check setiap 1 menit
-  }
-})
-
-// Cleanup saat unmount
-onUnmounted(() => {
-  const app = document.getElementById('app')
-  if (app) {
-    app.style.backgroundColor = 'rgb(255 255 255 / var(--tw-bg-opacity))' /* #ffffff */
-    app.removeEventListener('scroll', scrollListener)
-  }
-
-  // Clear interval
-  clearInterval(periodicCheckInterval)
-
-  // Trigger sync sebelum unmount jika ada perubahan
-  if (hasPendingSync.value && appStore.network_status.connected) {
-    console.log('[Session Page] Syncing before unmount')
-    sessionStore.triggerSync(true)
-  }
-})
-
 const counter = ref<number>(0)
-const counterInterval = ref<any>(null)
+const counterInterval = ref<number | undefined>(undefined)
 const unCompletedColdProbeIds = ref<Measurement['id'][]>([])
 const counterTimer = () => {
-  clearInterval(counterInterval.value)
+  if (counterInterval.value) {
+    clearInterval(counterInterval.value)
+    counterInterval.value = undefined
+  }
+
   counterInterval.value = setInterval(() => {
     counter.value += 1
   }, 1000)
+
+  return () => {
+    if (counterInterval.value) {
+      clearInterval(counterInterval.value)
+      counterInterval.value = undefined
+    }
+  }
 }
 const recordingTime = computed<string>(() => {
   let hours: number | string = '00'
@@ -345,12 +305,14 @@ const onToggleSavedSbt = (payload: { id: Measurement['id']; saved: boolean }) =>
 
 const showReviewMode = ref<boolean>(false)
 const containerHeight = ref<string>('100%')
+
+const updateHeightTimeout = ref<number | undefined>(undefined)
 watch(showReviewMode, (val) => {
   if (sessionStore.session?.status === 'ongoing') {
     document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
   }
   if (val) focusMeasurement.value = 0
-  setTimeout(() => {
+  updateHeightTimeout.value = setTimeout(() => {
     const el = document.getElementById('container-record-measurement')
     let realHeight = el?.clientHeight || 0
     if (val) realHeight = realHeight / 2
@@ -358,9 +320,21 @@ watch(showReviewMode, (val) => {
     else realHeight = realHeight + 64
     containerHeight.value = `${realHeight + 44}px`
   }, 1000)
+
+  return () => {
+    if (updateHeightTimeout.value) {
+      clearTimeout(updateHeightTimeout.value)
+      updateHeightTimeout.value = undefined
+    }
+  }
 })
 
 const focusMeasurement = ref<Measurement['id']>(0)
+
+const collapseTimeout = ref<number | undefined>(undefined)
+const nav1Timeout = ref<number | undefined>(undefined)
+const nav2Timeout = ref<number | undefined>(undefined)
+
 const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
   let timer = 500
   if (val.id === focusMeasurement.value) return
@@ -381,11 +355,11 @@ const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
     if (first.id === val.id) isFirst = true
   }
 
-  setTimeout(() => {
+  collapseTimeout.value = setTimeout(() => {
     if (val.is_fixed) {
       isMeasurementCollapsed.value = false
     } else {
-      setTimeout(() => {
+      nav1Timeout.value = setTimeout(() => {
         if (isFirst) {
           const app = document.getElementById(`app`)
           app?.scrollTo({ top: 112, behavior: 'smooth' })
@@ -394,12 +368,27 @@ const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
           record?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
         }
       }, timer + timer)
-      setTimeout(() => {
+      nav2Timeout.value = setTimeout(() => {
         const menu = document.getElementById(`measurement-nav-${val.id}`)
         menu?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
       }, timer)
     }
   }, timer)
+
+  return () => {
+    if (collapseTimeout.value) {
+      clearTimeout(collapseTimeout.value)
+      collapseTimeout.value = undefined
+    }
+    if (nav1Timeout.value) {
+      clearTimeout(nav1Timeout.value)
+      nav1Timeout.value = undefined
+    }
+    if (nav2Timeout.value) {
+      clearTimeout(nav2Timeout.value)
+      nav2Timeout.value = undefined
+    }
+  }
 }
 const showSessionComments = ref<boolean>(false)
 
@@ -535,6 +524,7 @@ const openEndSession = () => {
   showEndSession.value = true
 }
 
+const trunOffTimeout = ref<number | undefined>(undefined)
 const onTrunOffAllAndEndSession = async () => {
   showEndSession.value = false
   showReviewMode.value = true
@@ -570,19 +560,34 @@ const onTrunOffAllAndEndSession = async () => {
   }
 
   endSessionStatus.value = 'normal'
-  setTimeout(() => {
+  trunOffTimeout.value = setTimeout(() => {
     cycleLoading.value = false
     showEndSession.value = true
   }, 500)
+
+  return () => {
+    if (trunOffTimeout.value) {
+      clearTimeout(trunOffTimeout.value)
+      trunOffTimeout.value = undefined
+    }
+  }
 }
 
+const keepActiveTimeout = ref<number | undefined>(undefined)
 const onKeepActiveAndEndSession = () => {
   showEndSession.value = false
   showReviewMode.value = true
   endSessionStatus.value = 'normal'
-  setTimeout(() => {
+  keepActiveTimeout.value = setTimeout(() => {
     showEndSession.value = true
   }, 500)
+
+  return () => {
+    if (keepActiveTimeout.value) {
+      clearTimeout(keepActiveTimeout.value)
+      keepActiveTimeout.value = undefined
+    }
+  }
 }
 
 const onEndSession = async () => {
@@ -806,6 +811,116 @@ const duplicateImageCommentsToClientDocument = async () => {
     console.log('🚀 ~ duplicateImageCommentsToClientDocument ~ error:', error)
   }
 }
+
+// Periodic check untuk stuck items
+const periodicCheckInterval = ref<number | undefined>(undefined)
+
+onMounted(async () => {
+  const app = document.getElementById('app')
+  if (app) {
+    app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
+  }
+
+  appStore.getRunningSessions()
+  redirect.value = route.query.redirect?.toString() || '/home'
+
+  // Generate session store dari storage
+  await sessionStore.generateSessionStore()
+
+  // Setup auto-sync (hanya sekali)
+  if (!sessionStore._autoSyncInitialized) {
+    sessionStore.setupAutoSync()
+  }
+
+  // Run storage maintenance on startup
+  await sessionStore.runStorageMaintenance()
+
+  // Restore & sync pending items
+  if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
+    console.log('[Session Page] Processing pending items on mount')
+    await sessionStore.resolvePendingProgress()
+  }
+
+  await fetchSession({ first: true })
+
+  if (sessionStore.session?.status === 'ongoing') {
+    // Setup periodic check untuk stuck items
+    periodicCheckInterval.value = setInterval(() => {
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+
+      const stuckItems = sessionStore.pending_progress.filter(
+        (item) => item.timestamp && item.timestamp < fiveMinutesAgo
+      )
+
+      if (stuckItems.length > 0 && appStore.network_status.connected) {
+        console.warn('[Session Page] Found stuck items, triggering sync')
+        sessionStore.triggerSync(true)
+      }
+    }, 60000) // Check setiap 1 menit
+  }
+
+  return () => {
+    if (periodicCheckInterval.value) {
+      clearInterval(periodicCheckInterval.value)
+      periodicCheckInterval.value = undefined
+    }
+  }
+})
+
+// Cleanup saat unmount
+onUnmounted(() => {
+  const app = document.getElementById('app')
+  if (app) {
+    app.style.backgroundColor = 'rgb(255 255 255 / var(--tw-bg-opacity))' /* #ffffff */
+    app.removeEventListener('scroll', scrollListener)
+  }
+
+  // Clear interval to prevent memory leaks
+  if (periodicCheckInterval.value) {
+    clearInterval(periodicCheckInterval.value)
+    periodicCheckInterval.value = undefined
+  }
+  if (counterInterval.value) {
+    clearInterval(counterInterval.value)
+    counterInterval.value = undefined
+  }
+
+  // Clear timeout to prevent memory leaks
+  if (scrollingTimeout.value) {
+    clearTimeout(scrollingTimeout.value)
+    scrollingTimeout.value = undefined
+  }
+  if (updateHeightTimeout.value) {
+    clearTimeout(updateHeightTimeout.value)
+    updateHeightTimeout.value = undefined
+  }
+  if (collapseTimeout.value) {
+    clearTimeout(collapseTimeout.value)
+    collapseTimeout.value = undefined
+  }
+  if (nav1Timeout.value) {
+    clearTimeout(nav1Timeout.value)
+    nav1Timeout.value = undefined
+  }
+  if (nav2Timeout.value) {
+    clearTimeout(nav2Timeout.value)
+    nav2Timeout.value = undefined
+  }
+  if (trunOffTimeout.value) {
+    clearTimeout(trunOffTimeout.value)
+    trunOffTimeout.value = undefined
+  }
+  if (keepActiveTimeout.value) {
+    clearTimeout(keepActiveTimeout.value)
+    keepActiveTimeout.value = undefined
+  }
+
+  // Trigger sync sebelum unmount jika ada perubahan
+  if (hasPendingSync.value && appStore.network_status.connected) {
+    console.log('[Session Page] Syncing before unmount')
+    sessionStore.triggerSync(true)
+  }
+})
 </script>
 
 <template>
