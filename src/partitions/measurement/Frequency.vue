@@ -102,17 +102,17 @@ const onChangeScore = async (score: number) => {
 </script>
 
 <template>
-  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
+  <div class="flex h-full flex-grow flex-col justify-between gap-2">
     <div
       v-if="scoreLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-20 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
 
     <div
-      class="flex flex-wrap flex-grow gap-x-3 gap-y-4 justify-center content-center items-center h-full"
+      class="flex h-full flex-grow flex-wrap content-center items-center justify-center gap-x-3 gap-y-4"
       :class="{ 'scale-90': isCollapsed }"
     >
       <div
@@ -122,7 +122,7 @@ const onChangeScore = async (score: number) => {
         "
       >
         <div
-          class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] text-4xl font-bold transition-all"
+          class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] text-4xl font-bold transition-colors"
           :class="[
             scoreLoading || sessionStore.session?.status !== 'ongoing' || isDisabled
               ? 'pointer-events-none'
@@ -135,7 +135,7 @@ const onChangeScore = async (score: number) => {
           <Icon v-else icon="stash:plus-solid" class="text-5xl" />
         </div>
         <div
-          class="flex justify-center items-center h-5 rounded border border-slate-5 bg-pure-white"
+          class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"
           :class="{
             'pointer-events-none':
               scoreLoading ||
@@ -146,7 +146,7 @@ const onChangeScore = async (score: number) => {
           @click="onChangeScore(-1)"
         >
           <div
-            class="w-6 h-1 rounded shrink-0"
+            class="h-1 w-6 shrink-0 rounded"
             :class="{
               'bg-slate-5': !currentScore,
               'bg-slate-6': currentScore
@@ -158,15 +158,15 @@ const onChangeScore = async (score: number) => {
 
     <div
       v-if="!isCollapsed"
-      class="pb-3 space-y-2 text-xs font-medium text-center shrink-0 text-slate-7"
+      class="shrink-0 space-y-2 pb-3 text-center text-xs font-medium text-slate-7"
     >
-      <div class="flex justify-between items-center">
+      <div class="flex items-center justify-between">
         <div>Goal</div>
         <div>{{ measurement.target?.goal }} attempt(s)</div>
       </div>
       <div
         v-if="measurement.target?.frequency_format === 'custom'"
-        class="flex justify-between items-center"
+        class="flex items-center justify-between"
       >
         <div>Duration</div>
         <div>{{ measurement.duration }} minute(s)</div>

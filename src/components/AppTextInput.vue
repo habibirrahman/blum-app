@@ -62,7 +62,7 @@ const minHeight = computed(() => {
       :placeholder="placeholder"
       :disabled="disabled"
       v-model="model"
-      class="field-sizing-content group w-full resize-none rounded text-[16px] outline-none ring-offset-2 transition-all focus:outline-none"
+      class="field-sizing-content group w-full resize-none rounded text-[16px] outline-none ring-offset-2 transition-colors focus:outline-none"
       :class="{
         'focus:ring-2': !disabled,
         'bg-slate-2': disabled,
@@ -81,7 +81,7 @@ const minHeight = computed(() => {
       :placeholder="placeholder"
       :disabled="disabled"
       v-model="model"
-      class="group h-full w-full rounded text-[16px] outline-none ring-offset-2 transition-all focus:outline-none"
+      class="group h-full w-full rounded text-[16px] outline-none ring-offset-2 transition-colors focus:outline-none"
       :class="{
         'focus:ring-2': !disabled,
         'bg-slate-2': disabled,
@@ -96,7 +96,7 @@ const minHeight = computed(() => {
     <Icon
       v-if="type === 'password'"
       :icon="openPassword ? 'ph:eye-closed' : 'ph:eye'"
-      class="absolute text-2xl cursor-pointer right-2 text-slate-7"
+      class="absolute right-2 cursor-pointer text-2xl text-slate-7"
       :class="[label ? 'top-[30px]' : 'top-1.5']"
       @click.prevent="openPassword = !openPassword"
     />
@@ -110,7 +110,7 @@ const minHeight = computed(() => {
     <Icon
       v-if="suffixIcon"
       :icon="suffixIcon"
-      class="absolute text-2xl cursor-pointer right-2 text-slate-7"
+      class="absolute right-2 cursor-pointer text-2xl text-slate-7"
       :class="[label ? 'top-[30px]' : 'top-1.5']"
     />
     <div v-if="error" class="mt-1 text-sm text-tomato-7">{{ error === true ? '' : error }}</div>

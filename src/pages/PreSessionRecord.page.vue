@@ -347,11 +347,11 @@ const onUpdateSessionName = async () => {
           <div class="text-sm">comment(s)</div>
           <Icon
             icon="ph:caret-up"
-            class="text-sm transition-all"
+            class="text-sm transition-transform"
             :class="{ 'rotate-180': !showComments }"
           />
         </div>
-        <div class="space-y-2 overflow-hidden transition-all" :class="{ 'h-0': !showComments }">
+        <div class="space-y-2 overflow-hidden" :class="{ 'h-0': !showComments }">
           <CommentItem
             v-for="comment in sessionStore.session_comments"
             :key="comment.id"

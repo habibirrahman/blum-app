@@ -359,7 +359,7 @@ onUnmounted(() => {
           class="flex w-[calc(320px-32px)] shrink-0 snap-start justify-center"
         >
           <div
-            class="flex max-w-72 flex-wrap content-center items-start justify-center py-2 transition-all"
+            class="flex max-w-72 flex-wrap content-center items-start justify-center py-2"
             :class="{
               'gap-x-4 gap-y-4': !isCollapsed,
               'gap-x-2 gap-y-2': isCollapsed
@@ -375,7 +375,7 @@ onUnmounted(() => {
                 <Icon icon="ph:x" class="h-2 w-2 text-white" />
               </div>
               <div
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded border text-2xl transition-all"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded border text-2xl transition-colors"
                 :class="{
                   'pointer-events-none':
                     (percentageLoadingBox && percentageLoadingBox !== box.key) ||
@@ -402,7 +402,7 @@ onUnmounted(() => {
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="h-2 w-2 rounded-full transition-all"
+          class="h-2 w-2 rounded-full transition-colors"
         ></div>
       </div>
 

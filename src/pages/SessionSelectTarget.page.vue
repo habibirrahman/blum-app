@@ -256,7 +256,7 @@ onUnmounted(() => {
       <div class="pl-4">
         <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
           <div
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+            class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
             :class="[
               selected
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -270,7 +270,7 @@ onUnmounted(() => {
           <div
             v-for="opt in statusOptions"
             :key="opt.value"
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+            class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
             :class="[
               statuses.includes(opt.value)
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'

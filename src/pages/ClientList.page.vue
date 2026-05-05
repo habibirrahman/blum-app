@@ -208,7 +208,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="space-y-3 pt-3 transition-all">
+  <div class="space-y-3 pt-3">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Clients</div>
       <div v-if="clientsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
@@ -241,7 +241,7 @@ onUnmounted(() => {
         ></div>
         <div
           v-else-if="appStore.account?.center_enable_branch"
-          class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center gap-1 truncate rounded-full border px-4 text-xs font-medium transition-all"
+          class="transition-alcolorsl flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center gap-1 truncate rounded-full border px-4 text-xs font-medium"
           :class="[
             branches.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -263,7 +263,7 @@ onUnmounted(() => {
         </div>
 
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-colors"
           :class="[
             statuses.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -285,7 +285,7 @@ onUnmounted(() => {
         </div>
 
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />

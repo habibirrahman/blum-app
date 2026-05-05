@@ -28,7 +28,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="fixed left-1/2 z-[9] -translate-x-1/2 transition-all pt-safe"
+    class="fixed left-1/2 z-[9] -translate-x-1/2 pt-safe"
     :class="{ 'top-5': signoutLoading, '-top-10': !signoutLoading }"
   >
     <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">

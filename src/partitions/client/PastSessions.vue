@@ -156,7 +156,7 @@ const onOpenSession = (session: Session) => {
 </script>
 
 <template>
-  <div class="space-y-3 pt-3 transition-all">
+  <div class="space-y-3 pt-3">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Past Sessions</div>
       <div v-if="sessionsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
@@ -183,7 +183,7 @@ const onOpenSession = (session: Session) => {
         <div
           v-for="opt in dateOptions"
           :key="opt.value"
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
           :class="[
             date === opt.value
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -194,7 +194,7 @@ const onOpenSession = (session: Session) => {
           {{ opt.label }}
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />

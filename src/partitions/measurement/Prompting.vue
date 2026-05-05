@@ -310,7 +310,7 @@ onUnmounted(() => {
           >
             <div v-for="prompt in promptBoxes" :key="prompt.id" class="space-y-1">
               <div
-                class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] border text-4xl font-bold transition-all"
+                class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] border text-4xl font-bold transition-colors"
                 :class="{
                   'cursor-wait':
                     (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
@@ -339,7 +339,7 @@ onUnmounted(() => {
                 @click="onChangeScore(prompt, -1)"
               >
                 <div
-                  class="h-1 w-6 shrink-0 rounded transition-all"
+                  class="h-1 w-6 shrink-0 rounded transition-colors"
                   :class="{ 'bg-slate-5': !prompt.score, 'bg-slate-6': prompt.score }"
                 ></div>
               </div>
@@ -355,7 +355,7 @@ onUnmounted(() => {
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="h-2 w-2 rounded-full transition-all"
+          class="h-2 w-2 rounded-full transition-colors"
         ></div>
       </div>
       <div v-if="!isCollapsed">

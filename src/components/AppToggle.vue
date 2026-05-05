@@ -22,13 +22,13 @@ const emit = defineEmits<Emits>()
 <template>
   <label
     :for="name"
-    class="relative flex items-center w-8 h-4 transition-all border rounded-full shrink-0"
+    class="relative flex h-4 w-8 shrink-0 items-center rounded-full border transition-colors"
     :class="[
       checked
         ? `border-transparent ${color === 'lime' ? ' bg-lime-7' : 'bg-light-purple-5'} `
         : 'border-slate-5 bg-slate-4',
       disabled || loading ? 'pointer-events-none' : 'cursor-pointer',
-      disabled ? '!grayscale opacity-50' : ''
+      disabled ? 'opacity-50 !grayscale' : ''
     ]"
   >
     <input
@@ -39,7 +39,7 @@ const emit = defineEmits<Emits>()
       @click="emit('change', !checked)"
     />
     <div
-      class="absolute w-3 h-3 transition-all bg-white rounded-full"
+      class="absolute h-3 w-3 rounded-full bg-white"
       :style="{ left: checked ? '17px' : '1px' }"
     ></div>
   </label>

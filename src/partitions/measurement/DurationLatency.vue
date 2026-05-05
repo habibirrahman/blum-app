@@ -183,12 +183,12 @@ const isTimeSuccessful = (timeString: string, compareMode: string) => {
     </div>
 
     <div
-      class="flex h-full flex-grow flex-col content-center items-center justify-center gap-x-3 transition-all"
-      :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 ps-3': isCollapsed }"
+      class="flex h-full flex-grow flex-col content-center items-center justify-center gap-x-3"
+      :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 px-3': isCollapsed }"
     >
       <div v-if="isCollapsed" class="font-semibold text-slate-7">Lap {{ lapLength }}</div>
       <div
-        class="grid grid-cols-5 items-center text-3xl text-[32px] font-bold transition-all"
+        class="grid grid-cols-5 items-center text-3xl text-[32px] font-bold transition-colors"
         :class="{ 'text-slate-6': !isStarted, 'text-slate-8': isStarted }"
       >
         <div class="flex justify-center">{{ timer.split(':')[0] }}</div>

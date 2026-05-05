@@ -229,7 +229,7 @@ const isHeightFull = computed<boolean>(
   >
     <div v-if="routeName !== 'session-record'" class="sticky left-0 top-0 z-[999]">
       <div
-        class="flex w-full items-center justify-center bg-rose-3 text-sm font-medium text-rose-7 transition-all"
+        class="flex w-full items-center justify-center bg-rose-3 text-sm font-medium text-rose-7"
         :class="{ 'h-8': !networkStatus.connected, 'h-0': networkStatus.connected }"
       >
         <div v-if="!networkStatus.connected">You're offline. Connect to sync your data.</div>
@@ -306,13 +306,13 @@ const isHeightFull = computed<boolean>(
         v-for="nav in navigations"
         :key="nav.route_name"
         :to="{ name: nav.route_name }"
-        class="flex h-full w-full flex-col items-center justify-center gap-1 transition-all"
+        class="flex h-full w-full flex-col items-center justify-center gap-1 transition-colors"
         :class="{ 'bg-prim-1': nav.is_active }"
       >
         <Icon v-if="nav.is_active" :icon="nav.active_icon" class="text-xl text-light-purple-5" />
         <Icon v-else :icon="nav.icon" class="text-xl text-slate-7" />
         <div
-          class="w-full truncate px-3 text-center text-xs transition-all"
+          class="w-full truncate px-3 text-center text-xs transition-colors"
           :class="{ 'text-light-purple-5': nav.is_active, 'text-slate-7': !nav.is_active }"
         >
           {{ nav.label }}

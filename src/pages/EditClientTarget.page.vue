@@ -1387,15 +1387,15 @@ onUnmounted(() => {
               class="flex rounded-lg border border-slate-4 bg-slate-2 p-1"
             >
               <div
-                class="flex w-full cursor-pointer items-center justify-center rounded py-1 text-xs font-semibold text-slate-7 transition-all duration-300"
-                :class="maintenanceApproach === 'manual' ? 'bg-white shadow' : 'text-slate-7'"
+                class="flex w-full cursor-pointer items-center justify-center rounded py-1 text-xs font-semibold text-slate-7 transition-colors duration-300"
+                :class="maintenanceApproach === 'manual' ? 'bg-white' : 'text-slate-7'"
                 @click="maintenanceApproach = 'manual'"
               >
                 Manual
               </div>
               <div
-                class="flex w-full cursor-pointer items-center justify-center rounded py-1 text-xs font-semibold text-slate-7 transition-all duration-300"
-                :class="maintenanceApproach === 'automation' ? 'bg-white shadow' : 'text-slate-7'"
+                class="flex w-full cursor-pointer items-center justify-center rounded py-1 text-xs font-semibold text-slate-7 transition-colors duration-300"
+                :class="maintenanceApproach === 'automation' ? 'bg-white' : 'text-slate-7'"
                 @click="maintenanceApproach = 'automation'"
               >
                 Automation

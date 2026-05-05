@@ -37,7 +37,7 @@ const currentClass = computed<string>(() => {
 
 <template>
   <button
-    class="relative flex items-center justify-center gap-2 rounded border text-sm font-semibold transition-all duration-300"
+    class="relative flex items-center justify-center gap-2 rounded border text-sm font-semibold"
     :class="[
       size === 'sm' ? 'px-1.5 py-1' : size === 'lg' ? 'px-3 py-3' : 'px-2 py-2',
       isDisabled || isLoading ? 'pointer-events-none' : '',

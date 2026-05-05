@@ -55,9 +55,13 @@ const parseModelValue = (value: string) => {
 }
 
 // Watch model value changes
-watch(() => model.value, (newValue) => {
-  parseModelValue(newValue)
-}, { immediate: true })
+watch(
+  () => model.value,
+  (newValue) => {
+    parseModelValue(newValue)
+  },
+  { immediate: true }
+)
 
 // Format number with padding
 const formatNumber = (value: string, max: number): string => {
@@ -120,14 +124,14 @@ const showSeconds = computed(() => props.format.toLowerCase().includes('s'))
 
       <!-- Input Container -->
       <div
-        class="flex h-10 w-full items-center gap-1 rounded border px-4 transition-all"
+        class="flex h-10 w-full items-center gap-1 rounded border px-4 transition-colors"
         :class="{
           'border-light-purple-5 ring-2 ring-light-purple-2': focused && !error && !disabled,
           'border-tomato-7 ring-2 ring-tomato-2 ring-offset-2': focused && error && !disabled,
           'border-slate-4': !focused && !error,
           'border-tomato-7': !focused && error,
           'bg-slate-2 opacity-50': disabled,
-          'pl-12': showIcon,
+          'pl-12': showIcon
         }"
       >
         <!-- Hours -->
@@ -141,11 +145,14 @@ const showSeconds = computed(() => props.format.toLowerCase().includes('s'))
           @focus="focused = true"
           @blur="focused = false"
           @input="handleChange"
-          class="h-full w-6 p-0 flex-shrink-0 bg-transparent text-center text-[16px] outline-none border-none ring-0 focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          class="h-full w-6 flex-shrink-0 border-none bg-transparent p-0 text-center text-[16px] outline-none ring-0 [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
 
         <!-- Divider : -->
-        <div v-if="showHours && showMinutes" class="flex h-full items-center justify-center text-sm">
+        <div
+          v-if="showHours && showMinutes"
+          class="flex h-full items-center justify-center text-sm"
+        >
           :
         </div>
 
@@ -159,11 +166,14 @@ const showSeconds = computed(() => props.format.toLowerCase().includes('s'))
           @focus="focused = true"
           @blur="focused = false"
           @input="handleChange"
-          class="h-full w-6  p-0 flex-shrink-0 bg-transparent text-center text-[16px] outline-none border-none ring-0 focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          class="h-full w-6 flex-shrink-0 border-none bg-transparent p-0 text-center text-[16px] outline-none ring-0 [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
 
         <!-- Divider : -->
-        <div v-if="showMinutes && showSeconds" class="flex h-full items-center justify-center text-sm">
+        <div
+          v-if="showMinutes && showSeconds"
+          class="flex h-full items-center justify-center text-sm"
+        >
           :
         </div>
 
@@ -177,7 +187,7 @@ const showSeconds = computed(() => props.format.toLowerCase().includes('s'))
           @focus="focused = true"
           @blur="focused = false"
           @input="handleChange"
-          class="h-full w-6  p-0 flex-shrink-0 bg-transparent text-center text-[16px] outline-none border-none ring-0 focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          class="h-full w-6 flex-shrink-0 border-none bg-transparent p-0 text-center text-[16px] outline-none ring-0 [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
       </div>
     </div>

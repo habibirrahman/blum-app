@@ -97,7 +97,7 @@ onUnmounted(() => {
             name: 'client',
             params: tab.params
           }"
-          class="flex h-7 shrink-0 items-center border-b-[3px] px-3 text-xs font-medium transition-all"
+          class="flex h-7 shrink-0 items-center border-b-[3px] px-3 text-xs font-medium transition-colors"
           :class="{
             'border-transparent text-slate-7': !tab.is_active,
             'border-light-purple-5 text-light-purple-5': tab.is_active

@@ -242,7 +242,7 @@ const onCreateSession = async () => {
 
 <template>
   <div
-    class="space-y-3 pt-3 transition-all"
+    class="space-y-3 pt-3 transition-colors"
     :class="{ 'bg-chestnut-1': clientStore.upcoming_sessions_count }"
   >
     <div class="flex items-center gap-3 px-4">
@@ -304,7 +304,7 @@ const onCreateSession = async () => {
         <div
           v-for="opt in dateOptions"
           :key="opt.value"
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
           :class="[
             date === opt.value
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -315,7 +315,7 @@ const onCreateSession = async () => {
           {{ opt.label }}
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-colors"
           :class="[
             status
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -327,7 +327,7 @@ const onCreateSession = async () => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />

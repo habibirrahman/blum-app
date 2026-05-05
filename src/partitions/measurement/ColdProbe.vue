@@ -180,28 +180,28 @@ const isLoading = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col flex-grow justify-center h-full">
+  <div class="flex h-full flex-grow flex-col justify-center">
     <div
       v-if="isLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-4 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
 
     <div
-      class="flex justify-center content-center items-center h-full"
+      class="flex h-full content-center items-center justify-center"
       :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 ps-3': isCollapsed }"
     >
       <div class="">
-        <div class="flex flex-col gap-3 items-center" v-if="target.cold_probe_format === 'classic'">
+        <div class="flex flex-col items-center gap-3" v-if="target.cold_probe_format === 'classic'">
           <div class="text-sm text-slate-7">Probe</div>
           <div
             class="flex gap-2"
             :class="{ 'flex-row-reverse': isCollapsed, 'flex-col': !isCollapsed }"
           >
             <div
-              class="flex relative flex-shrink-0 justify-center items-center w-16 h-16 rounded-full border-2 transition-all duration-300"
+              class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-300"
               :class="{
                 'border-dotted ': !loading.yes,
                 'border-lime-5 bg-lime-5': loading.yes || singleVariableResult.yes,
@@ -226,7 +226,7 @@ const isLoading = computed(() => {
               </div>
             </div>
             <div
-              class="flex relative flex-shrink-0 justify-center items-center w-16 h-16 rounded-full border-2 transition-all duration-300"
+              class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-300"
               :class="{
                 'border-dotted': !loading.no,
                 'border-red-cherry bg-red-cherry': loading.no || singleVariableResult.no,
@@ -253,11 +253,11 @@ const isLoading = computed(() => {
           </div>
         </div>
         <div
-          class="flex gap-3 justify-center items-center"
+          class="flex items-center justify-center gap-3"
           v-if="target.cold_probe_format === 'custom'"
         >
           <div v-for="(variable, index) in target.target_variables" :key="variable.id">
-            <div class="flex flex-col gap-3 items-center">
+            <div class="flex flex-col items-center gap-3">
               <div :class="{ 'pl-1 pr-4': !isCollapsed }">
                 <div class="text-sm text-slate-7">{{ variable.code }}</div>
               </div>
@@ -272,7 +272,7 @@ const isLoading = computed(() => {
               >
                 <!-- YES BUTTON -->
                 <div
-                  class="flex relative flex-shrink-0 justify-center items-center w-16 h-16 rounded-full border-2 transition-all duration-300"
+                  class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-300"
                   :class="{
                     'border-dotted': !loadingMultiple[variable?.id ?? ''],
                     'border-lime-5 bg-lime-5':
@@ -306,7 +306,7 @@ const isLoading = computed(() => {
 
                 <!-- NO BUTTON -->
                 <div
-                  class="flex relative flex-shrink-0 justify-center items-center w-16 h-16 rounded-full border-2 transition-all duration-300"
+                  class="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-300"
                   :class="{
                     'border-dotted': !loadingMultiple[variable?.id ?? ''],
                     'border-red-cherry bg-red-cherry':

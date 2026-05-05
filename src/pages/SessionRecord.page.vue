@@ -928,7 +928,7 @@ onUnmounted(() => {
     <!-- Tambahkan pending sync indicator -->
     <div class="flex items-center gap-2">
       <div
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-all"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-colors"
         :class="{
           'border-prim-3 bg-prim-1 text-light-purple-4': !showReviewMode,
           'border-light-purple-3 bg-light-purple-1 text-dark-purple-4': showReviewMode
@@ -955,7 +955,7 @@ onUnmounted(() => {
       >
         <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
         <div
-          class="absolute right-1 top-1 h-2 w-2 rounded-full bg-light-purple-5 transition-all"
+          class="absolute right-1 top-1 h-2 w-2 rounded-full bg-light-purple-5 transition-opacity"
           :class="[sessionStore.session_comments?.length ? 'opacity-100' : 'opacity-0']"
         ></div>
       </div>
@@ -964,12 +964,10 @@ onUnmounted(() => {
     <div class="flex w-full items-center justify-end gap-2">
       <div class="text-xs font-medium text-slate-6">ID {{ sessionStore.session?.id }}</div>
       <div
-        class="h-2 w-2 shrink-0 rounded-full transition-all"
+        class="h-2 w-2 shrink-0 rounded-full transition-colors"
         :class="{ 'bg-tomato-7': counter % 2 === 0, 'bg-slate-6': counter % 2 === 1 }"
       ></div>
-      <div
-        class="grid w-16 grid-cols-5 items-center text-xs font-semibold text-slate-8 transition-all"
-      >
+      <div class="grid w-16 grid-cols-5 items-center text-xs font-semibold text-slate-8">
         <div class="flex justify-center">{{ recordingTime.split(':')[0] }}</div>
         <div class="flex justify-center">:</div>
         <div class="flex justify-center">{{ recordingTime.split(':')[1] }}</div>
@@ -997,7 +995,7 @@ onUnmounted(() => {
   </div>
 
   <div
-    class="fixed left-1/2 z-[9] -translate-x-1/2 transition-all pt-safe"
+    class="fixed left-1/2 z-[9] -translate-x-1/2 pt-safe"
     :class="{ 'top-[60px]': cycleLoading, '-top-[60px]': !cycleLoading }"
   >
     <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
@@ -1075,7 +1073,7 @@ onUnmounted(() => {
   <div
     v-if="!sessionLoading && fixedMeasurement && !showReviewMode"
     id="fixed-measurement"
-    class="fixed bottom-0 z-[9] flex w-screen bg-prim-3 transition-all px-safe pb-safe"
+    class="fixed bottom-0 z-[9] flex w-screen bg-prim-3 px-safe pb-safe"
   >
     <div
       class="flex grow"
@@ -1138,7 +1136,7 @@ onUnmounted(() => {
           v-for="opt in sessionStore.session_measurements"
           :key="opt.id"
           :id="`measurement-nav-${opt.id}`"
-          class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-all"
+          class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
           :class="[
             focusMeasurement === opt.id
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'

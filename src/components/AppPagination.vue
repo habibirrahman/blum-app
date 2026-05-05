@@ -58,7 +58,7 @@ const pages = computed<(number | null)[]>(() => {
 <template>
   <div v-if="totalCount > perPage" class="flex items-center justify-center gap-2 px-4 py-4">
     <div
-      class="flex items-center justify-center text-xl transition-all rounded h-7 w-7 shrink-0"
+      class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-xl transition-colors"
       :class="{
         'bg-white text-slate-8': page > 1,
         'pointer-events-none bg-slate-2 text-slate-6': page === 1
@@ -70,7 +70,7 @@ const pages = computed<(number | null)[]>(() => {
     <div v-for="(i, idx) in pages" :key="`pagination_${idx}`">
       <div
         v-if="i"
-        class="flex items-center justify-center text-sm transition-all rounded cursor-pointer h-7 w-7 shrink-0"
+        class="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded text-sm transition-colors"
         :class="{ 'bg-light-purple-5 text-white': page === i, 'bg-white text-slate-8': page !== i }"
         @click="emit('change', i)"
       >
@@ -78,13 +78,13 @@ const pages = computed<(number | null)[]>(() => {
       </div>
       <div
         v-else
-        class="flex items-center justify-center text-sm bg-white rounded h-7 w-7 shrink-0 text-slate-8"
+        class="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-white text-sm text-slate-8"
       >
         ...
       </div>
     </div>
     <div
-      class="flex items-center justify-center text-xl transition-all rounded h-7 w-7 shrink-0"
+      class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-xl transition-colors"
       :class="{
         'bg-white text-slate-8': page < Number(pages[pages.length - 1]),
         'pointer-events-none bg-slate-2 text-slate-6': page === Number(pages[pages.length - 1])

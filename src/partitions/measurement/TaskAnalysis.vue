@@ -934,7 +934,7 @@ const onSaveEditTrial = async () => {
       <div
         v-for="target in ratioScores"
         :key="target.target_id"
-        class="relative flex h-10 w-10 flex-col-reverse items-center overflow-hidden rounded border transition-all duration-300"
+        class="relative flex h-10 w-10 flex-col-reverse items-center overflow-hidden rounded border transition-colors duration-300"
         :class="{
           'border-slate-2 bg-slate-2':
             target.count <= 0 && target.target_id !== currentTrial.target_id,
@@ -1072,11 +1072,8 @@ const onSaveEditTrial = async () => {
             <div
               v-for="(n, idx) in pageCount"
               :key="idx"
-              :class="{
-                'bg-slate-7': n === page,
-                'bg-slate-4': n !== page
-              }"
-              class="h-3 w-3 rounded-full transition-all duration-300"
+              :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
+              class="h-3 w-3 rounded-full transition-colors duration-300"
             ></div>
           </div>
         </div>
@@ -1190,7 +1187,7 @@ const onSaveEditTrial = async () => {
         >
           <div v-for="(problemBehavior, idx) in TAProblemBehaviors" :key="idx">
             <div
-              class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-90"
+              class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-colors duration-300 hover:brightness-90"
               :class="{
                 'h-[72px] w-[72px]': !isCollapsed,
                 'h-[64px] w-[64px]': isCollapsed,
@@ -1377,7 +1374,7 @@ const onSaveEditTrial = async () => {
             target.enable_problem_behavior &&
             (Object.keys(resultsState).length > 1 || currentTrial.prompt_id)
           "
-          class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-all duration-300 hover:brightness-90"
+          class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-colors duration-300 hover:brightness-90"
           :class="{
             'bg-tomato-2': !currentTrial.target_problem_behavior_id,
             'bg-tomato-7': currentTrial.target_problem_behavior_id

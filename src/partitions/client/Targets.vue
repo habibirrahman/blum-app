@@ -165,7 +165,7 @@ const onToggleGroup = (id: Target['id']) => {
 </script>
 
 <template>
-  <div class="space-y-3 pt-3 transition-all">
+  <div class="space-y-3 pt-3">
     <div class="flex items-center gap-3 px-4">
       <div class="text-2xl text-[22px] font-bold text-dark-purple-1">Targets</div>
       <div v-if="targetsLoading" class="h-6 w-6 shrink-0 animate-pulse rounded bg-slate-3"></div>
@@ -194,7 +194,7 @@ const onToggleGroup = (id: Target['id']) => {
     <div class="pl-4">
       <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-colors"
           :class="[
             statuses.length
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -215,7 +215,7 @@ const onToggleGroup = (id: Target['id']) => {
           <Icon icon="ph:caret-down" class="text-base text-slate-8" />
         </div>
         <div
-          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium transition-all"
+          class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border border-slate-4 bg-white px-4 text-xs font-medium"
           @click="showSort = true"
         >
           <Icon icon="ph:arrows-down-up" class="text-base text-slate-8" />

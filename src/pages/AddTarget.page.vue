@@ -369,7 +369,7 @@ const onAddTarget = async () => {
       <div class="pl-4">
         <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
           <div
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-colors"
             :class="[
               curriculums.length
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -387,7 +387,7 @@ const onAddTarget = async () => {
             <Icon icon="ph:caret-down" class="text-base text-slate-8" />
           </div>
           <div
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-colors"
             :class="[
               methods.length
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -405,7 +405,7 @@ const onAddTarget = async () => {
             <Icon icon="ph:caret-down" class="text-base text-slate-8" />
           </div>
           <div
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-all"
+            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-colors"
             :class="[
               progressions.length
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'

@@ -665,7 +665,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="relative shrink-0 rounded transition-all"
+    class="relative shrink-0 rounded"
     :class="{
       'h-[600px] w-[320px]': !isCollapsed,
       'h-[160px] w-full': isCollapsed,
@@ -693,7 +693,7 @@ onUnmounted(() => {
         >
           <div
             v-if="useLock"
-            class="flex h-7 w-7 items-center justify-center rounded bg-white transition-all"
+            class="flex h-7 w-7 items-center justify-center rounded bg-white"
             @click="emit('toggle-lock')"
           >
             <Icon icon="ph:lock-open-fill" class="text-2xl text-light-purple-5" />
@@ -711,20 +711,20 @@ onUnmounted(() => {
         </div>
         <div v-else class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-4">
           <div
-            class="flex h-6 w-6 items-center justify-center rounded transition-all"
+            class="flex h-6 w-6 items-center justify-center rounded transition-colors"
             :class="{ 'bg-white': display === 'description' }"
             @click="onChangeDisplay('description')"
           >
             <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
           </div>
           <div
-            class="relative flex h-6 w-6 items-center justify-center rounded transition-all"
+            class="relative flex h-6 w-6 items-center justify-center rounded transition-colors"
             :class="{ 'bg-white': display === 'comment' }"
             @click="onChangeDisplay('comment')"
           >
             <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
             <div
-              class="absolute right-px top-px h-2 w-2 rounded-full bg-light-purple-5 transition-all"
+              class="absolute right-px top-px h-2 w-2 rounded-full bg-light-purple-5 transition-colors"
               :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
             ></div>
           </div>

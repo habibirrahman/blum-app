@@ -527,7 +527,7 @@ onUnmounted(() => {
 <template>
   <div class="flex h-full flex-grow flex-col justify-between gap-2">
     <div
-      class="flex flex-grow flex-col content-center items-center justify-center gap-2 transition-all"
+      class="flex flex-grow flex-col content-center items-center justify-center gap-2"
       :class="{
         'h-full w-full': !isCollapsed,
         'absolute left-1/2 mb-2 w-64 -translate-x-1/2 rounded border border-prim-3 bg-white py-3':
@@ -554,7 +554,7 @@ onUnmounted(() => {
             <div
               v-for="box in probingCircles"
               :key="`${box.key}_${box.value}`"
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors"
               :class="{
                 'pointer-events-none':
                   measurement.submitted_at ||
@@ -583,7 +583,7 @@ onUnmounted(() => {
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="h-2 w-2 rounded-full transition-all"
+          class="h-2 w-2 rounded-full transition-colors"
         ></div>
       </div>
       <div v-if="measurement.submitted_at && !isCollapsed" class="flex w-60 justify-center">
@@ -603,7 +603,7 @@ onUnmounted(() => {
           v-for="n in pageCount"
           :key="n"
           :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-          class="h-2 w-2 rounded-full transition-all"
+          class="h-2 w-2 rounded-full"
         ></div>
       </div>
       <div class="flex flex-col" :class="{ 'gap-4': !isCollapsed, 'gap-0 pt-2': isCollapsed }">
@@ -612,7 +612,7 @@ onUnmounted(() => {
           :class="{ 'scale-90 gap-3': isCollapsed, 'gap-4': !isCollapsed }"
         >
           <div
-            class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-all"
+            class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-colors"
             :class="{
               'pointer-events-none': measurement.submitted_at || probingLoading,
               'bg-tomato-9': reduceProbingLoading,
@@ -624,7 +624,7 @@ onUnmounted(() => {
             <Icon icon="ph:x" class="h-10 w-10 text-white" />
           </div>
           <div
-            class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-all"
+            class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-colors"
             :class="{
               'pointer-events-none': measurement.submitted_at || probingLoading,
               'bg-lime-7': plusProbingLoading,
@@ -740,7 +740,7 @@ onUnmounted(() => {
           <div
             v-for="opt in probingActionOptions"
             :key="opt.id"
-            class="flex flex-col items-center justify-center gap-2 rounded-[10px] border bg-white p-3 text-center transition-all"
+            class="flex flex-col items-center justify-center gap-2 rounded-[10px] border bg-white p-3 text-center transition-colors"
             :class="{
               'border-lime-6': probingAction?.id === opt.id,
               'border-white': probingAction?.id !== opt.id

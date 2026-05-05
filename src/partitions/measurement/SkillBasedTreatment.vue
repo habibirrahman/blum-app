@@ -893,7 +893,7 @@ const onSaveEditTrial = async () => {
       <div
         v-for="taskCode in ratioScores"
         :key="taskCode.id"
-        class="relative flex h-10 w-10 flex-col-reverse items-center overflow-hidden rounded border transition-all duration-300"
+        class="relative flex h-10 w-10 flex-col-reverse items-center overflow-hidden rounded border transition-colors duration-300"
         :class="{
           'border-slate-2 bg-slate-2':
             taskCode.count <= 0 && taskCode.id !== currentTrial.target_task_id,
@@ -1006,7 +1006,7 @@ const onSaveEditTrial = async () => {
               >
                 <div v-for="(prompt, promptIdx) in promptBoxes" :key="promptIdx">
                   <div
-                    class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-95"
+                    class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-colors duration-300 hover:brightness-95"
                     :class="{
                       'bg-teal-7': prompt.id === currentTrial.prompt_id,
                       'bg-teal-1': prompt.id !== currentTrial.prompt_id
@@ -1031,11 +1031,8 @@ const onSaveEditTrial = async () => {
             <div
               v-for="(n, idx) in pageCount"
               :key="idx"
-              :class="{
-                'bg-slate-7': n === page,
-                'bg-slate-4': n !== page
-              }"
-              class="h-3 w-3 rounded-full transition-all duration-300"
+              :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
+              class="h-3 w-3 rounded-full transition-colors"
             ></div>
           </div>
         </div>
@@ -1151,7 +1148,7 @@ const onSaveEditTrial = async () => {
         >
           <div v-for="(problemBehavior, idx) in SBTProblemBehaviors" :key="idx">
             <div
-              class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-all duration-300 hover:brightness-90"
+              class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-colors duration-300 hover:brightness-90"
               :class="{
                 'h-[72px] w-[72px]': !isCollapsed,
                 'h-[64px] w-[64px]': isCollapsed,
@@ -1329,7 +1326,7 @@ const onSaveEditTrial = async () => {
             target.enable_problem_behavior &&
             (Object.keys(resultsState).length > 1 || currentTrial.prompt_id)
           "
-          class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-all duration-300 hover:brightness-90"
+          class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-colors duration-300 hover:brightness-90"
           :class="{
             'bg-tomato-2': !currentTrial.target_problem_behavior_id,
             'bg-tomato-7': currentTrial.target_problem_behavior_id
