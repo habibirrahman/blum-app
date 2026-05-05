@@ -58,9 +58,6 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<Emits>()
 
-// Periodic check untuk stuck items
-let periodicCheckInterval: any = null
-
 onMounted(async () => {
   if (sessionStore.session?.status === 'ongoing') {
     // Setup auto-sync (hanya sekali)
@@ -84,7 +81,7 @@ onMounted(async () => {
 
 // Cleanup saat unmount
 onUnmounted(() => {
-  clearInterval(periodicCheckInterval)
+  clearInterval(durationInterval.value)
 })
 
 const measurementResults = ref<Measurement['results']>(props.measurement.results)
@@ -789,6 +786,7 @@ const taskAnalysisPrompts = computed(() => {
               </div>
             </div>
           </div>
+
           <div v-else :key="`measurement-card-${cardId}`" class="h-full w-full">
             <!-- Tambahkan sync status indicator (optional) -->
             <div

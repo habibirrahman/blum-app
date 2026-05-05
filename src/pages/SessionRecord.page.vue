@@ -745,6 +745,13 @@ const onExitSession = async () => {
   exitSessionLoading.value = true
   await appStore.getRunningSessions()
   exitSessionLoading.value = false
+
+  const clientId = sessionStore.session?.client_id
+  if (redirect.value === '/home' && clientId) {
+    router.push(`/clients/${clientId}/sessions-draft`)
+    return
+  }
+
   router.push(redirect.value)
 }
 

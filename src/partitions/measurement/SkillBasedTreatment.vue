@@ -451,7 +451,12 @@ const onSaveCurrentTrial = async () => {
 
   results = results
     .filter((i) => Number(i.prompt_id) && Number(i.target_task_id))
-    .map((i, idx) => ({ ...i, key: idx + 1 }))
+    .map((i, idx) => ({
+      key: idx + 1,
+      prompt_id: i.prompt_id,
+      target_task_id: i.target_task_id,
+      problem_behavior_id: i.problem_behavior_id
+    }))
 
   const finalResults: Record<string, any> = {}
   for (let idx = 0; idx < results.length; idx++) {
@@ -775,7 +780,12 @@ const onDeleteTrial = async () => {
   results = results
     .filter((i) => Number(i.key) !== Number(key))
     .filter((i) => Number(i.prompt_id) && Number(i.target_task_id))
-    .map((i, idx) => ({ ...i, key: idx + 1 }))
+    .map((i, idx) => ({
+      key: idx + 1,
+      prompt_id: i.prompt_id,
+      target_task_id: i.target_task_id,
+      problem_behavior_id: i.problem_behavior_id
+    }))
 
   const finalResults: Record<string, any> = {}
   for (let idx = 0; idx < results.length; idx++) {
