@@ -18,7 +18,7 @@ export interface ClientStateSchema {
   targets_count: number
   clients: Client[]
   clients_count: number
-  client_target_job: any,
+  client_target_job: any
   //
   _jobTimeout?: number | undefined
 }
