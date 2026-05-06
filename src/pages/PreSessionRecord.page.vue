@@ -38,7 +38,7 @@ const showEditSessionName = ref<boolean>(false)
 const sessionName = ref<string>('')
 const editSessionNameLoading = ref<boolean>(false)
 
-const fetchCommentsTimeout = ref<number | undefined>(undefined)
+const fetchCommentsTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchComments() {
   const id = sessionStore.session?.id
   commentsLoading.value = true
@@ -57,7 +57,7 @@ async function fetchComments() {
   }
 }
 
-const fetchSessionTimeout = ref<number | undefined>(undefined)
+const fetchSessionTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchSession() {
   const slug = route.params?.slug as string
   sessionLoading.value = true

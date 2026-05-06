@@ -31,7 +31,7 @@ watch(page, (val, old) => {
 })
 
 const query = ref<string>('')
-const queryTimeout = ref<number | undefined>(undefined)
+const queryTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(query, () => {
   if (queryTimeout.value) {
     clearTimeout(queryTimeout.value)
@@ -143,7 +143,7 @@ async function fetchUpcoming() {
   if (!success) return
 }
 
-const fetchSessionTimeout = ref<number | undefined>(undefined)
+const fetchSessionTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchSessions() {
   sessionsLoading.value = true
   const { success } = await sessionStore.getSessions({ params: params.value })

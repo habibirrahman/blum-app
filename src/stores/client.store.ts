@@ -20,7 +20,7 @@ export interface ClientStateSchema {
   clients_count: number
   client_target_job: any
   //
-  _jobTimeout?: number | undefined
+  _jobTimeout?: ReturnType<typeof setTimeout> | undefined
 }
 
 export const useClientStore = defineStore('client', {

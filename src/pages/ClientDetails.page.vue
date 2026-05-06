@@ -45,7 +45,7 @@ const tabs = computed<Tab[]>(() => {
   ]
 })
 
-const fetchClientTimeout = ref<number | undefined>(undefined)
+const fetchClientTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchClient() {
   clientLoading.value = true
   const id = Number(route.params.id)

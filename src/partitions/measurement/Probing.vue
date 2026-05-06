@@ -57,7 +57,7 @@ const onDisplayPopup = () => {
 }
 
 const page = ref<number>(1)
-const collapeTimeout = ref<number | undefined>(undefined)
+const collapeTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(
   () => props.isCollapsed,
   () => {
@@ -242,7 +242,7 @@ watch(showPanel, (val) => {
 })
 const isProbingPassed = ref<boolean>(false)
 const showCelebration = ref<boolean>(false)
-const submitPorbingTimeout = ref<number | undefined>(undefined)
+const submitPorbingTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const onSubmitProbing = async () => {
   probingAction.value = null
   showPanel.value = true
@@ -436,7 +436,7 @@ const onSave = async () => {
 
 // draft
 const switchLoading = ref<boolean>(false)
-const changeToPercentageTimeout = ref<number | undefined>(undefined)
+const changeToPercentageTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const onChangeToPercentage = async () => {
   if (sessionStore.session?.status !== 'draft') return
   if (switchLoading.value) return

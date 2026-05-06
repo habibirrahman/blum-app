@@ -26,7 +26,7 @@ watch(page, (val, old) => {
 })
 
 const query = ref<string>('')
-const queryTimeout = ref<number | undefined>(undefined)
+const queryTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(query, () => {
   if (queryTimeout.value) {
     clearTimeout(queryTimeout.value)
@@ -144,7 +144,7 @@ const params = computed<string>(() => {
   return p
 })
 
-const fetchClientsTimeout = ref<number | undefined>(undefined)
+const fetchClientsTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchClients() {
   clientsLoading.value = true
   const { success } = await clientStore.getClients({ params: params.value })
@@ -162,7 +162,7 @@ async function fetchClients() {
   }
 }
 
-const fetchBranchTimeout = ref<number | undefined>(undefined)
+const fetchBranchTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchBranch() {
   branchLoading.value = true
   const { success } = await appStore.getBranches()

@@ -28,7 +28,7 @@ watch(page, (val, old) => {
 })
 
 const query = ref<string>('')
-const queryTimeout = ref<number | undefined>(undefined)
+const queryTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(query, () => {
   if (queryTimeout.value) {
     clearTimeout(queryTimeout.value)

@@ -42,7 +42,7 @@ watch(
   }
 )
 
-const fetchCurrentUserTimeout = ref<number | undefined>(undefined)
+const fetchCurrentUserTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchCurrentUser() {
   fetchCurrentUserTimeout.value = setTimeout(async () => {
     const { success } = await appStore.getAccount()

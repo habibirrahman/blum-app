@@ -30,7 +30,7 @@ const results = ref<Measurement['results']>({})
 
 const page = ref<number>(1)
 
-const collapseTimeout = ref<number | undefined>(undefined)
+const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(
   () => props.isCollapsed,
   () => {
@@ -253,7 +253,7 @@ const onRemoveBox = async (box: PercentageBox) => {
 
 // draft
 const switchLoading = ref<boolean>(false)
-const changeProbingTimeout = ref<number | undefined>(undefined)
+const changeProbingTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const onChangeProbing = async () => {
   if (sessionStore.session?.status !== 'draft') return
   if (switchLoading.value) return

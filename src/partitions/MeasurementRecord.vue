@@ -253,7 +253,7 @@ interface DurationLap {
 
 const durationCounter = ref<number>(0)
 const isDurationLatencyStarted = ref<boolean>(false)
-const durationInterval = ref<number | undefined>(undefined)
+const durationInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
 const isDurationLatencyLoading = ref<boolean>(false)
 const lapLoading = ref<boolean>(false)
 const laps = ref<DurationLap[]>([])

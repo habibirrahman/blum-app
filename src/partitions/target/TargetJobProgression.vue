@@ -45,7 +45,7 @@ watch(
   }
 )
 
-const setupTimeout = ref<number | undefined>(undefined)
+const setupTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const setup = (val: any) => {
   const clientId = clientStore.client?.id
   if (val && val.client_id === clientId) {

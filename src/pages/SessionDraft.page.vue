@@ -46,8 +46,8 @@ async function fetchMeasurements() {
 const showReviewMode = ref<boolean>(false)
 const containerHeight = ref<string>('100%')
 
-const updateCollapseTimeout = ref<number | undefined>(undefined)
-const updateHeightTimeout = ref<number | undefined>(undefined)
+const updateCollapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
+const updateHeightTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 
 watch(showReviewMode, (val) => {
   document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })

@@ -48,8 +48,8 @@ export interface SessionStateSchema {
   pending_progress: SessionPendingProgress[]
   //
   _autoSyncInitialized?: boolean // Track auto-sync setup
-  _syncDebounceTimer?: any // For debounced sync
-  _periodicCheckInterval?: number | undefined // For periodic check
+  _syncDebounceTimeout?: ReturnType<typeof setTimeout> | undefined // For debounced sync
+  _periodicCheckInterval?: ReturnType<typeof setInterval> | undefined // For periodic check
 }
 
 export type SessionCommentFilter = '' | 'general' | 'assessment' | 'target' | 'mine'
@@ -164,7 +164,7 @@ export const useSessionStore = defineStore('session', {
     pending_progress: [],
     //
     _autoSyncInitialized: false,
-    _syncDebounceTimer: null,
+    _syncDebounceTimeout: undefined,
     _periodicCheckInterval: undefined
   }),
   getters: {
@@ -510,9 +510,9 @@ export const useSessionStore = defineStore('session', {
 
     // Manual trigger sync dengan debounce
     triggerSync(immediate = false): void {
-      if (this._syncDebounceTimer) {
-        clearTimeout(this._syncDebounceTimer)
-        this._syncDebounceTimer = undefined
+      if (this._syncDebounceTimeout) {
+        clearTimeout(this._syncDebounceTimeout)
+        this._syncDebounceTimeout = undefined
       }
 
       if (immediate) {
@@ -520,7 +520,7 @@ export const useSessionStore = defineStore('session', {
         return
       }
 
-      this._syncDebounceTimer = setTimeout(() => {
+      this._syncDebounceTimeout = setTimeout(() => {
         this.resolvePendingProgress()
       }, 2000) as any
     },

@@ -38,7 +38,7 @@ watch(
 
 const page = ref<number>(1)
 
-const collapseTimeout = ref<number | undefined>(undefined)
+const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(
   () => props.isCollapsed,
   () => {

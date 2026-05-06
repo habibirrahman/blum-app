@@ -700,7 +700,7 @@ async function onSubmit() {
   await doSubmit()
 }
 
-const submitTimeout = ref<number | undefined>(undefined)
+const submitTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function doSubmit() {
   try {
     submitLoading.value = true

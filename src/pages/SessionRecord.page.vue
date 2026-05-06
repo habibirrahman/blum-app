@@ -162,7 +162,7 @@ watch(hasPendingSync, (isPending, wasPending) => {
   }
 })
 
-const scrollingTimeout = ref<number | undefined>(undefined)
+const scrollingTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const isScrolling = ref<boolean>(false)
 
 const isDisabledAction = computed(() => {
@@ -234,7 +234,7 @@ const scrollListener = async (e: any) => {
 }
 
 const counter = ref<number>(0)
-const counterInterval = ref<number | undefined>(undefined)
+const counterInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
 const unCompletedColdProbeIds = ref<Measurement['id'][]>([])
 const counterTimer = () => {
   if (counterInterval.value) {
@@ -306,7 +306,7 @@ const onToggleSavedSbt = (payload: { id: Measurement['id']; saved: boolean }) =>
 const showReviewMode = ref<boolean>(false)
 const containerHeight = ref<string>('100%')
 
-const updateHeightTimeout = ref<number | undefined>(undefined)
+const updateHeightTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(showReviewMode, (val) => {
   if (sessionStore.session?.status === 'ongoing') {
     document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
@@ -331,7 +331,7 @@ watch(showReviewMode, (val) => {
 
 const focusMeasurement = ref<Measurement['id']>(0)
 
-const collapseTimeout = ref<number | undefined>(undefined)
+const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 
 const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
   let timer = 500
@@ -511,7 +511,7 @@ const openEndSession = () => {
   showEndSession.value = true
 }
 
-const trunOffTimeout = ref<number | undefined>(undefined)
+const trunOffTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const onTrunOffAllAndEndSession = async () => {
   showEndSession.value = false
   showReviewMode.value = true
@@ -560,7 +560,7 @@ const onTrunOffAllAndEndSession = async () => {
   }
 }
 
-const keepActiveTimeout = ref<number | undefined>(undefined)
+const keepActiveTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const onKeepActiveAndEndSession = () => {
   showEndSession.value = false
   showReviewMode.value = true
@@ -800,7 +800,7 @@ const duplicateImageCommentsToClientDocument = async () => {
 }
 
 // Periodic check untuk stuck items
-const periodicCheckInterval = ref<number | undefined>(undefined)
+const periodicCheckInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
 
 onMounted(async () => {
   const app = document.getElementById('app')

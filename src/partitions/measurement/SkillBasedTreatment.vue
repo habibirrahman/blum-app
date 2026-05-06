@@ -144,7 +144,7 @@ watch(
   }
 )
 
-const collapseTimeout = ref<number | undefined>(undefined)
+const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(
   () => props.isCollapsed,
   () => {
@@ -200,7 +200,7 @@ watch(hasPendingSync, (isPending, wasPending) => {
 })
 
 // Auto-save timer
-const idleTimeout = ref<number | undefined>(undefined)
+const idleTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const resetIdleTimer = () => {
   if (idleTimeout.value) {
     clearTimeout(idleTimeout.value)

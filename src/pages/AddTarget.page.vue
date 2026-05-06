@@ -75,7 +75,7 @@ watch(page, (val, old) => {
 })
 
 const query = ref<string>('')
-const queryTimeout = ref<number | undefined>(undefined)
+const queryTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(query, () => {
   if (queryTimeout.value) {
     clearTimeout(queryTimeout.value)
@@ -97,7 +97,7 @@ watch(query, () => {
 })
 
 const curriculumQuery = ref<string>('')
-const curriculumQueryTimeout = ref<number | undefined>(undefined)
+const curriculumQueryTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(curriculumQuery, () => {
   if (curriculumQueryTimeout.value) {
     clearTimeout(curriculumQueryTimeout.value)
@@ -117,7 +117,7 @@ watch(curriculumQuery, () => {
 })
 
 const progressionQuery = ref<string>('')
-const progressionQueryTimeout = ref<number | undefined>(undefined)
+const progressionQueryTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 watch(progressionQuery, () => {
   if (progressionQueryTimeout.value) {
     clearTimeout(progressionQueryTimeout.value)
@@ -318,7 +318,7 @@ const onOpenTarget = async (target: Target) => {
   targetDetails.value = data
 }
 
-const addTargetTimeout = ref<number | undefined>(undefined)
+const addTargetTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const onAddTarget = async () => {
   submitLoading.value = true
   const data = {
