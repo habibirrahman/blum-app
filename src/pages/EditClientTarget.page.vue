@@ -1477,10 +1477,8 @@ onUnmounted(() => {
                     <div
                       @click="
                         () => {
-                          if (!maintenanceSessionHasBeenRecorded(schedule)) {
-                            editingScheduleIndex = index
-                            showScheduleUnitSheet = true
-                          }
+                          editingScheduleIndex = index
+                          showScheduleUnitSheet = true
                         }
                       "
                       class="flex h-10 w-2/4 min-w-[100px] cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-3"
@@ -1507,13 +1505,9 @@ onUnmounted(() => {
                   When a maintenance session fails
                 </div>
                 <div
-                  @click="
-                    () => {
-                      if (automationSchedules.length > 1) showFailureSheet = true
-                    }
-                  "
+                  @click="showFailureSheet = true"
                   class="flex h-10 w-full cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-3"
-                  :class="{ 'cursor-not-allowed opacity-50': automationSchedules.length === 1 }"
+                  :class="{ 'cursor-not-allowed opacity-50': automationSchedules.length <= 1 }"
                 >
                   <span class="truncate pr-2 text-sm">{{
                     FAILURE_OPTIONS.find((o) => o.value === automationOnFailure)?.label
@@ -1675,8 +1669,10 @@ onUnmounted(() => {
             :value="opt.value"
             class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="
-              manualIntervalUnit = opt.value
-              showManualUnitSheet = false
+              () => {
+                manualIntervalUnit = opt.value
+                showManualUnitSheet = false
+              }
             "
           />
         </div>
@@ -1710,8 +1706,10 @@ onUnmounted(() => {
             :value="opt.value"
             class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="
-              automationSchedules[editingScheduleIndex].interval_unit = opt.value
-              showScheduleUnitSheet = false
+              () => {
+                automationSchedules[editingScheduleIndex].interval_unit = opt.value
+                showScheduleUnitSheet = false
+              }
             "
           />
         </div>
@@ -1745,8 +1743,10 @@ onUnmounted(() => {
             :value="opt.value"
             class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="
-              automationOnFailure = opt.value
-              showFailureSheet = false
+              () => {
+                automationOnFailure = opt.value
+                showFailureSheet = false
+              }
             "
           />
         </div>
