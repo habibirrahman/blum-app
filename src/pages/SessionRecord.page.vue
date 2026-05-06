@@ -1115,7 +1115,7 @@ onUnmounted(() => {
           v-for="opt in sessionStore.session_measurements"
           :key="opt.id"
           :id="`measurement-nav-${opt.id}`"
-          class="flex h-8 max-w-32 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
+          class="flex h-8 max-w-64 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
           :class="[
             focusMeasurement === opt.id
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
