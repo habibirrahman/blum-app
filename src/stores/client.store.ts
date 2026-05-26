@@ -389,6 +389,23 @@ export const useClientStore = defineStore('client', {
         })
     },
 
+    async createTarget({
+      data
+    }: {
+      data: any
+    }): Promise<ResponseSchema> {
+      return axios
+        .post(`/api/v1/targets`, data)
+        .then(async ({ data }) => {
+          this.target = data
+          this.syncClientStore()
+          return { success: true, data }
+        })
+        .catch(({ response }) => {
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+
     async updateTarget({
       id,
       data

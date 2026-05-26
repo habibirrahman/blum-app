@@ -46,6 +46,11 @@ const router = createRouter({
     {
       path: '/clients/:id/targets/new',
       name: 'new-client-target',
+      component: () => import('../pages/CreateClientTarget.page.vue')
+    },
+    {
+      path: '/clients/:id/targets/databank',
+      name: 'databank-client-target',
       component: () => import('../pages/AddTarget.page.vue')
     },
     {
