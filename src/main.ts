@@ -2,14 +2,18 @@ import './assets/main.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import router from './router'
+import Toast, { type PluginOptions, POSITION } from 'vue-toastification'
 import VueAxios from 'vue-axios'
 import axios from './backend/axios'
-import Toast, { type PluginOptions, POSITION } from 'vue-toastification'
+
 // Import the CSS or use your own!
 import 'vue-toastification/dist/index.css'
 
 import App from './App.vue'
+import router from './router'
+
+import dayjs from 'dayjs'
+import isBetween from 'dayjs/plugin/isBetween'
 
 const app = createApp(App)
 
@@ -25,5 +29,7 @@ const options: PluginOptions = {
   closeButton: false
 }
 app.use(Toast, options)
+
+dayjs.extend(isBetween)
 
 app.mount('#app')

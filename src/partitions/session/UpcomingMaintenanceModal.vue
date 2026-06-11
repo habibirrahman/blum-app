@@ -5,8 +5,8 @@ import AppButton from '@/components/AppButton.vue'
 import AppCheckInput from '@/components/AppCheckInput.vue'
 import type { Target } from '@/lib/types'
 import { useSessionStore } from '@/stores/session.store'
-import moment from 'moment'
 import AppChip from '@/components/AppChip.vue'
+import dayjs from 'dayjs'
 
 const props = defineProps<{
   targets: Target[]
@@ -54,7 +54,7 @@ const toggleSelect = (id: number | undefined) => {
 
 const maintenanceDateText = (target: Target) => {
   if (!target.maintenance_next_date) return ''
-  const nextDate = moment(target.maintenance_next_date)
+  const nextDate = dayjs(target.maintenance_next_date)
   return `Maintenance scheduled for ${nextDate.format('DD MMM YY')}`
 }
 
@@ -77,21 +77,21 @@ const onSubmit = async () => {
 </script>
 
 <template>
-  <div class="flex fixed top-0 left-0 z-50 flex-col w-screen h-screen bg-slate-1 p-safe">
-    <div class="flex flex-col h-full bg-white">
+  <div class="fixed left-0 top-0 z-50 flex h-screen w-screen flex-col bg-slate-1 p-safe">
+    <div class="flex h-full flex-col bg-white">
       <!-- Header -->
-      <div class="flex justify-between items-center px-4 h-14 shrink-0">
+      <div class="flex h-14 shrink-0 items-center justify-between px-4">
         <div class="text-lg font-semibold text-slate-10">Upcoming maintenance targets detected</div>
         <button
           @click="emit('close')"
-          class="flex justify-center items-center w-8 h-8 rounded-full hover:bg-slate-2"
+          class="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-2"
         >
-          <Icon icon="ph:x" class="w-5 h-5 text-slate-9" />
+          <Icon icon="ph:x" class="h-5 w-5 text-slate-9" />
         </button>
       </div>
 
       <!-- Body -->
-      <div class="overflow-y-auto flex-1">
+      <div class="flex-1 overflow-y-auto">
         <div class="px-4 pb-4 text-sm text-slate-8">
           Select which targets to maintain today. Selected targets will be run in the maintenance
           phase. The next maintenance date for selected targets will be rescheduled automatically.
@@ -99,10 +99,12 @@ const onSubmit = async () => {
 
         <!-- Select all -->
         <div
-          class="flex justify-between items-center px-4 h-12 cursor-pointer border-slate-3"
+          class="flex h-12 cursor-pointer items-center justify-between border-slate-3 px-4"
           @click="toggleSelectAll"
         >
-          <div class="text-sm text-slate-7">{{ selectedIds.length }} target(s) selected for maintenance</div>
+          <div class="text-sm text-slate-7">
+            {{ selectedIds.length }} target(s) selected for maintenance
+          </div>
           <AppCheckInput
             name="select-all"
             :checked="isAllSelected"
@@ -115,30 +117,30 @@ const onSubmit = async () => {
         <div
           v-for="target in targets"
           :key="target.id"
-          class="flex w-full border-b cursor-pointer border-slate-3"
+          class="flex w-full cursor-pointer border-b border-slate-3"
           @click="toggleSelect(target.id)"
         >
           <div
             class="w-2 shrink-0"
             :style="{ backgroundColor: target.curriculum_color || '#F3F0F7' }"
           ></div>
-          <div class="flex justify-between items-center px-4 py-3 w-full bg-white">
+          <div class="flex w-full items-center justify-between bg-white px-4 py-3">
             <div class="flex flex-col gap-1 pr-4">
-              <div class="flex gap-2 items-center">
+              <div class="flex items-center gap-2">
                 <AppChip chip="mastered" />
                 <div class="max-w-[150px] truncate text-xs font-medium text-slate-6">
                   {{ target.curriculum_name }}
                 </div>
               </div>
               <div class="text-sm font-bold text-slate-9">{{ target.name }}</div>
-              <div class="text-sm line-clamp-2 text-slate-6">
+              <div class="line-clamp-2 text-sm text-slate-6">
                 {{ target.description || '' }}
               </div>
               <div
                 v-if="target.maintenance_next_date"
-                class="flex gap-1 items-center mt-1 text-xs font-medium text-info-6"
+                class="text-info-6 mt-1 flex items-center gap-1 text-xs font-medium"
               >
-                <Icon icon="ph:calendar-blank" class="w-4 h-4 text-info" />
+                <Icon icon="ph:calendar-blank" class="h-4 w-4 text-info" />
                 <div class="text-info">{{ maintenanceDateText(target) }}</div>
               </div>
             </div>
@@ -155,19 +157,16 @@ const onSubmit = async () => {
       </div>
 
       <!-- Footer -->
-      <div class="fixed bottom-0 left-0 p-4 w-full bg-white border-t border-slate-3 pb-safe">
+      <div class="fixed bottom-0 left-0 w-full border-t border-slate-3 bg-white p-4 pb-safe">
         <div class="flex h-[130px] flex-col gap-5">
-          <div class="flex gap-2 items-center p-2 rounded bg-cornflower-2">
-            <Icon icon="ph:info-fill" class="w-5 h-5 text-cornflower-8" />
+          <div class="flex items-center gap-2 rounded bg-cornflower-2 p-2">
+            <Icon icon="ph:info-fill" class="h-5 w-5 text-cornflower-8" />
             <div class="text-sm text-cornflower-8">
-              Data from this session for <b>unselected targets</b> will be recorded in <b>teaching phase.</b>
+              Data from this session for <b>unselected targets</b> will be recorded in
+              <b>teaching phase.</b>
             </div>
           </div>
-          <AppButton
-            class="w-full"
-            :loading="loading"
-            @click="onSubmit"
-          >
+          <AppButton class="w-full" :loading="loading" @click="onSubmit">
             Confrim & start session
           </AppButton>
         </div>

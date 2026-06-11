@@ -24,7 +24,7 @@ import ColdProbe from './measurement/ColdProbe.vue'
 import TaskAnalysis from './measurement/TaskAnalysis.vue'
 import { useAppStore } from '@/stores/app.store'
 import AppCheckInput from '@/components/AppCheckInput.vue'
-import moment from 'moment'
+import dayjs from 'dayjs'
 
 const toast = useToast()
 const appStore = useAppStore()
@@ -299,13 +299,16 @@ const isMaintenanceDisplayable = computed<boolean>(() => {
   if (!target || !target.in_maintenance) return false
   if (!target.maintenance_next_date) return false
 
-  const nextDate = moment(new Date(target.maintenance_next_date))
-  const today = moment().startOf('day')
+  const nextDate = dayjs(new Date(target.maintenance_next_date))
+  const today = dayjs().startOf('day')
 
-  if (nextDate.isSameOrBefore(today, 'day') && target.maintenance_status === 'overdue') {
+  if (
+    (nextDate.isSame(today) || nextDate.isBefore(today)) &&
+    target.maintenance_status === 'overdue'
+  ) {
     return true
   }
-  if (nextDate.isSame(today, 'day')) {
+  if (nextDate.isSame(today)) {
     return true
   }
   return false
