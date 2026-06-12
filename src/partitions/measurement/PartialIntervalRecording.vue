@@ -39,16 +39,18 @@ const intervalSeconds = computed<number>(() => {
   const interval = props.measurement.target?.interval
   return (interval || 1) * 60
 })
+
 const durationSeconds = computed<number>(() => {
   const measurementDuration = props.measurement.duration
   const targetDuration = props.measurement.target?.duration
   return (measurementDuration || targetDuration || 1) * 60
 })
+
 const intervalRound = computed<number>(() => {
   if (!intervalSeconds.value) return 1
   return Math.ceil(durationSeconds.value / intervalSeconds.value)
 })
-//
+
 const elapsedTime = computed<number>(() => {
   const datetimeNow = now.value.valueOf()
   let time = 0
@@ -87,11 +89,13 @@ const elapsedTime = computed<number>(() => {
 
   return time
 })
+
 const currentInterval = computed<number>(() => {
   if (!elapsedTime.value) return 1
   const interval = Math.ceil(elapsedTime.value / intervalSeconds.value)
   return Math.max(1, interval)
 })
+
 const displayCurrentInterval = computed<number>(() => {
   // Get actual interval count from results
   const resultsCount = props.measurementResults ? Object.keys(props.measurementResults).length : 0
@@ -107,6 +111,7 @@ const displayCurrentInterval = computed<number>(() => {
   // Otherwise cap at intervalRound
   return Math.min(currentInterval.value, intervalRound.value)
 })
+
 const isOvertimeStopped = computed<boolean>(() => {
   return (
     !!props.measurement?.target?.allow_overtime_recording &&
@@ -114,14 +119,14 @@ const isOvertimeStopped = computed<boolean>(() => {
     !!props.measurement.overtime_ended_at
   )
 })
-//
+
 const isPending = computed<boolean>(() => {
   return (
     props.measurement?.target?.interval_start_timing === 'custom_start' &&
     !props.measurement.recording_started_at
   )
 })
-//
+
 const isOvertimeRunning = computed<boolean>(() => {
   return (
     !!props.measurement?.target?.allow_overtime_recording &&
@@ -129,6 +134,7 @@ const isOvertimeRunning = computed<boolean>(() => {
     !props.measurement.overtime_ended_at
   )
 })
+
 const isOvertimePending = computed<boolean>(() => {
   return (
     !!props.measurement?.target?.allow_overtime_recording &&
@@ -137,6 +143,7 @@ const isOvertimePending = computed<boolean>(() => {
     !props.measurement.overtime_ended_at
   )
 })
+
 const isFinished = computed<boolean>(() => {
   // Legacy data fallback: if session is already strictly finished,
   // cap the completion so it shows as finished correctly.
@@ -153,6 +160,7 @@ const isFinished = computed<boolean>(() => {
   }
   return elapsedTime.value >= durationSeconds.value
 })
+
 const isNearEnd = computed<boolean>(() => {
   if (isFinished.value || isOvertimeRunning.value || isOvertimePending.value) {
     return false
@@ -161,7 +169,7 @@ const isNearEnd = computed<boolean>(() => {
   const remaining = durationSeconds.value - elapsedTime.value
   return remaining <= 300 && remaining > 0
 })
-//
+
 // Recording is considered active when:
 // - start_with_session: when session is ongoing
 // - custom_start: when recording_started_at is set
@@ -178,16 +186,19 @@ const isRecordingActive = computed<boolean>(() => {
     sessionStore.session?.status === 'draft'
   )
 })
+
 // Show duration label only when recording is active (for custom_start, after start recording period)
 const showDurationLabel = computed<boolean>(() => {
   if (isPending.value) return false
   return isRecordingActive.value
 })
+
 // Display total intervals - always show planned count (intervalRound)
 // e.g., "Interval 2 of 1" means we're on interval 2 but originally planned 1
 const displayTotalIntervals = computed<number>(() => {
   return intervalRound.value
 })
+
 // Countdown timer for interval (5 min countdown)
 const displayTimerString = computed<string>(() => {
   // If pending or finished, show total duration
@@ -217,6 +228,7 @@ const displayTimerString = computed<string>(() => {
 
   return formatTime(remainingInInterval)
 })
+
 // Remaining duration string (countdown from total duration)
 const remainingDurationString = computed<string>(() => {
   if (isPending.value || isFinished.value) return '00:00:00'
@@ -224,6 +236,7 @@ const remainingDurationString = computed<string>(() => {
   const remaining = Math.max(0, durationSeconds.value - elapsedTime.value)
   return formatTime(remaining)
 })
+
 // Overtime duration string (counting up from when overtime started)
 const overtimeDurationString = computed<string>(() => {
   if (!props.measurement.overtime_started_at) return '00:00:00'
@@ -234,6 +247,7 @@ const overtimeDurationString = computed<string>(() => {
   const diff = Math.max(0, Math.floor((datetimeNow - start) / 1000))
   return formatTime(diff)
 })
+
 const lastIntervalScore = computed<number>(() => {
   // Get the score from the last completed interval (for finished state display)
   if (!props.measurementResults) return 0
@@ -243,18 +257,20 @@ const lastIntervalScore = computed<number>(() => {
   const lastIntervalIndex = Math.max(...keys)
   return props.measurementResults[lastIntervalIndex] || 0
 })
-//
+
 const scoreInInterval = computed<number>(() => {
   if (!props.measurementResults) return 0
   // Use displayCurrentInterval for score lookup
   const intervalIndex = displayCurrentInterval.value - 1
   return props.measurementResults[intervalIndex] || 0
 })
+
 const totalScore = computed<number>(() => {
   if (!props.measurementResults) return 0
   const results: number[] = Object.values(props.measurementResults)
   return results.reduce((a, b) => a + b, 0) || 0
 })
+
 const percentageScore = computed<number>(() => {
   if (!props.measurementResults) return 0
   // Percentage is Intervals with Score > 0 / Total Intervals (Round? or Current?)
@@ -269,6 +285,7 @@ const percentageScore = computed<number>(() => {
 })
 
 /** WATHCER */
+
 watch(
   () => scoreLoading.value,
   (val) => {
@@ -279,6 +296,7 @@ watch(
     }
   }
 )
+
 watch(
   () => sessionStore.session?.status,
   (newStatus, oldStatus) => {
@@ -289,6 +307,7 @@ watch(
     }
   }
 )
+
 watch(
   () => isNearEnd.value,
   (val) => {
@@ -303,6 +322,7 @@ watch(
     }
   }
 )
+
 // Watch for interval changes to auto-initialize new intervals with 0
 watch(
   () => currentInterval.value,
@@ -316,6 +336,7 @@ watch(
 )
 
 /** METHODS */
+
 const formatTime = (seconds: number): string => {
   const h = Math.floor(seconds / 3600)
     .toString()
@@ -326,6 +347,7 @@ const formatTime = (seconds: number): string => {
   const s = (seconds % 60).toString().padStart(2, '0')
   return `${h}:${m}:${s}`
 }
+
 const getOvertimeSeconds = (): number => {
   if (!props.measurement.overtime_started_at) return 0
 
@@ -370,6 +392,7 @@ const onStartRecording = async () => {
     return
   }
 }
+
 const onStartOvertime = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
   if (scoreLoading.value) return
@@ -439,6 +462,7 @@ const roundOvertimeDuration = (overtimeStartedAt: string) => {
   // Calculate overtime_ended_at from overtime_started_at + rounded duration
   return new Date(start + roundedDuration * 1000)
 }
+
 const onStopOvertime = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
   if (scoreLoading.value) return
@@ -489,6 +513,7 @@ const onStopOvertime = async () => {
     return
   }
 }
+
 // Initialize a specific interval index with 0 if it doesn't exist
 const initializeIntervalIfNeeded = async (intervalIndex: number) => {
   const currentResults = props.measurementResults || {}
@@ -520,6 +545,7 @@ const initializeIntervalIfNeeded = async (intervalIndex: number) => {
     }
   }
 }
+
 const onAddScore = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
   if (scoreLoading.value) return
