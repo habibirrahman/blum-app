@@ -20,6 +20,7 @@ interface Emits {
   (e: 'toggle-updated', bool: boolean): void
   (e: 'fetch-session'): void
 }
+
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
