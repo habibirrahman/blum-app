@@ -71,8 +71,8 @@ export interface AdvanceMaintenanceSessionParams {
 }
 export interface UpdateMeasurementParams {
   id: Measurement['id']
-  measurement: Measurement
-  data_result: Measurement
+  measurement: Partial<Measurement>
+  data_result: Partial<Measurement>
   //
   is_comment?: boolean
 }

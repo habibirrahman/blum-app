@@ -9,14 +9,11 @@ import type { DurationArray, Measurement } from '@/lib/types'
 import { useToast } from 'vue-toastification'
 import { Icon } from '@iconify/vue/dist/iconify.js'
 import AppButton from '@/components/AppButton.vue'
-
-const sessionStore = useSessionStore()
-const toast = useToast()
+import { useClock } from '@/composable/use-clock'
 
 interface Props {
   measurement: Measurement
   measurementResults: Measurement['results']
-  counter: number
   isCollapsed: boolean
 }
 interface Emits {
@@ -26,23 +23,18 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
+const sessionStore = useSessionStore()
+const toast = useToast()
+const { now } = useClock()
+
 /** DATA */
+
 const scoreLoading = ref<boolean>(false)
 const stopOvertimeConfirmation = ref<boolean>(false)
 const nearEndToastShown = ref<boolean>(false)
 
-watch(
-  () => scoreLoading.value,
-  (val) => {
-    if (!val) {
-      emit('toggle-updated', true)
-    } else {
-      emit('toggle-updated', false)
-    }
-  }
-)
-
 /** COMPUTED */
+
 const intervalSeconds = computed<number>(() => {
   const interval = props.measurement.target?.interval
   return (interval || 1) * 60
@@ -58,13 +50,10 @@ const intervalRound = computed<number>(() => {
 })
 //
 const elapsedTime = computed<number>(() => {
+  const datetimeNow = now.value.valueOf()
   let time = 0
+  let endTime = datetimeNow
 
-  // eslint-disable-next-line no-unused-vars
-  void props.counter
-
-  // Determine end time: if overtime ended, use that; otherwise use now
-  let endTime = Date.now()
   if (props.measurement.overtime_ended_at) {
     endTime = new Date(props.measurement.overtime_ended_at).getTime()
   }
@@ -72,34 +61,27 @@ const elapsedTime = computed<number>(() => {
   if (props.measurement?.target?.interval_start_timing === 'custom_start') {
     if (!props.measurement.recording_started_at) return 0
 
-    if (props.measurement.overtime_ended_at) {
-      if (props.measurement.overtime_duration) {
-        const overtimeDuration = props.measurement.overtime_duration as DurationArray
-        time = durationSeconds.value + overtimeDuration[0]
-      } else {
-        const start = new Date(props.measurement.recording_started_at).getTime()
-        time = Math.floor((endTime - start) / 1000)
-      }
+    if (props.measurement.overtime_ended_at && props.measurement.overtime_duration) {
+      const overtimeDuration = props.measurement.overtime_duration as DurationArray
+      time = durationSeconds.value + overtimeDuration[0]
     } else {
       const start = new Date(props.measurement.recording_started_at).getTime()
       time = Math.floor((endTime - start) / 1000)
     }
   } else {
-    if (props.measurement.overtime_ended_at) {
-      if (props.measurement.overtime_duration) {
-        const overtimeDuration = props.measurement.overtime_duration as DurationArray
-        time = durationSeconds.value + overtimeDuration[0]
-      } else {
-        time = props.counter || 0
-      }
+    // start_with_session logic
+    if (props.measurement.recording_started_at) {
+      const start = new Date(props.measurement.recording_started_at).getTime()
+      time = Math.floor((endTime - start) / 1000)
     } else {
-      time = props.counter || 0
+      // fallback if missing
+      time = 0
     }
   }
 
   if (isOvertimeRunning.value && !!props.measurement.overtime_started_at) {
     const overtimeStart = new Date(props.measurement.overtime_started_at)
-    const diff = Math.floor((Date.now() - overtimeStart.getTime()) / 1000)
+    const diff = Math.floor((datetimeNow - overtimeStart.getTime()) / 1000)
     time = durationSeconds.value + diff
   }
 
@@ -246,13 +228,10 @@ const remainingDurationString = computed<string>(() => {
 const overtimeDurationString = computed<string>(() => {
   if (!props.measurement.overtime_started_at) return '00:00:00'
 
-  // Force reactivity
-  // eslint-disable-next-line no-unused-vars
-  void props.counter
+  const datetimeNow = now.value.valueOf()
 
   const start = new Date(props.measurement.overtime_started_at).getTime()
-  const now = Date.now()
-  const diff = Math.max(0, Math.floor((now - start) / 1000))
+  const diff = Math.max(0, Math.floor((datetimeNow - start) / 1000))
   return formatTime(diff)
 })
 const lastIntervalScore = computed<number>(() => {
@@ -290,6 +269,16 @@ const percentageScore = computed<number>(() => {
 })
 
 /** WATHCER */
+watch(
+  () => scoreLoading.value,
+  (val) => {
+    if (!val) {
+      emit('toggle-updated', true)
+    } else {
+      emit('toggle-updated', false)
+    }
+  }
+)
 watch(
   () => sessionStore.session?.status,
   (newStatus, oldStatus) => {
@@ -339,7 +328,10 @@ const formatTime = (seconds: number): string => {
 }
 const getOvertimeSeconds = (): number => {
   if (!props.measurement.overtime_started_at) return 0
-  let end = Date.now()
+
+  const datetimeNow = now.value.valueOf()
+  let end = datetimeNow
+
   if (props.measurement.overtime_ended_at) {
     end = new Date(props.measurement.overtime_ended_at).getTime()
   }
@@ -430,9 +422,10 @@ const onStartOvertime = async () => {
 }
 
 const roundOvertimeDuration = (overtimeStartedAt: string) => {
+  const datetimeNow = now.value.valueOf()
+
   const start = new Date(overtimeStartedAt).getTime()
-  const now = Date.now()
-  const durationSeconds = Math.floor((now - start) / 1000)
+  const durationSeconds = Math.floor((datetimeNow - start) / 1000)
 
   // Round duration to nearest minute (>= 30s rounds up, < 30s rounds down)
   const remainderSeconds = durationSeconds % 60
@@ -577,18 +570,18 @@ const onAddScore = async () => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
     <div
       v-if="scoreLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-28 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <!-- Stop Recording Confirmation (replaces content) -->
     <template v-if="stopOvertimeConfirmation && !isCollapsed">
-      <div class="flex flex-grow flex-col items-center justify-center gap-4 py-6">
+      <div class="flex flex-col flex-grow gap-4 justify-center items-center py-6">
         <div class="flex flex-col gap-2 text-center">
           <div class="font-semibold text-slate-10">Stop recording?</div>
           <div class="text-sm text-slate-8">
@@ -604,15 +597,15 @@ const onAddScore = async () => {
 
     <!-- Normal PIR Content -->
     <template v-else>
-      <div class="flex items-center justify-evenly gap-3">
+      <div class="flex gap-3 justify-evenly items-center">
         <div v-if="isCollapsed"></div>
 
         <div class="space-y-2">
           <!-- Header: Timer & Status for Collapsed or nah -->
-          <div class="flex flex-col items-center justify-center gap-1">
-            <div v-if="!isCollapsed" class="flex items-center gap-1">
+          <div class="flex flex-col gap-1 justify-center items-center">
+            <div v-if="!isCollapsed" class="flex gap-1 items-center">
               <div
-                class="flex h-6 items-center rounded px-1.5"
+                class="flex items-center px-1.5 h-6 rounded"
                 :class="[isRecordingActive ? 'bg-prim-1' : 'bg-slate-2']"
               >
                 <div
@@ -629,8 +622,8 @@ const onAddScore = async () => {
             </div>
 
             <!-- Timer -->
-            <div class="flex items-center gap-2">
-              <div class="flex items-center justify-center gap-1">
+            <div class="flex gap-2 items-center">
+              <div class="flex gap-1 justify-center items-center">
                 <div
                   class="grid grid-cols-5 items-center font-bold text-slate-8"
                   :class="[isCollapsed ? 'text-xl' : 'text-2xl']"
@@ -650,7 +643,7 @@ const onAddScore = async () => {
               </div>
               <div
                 v-if="isCollapsed"
-                class="flex h-6 items-center rounded px-1.5"
+                class="flex items-center px-1.5 h-6 rounded"
                 :class="[isRecordingActive ? 'bg-prim-1' : 'bg-slate-2']"
               >
                 <div
@@ -677,7 +670,7 @@ const onAddScore = async () => {
           <!-- Main Interaction Area - Collapsed -->
           <div v-if="isCollapsed" class="grid justify-center">
             <!-- Center: Stats -->
-            <div class="flex flex-col items-center gap-1">
+            <div class="flex flex-col gap-1 items-center">
               <div class="text-3xl font-bold text-slate-8">
                 {{ totalScore }}
               </div>
@@ -710,14 +703,14 @@ const onAddScore = async () => {
           </AppButton>
 
           <!-- Finished -->
-          <AppButton v-else-if="isFinished" class="h-32 w-32 rounded-full" disabled>
+          <AppButton v-else-if="isFinished" class="w-32 h-32 rounded-full" disabled>
             Incident
           </AppButton>
 
           <!-- Running / Incident -->
           <AppButton
             v-else
-            class="h-32 w-32 rounded-full"
+            class="w-32 h-32 rounded-full"
             :class="{
               'cursor-wait': scoreLoading,
               'pointer-events-none': sessionStore.session?.status !== 'ongoing'
@@ -732,7 +725,7 @@ const onAddScore = async () => {
       <!-- Main Interaction Area - Desktop (Centered Layout) -->
       <div
         v-if="!isCollapsed"
-        class="flex h-full flex-col content-center items-center justify-center gap-y-4 duration-300"
+        class="flex flex-col gap-y-4 justify-center content-center items-center h-full duration-300"
       >
         <!-- Pending Start -->
         <AppButton
@@ -747,7 +740,7 @@ const onAddScore = async () => {
         <!-- Overtime Pending or Finished - Show last interval frequency with different color -->
         <AppButton
           v-else-if="isOvertimePending || isFinished"
-          class="h-48 w-48 rounded-full"
+          class="w-48 h-48 rounded-full"
           disabled
         >
           <div class="flex flex-col gap-1">
@@ -759,7 +752,7 @@ const onAddScore = async () => {
         <!-- Running / Incident -->
         <AppButton
           v-else
-          class="h-48 w-48 rounded-full"
+          class="w-48 h-48 rounded-full"
           :class="{
             'cursor-wait': scoreLoading,
             'pointer-events-none': sessionStore.session?.status !== 'ongoing'
@@ -793,12 +786,12 @@ const onAddScore = async () => {
       </div>
 
       <!-- Stats -->
-      <div v-if="!isCollapsed" class="shrink-0 space-y-1 pb-3 text-xs font-medium text-slate-7">
-        <div class="flex items-center justify-between">
+      <div v-if="!isCollapsed" class="pb-3 space-y-1 text-xs font-medium shrink-0 text-slate-7">
+        <div class="flex justify-between items-center">
           <div>Total frequency</div>
           <div>{{ totalScore }}</div>
         </div>
-        <div class="flex items-center justify-between">
+        <div class="flex justify-between items-center">
           <div>Percentage</div>
           <div>{{ percentageScore }}%</div>
         </div>

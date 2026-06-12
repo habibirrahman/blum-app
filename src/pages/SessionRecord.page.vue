@@ -10,23 +10,59 @@ import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
 import AppButton from '@/components/AppButton.vue'
 import MeasurementRecord from '@/partitions/MeasurementRecord.vue'
-import type { Measurement, Session, Target } from '@/lib/types'
+import type { Measurement, MeasurementResultsDurationOrLatency, Session, Target } from '@/lib/types'
 import SessionComments from '@/partitions/SessionComments.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import { useToast } from 'vue-toastification'
 import { TransitionRoot } from '@headlessui/vue'
 import AppChip from '@/components/AppChip.vue'
+import { useClock } from '@/composable/use-clock'
+import dayjs from 'dayjs'
+import { secondsToDuration } from '@/lib/func'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
+const { now } = useClock()
+
+/** === DATA === */
 
 const sessionLoading = ref<boolean>(true)
 const cycleLoading = ref<boolean>(false)
-const redirect = ref<string>('/home')
+const isRefreshing = ref<boolean>(false)
+const showOffline = ref<boolean>(false)
+const isScrolling = ref<boolean>(false)
+const showReviewMode = ref<boolean>(false)
+const showSessionComments = ref<boolean>(false)
+const isMeasurementCollapsed = ref<boolean>(true)
+const showEndSession = ref<boolean>(false)
+const endSessionLoading = ref<boolean>(false)
+const showActionRecommendations = ref<boolean>(false)
+const isOpenMastered = ref<boolean>(true)
+const isOpenMaintenance = ref<boolean>(true)
+const exitSessionLoading = ref<boolean>(false)
+
 const heightReload = 112
+
+const endSessionStatus = ref<'normal' | 'group_reason' | 'empty_record'>('normal')
+const redirect = ref<string>('/home')
+const containerHeight = ref<string>('100%')
+const groupReasons = ref<string[]>([])
+
+const focusMeasurement = ref<Measurement['id']>(0)
+const updatingMeasurementIds = ref<Measurement['id'][]>([])
+const unsavedSbtIds = ref<Measurement['id'][]>([])
+const unCompletedColdProbeIds = ref<Measurement['id'][]>([])
+const runningDurationLatency = ref<Measurement[]>([])
+
+const scrollingTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
+const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
+// Periodic check untuk stuck items
+const periodicCheckInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
+
+/** === COMPUTEDS === */
 
 // Tambahkan computed untuk monitoring
 const hasPendingSync = computed(() => {
@@ -34,136 +70,6 @@ const hasPendingSync = computed(() => {
 })
 
 const pendingSyncStats = computed(() => sessionStore.pendingSyncStats)
-
-interface FetchSessionProps {
-  first?: boolean
-  isSwipe?: boolean
-}
-
-// Improved syncSession dengan proper feedback
-async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) {
-  if (!appStore.network_status.connected) {
-    console.log('[syncSession] Skipped - offline')
-    return
-  }
-
-  const pendingCount = sessionStore.pending_progress.length
-
-  if (pendingCount > 0) {
-    console.log(`[syncSession] Syncing ${pendingCount} pending items...`)
-  }
-
-  const { success, data } = await sessionStore.resolvePendingProgress()
-  sessionLoading.value = false
-
-  if (!success) return
-
-  if (isSwipe && appStore.network_status.connected) {
-    if (data && data.succeeded > 0) {
-      toast.success(`${data.succeeded} item(s) synced`)
-    } else {
-      toast.success('Results are now up-to-date!')
-    }
-  }
-}
-
-async function fetchSession(
-  { first, isSwipe }: FetchSessionProps = { first: false, isSwipe: false }
-) {
-  const slug = route.params?.slug as string
-  const { success, data } = await sessionStore.getSession({ slug })
-  const session = data as Session
-  await sessionStore.getSessionComments({ id: session?.id, filter: '' })
-  sessionLoading.value = false
-  if (!success) return
-
-  const app = document.getElementById('app')
-  const recordingTime = session.current_recording_time
-    ? (session.current_recording_time[0] as number)
-    : 0
-
-  if (session.status === 'ongoing') {
-    if (isSwipe && appStore.network_status.connected) {
-      toast.success('Results are now up-to-date!')
-    }
-    counter.value = recordingTime
-    counterTimer()
-
-    if (first) {
-      syncSession()
-      app?.scroll({ top: heightReload, behavior: 'smooth' })
-      app?.addEventListener('scroll', scrollListener)
-    }
-  }
-
-  if (session.status === 'completed' || session.status === 'cancelled') {
-    await appStore.getRunningSessions()
-
-    if (counterInterval.value) {
-      clearInterval(counterInterval.value)
-      counterInterval.value = undefined
-    }
-
-    counter.value = recordingTime
-    app?.removeEventListener('scroll', scrollListener)
-  }
-
-  // reset all state
-  runningDurationIds.value = []
-  unsavedSbtIds.value = []
-  unCompletedColdProbeIds.value = []
-}
-
-const showOffline = ref<boolean>(false)
-
-// Watch network status dengan auto-sync
-watch(
-  () => appStore.network_status.connected,
-  async (isConnected, wasConnected) => {
-    if (!isConnected) {
-      showOffline.value = true
-
-      // record session activities
-      await sessionStore.addSessionActivity({
-        action_label: `network_offline`,
-        recordable: 'Network',
-        notes: `Network disconnected`,
-        timestamp: new Date().toISOString()
-      })
-
-      return
-    }
-
-    if (isConnected && !wasConnected) {
-      console.log('[Session Page] Network reconnected')
-
-      // Show syncing notification if there are pending items
-      if (sessionStore.pending_progress.length > 0) {
-        toast.info('Syncing data...')
-      }
-
-      // record session activities
-      await sessionStore.addSessionActivity({
-        action_label: `network_online`,
-        recordable: 'Network',
-        notes: `Network reconnected`,
-        timestamp: new Date().toISOString()
-      })
-
-      await syncSession({ isSwipe: true })
-    }
-  }
-)
-
-// Watch untuk notifikasi saat sync berhasil
-watch(hasPendingSync, (isPending, wasPending) => {
-  if (wasPending && !isPending) {
-    console.log('[Session Page] All data synced')
-  }
-})
-
-const scrollingTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-const isScrolling = ref<boolean>(false)
 
 const isDisabledAction = computed(() => {
   return (
@@ -175,224 +81,21 @@ const isDisabledAction = computed(() => {
   )
 })
 
-const isRefreshing = ref<boolean>(false)
-
-const scrollListener = async (e: any) => {
-  let top = e.currentTarget.scrollTop
-
-  isScrolling.value = true
-
-  if (!appStore.network_status.connected && top < heightReload) {
-    document.getElementById('app')?.scroll({ top: heightReload, behavior: 'instant' })
-  }
-
-  let timer = 1000
-  if (scrollingTimeout.value) {
-    clearTimeout(scrollingTimeout.value)
-    scrollingTimeout.value = undefined
-  }
-
-  if (top <= 0 && runningDurationIds.value.length) {
-    top = 1
-    timer = 2000
-  }
-
-  if (top >= heightReload) {
-    isScrolling.value = false
-    return
-  }
-
-  scrollingTimeout.value = setTimeout(async () => {
-    if (top === 0 && !isRefreshing.value) {
-      isRefreshing.value = true
-      cycleLoading.value = true
-
-      await sessionStore.addSessionActivity({
-        action_label: `session_refresh`,
-        recordable: 'Session',
-        recordable_id: sessionStore.session?.id,
-        notes: `Refresh session (swipe up)`,
-        timestamp: new Date().toISOString()
-      })
-      await fetchSession({ isSwipe: true })
-
-      isRefreshing.value = false
-      cycleLoading.value = false
-    }
-    if (top < heightReload) {
-      document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
-    }
-    isScrolling.value = false
-  }, timer)
-
-  return () => {
-    if (scrollingTimeout.value) {
-      clearTimeout(scrollingTimeout.value)
-      scrollingTimeout.value = undefined
-    }
-  }
-}
-
-const counter = ref<number>(0)
-const counterInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
-const unCompletedColdProbeIds = ref<Measurement['id'][]>([])
-const counterTimer = () => {
-  if (counterInterval.value) {
-    clearInterval(counterInterval.value)
-    counterInterval.value = undefined
-  }
-
-  counterInterval.value = setInterval(() => {
-    counter.value += 1
-  }, 1000)
-
-  return () => {
-    if (counterInterval.value) {
-      clearInterval(counterInterval.value)
-      counterInterval.value = undefined
-    }
-  }
-}
 const recordingTime = computed<string>(() => {
-  let hours: number | string = '00'
-  let minutes: number | string = '00'
-  let seconds: number | string = '00'
-  seconds = (counter.value % 60).toString().padStart(2, '0')
-  if (counter.value >= 60) {
-    minutes = Math.floor(counter.value / 60)
-    if (counter.value >= 3600) minutes = minutes % 60
-    minutes = minutes.toString().padStart(2, '0')
-  }
-  if (counter.value >= 3600) {
-    hours = Math.floor(counter.value / 3600)
-      .toString()
-      .padStart(2, '0')
-  }
-  return `${hours}:${minutes}:${seconds}`
+  const time = sessionStore.session?.start_time
+  const diff = now.value.diff(dayjs(time), 'second')
+  return secondsToDuration(diff)
 })
-
-const updatingMeasurementIds = ref<Measurement['id'][]>([])
-const onToggleUpdatedMeasurement = (payload: { id: Measurement['id']; updated: boolean }) => {
-  if (payload.updated) {
-    updatingMeasurementIds.value = updatingMeasurementIds.value.filter((i) => i !== payload.id)
-  } else {
-    if (!updatingMeasurementIds.value.includes(payload.id)) {
-      updatingMeasurementIds.value.push(payload.id)
-    }
-  }
-}
-
-const runningDurationIds = ref<Measurement['id'][]>([])
-const onToggleRunningDuration = (data: Measurement) => {
-  const found = runningDurationIds.value.includes(data.id)
-  if (found) {
-    runningDurationIds.value = runningDurationIds.value.filter((i) => i !== data.id)
-  } else {
-    runningDurationIds.value.push(data.id)
-  }
-}
-
-const unsavedSbtIds = ref<Measurement['id'][]>([])
-const onToggleSavedSbt = (payload: { id: Measurement['id']; saved: boolean }) => {
-  if (payload.saved) {
-    unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== payload.id)
-  } else {
-    if (!unsavedSbtIds.value.includes(payload.id)) {
-      unsavedSbtIds.value.push(payload.id)
-    }
-  }
-}
-
-const showReviewMode = ref<boolean>(false)
-const containerHeight = ref<string>('100%')
-
-const updateHeightTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-watch(showReviewMode, (val) => {
-  if (sessionStore.session?.status === 'ongoing') {
-    document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
-  }
-  if (val) focusMeasurement.value = 0
-  updateHeightTimeout.value = setTimeout(() => {
-    const el = document.getElementById('container-record-measurement')
-    let realHeight = el?.clientHeight || 0
-    if (val) realHeight = realHeight / 2
-    if (fixedMeasurement.value) realHeight = realHeight + 128
-    else realHeight = realHeight + 64
-    containerHeight.value = `${realHeight + 44}px`
-  }, 1000)
-
-  return () => {
-    if (updateHeightTimeout.value) {
-      clearTimeout(updateHeightTimeout.value)
-      updateHeightTimeout.value = undefined
-    }
-  }
-})
-
-const focusMeasurement = ref<Measurement['id']>(0)
-
-const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
-  let timer = 500
-  if (val.id === focusMeasurement.value) return
-  focusMeasurement.value = val.id
-
-  if (checkReviewMode) {
-    if (!showReviewMode.value) return
-    showReviewMode.value = false
-  }
-
-  const measurements = sessionStore.session_measurements
-  let isFirst = false
-  if (measurements.length <= 1) return
-  else {
-    const first = fixedMeasurement.value
-      ? sessionStore.session_measurements[1]
-      : sessionStore.session_measurements[0]
-    if (first.id === val.id) isFirst = true
-  }
-
-  collapseTimeout.value = setTimeout(() => {
-    if (val.is_fixed) {
-      isMeasurementCollapsed.value = false
-    } else {
-      if (isFirst) {
-        const app = document.getElementById(`app`)
-        app?.scrollTo({ top: 112, behavior: 'smooth' })
-      } else {
-        const record = document.getElementById(`measurement-record-${val.id}`)
-        record?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-      }
-
-      const menu = document.getElementById(`measurement-nav-${val.id}`)
-      menu?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-    }
-  }, timer)
-
-  return () => {
-    if (collapseTimeout.value) {
-      clearTimeout(collapseTimeout.value)
-      collapseTimeout.value = undefined
-    }
-  }
-}
-const showSessionComments = ref<boolean>(false)
 
 const normalMeasurements = computed<Measurement[]>(() => {
   if (showReviewMode.value) return sessionStore.session_measurements
   return sessionStore.session_measurements.filter((i) => !i.is_fixed)
 })
+
 const fixedMeasurement = computed<Measurement | undefined>(() =>
   sessionStore.session_measurements.find((i) => i.is_fixed)
 )
-const isMeasurementCollapsed = ref<boolean>(true)
-watch(isMeasurementCollapsed, () => {
-  document.getElementById('fixed-measurement')?.scrollTo({ top: 0, behavior: 'smooth' })
-})
 
-const endSessionStatus = ref<'normal' | 'group_reason' | 'empty_record'>('normal')
-const groupReasons = ref<string[]>([])
 const isAllMeasurementResultEmpty = computed<boolean>(() => {
   const isAllEmpty = []
   const recordMeasurments = sessionStore.session_measurements.filter((i) => !i.is_dropped)
@@ -468,189 +171,6 @@ const isAllMeasurementResultEmpty = computed<boolean>(() => {
   return !isAllEmpty.includes(false)
 })
 
-const showEndSession = ref<boolean>(false)
-const endSessionLoading = ref<boolean>(false)
-
-const openEndSession = () => {
-  const unfinishedProbings: Measurement[] = sessionStore.session_measurements.filter(
-    (i) => i?.type === 'Measurement::Probing' && !i.submitted_at && !i.is_dropped
-  )
-  let isNotCompletedProbes = false
-  let isNotSavedProbing = false
-  unfinishedProbings.forEach((i) => {
-    const probes = Object.keys(i.results).length
-    const trials = i.target?.probing_number_of_trial || 0
-    if (probes < trials) isNotCompletedProbes = true
-    else isNotSavedProbing = true
-  })
-
-  groupReasons.value = []
-  const runningDuration = runningDurationIds.value.length
-  const unsavedSbt = unsavedSbtIds.value.length
-  const unCompletedColdProbe = unCompletedColdProbeIds.value.length
-
-  if (
-    isNotCompletedProbes ||
-    isNotSavedProbing ||
-    runningDuration ||
-    unsavedSbt ||
-    unCompletedColdProbe
-  ) {
-    endSessionStatus.value = 'group_reason'
-    if (runningDuration) groupReasons.value.push(`${runningDuration} timer(s) are still running`)
-    if (isNotCompletedProbes) groupReasons.value.push('Minimum required probes have not been met')
-    if (isNotSavedProbing) groupReasons.value.push('Actions for probing have not been saved')
-    if (unsavedSbt) groupReasons.value.push("The target with SBT hasn't saved its result")
-    if (unCompletedColdProbe)
-      groupReasons.value.push("You haven't completed data collection for the cold probe")
-  } else if (isAllMeasurementResultEmpty.value) {
-    endSessionStatus.value = 'empty_record'
-  } else {
-    endSessionStatus.value = 'normal'
-  }
-  showEndSession.value = true
-}
-
-const trunOffTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-const onTrunOffAllAndEndSession = async () => {
-  showEndSession.value = false
-  showReviewMode.value = true
-  cycleLoading.value = true
-  const length = sessionStore.session_measurements.length
-
-  for (let idx = 0; idx < length; idx++) {
-    const measurement: Measurement = sessionStore.session_measurements[idx]
-    if (!measurement.is_dropped) {
-      if (runningDurationIds.value.includes(measurement.id)) {
-        runningDurationIds.value = runningDurationIds.value.filter((i) => i !== measurement.id)
-      }
-      if (unsavedSbtIds.value.includes(measurement.id)) {
-        unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== measurement.id)
-      }
-
-      if (unCompletedColdProbeIds.value.includes(measurement.id)) {
-        unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter(
-          (i) => i !== measurement.id
-        )
-      }
-
-      const params: UpdateMeasurementParams = {
-        id: measurement.id,
-        measurement: { is_dropped: true },
-        data_result: { ...measurement, is_dropped: true }
-      }
-      const { success, message } = await sessionStore.updateMeasurement(params)
-      if (!success) {
-        toast.error(message)
-      }
-    }
-  }
-
-  endSessionStatus.value = 'normal'
-  trunOffTimeout.value = setTimeout(() => {
-    cycleLoading.value = false
-    showEndSession.value = true
-  }, 500)
-
-  return () => {
-    if (trunOffTimeout.value) {
-      clearTimeout(trunOffTimeout.value)
-      trunOffTimeout.value = undefined
-    }
-  }
-}
-
-const keepActiveTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-const onKeepActiveAndEndSession = () => {
-  showEndSession.value = false
-  showReviewMode.value = true
-  endSessionStatus.value = 'normal'
-  keepActiveTimeout.value = setTimeout(() => {
-    showEndSession.value = true
-  }, 500)
-
-  return () => {
-    if (keepActiveTimeout.value) {
-      clearTimeout(keepActiveTimeout.value)
-      keepActiveTimeout.value = undefined
-    }
-  }
-}
-
-const onEndSession = async () => {
-  endSessionLoading.value = true
-
-  // ✅ Resolve semua pending dulu sebelum end session
-  if (sessionStore.pending_progress.length > 0) {
-    await sessionStore.resolvePendingProgress()
-  }
-
-  const measurements = sessionStore.session_measurements || []
-  const payload: ResolveAllMeasurementsParams = {
-    params: measurements?.map((i) => {
-      /** skip checking results normalize -- to temporarily skip missing data */
-
-      // let results: Measurement['results'] = {}
-
-      // if (i.type === 'Measurement::Sbt') {
-      //   const res = Object.values(i.results).filter(
-      //     (i: any) => Number(i.prompt_id) && Number(i.target_task_id)
-      //   )
-      //   results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
-      // } else if (i.type === 'Measurement::Prompting' && i.target?.is_group) {
-      //   const res = Object.values(i.results).filter(
-      //     (i: any) => Number(i.prompt_id) && Number(i.target_id)
-      //   )
-      //   results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
-      // } else {
-      //   results = { ...i.results }
-      // }
-
-      return { id: i.id, results: i.results }
-    })
-  }
-
-  const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements(payload)
-  if (!s1) {
-    endSessionLoading.value = false
-    toast.error(m1)
-    return
-  }
-
-  const { success: s2, message: m2 } = await sessionStore.endSession()
-  if (!s2) {
-    endSessionLoading.value = false
-    toast.error(m2)
-    return
-  }
-
-  checkActionRecommendations()
-  duplicateImageCommentsToClientDocument()
-}
-
-const showActionRecommendations = ref<boolean>(false)
-const checkActionRecommendations = async () => {
-  const { success, data } = await sessionStore.getSessionRecommendations()
-  endSessionLoading.value = false
-  showEndSession.value = false
-
-  toast.success('The session has been completed.')
-
-  if (!success) {
-    onExitSession()
-    return
-  }
-
-  if (data.action_recommendations.length) {
-    showActionRecommendations.value = true
-  } else {
-    onExitSession()
-  }
-}
-
-const isOpenMastered = ref<boolean>(true)
-const isOpenMaintenance = ref<boolean>(true)
-
 const masteredRecommendations = computed(() => {
   return sessionStore.session_recommendations.filter((r) => r.recommended_action === 'mastered')
 })
@@ -698,6 +218,426 @@ const passedCompleteMaintenanceTargets = computed(() => {
   })
 })
 
+/** === WATCHERS === */
+
+// Watch network status dengan auto-sync
+watch(
+  () => appStore.network_status.connected,
+  async (isConnected, wasConnected) => {
+    if (!isConnected) {
+      showOffline.value = true
+
+      // record session activities
+      await sessionStore.addSessionActivity({
+        action_label: `network_offline`,
+        recordable: 'Network',
+        notes: `Network disconnected`,
+        timestamp: new Date().toISOString()
+      })
+
+      return
+    }
+
+    if (isConnected && !wasConnected) {
+      console.log('[Session Page] Network reconnected')
+
+      // Show syncing notification if there are pending items
+      if (sessionStore.pending_progress.length > 0) {
+        toast.info('Syncing data...')
+      }
+
+      // record session activities
+      await sessionStore.addSessionActivity({
+        action_label: `network_online`,
+        recordable: 'Network',
+        notes: `Network reconnected`,
+        timestamp: new Date().toISOString()
+      })
+
+      await syncSession({ isSwipe: true })
+    }
+  }
+)
+
+// Watch untuk notifikasi saat sync berhasil
+watch(
+  () => hasPendingSync.value,
+  (isPending, wasPending) => {
+    if (wasPending && !isPending) {
+      console.log('[Session Page] All data synced')
+    }
+  }
+)
+
+watch(
+  () => showReviewMode.value,
+  (val) => {
+    if (sessionStore.session?.status === 'ongoing') {
+      document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
+    }
+    if (val) focusMeasurement.value = 0
+
+    const el = document.getElementById('container-record-measurement')
+    let realHeight = el?.clientHeight || 0
+    if (val) realHeight = realHeight / 2
+    if (fixedMeasurement.value) realHeight = realHeight + 128
+    else realHeight = realHeight + 64
+    containerHeight.value = `${realHeight + 44}px`
+  }
+)
+
+watch(
+  () => isMeasurementCollapsed.value,
+  () => {
+    document.getElementById('fixed-measurement')?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+)
+
+/** === METHODS === */
+
+interface FetchSessionProps {
+  first?: boolean
+  isSwipe?: boolean
+}
+// Improved syncSession dengan proper feedback
+async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) {
+  if (!appStore.network_status.connected) {
+    console.log('[syncSession] Skipped - offline')
+    return
+  }
+
+  const pendingCount = sessionStore.pending_progress.length
+
+  if (pendingCount > 0) {
+    console.log(`[syncSession] Syncing ${pendingCount} pending items...`)
+  }
+
+  const { success, data } = await sessionStore.resolvePendingProgress()
+  sessionLoading.value = false
+
+  if (!success) return
+
+  if (isSwipe && appStore.network_status.connected) {
+    if (data && data.succeeded > 0) {
+      toast.success(`${data.succeeded} item(s) synced`)
+    } else {
+      toast.success('Results are now up-to-date!')
+    }
+  }
+}
+
+async function fetchSession(
+  { first, isSwipe }: FetchSessionProps = { first: false, isSwipe: false }
+) {
+  const slug = route.params?.slug as string
+  const { success, data } = await sessionStore.getSession({ slug })
+  const session = data as Session
+  await sessionStore.getSessionComments({ id: session?.id, filter: '' })
+  sessionLoading.value = false
+  if (!success) return
+
+  const app = document.getElementById('app')
+
+  if (session.status === 'ongoing') {
+    if (isSwipe && appStore.network_status.connected) {
+      toast.success('Results are now up-to-date!')
+    }
+
+    if (first) {
+      syncSession()
+      app?.scroll({ top: heightReload, behavior: 'smooth' })
+      app?.addEventListener('scroll', scrollListener)
+    }
+  }
+
+  if (session.status === 'completed' || session.status === 'cancelled') {
+    await appStore.getRunningSessions()
+
+    app?.removeEventListener('scroll', scrollListener)
+  }
+
+  // reset all state
+  runningDurationLatency.value = []
+  unsavedSbtIds.value = []
+  unCompletedColdProbeIds.value = []
+}
+
+const scrollListener = async (e: any) => {
+  let top = e.currentTarget.scrollTop
+
+  isScrolling.value = true
+
+  if (!appStore.network_status.connected && top < heightReload) {
+    document.getElementById('app')?.scroll({ top: heightReload, behavior: 'instant' })
+  }
+
+  let timer = 1000
+  if (scrollingTimeout.value) {
+    clearTimeout(scrollingTimeout.value)
+    scrollingTimeout.value = undefined
+  }
+
+  if (top <= 0 && runningDurationLatency.value.length) {
+    top = 1
+    timer = 2000
+  }
+
+  if (top >= heightReload) {
+    isScrolling.value = false
+    return
+  }
+
+  scrollingTimeout.value = setTimeout(async () => {
+    if (top === 0 && !isRefreshing.value) {
+      isRefreshing.value = true
+      cycleLoading.value = true
+
+      await sessionStore.addSessionActivity({
+        action_label: `session_refresh`,
+        recordable: 'Session',
+        recordable_id: sessionStore.session?.id,
+        notes: `Refresh session (swipe up)`,
+        timestamp: new Date().toISOString()
+      })
+      await fetchSession({ isSwipe: true })
+
+      isRefreshing.value = false
+      cycleLoading.value = false
+    }
+    if (top < heightReload) {
+      document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
+    }
+    isScrolling.value = false
+  }, timer)
+
+  return () => {
+    if (scrollingTimeout.value) {
+      clearTimeout(scrollingTimeout.value)
+      scrollingTimeout.value = undefined
+    }
+  }
+}
+
+const onToggleUpdatedMeasurement = (payload: { id: Measurement['id']; updated: boolean }) => {
+  if (payload.updated) {
+    updatingMeasurementIds.value = updatingMeasurementIds.value.filter((i) => i !== payload.id)
+  } else {
+    if (!updatingMeasurementIds.value.includes(payload.id)) {
+      updatingMeasurementIds.value.push(payload.id)
+    }
+  }
+}
+
+const onToggleSavedSbt = (payload: { id: Measurement['id']; saved: boolean }) => {
+  if (payload.saved) {
+    unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== payload.id)
+  } else {
+    if (!unsavedSbtIds.value.includes(payload.id)) {
+      unsavedSbtIds.value.push(payload.id)
+    }
+  }
+}
+
+const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
+  let timer = 300
+  if (val.id === focusMeasurement.value) return
+  focusMeasurement.value = val.id
+
+  if (checkReviewMode) {
+    if (!showReviewMode.value) return
+    showReviewMode.value = false
+  }
+
+  const measurements = sessionStore.session_measurements
+  let isFirst = false
+  if (measurements.length <= 1) return
+  else {
+    const first = fixedMeasurement.value
+      ? sessionStore.session_measurements[1]
+      : sessionStore.session_measurements[0]
+    if (first.id === val.id) isFirst = true
+  }
+
+  collapseTimeout.value = setTimeout(() => {
+    if (val.is_fixed) {
+      isMeasurementCollapsed.value = false
+    } else {
+      if (isFirst) {
+        const app = document.getElementById(`app`)
+        app?.scrollTo({ top: 112, behavior: 'smooth' })
+      } else {
+        const record = document.getElementById(`measurement-record-${val.id}`)
+        record?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+      }
+
+      const menu = document.getElementById(`measurement-nav-${val.id}`)
+      menu?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+    }
+  }, timer)
+
+  return () => {
+    if (collapseTimeout.value) {
+      clearTimeout(collapseTimeout.value)
+      collapseTimeout.value = undefined
+    }
+  }
+}
+
+const openEndSession = () => {
+  const measurements = sessionStore.session_measurements || []
+
+  const unfinishedProbings: Measurement[] = measurements.filter(
+    (i) => i?.type === 'Measurement::Probing' && !i.submitted_at && !i.is_dropped
+  )
+  let isNotCompletedProbes = false
+  let isNotSavedProbing = false
+  unfinishedProbings.forEach((i) => {
+    const probes = Object.keys(i.results || {}).length
+    const trials = i.target?.probing_number_of_trial || 0
+    if (probes < trials) isNotCompletedProbes = true
+    else isNotSavedProbing = true
+  })
+
+  groupReasons.value = []
+  runningDurationLatency.value = measurements.filter((i) => {
+    const res = Object.values(i.results || {}) as MeasurementResultsDurationOrLatency[]
+    return (
+      (i.type === 'Measurement::Duration' || i.type === 'Measurement::Latency') &&
+      !i.submitted_at &&
+      !i.is_dropped &&
+      res.some((r) => r.started_at && !r.ended_at)
+    )
+  })
+  const unsavedSbt = unsavedSbtIds.value.length
+  const unCompletedColdProbe = unCompletedColdProbeIds.value.length
+
+  if (
+    isNotCompletedProbes ||
+    isNotSavedProbing ||
+    runningDurationLatency.value.length ||
+    unsavedSbt ||
+    unCompletedColdProbe
+  ) {
+    endSessionStatus.value = 'group_reason'
+    if (runningDurationLatency.value.length) {
+      groupReasons.value.push(`${runningDurationLatency.value.length} timer(s) are still running`)
+    }
+
+    if (isNotCompletedProbes) groupReasons.value.push('Minimum required probes have not been met')
+    if (isNotSavedProbing) groupReasons.value.push('Actions for probing have not been saved')
+    if (unsavedSbt) groupReasons.value.push("The target with SBT hasn't saved its result")
+
+    if (unCompletedColdProbe) {
+      groupReasons.value.push("You haven't completed data collection for the cold probe")
+    }
+  } else if (isAllMeasurementResultEmpty.value) {
+    endSessionStatus.value = 'empty_record'
+  } else {
+    endSessionStatus.value = 'normal'
+  }
+  showEndSession.value = true
+}
+
+const onTrunOffAllAndEndSession = async () => {
+  showEndSession.value = false
+  showReviewMode.value = true
+  cycleLoading.value = true
+  const length = sessionStore.session_measurements.length
+
+  for (let idx = 0; idx < length; idx++) {
+    const measurement: Measurement = sessionStore.session_measurements[idx]
+    if (!measurement.is_dropped) {
+      if (runningDurationLatency.value.find((i) => i.id === measurement.id)) {
+        runningDurationLatency.value = runningDurationLatency.value.filter(
+          (i) => i.id !== measurement.id
+        )
+      }
+      if (unsavedSbtIds.value.includes(measurement.id)) {
+        unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== measurement.id)
+      }
+
+      if (unCompletedColdProbeIds.value.includes(measurement.id)) {
+        unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter(
+          (i) => i !== measurement.id
+        )
+      }
+
+      const params: UpdateMeasurementParams = {
+        id: measurement.id,
+        measurement: { is_dropped: true },
+        data_result: { ...measurement, is_dropped: true }
+      }
+      const { success, message } = await sessionStore.updateMeasurement(params)
+      if (!success) {
+        toast.error(message)
+      }
+    }
+  }
+
+  endSessionStatus.value = 'normal'
+  cycleLoading.value = false
+  showEndSession.value = true
+}
+
+const onKeepActiveAndEndSession = () => {
+  showEndSession.value = false
+  showReviewMode.value = true
+  endSessionStatus.value = 'normal'
+  showEndSession.value = true
+}
+
+const onEndSession = async () => {
+  endSessionLoading.value = true
+
+  // ✅ Resolve semua pending dulu sebelum end session
+  if (sessionStore.pending_progress.length > 0) {
+    await sessionStore.resolvePendingProgress()
+  }
+
+  const measurements = sessionStore.session_measurements || []
+  const payload: ResolveAllMeasurementsParams = {
+    params: measurements?.map((i) => {
+      return { id: i.id, results: i.results }
+    })
+  }
+
+  const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements(payload)
+  if (!s1) {
+    endSessionLoading.value = false
+    toast.error(m1)
+    return
+  }
+
+  const { success: s2, message: m2 } = await sessionStore.endSession()
+  if (!s2) {
+    endSessionLoading.value = false
+    toast.error(m2)
+    return
+  }
+
+  checkActionRecommendations()
+  duplicateImageCommentsToClientDocument()
+}
+
+const checkActionRecommendations = async () => {
+  const { success, data } = await sessionStore.getSessionRecommendations()
+  endSessionLoading.value = false
+  showEndSession.value = false
+
+  toast.success('The session has been completed.')
+
+  if (!success) {
+    onExitSession()
+    return
+  }
+
+  if (data.action_recommendations.length) {
+    showActionRecommendations.value = true
+  } else {
+    onExitSession()
+  }
+}
+
 const generateSuccessMetric = (target?: Target) => {
   if (!target) return ''
   let prefix = ''
@@ -732,7 +672,6 @@ const generateSuccessMetric = (target?: Target) => {
   return prefix + goalText + suffix
 }
 
-const exitSessionLoading = ref<boolean>(false)
 const onExitSession = async () => {
   exitSessionLoading.value = true
   await appStore.getRunningSessions()
@@ -799,9 +738,6 @@ const duplicateImageCommentsToClientDocument = async () => {
   }
 }
 
-// Periodic check untuk stuck items
-const periodicCheckInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
-
 onMounted(async () => {
   const app = document.getElementById('app')
   if (app) {
@@ -867,31 +803,15 @@ onUnmounted(() => {
     clearInterval(periodicCheckInterval.value)
     periodicCheckInterval.value = undefined
   }
-  if (counterInterval.value) {
-    clearInterval(counterInterval.value)
-    counterInterval.value = undefined
-  }
 
   // Clear timeout to prevent memory leaks
   if (scrollingTimeout.value) {
     clearTimeout(scrollingTimeout.value)
     scrollingTimeout.value = undefined
   }
-  if (updateHeightTimeout.value) {
-    clearTimeout(updateHeightTimeout.value)
-    updateHeightTimeout.value = undefined
-  }
   if (collapseTimeout.value) {
     clearTimeout(collapseTimeout.value)
     collapseTimeout.value = undefined
-  }
-  if (trunOffTimeout.value) {
-    clearTimeout(trunOffTimeout.value)
-    trunOffTimeout.value = undefined
-  }
-  if (keepActiveTimeout.value) {
-    clearTimeout(keepActiveTimeout.value)
-    keepActiveTimeout.value = undefined
   }
 
   // Trigger sync sebelum unmount jika ada perubahan
@@ -905,9 +825,9 @@ onUnmounted(() => {
 <template>
   <div class="sticky top-0 z-[10] flex h-14 shrink-0 items-center gap-3 bg-white px-4">
     <!-- Tambahkan pending sync indicator -->
-    <div class="flex items-center gap-2">
+    <div class="flex gap-2 items-center">
       <div
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-colors"
+        class="flex justify-center items-center w-8 h-8 text-xs font-semibold rounded border transition-colors shrink-0"
         :class="{
           'border-prim-3 bg-prim-1 text-light-purple-4': !showReviewMode,
           'border-light-purple-3 bg-light-purple-1 text-dark-purple-4': showReviewMode
@@ -920,33 +840,35 @@ onUnmounted(() => {
       <!-- Pending sync indicator -->
       <div v-if="hasPendingSync && !sessionLoading" class="flex">
         <div
-          class="flex h-6 items-center gap-1 rounded-full bg-tulip-1 px-2 text-xs text-tulip-7"
+          class="flex gap-1 items-center px-2 h-6 text-xs rounded-full bg-tulip-1 text-tulip-7"
           :title="`${pendingSyncStats.total} item(s) pending sync`"
         >
-          <Icon icon="ph:cloud-arrow-up" class="animate-pulse text-sm" />
+          <Icon icon="ph:cloud-arrow-up" class="text-sm animate-pulse" />
           <span class="font-medium">{{ pendingSyncStats.total }}</span>
         </div>
       </div>
 
       <div
-        class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded"
+        class="flex relative justify-center items-center w-8 h-8 rounded shrink-0"
         @click="showSessionComments = true"
       >
         <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
         <div
-          class="absolute right-1 top-1 h-2 w-2 rounded-full bg-light-purple-5 transition-opacity"
+          class="absolute top-1 right-1 w-2 h-2 rounded-full transition-opacity bg-light-purple-5"
           :class="[sessionStore.session_comments?.length ? 'opacity-100' : 'opacity-0']"
         ></div>
       </div>
     </div>
 
-    <div class="flex w-full items-center justify-end gap-2">
+    <div class="flex gap-2 justify-end items-center w-full">
       <div class="text-xs font-medium text-slate-6">ID {{ sessionStore.session?.id }}</div>
       <div
-        class="h-2 w-2 shrink-0 rounded-full transition-colors"
-        :class="{ 'bg-tomato-7': counter % 2 === 0, 'bg-slate-6': counter % 2 === 1 }"
+        class="w-2 h-2 rounded-full transition-colors shrink-0"
+        :class="[
+          sessionStore.session?.status === 'ongoing' ? 'animate-pulse-recording' : 'bg-slate-6'
+        ]"
       ></div>
-      <div class="grid w-16 grid-cols-5 items-center text-xs font-semibold text-slate-8">
+      <div class="grid grid-cols-5 items-center w-16 text-xs font-semibold text-slate-8">
         <div class="flex justify-center">{{ recordingTime.split(':')[0] }}</div>
         <div class="flex justify-center">:</div>
         <div class="flex justify-center">{{ recordingTime.split(':')[1] }}</div>
@@ -977,16 +899,16 @@ onUnmounted(() => {
     class="fixed left-1/2 z-[9] -translate-x-1/2 pt-safe"
     :class="{ 'top-[60px]': cycleLoading, '-top-[60px]': !cycleLoading }"
   >
-    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    <div class="flex justify-center items-center w-10 h-10 bg-white rounded-full shadow">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
   </div>
 
   <div
     v-if="!sessionLoading && sessionStore.session?.status === 'ongoing'"
-    class="flex h-28 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
+    class="flex justify-center items-end px-4 h-28 text-sm font-semibold text-center bg-prim-3 text-light-purple-5"
   >
-    <div v-if="runningDurationIds.length">
+    <div v-if="runningDurationLatency.length">
       <div>Can't refresh while the timer is running.</div>
       <div>Please stop the timer first.</div>
     </div>
@@ -999,18 +921,22 @@ onUnmounted(() => {
   </div>
 
   <div
-    class="flex min-h-screen w-full flex-col items-center bg-prim-3"
+    class="flex flex-col items-center w-full min-h-screen bg-prim-3"
     :style="{ height: containerHeight }"
   >
+    ayam scrollingTimeout: {{ scrollingTimeout }}
+    <br />
+    ayam periodicCheckInterval: {{ periodicCheckInterval }}
+
     <div
       v-if="showReviewMode"
-      class="flex w-full items-end justify-center bg-prim-3 px-4 pb-2 pt-4 text-center text-sm font-semibold text-light-purple-5"
+      class="flex justify-center items-end px-4 pt-4 pb-2 w-full text-sm font-semibold text-center bg-prim-3 text-light-purple-5"
     >
       <div class="truncapy-3 space-y-3te">{{ sessionStore.session?.client?.name }}</div>
     </div>
     <div
       id="container-record-measurement"
-      class="flex w-full flex-wrap justify-center gap-4 px-4 py-4 transition-all duration-500"
+      class="flex flex-wrap gap-4 justify-center px-4 py-4 w-full transition-all duration-500"
       :class="{
         'origin-top scale-50 object-top': showReviewMode,
         'min-w-[calc((320px*2)+(16px*3))]': showReviewMode,
@@ -1021,7 +947,7 @@ onUnmounted(() => {
         '2xl:min-w-[calc((320px*9)+(16px*10))]': showReviewMode
       }"
     >
-      <div v-if="sessionLoading" class="flex w-full flex-wrap justify-center gap-4">
+      <div v-if="sessionLoading" class="flex flex-wrap gap-4 justify-center w-full">
         <div
           v-for="n in 8"
           :key="n"
@@ -1034,12 +960,9 @@ onUnmounted(() => {
           :key="measurement.id"
           :id="`measurement-record-${measurement.id}`"
           :measurement="measurement"
-          :counter="counter"
           :review-mode="showReviewMode"
           :is-disabled-action="isDisabledAction"
-          :is-running="runningDurationIds.includes(measurement.id)"
           @toggle-updated="onToggleUpdatedMeasurement($event)"
-          @toggle-running="onToggleRunningDuration(measurement)"
           @toggle-saved="onToggleSavedSbt($event)"
           @check-completed-cold-probe="handleCompletedColdProbe"
           @click="onFocusMeasurement(measurement, true)"
@@ -1062,20 +985,17 @@ onUnmounted(() => {
           !isMeasurementCollapsed
       }"
     >
-      <div v-if="!isMeasurementCollapsed" class="flex flex-col items-center gap-1">
-        <Icon icon="ph:lock-fill" class="text-center text-2xl text-prim-5" />
-        <div class="text-center text-xs font-medium text-prim-5">
+      <div v-if="!isMeasurementCollapsed" class="flex flex-col gap-1 items-center">
+        <Icon icon="ph:lock-fill" class="text-2xl text-center text-prim-5" />
+        <div class="text-xs font-medium text-center text-prim-5">
           You're viewing a locked target.
         </div>
       </div>
       <MeasurementRecord
         :measurement="fixedMeasurement"
-        :counter="counter"
         :is-collapsed="isMeasurementCollapsed"
         :is-disabled-action="isDisabledAction"
-        :is-running="runningDurationIds.includes(fixedMeasurement.id)"
         @toggle-updated="onToggleUpdatedMeasurement($event)"
-        @toggle-running="onToggleRunningDuration(fixedMeasurement)"
         @toggle-saved="onToggleSavedSbt($event)"
         @toggle-collapsed="isMeasurementCollapsed = $event"
         @check-completed-cold-probe="handleCompletedColdProbe"
@@ -1096,10 +1016,10 @@ onUnmounted(() => {
     class="fixed z-[9] w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
     :class="{ 'bottom-0': !showReviewMode, '-bottom-36': showReviewMode }"
   >
-    <div class="flex h-16 grow items-center gap-6 pl-4">
+    <div class="flex gap-6 items-center pl-4 h-16 grow">
       <div class="relative" @click="showReviewMode = !showReviewMode">
         <div
-          class="flex h-10 w-8 items-center justify-center rounded bg-white text-xs font-semibold text-dark-purple-1"
+          class="flex justify-center items-center w-8 h-10 text-xs font-semibold bg-white rounded text-dark-purple-1"
         >
           {{ sessionStore.session_measurements.length }}
         </div>
@@ -1109,13 +1029,13 @@ onUnmounted(() => {
         ></div>
       </div>
       <div
-        class="flex snap-x snap-mandatory items-center gap-2 overflow-x-auto scroll-smooth py-3 pr-4"
+        class="flex overflow-x-auto gap-2 items-center py-3 pr-4 snap-x snap-mandatory scroll-smooth"
       >
         <div
           v-for="opt in sessionStore.session_measurements"
           :key="opt.id"
           :id="`measurement-nav-${opt.id}`"
-          class="flex h-8 max-w-64 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
+          class="flex items-center px-3 h-8 text-xs font-medium rounded-full border transition-colors cursor-pointer max-w-64 shrink-0 snap-start"
           :class="[
             focusMeasurement === opt.id
               ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -1132,9 +1052,9 @@ onUnmounted(() => {
   <SessionComments :show="showSessionComments" @close="showSessionComments = false" />
 
   <AppActionSheet :show="showOffline" @close="showOffline = false">
-    <div class="flex flex-col items-center gap-4 py-3">
-      <div class="text-center text-xl font-semibold">Oops! You're offline</div>
-      <div class="text-center text-sm">
+    <div class="flex flex-col gap-4 items-center py-3">
+      <div class="text-xl font-semibold text-center">Oops! You're offline</div>
+      <div class="text-sm text-center">
         Your connection is lost. You can keep tracking data, but you'll need to go online to end the
         session.
       </div>
@@ -1145,22 +1065,22 @@ onUnmounted(() => {
   </AppActionSheet>
 
   <AppActionSheet :show="showEndSession" @close="showEndSession = false">
-    <div v-if="endSessionStatus === 'normal'" class="flex flex-col items-center gap-4 py-3">
-      <div class="text-center text-xl font-semibold">End this session?</div>
-      <div class="text-center text-sm">
+    <div v-if="endSessionStatus === 'normal'" class="flex flex-col gap-4 items-center py-3">
+      <div class="text-xl font-semibold text-center">End this session?</div>
+      <div class="text-sm text-center">
         Are you sure you want to end this session? Make sure you've reviewed all data before
         finalizing.
       </div>
-      <div class="grid w-full grid-cols-2 gap-2">
+      <div class="grid grid-cols-2 gap-2 w-full">
         <AppButton kind="plain" @click="showEndSession = false">Cancel</AppButton>
         <AppButton :loading="endSessionLoading" @click="onEndSession">End now</AppButton>
       </div>
     </div>
-    <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4 py-3">
-      <div class="text-center text-xl font-semibold">Session can't be ended</div>
-      <div class="flex w-full flex-col gap-2">
+    <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col gap-4 items-center py-3">
+      <div class="text-xl font-semibold text-center">Session can't be ended</div>
+      <div class="flex flex-col gap-2 w-full">
         <div class="text-sm">You can't end the session because of the following reason(s):</div>
-        <div class="w-full pl-4 pr-4 text-left text-sm">
+        <div class="pr-4 pl-4 w-full text-sm text-left">
           <ul class="list-disc">
             <li v-for="(text, idx) in groupReasons" :key="idx">{{ text }}</li>
           </ul>
@@ -1171,14 +1091,14 @@ onUnmounted(() => {
         Back to session
       </AppButton>
     </div>
-    <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col items-center gap-4 py-3">
-      <div class="text-center text-xl font-semibold">It seems you haven't recorded any data</div>
+    <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col gap-4 items-center py-3">
+      <div class="text-xl font-semibold text-center">It seems you haven't recorded any data</div>
       <img
         alt="measurement_droped"
-        class="h-auto w-full rounded"
+        class="w-full h-auto rounded"
         src="@/assets/measurement_droped.png"
       />
-      <div class="text-center text-sm">
+      <div class="text-sm text-center">
         Please note that if you end the session now, the targets will record the data as ''0''. To
         prevent any data recording, you can deactivate the toggle on each target. Would you like to
         turn off the toggle for all targets?
@@ -1209,13 +1129,13 @@ onUnmounted(() => {
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
     <div class="sticky top-0 z-[10] flex h-14 shrink-0 grow items-center gap-3 bg-white px-4">
-      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-orange-3">
+      <div class="flex justify-center items-center w-8 h-8 rounded shrink-0 bg-orange-3">
         <Icon icon="ph:seal-warning-fill" class="text-2xl text-orange-6" />
       </div>
       <div class="text-2xl text-[22px] font-bold">Action recommendation</div>
     </div>
 
-    <div class="flex grow flex-col gap-3 overflow-y-auto px-4 pb-4">
+    <div class="flex overflow-y-auto flex-col gap-3 px-4 pb-4 grow">
       <div class="pt-2 text-sm text-slate-8">
         The following targets are the targets that meet the criteria for recommendation. Please go
         to the
@@ -1226,11 +1146,11 @@ onUnmounted(() => {
       <!-- MASTERED -->
       <div
         v-if="masteredRecommendations.length"
-        class="mt-2 flex flex-col rounded border border-slate-3"
+        class="flex flex-col mt-2 rounded border border-slate-3"
       >
         <div class="flex flex-col">
           <div
-            class="flex cursor-pointer select-none items-center justify-between px-4 py-3"
+            class="flex justify-between items-center px-4 py-3 cursor-pointer select-none"
             @click="isOpenMastered = !isOpenMastered"
           >
             <div class="text-sm font-bold">Mastered</div>
@@ -1238,7 +1158,7 @@ onUnmounted(() => {
           </div>
 
           <div v-if="isOpenMastered" class="flex flex-col px-4 pb-2">
-            <div class="flex items-center gap-1 pb-3">
+            <div class="flex gap-1 items-center pb-3">
               <AppChip chip="in_progress" />
               <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
               <AppChip chip="mastered" />
@@ -1281,11 +1201,11 @@ onUnmounted(() => {
       <!-- MAINTENANCE -->
       <div
         v-if="maintenanceRecommendations.length"
-        class="mb-24 mt-2 flex flex-col rounded border border-slate-3"
+        class="flex flex-col mt-2 mb-24 rounded border border-slate-3"
       >
         <div class="flex flex-col">
           <div
-            class="flex cursor-pointer select-none items-center justify-between px-4 py-3"
+            class="flex justify-between items-center px-4 py-3 cursor-pointer select-none"
             @click="isOpenMaintenance = !isOpenMaintenance"
           >
             <div class="text-sm font-bold">Maintenance</div>
@@ -1295,7 +1215,7 @@ onUnmounted(() => {
           <div v-if="isOpenMaintenance" class="flex flex-col px-4 pb-2">
             <!-- For failed targets -->
             <template v-if="failedMaintenanceTargets.length">
-              <div class="flex items-center gap-1 pb-3 pt-1">
+              <div class="flex gap-1 items-center pt-1 pb-3">
                 <AppChip chip="mastered" />
                 <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
                 <AppChip chip="in_progress" />
@@ -1317,7 +1237,7 @@ onUnmounted(() => {
 
                   <div v-if="recommendation.target?.type_name === 'Cold Probe'" class="flex">
                     <div
-                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1344,7 +1264,7 @@ onUnmounted(() => {
             <!-- For passed targets (continue next maintenance) -->
             <template v-if="passedContinueMaintenanceTargets.length">
               <div
-                class="flex items-center gap-1 pb-3"
+                class="flex gap-1 items-center pb-3"
                 :class="{ 'pt-4': failedMaintenanceTargets.length > 0 }"
               >
                 <AppChip chip="mastered" />
@@ -1367,7 +1287,7 @@ onUnmounted(() => {
                   <div class="flex items-center">Success metric</div>
                   <div v-if="recommendation.target?.type_name === 'Cold Probe'" class="flex">
                     <div
-                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1381,7 +1301,7 @@ onUnmounted(() => {
                   <div class="flex items-center">Result</div>
                   <div class="flex">
                     <div
-                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1394,7 +1314,7 @@ onUnmounted(() => {
             <!-- For passed targets (maintenance complete) -->
             <template v-if="passedCompleteMaintenanceTargets.length">
               <div
-                class="flex items-center gap-1 pb-3"
+                class="flex gap-1 items-center pb-3"
                 :class="{
                   'pt-4':
                     failedMaintenanceTargets.length > 0 ||
@@ -1419,7 +1339,7 @@ onUnmounted(() => {
                   <div class="flex items-center">Success metric</div>
                   <div v-if="recommendation.target?.type_name === 'Cold Probe'" class="flex">
                     <div
-                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1433,7 +1353,7 @@ onUnmounted(() => {
                   <div class="flex items-center">Result</div>
                   <div class="flex">
                     <div
-                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
+                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1447,7 +1367,7 @@ onUnmounted(() => {
       </div>
     </div>
     <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
-      <div class="flex h-16 grow items-center px-4">
+      <div class="flex items-center px-4 h-16 grow">
         <AppButton class="w-full" :loading="exitSessionLoading" @click="onExitSession">
           Close session
         </AppButton>
