@@ -74,6 +74,8 @@ bunx cap run ios
 ### Build APK
 
 manual: update version code and version name
+:: build.gradle
+:: project.pbxproj
 
 ```sh
 bun run build
