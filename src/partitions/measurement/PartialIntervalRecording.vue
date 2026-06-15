@@ -100,7 +100,6 @@ const currentInterval = computed<number>(() => {
 const displayCurrentInterval = computed<number>(() => {
   // Get actual interval count from results
   const resultsCount = props.measurementResults ? Object.keys(props.measurementResults).length : 0
-  console.log('[props.measurementResults]', props.measurementResults)
   if (isOvertimeRunning.value) {
     // During overtime, show actual interval count (can exceed intervalRound)
     return Math.max(currentInterval.value, resultsCount)
@@ -597,18 +596,18 @@ const onAddScore = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
+  <div class="flex h-full flex-grow flex-col justify-between gap-2">
     <div
       v-if="scoreLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-28 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
 
     <!-- Stop Recording Confirmation (replaces content) -->
     <template v-if="stopOvertimeConfirmation && !isCollapsed">
-      <div class="flex flex-col flex-grow gap-4 justify-center items-center py-6">
+      <div class="flex flex-grow flex-col items-center justify-center gap-4 py-6">
         <div class="flex flex-col gap-2 text-center">
           <div class="font-semibold text-slate-10">Stop recording?</div>
           <div class="text-sm text-slate-8">
@@ -624,15 +623,15 @@ const onAddScore = async () => {
 
     <!-- Normal PIR Content -->
     <template v-else>
-      <div class="flex gap-3 justify-evenly items-center">
+      <div class="flex items-center justify-evenly gap-3">
         <div v-if="isCollapsed"></div>
 
         <div class="space-y-2">
           <!-- Header: Timer & Status for Collapsed or nah -->
-          <div class="flex flex-col gap-1 justify-center items-center">
-            <div v-if="!isCollapsed" class="flex gap-1 items-center">
+          <div class="flex flex-col items-center justify-center gap-1">
+            <div v-if="!isCollapsed" class="flex items-center gap-1">
               <div
-                class="flex items-center px-1.5 h-6 rounded"
+                class="flex h-6 items-center rounded px-1.5"
                 :class="[isRecordingActive ? 'bg-prim-1' : 'bg-slate-2']"
               >
                 <div
@@ -649,8 +648,8 @@ const onAddScore = async () => {
             </div>
 
             <!-- Timer -->
-            <div class="flex gap-2 items-center">
-              <div class="flex gap-1 justify-center items-center">
+            <div class="flex items-center gap-2">
+              <div class="flex items-center justify-center gap-1">
                 <div
                   class="grid grid-cols-5 items-center font-bold text-slate-8"
                   :class="[isCollapsed ? 'text-xl' : 'text-2xl']"
@@ -670,7 +669,7 @@ const onAddScore = async () => {
               </div>
               <div
                 v-if="isCollapsed"
-                class="flex items-center px-1.5 h-6 rounded"
+                class="flex h-6 items-center rounded px-1.5"
                 :class="[isRecordingActive ? 'bg-prim-1' : 'bg-slate-2']"
               >
                 <div
@@ -697,7 +696,7 @@ const onAddScore = async () => {
           <!-- Main Interaction Area - Collapsed -->
           <div v-if="isCollapsed" class="grid justify-center">
             <!-- Center: Stats -->
-            <div class="flex flex-col gap-1 items-center">
+            <div class="flex flex-col items-center gap-1">
               <div class="text-3xl font-bold text-slate-8">
                 {{ totalScore }}
               </div>
@@ -730,14 +729,14 @@ const onAddScore = async () => {
           </AppButton>
 
           <!-- Finished -->
-          <AppButton v-else-if="isFinished" class="w-32 h-32 rounded-full" disabled>
+          <AppButton v-else-if="isFinished" class="h-32 w-32 rounded-full" disabled>
             Incident
           </AppButton>
 
           <!-- Running / Incident -->
           <AppButton
             v-else
-            class="w-32 h-32 rounded-full"
+            class="h-32 w-32 rounded-full"
             :class="{
               'cursor-wait': scoreLoading,
               'pointer-events-none': sessionStore.session?.status !== 'ongoing'
@@ -752,7 +751,7 @@ const onAddScore = async () => {
       <!-- Main Interaction Area - Desktop (Centered Layout) -->
       <div
         v-if="!isCollapsed"
-        class="flex flex-col gap-y-4 justify-center content-center items-center h-full duration-300"
+        class="flex h-full flex-col content-center items-center justify-center gap-y-4 duration-300"
       >
         <!-- Pending Start -->
         <AppButton
@@ -767,7 +766,7 @@ const onAddScore = async () => {
         <!-- Overtime Pending or Finished - Show last interval frequency with different color -->
         <AppButton
           v-else-if="isOvertimePending || isFinished"
-          class="w-48 h-48 rounded-full"
+          class="h-48 w-48 rounded-full"
           disabled
         >
           <div class="flex flex-col gap-1">
@@ -779,7 +778,7 @@ const onAddScore = async () => {
         <!-- Running / Incident -->
         <AppButton
           v-else
-          class="w-48 h-48 rounded-full"
+          class="h-48 w-48 rounded-full"
           :class="{
             'cursor-wait': scoreLoading,
             'pointer-events-none': sessionStore.session?.status !== 'ongoing'
@@ -813,12 +812,12 @@ const onAddScore = async () => {
       </div>
 
       <!-- Stats -->
-      <div v-if="!isCollapsed" class="pb-3 space-y-1 text-xs font-medium shrink-0 text-slate-7">
-        <div class="flex justify-between items-center">
+      <div v-if="!isCollapsed" class="shrink-0 space-y-1 pb-3 text-xs font-medium text-slate-7">
+        <div class="flex items-center justify-between">
           <div>Total frequency</div>
           <div>{{ totalScore }}</div>
         </div>
-        <div class="flex justify-between items-center">
+        <div class="flex items-center justify-between">
           <div>Percentage</div>
           <div>{{ percentageScore }}%</div>
         </div>

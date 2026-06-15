@@ -196,6 +196,11 @@ export const useSessionStore = defineStore('session', {
       this.clearAllMeasurementBackups()
       this.clearSessionActivities()
 
+      if (this._periodicCheckInterval) {
+        clearInterval(this._periodicCheckInterval)
+        this._periodicCheckInterval = undefined
+      }
+
       this.session = null
       this.session_comments = []
       this.session_measurements = []
