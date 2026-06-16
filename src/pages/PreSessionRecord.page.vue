@@ -5,7 +5,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { displayDate, getTargetTasks, getTargetType } from '@/lib/func'
 import AppButton from '@/components/AppButton.vue'
-import moment from 'moment'
 import { useAppStore } from '@/stores/app.store'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import CommentItem from '@/partitions/CommentItem.vue'
@@ -13,6 +12,7 @@ import UpcomingMaintenanceModal from '@/partitions/session/UpcomingMaintenanceMo
 import type { Target } from '@/lib/types'
 import { useToast } from 'vue-toastification'
 import AppTextInput from '@/components/AppTextInput.vue'
+import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
@@ -137,13 +137,16 @@ const isMaintenanceDisplayable = (target?: Target) => {
   if (!target || !target.in_maintenance) return false
   if (!target.maintenance_next_date) return false
 
-  const nextDate = moment(new Date(target.maintenance_next_date))
-  const today = moment().startOf('day')
+  const nextDate = dayjs(new Date(target.maintenance_next_date))
+  const today = dayjs().startOf('day')
 
-  if (nextDate.isSameOrBefore(today, 'day') && target.maintenance_status === 'overdue') {
+  if (
+    (nextDate.isSame(today) || nextDate.isBefore(today)) &&
+    target.maintenance_status === 'overdue'
+  ) {
     return true
   }
-  if (nextDate.isSame(today, 'day')) {
+  if (nextDate.isSame(today)) {
     return true
   }
   return false
@@ -212,8 +215,8 @@ const onStartSession = () => {
   }
   const t = sessionStore.session.appointment?.start_time_string || '24:00'
   const d = `${sessionStore.session.appointment?.date}T${t}:00`
-  const startDate = moment(d)
-  if (moment().isBefore(startDate)) {
+  const startDate = dayjs(d)
+  if (dayjs().isBefore(startDate)) {
     isLunchBeforeSchedule.value = true
     showAction = true
   }

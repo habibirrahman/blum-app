@@ -8,7 +8,7 @@ import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useClientStore } from '@/stores/client.store'
 import { useToast } from 'vue-toastification'
-import moment from 'moment'
+import dayjs from 'dayjs'
 
 interface Props {
   showDetails: boolean
@@ -125,7 +125,7 @@ const lastMaintenanceActivityText = computed(() => {
 
   // If completed maintenance
   if (state.completed && state.completed_at && state.completed_session_order) {
-    const formattedCompletedAt = moment(new Date(state.completed_at)).format('DD MMM YYYY')
+    const formattedCompletedAt = dayjs(new Date(state.completed_at)).format('DD MMM YYYY')
     const ordinal = ordinalSuffix(state.completed_session_order)
     return `${ordinal} maintenance session <span class="font-semibold">passed on ${formattedCompletedAt}</span>.`
   }
@@ -136,7 +136,7 @@ const lastMaintenanceActivityText = computed(() => {
 
   const result = props.target?.last_maintenance_session_result
   const nextDateStr = state.next_date
-  const formattedNextDate = nextDateStr ? moment(new Date(nextDateStr)).format('DD MMM YYYY') : ''
+  const formattedNextDate = nextDateStr ? dayjs(new Date(nextDateStr)).format('DD MMM YYYY') : ''
 
   // If no previous session result yet, just show next scheduled date
   if (!result) {
@@ -151,7 +151,7 @@ const lastMaintenanceActivityText = computed(() => {
 
   const isPassed = result.verb === 'maintenance_session_passed'
   const resultText = isPassed ? 'passed' : 'failed'
-  const recordedAt = moment(new Date(result.recorded_at)).format('DD MMM YYYY')
+  const recordedAt = dayjs(new Date(result.recorded_at)).format('DD MMM YYYY')
 
   if (config.approach === 'manual') {
     let text = `Maintenance session <span class="font-semibold">${resultText} on ${recordedAt}</span>.`

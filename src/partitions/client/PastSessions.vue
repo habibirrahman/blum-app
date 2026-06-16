@@ -3,7 +3,6 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
-import moment from 'moment'
 import type { Session } from '@/lib/types'
 import SessionItem from '../SessionItem.vue'
 import AppPagination from '@/components/AppPagination.vue'
@@ -11,6 +10,7 @@ import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppButton from '@/components/AppButton.vue'
 import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
+import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
@@ -92,9 +92,9 @@ const params = computed<string>(() => {
   let p = `?page=${page.value}&per_page=25`
   if (query.value) p += `&query=${query.value}`
   if (date.value) {
-    const d = moment()
-    p += `&start_date=${d.startOf(date.value).format('YYYY-MM-DD')}`
-    p += `&end_date=${d.endOf(date.value).format('YYYY-MM-DD')}`
+    const d = dayjs(date.value)
+    p += `&start_date=${d.startOf('days').format('YYYY-MM-DD')}`
+    p += `&end_date=${d.endOf('days').format('YYYY-MM-DD')}`
   }
   p += `&sort=${sort.value}`
   return p

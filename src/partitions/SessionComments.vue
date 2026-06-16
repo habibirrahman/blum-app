@@ -12,11 +12,11 @@ import { TransitionRoot } from '@headlessui/vue'
 import CommentItem from './CommentItem.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import { getRandomString } from '@/lib/func'
-import moment from 'moment'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { useToast } from 'vue-toastification'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import { Device } from '@capacitor/device'
+import dayjs from 'dayjs'
 
 // ================================
 // STORES & COMPOSABLES
@@ -567,8 +567,8 @@ const onCreate = async () => {
       type: typeInput.value === 'assessment' ? 'Assessment::InSession' : undefined,
       client_id: sessionStore.session?.client_id,
       session_id: sessionStore.session?.id,
-      created_at: moment().format(),
-      updated_at: moment().format()
+      created_at: dayjs().format(),
+      updated_at: dayjs().format()
     },
     images: selectedImages.value.map((img) => ({
       base64: img.base64,

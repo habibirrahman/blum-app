@@ -1,4 +1,4 @@
-import moment from 'moment'
+import dayjs from 'dayjs'
 import type { ClientDischargeReason, MeasurementType, Target, TargetTask, TargetType, User } from './types'
 
 interface DisplayDate {
@@ -9,7 +9,7 @@ interface DisplayDate {
 
 export const displayDate = ({ date, format = 'DD/MM/YYYY', empty = '' }: DisplayDate): string => {
   if (!date) return empty
-  return moment(new Date(date)).format(format)
+  return dayjs(new Date(date)).format(format)
 }
 
 export const getMeasurementType = (type?: MeasurementType): string => {

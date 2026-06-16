@@ -13,7 +13,7 @@ import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
-import moment from 'moment'
+import dayjs from 'dayjs'
 
 // ========== CONSTANTS ==========
 const STATUS_OPTIONS: { value: TargetStatus; label: string }[] = [
@@ -652,7 +652,7 @@ const baseDateText = computed(() => {
   const prefix = 'after the target is <b>mastered</b>'
   if (!clientStore.target) return prefix
   if (clientStore.target.status === 'mastered' && clientStore.target.date_mastered) {
-    const dateStr = moment(clientStore.target.date_mastered).format('DD MMM YYYY')
+    const dateStr = dayjs(clientStore.target.date_mastered).format('DD MMM YYYY')
     return `${prefix} <b>at ${dateStr}</b>`
   }
   return prefix

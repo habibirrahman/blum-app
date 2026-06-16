@@ -5,7 +5,7 @@ import { getTargetType } from '@/lib/func'
 import AppCheckInput from '@/components/AppCheckInput.vue'
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
-import moment from 'moment'
+import dayjs from 'dayjs'
 
 interface Props {
   target: Target
@@ -41,9 +41,12 @@ const handleOpenDetail = () => {
 
 const maintenanceBadgeColor = computed<string>(() => {
   if (!props.target.in_maintenance || !props.target.maintenance_next_date) return 'info'
-  const nextDate = moment(new Date(props.target.maintenance_next_date))
-  const today = moment().startOf('day')
-  if (nextDate.isSameOrBefore(today, 'day') && props.target.maintenance_status === 'overdue') {
+  const nextDate = dayjs(new Date(props.target.maintenance_next_date))
+  const today = dayjs().startOf('day')
+  if (
+    (nextDate.isSame(today) || nextDate.isBefore(today)) &&
+    props.target.maintenance_status === 'overdue'
+  ) {
     return 'text-tomato-7'
   }
   return 'text-info'
@@ -51,12 +54,15 @@ const maintenanceBadgeColor = computed<string>(() => {
 
 const maintenanceBadgeText = computed<string>(() => {
   if (!props.target.in_maintenance || !props.target.maintenance_next_date) return ''
-  const nextDate = moment(new Date(props.target.maintenance_next_date))
-  const today = moment().startOf('day')
-  if (nextDate.isSameOrBefore(today, 'day') && props.target.maintenance_status === 'overdue') {
+  const nextDate = dayjs(new Date(props.target.maintenance_next_date))
+  const today = dayjs().startOf('day')
+  if (
+    (nextDate.isSame(today) || nextDate.isBefore(today)) &&
+    props.target.maintenance_status === 'overdue'
+  ) {
     return `Maintenance overdue on ${nextDate.format('DD MMM YY')}`
   }
-  if (nextDate.isSame(today, 'day')) {
+  if (nextDate.isSame(today)) {
     return 'Maintenance due today'
   }
   return `Maintenance on ${nextDate.format('DD MMM YY')}`
@@ -66,22 +72,22 @@ const maintenanceBadgeText = computed<string>(() => {
 <template>
   <div class="flex h-[154px] border-l-[6px]" :style="{ borderColor: target.curriculum_color }">
     <div
-      class="flex flex-col flex-1 gap-1.5 justify-center px-4 truncate cursor-pointer"
+      class="flex flex-1 cursor-pointer flex-col justify-center gap-1.5 truncate px-4"
       @click="handleOpenDetail"
     >
-      <div v-if="showStatus" class="flex gap-2 items-center">
+      <div v-if="showStatus" class="flex items-center gap-2">
         <AppChip :chip="target.status" />
-        <div v-if="showBadge && target.in_maintenance" class="p-1 rounded bg-orange-3">
+        <div v-if="showBadge && target.in_maintenance" class="rounded bg-orange-3 p-1">
           <Icon icon="mynaui:info-waves-solid" class="text-orange-6" />
         </div>
       </div>
-      <div class="text-xs truncate text-slate-8">
+      <div class="truncate text-xs text-slate-8">
         {{ target.curriculum_name }}
       </div>
-      <div class="text-sm font-semibold truncate">
+      <div class="truncate text-sm font-semibold">
         {{ target.name }}
       </div>
-      <div class="text-xs whitespace-pre-line line-clamp-3 text-slate-8">
+      <div class="line-clamp-3 whitespace-pre-line text-xs text-slate-8">
         {{ target.description }}
       </div>
       <div v-if="showType" class="text-xs font-medium text-slate-8">
@@ -90,16 +96,20 @@ const maintenanceBadgeText = computed<string>(() => {
 
       <div
         v-if="target.in_maintenance && target.maintenance_next_date"
-        class="flex gap-1 items-center pointer-events-none"
+        class="pointer-events-none flex items-center gap-1"
       >
-        <Icon icon="circum:calendar" :class="maintenanceBadgeColor"/>
-        <div class="mt-0.5 text-xs" :class="maintenanceBadgeColor" v-html="maintenanceBadgeText"></div>
+        <Icon icon="circum:calendar" :class="maintenanceBadgeColor" />
+        <div
+          class="mt-0.5 text-xs"
+          :class="maintenanceBadgeColor"
+          v-html="maintenanceBadgeText"
+        ></div>
       </div>
     </div>
 
     <div
       v-if="isChecked !== undefined && useAction"
-      class="flex justify-end items-center pr-4 shrink-0"
+      class="flex shrink-0 items-center justify-end pr-4"
     >
       <AppCheckInput
         :name="`check-${target.id}`"

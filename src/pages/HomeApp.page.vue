@@ -12,8 +12,8 @@ import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import UpcomingSession from '@/partitions/UpcomingSession.vue'
 import SessionItem from '@/partitions/SessionItem.vue'
-import moment from 'moment'
 import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
+import dayjs from 'dayjs'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -127,9 +127,9 @@ const params = computed<string>(() => {
   let p = `?page=${page.value}&per_page=25`
   if (query.value) p += `&query=${query.value}`
   if (date.value) {
-    const d = moment()
-    p += `&start_date=${d.startOf(date.value).format('YYYY-MM-DD')}`
-    p += `&end_date=${d.endOf(date.value).format('YYYY-MM-DD')}`
+    const d = dayjs(date.value)
+    p += `&start_date=${d.startOf('days').format('YYYY-MM-DD')}`
+    p += `&end_date=${d.endOf('days').format('YYYY-MM-DD')}`
   }
   if (status.value) p += `&status=${status.value}`
   p += `&sort=${sort.value}`
