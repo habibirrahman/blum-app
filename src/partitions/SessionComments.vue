@@ -341,7 +341,7 @@ const openCamera = async () => {
   try {
     cameraLoading.value = true
     const image = await Camera.getPhoto({
-      quality: 100,
+      quality: 80,
       allowEditing: false,
       resultType: CameraResultType.DataUrl,
       source: CameraSource.Camera,

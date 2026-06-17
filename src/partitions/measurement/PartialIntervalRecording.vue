@@ -52,43 +52,50 @@ const intervalRound = computed<number>(() => {
   return Math.ceil(durationSeconds.value / intervalSeconds.value)
 })
 
+const isOvertimeRunning = computed<boolean>(() => {
+  return (
+    !!props.measurement?.target?.allow_overtime_recording &&
+    !!props.measurement.overtime_started_at &&
+    !props.measurement.overtime_ended_at
+  )
+})
+
 const elapsedTime = computed<number>(() => {
-  const datetimeNow = now.value.valueOf()
-  let time = 0
-  let endTime = datetimeNow
+  const isCustomStart = props.measurement?.target?.interval_start_timing === 'custom_start'
 
+  // custom_start: belum pernah start → tidak perlu now, langsung 0
+  if (isCustomStart && !props.measurement.recording_started_at) return 0
+
+  // Sudah selesai dengan overtime_ended_at: tidak perlu now, hitung dari fixed data
   if (props.measurement.overtime_ended_at) {
-    endTime = new Date(props.measurement.overtime_ended_at).getTime()
-  }
-
-  if (props.measurement?.target?.interval_start_timing === 'custom_start') {
-    if (!props.measurement.recording_started_at) return 0
-
-    if (props.measurement.overtime_ended_at && props.measurement.overtime_duration) {
+    if (props.measurement.overtime_duration) {
       const overtimeDuration = props.measurement.overtime_duration as DurationArray
-      time = durationSeconds.value + overtimeDuration[0]
-    } else {
-      const start = new Date(props.measurement.recording_started_at).getTime()
-      time = Math.floor((endTime - start) / 1000)
+      return durationSeconds.value + overtimeDuration[0]
     }
-  } else {
-    // start_with_session logic
-    if (props.measurement.recording_started_at) {
-      const start = new Date(props.measurement.recording_started_at).getTime()
-      time = Math.floor((endTime - start) / 1000)
-    } else {
-      // fallback if missing
-      time = 0
-    }
+    const start = props.measurement.recording_started_at
+      ? new Date(props.measurement.recording_started_at).getTime()
+      : 0
+    const endTime = new Date(props.measurement.overtime_ended_at).getTime()
+    return start ? Math.floor((endTime - start) / 1000) : 0
   }
 
-  if (isOvertimeRunning.value && !!props.measurement.overtime_started_at) {
-    const overtimeStart = new Date(props.measurement.overtime_started_at)
+  // Ab sini kita butuh now.value (recording sedang berjalan / overtime running)
+  const datetimeNow = now.value.valueOf()
+
+  // Overtime sedang berjalan
+  if (isOvertimeRunning.value && props.measurement.overtime_started_at) {
+    const overtimeStart = new Date(props.measurement.overtime_started_at).getTime()
     const diff = Math.floor((datetimeNow - overtimeStart.getTime()) / 1000)
-    time = durationSeconds.value + diff
+    return durationSeconds.value + diff
   }
 
-  return time
+  // Recording sedang berjalan (custom_start atau start_with_session)
+  if (props.measurement.recording_started_at) {
+    const start = new Date(props.measurement.recording_started_at).getTime()
+    return Math.floor((datetimeNow - start) / 1000)
+  }
+
+  return 0
 })
 
 const currentInterval = computed<number>(() => {
@@ -124,14 +131,6 @@ const isPending = computed<boolean>(() => {
   return (
     props.measurement?.target?.interval_start_timing === 'custom_start' &&
     !props.measurement.recording_started_at
-  )
-})
-
-const isOvertimeRunning = computed<boolean>(() => {
-  return (
-    !!props.measurement?.target?.allow_overtime_recording &&
-    !!props.measurement.overtime_started_at &&
-    !props.measurement.overtime_ended_at
   )
 })
 

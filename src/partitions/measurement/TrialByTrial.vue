@@ -153,7 +153,7 @@ const onChangePercentage = async (box: PercentageBox) => {
   percentageLoadingBox.value = box.key
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: `tbt_score`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
@@ -184,7 +184,7 @@ const onAddBox = async () => {
   percentageLoadingBox.value = 'add-box'
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: `tbt_add`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
@@ -230,7 +230,7 @@ const onRemoveBox = async (box: PercentageBox) => {
   percentageLoadingBox.value = 'remove-box'
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: `tbt_delete`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,

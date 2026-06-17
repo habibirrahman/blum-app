@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import axios, { isAxiosError } from 'axios'
-import { getStorage, setStorage } from '@/plugins/preferences.plugin'
+import {
+  getStorage,
+  setStorage,
+  setSessionFullStore,
+  getSessionFullStore,
+  flushSessionActivities
+} from '@/plugins/preferences.plugin'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getErrorMessage, getRandomString, onlyUniqueId } from '@/lib/func'
 import { Preferences } from '@capacitor/preferences'
@@ -50,6 +56,10 @@ export interface SessionStateSchema {
   _autoSyncInitialized?: boolean // Track auto-sync setup
   _syncDebounceTimeout?: ReturnType<typeof setTimeout> | undefined // For debounced sync
   _periodicCheckInterval?: ReturnType<typeof setInterval> | undefined // For periodic check
+  // In-memory activities buffer (ditulis ke storage secara batched, bukan setiap aksi)
+  _activitiesBuffer?: AddSessionActivity[]
+  _activitiesFlushTimeout?: ReturnType<typeof setTimeout> | undefined
+  _activitiesFlushInterval?: ReturnType<typeof setInterval> | undefined
 }
 
 export type SessionCommentFilter = '' | 'general' | 'assessment' | 'target' | 'mine'
@@ -165,7 +175,10 @@ export const useSessionStore = defineStore('session', {
     //
     _autoSyncInitialized: false,
     _syncDebounceTimeout: undefined,
-    _periodicCheckInterval: undefined
+    _periodicCheckInterval: undefined,
+    _activitiesBuffer: [],
+    _activitiesFlushTimeout: undefined,
+    _activitiesFlushInterval: undefined
   }),
   getters: {
     // Getter untuk monitoring
@@ -196,9 +209,14 @@ export const useSessionStore = defineStore('session', {
       this.clearAllMeasurementBackups()
       this.clearSessionActivities()
 
-      if (this._periodicCheckInterval) {
+      // Bersihkan interval sebelum reset agar tidak ada interval lama yang menumpuk
+      if (this._periodicCheckInterval !== undefined) {
         clearInterval(this._periodicCheckInterval)
         this._periodicCheckInterval = undefined
+      }
+      if (this._syncDebounceTimeout !== undefined) {
+        clearTimeout(this._syncDebounceTimeout)
+        this._syncDebounceTimeout = undefined
       }
 
       this.session = null
@@ -211,11 +229,38 @@ export const useSessionStore = defineStore('session', {
       this.sessions_count = 0
       this.pending_progress = []
       this._autoSyncInitialized = false
-      this.syncSessionStore()
+      this._activitiesBuffer = []
+      if (this._activitiesFlushTimeout !== undefined) {
+        clearTimeout(this._activitiesFlushTimeout)
+        this._activitiesFlushTimeout = undefined
+      }
+      if (this._activitiesFlushInterval !== undefined) {
+        clearInterval(this._activitiesFlushInterval)
+        this._activitiesFlushInterval = undefined
+      }
+      this.syncSessionStoreNow()
     },
 
     async generateSessionStore(): Promise<ResponseSchema> {
       try {
+        // Coba baca dari single-key baru terlebih dahulu
+        const fullStore = await getSessionFullStore()
+
+        if (fullStore.success && fullStore.data) {
+          const storage = fullStore.data
+          this.session = storage.session || null
+          this.session_comments = storage.session_comments || []
+          this.session_measurements = storage.session_measurements || []
+          this.session_recommendations = []
+          this.upcoming_sessions = storage.upcoming_sessions || []
+          this.upcoming_sessions_count = storage.upcoming_sessions_count || 0
+          this.sessions = storage.sessions || []
+          this.sessions_count = storage.sessions_count || 0
+          this.pending_progress = storage.pending_progress || []
+          return { success: true, data: storage }
+        }
+
+        // Fallback: baca dari 9 key lama (migrasi dari versi sebelumnya)
         const arr = [
           { key: 'session.session-store' },
           { key: 'session_comments.session-store' },
@@ -227,74 +272,86 @@ export const useSessionStore = defineStore('session', {
           { key: 'sessions_count.session-store' },
           { key: 'pending_progress.session-store' }
         ]
-        const ses = await getStorage(arr[0].key)
-        const sesCom = await getStorage(arr[1].key)
-        const sesMea = await getStorage(arr[2].key)
-        const sesRec = await getStorage(arr[3].key)
-        const upcSes = await getStorage(arr[4].key)
-        const upcSesCou = await getStorage(arr[5].key)
-        const sess = await getStorage(arr[6].key)
-        const sessCou = await getStorage(arr[7].key)
-        const penPro = await getStorage(arr[8].key)
+        const [ses, sesCom, sesMea, , upcSes, upcSesCou, sess, sessCou, penPro] =
+          await Promise.all(arr.map((a) => getStorage(a.key)))
 
-        const storage: SessionStateSchema = {
-          session: ses.data,
-          session_comments: sesCom.data || [],
-          session_measurements: sesMea.data || [],
-          session_recommendations: sesRec.data || [],
-          upcoming_sessions: upcSes.data || [],
-          upcoming_sessions_count: upcSesCou.data || 0,
-          sessions: sess.data || [],
-          sessions_count: sessCou.data || 0,
-          pending_progress: penPro.data || []
-        }
-
-        this.session = storage?.session || null
-        this.session_comments = storage?.session_comments || []
-        this.session_measurements = storage?.session_measurements || []
+        this.session = ses.data || null
+        this.session_comments = sesCom.data || []
+        this.session_measurements = sesMea.data || []
         this.session_recommendations = []
-        this.upcoming_sessions = storage?.upcoming_sessions || []
-        this.upcoming_sessions_count = storage?.upcoming_sessions_count || 0
-        this.sessions = storage?.sessions || []
-        this.sessions_count = storage?.sessions_count || 0
-        this.pending_progress = storage?.pending_progress || []
+        this.upcoming_sessions = upcSes.data || []
+        this.upcoming_sessions_count = upcSesCou.data || 0
+        this.sessions = sess.data || []
+        this.sessions_count = sessCou.data || 0
+        this.pending_progress = penPro.data || []
 
-        return { success: true, data: storage }
+        // Migrasikan ke format baru setelah berhasil baca
+        await this.syncSessionStoreNow()
+
+        return {
+          success: true,
+          data: {
+            session: this.session,
+            session_comments: this.session_comments,
+            session_measurements: this.session_measurements,
+            upcoming_sessions: this.upcoming_sessions,
+            upcoming_sessions_count: this.upcoming_sessions_count,
+            sessions: this.sessions,
+            sessions_count: this.sessions_count,
+            pending_progress: this.pending_progress
+          }
+        }
       } catch (error) {
         console.error(error)
         return { success: false, data: null }
       }
     },
 
-    async syncSessionStore(): Promise<ResponseSchema> {
-      try {
-        const arr = [
-          { key: 'session.session-store', value: JSON.stringify(this.session) },
-          { key: 'session_comments.session-store', value: JSON.stringify(this.session_comments) },
-          {
-            key: 'session_measurements.session-store',
-            value: JSON.stringify(this.session_measurements)
-          },
-          { key: 'session_recommendations.session-store', value: JSON.stringify([]) },
-          { key: 'upcoming_sessions.session-store', value: JSON.stringify(this.upcoming_sessions) },
-          {
-            key: 'upcoming_sessions_count.session-store',
-            value: JSON.stringify(this.upcoming_sessions_count)
-          },
-          { key: 'sessions.session-store', value: JSON.stringify(this.sessions) },
-          { key: 'sessions_count.session-store', value: JSON.stringify(this.sessions_count) },
-          { key: 'pending_progress.session-store', value: JSON.stringify(this.pending_progress) }
-        ]
+    /**
+     * Sync session store ke storage.
+     * Menggunakan debounce 1.5 detik: banyak perubahan beruntun hanya menghasilkan 1x write.
+     * Untuk kebutuhan immediate write (mis. endSession), gunakan syncSessionStoreNow().
+     */
+    syncSessionStore(): Promise<ResponseSchema> {
+      // Batalkan write yang sedang menunggu
+      if (this._syncDebounceTimeout !== undefined) {
+        clearTimeout(this._syncDebounceTimeout)
+      }
 
-        let success = true
-        for (let idx = 0; idx < arr.length; idx++) {
-          const { success: s1 } = await setStorage(arr[idx])
-          if (!s1) success = false
+      return new Promise((resolve) => {
+        this._syncDebounceTimeout = setTimeout(async () => {
+          this._syncDebounceTimeout = undefined
+          const result = await this.syncSessionStoreNow()
+          resolve(result)
+        }, 1500)
+      })
+    },
+
+    /**
+     * Immediate write ke storage, tanpa debounce.
+     * Gunakan hanya untuk operasi kritis (endSession, resetSessionStore, dll).
+     */
+    async syncSessionStoreNow(): Promise<ResponseSchema> {
+      try {
+        if (this._syncDebounceTimeout !== undefined) {
+          clearTimeout(this._syncDebounceTimeout)
+          this._syncDebounceTimeout = undefined
         }
 
-        return { success }
+        const result = await setSessionFullStore({
+          session: this.session,
+          session_comments: this.session_comments,
+          session_measurements: this.session_measurements,
+          upcoming_sessions: this.upcoming_sessions,
+          upcoming_sessions_count: this.upcoming_sessions_count,
+          sessions: this.sessions,
+          sessions_count: this.sessions_count,
+          pending_progress: this.pending_progress
+        })
+
+        return result
       } catch (error) {
-        console.error(error)
+        console.error('[syncSessionStoreNow] Failed:', error)
         return { success: false }
       }
     },
@@ -1057,15 +1114,13 @@ export const useSessionStore = defineStore('session', {
     async endSession() {
       const { getRunningSessions } = useAppStore()
 
-      let activities: AddSessionActivity[] = []
-      try {
-        const key = `session_activities_${this.session?.id}`
-        const result = await getStorage(key)
-        const backup = typeof result.data === 'string' ? JSON.parse(result.data) : result.data
-        activities = backup.activities
-      } catch (error) {
-        activities = []
+      // Flush buffer aktivitas in-memory ke storage terlebih dahulu
+      if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
+        await flushSessionActivities(this.session.id, this._activitiesBuffer)
       }
+
+      // Baca activities dari buffer in-memory (lebih efisien, tidak perlu baca storage)
+      const activities: AddSessionActivity[] = [...(this._activitiesBuffer || [])]
 
       activities.push({
         action_label: `session_end`,
@@ -1094,10 +1149,15 @@ export const useSessionStore = defineStore('session', {
             console.log(`[endSession] Cleared ${result.count} backup(s)`)
           }
 
-          // ✅ Clear session activities dari storage
+          // ✅ Clear activities buffer in-memory dan storage
+          this._activitiesBuffer = []
+          if (this._activitiesFlushTimeout !== undefined) {
+            clearTimeout(this._activitiesFlushTimeout)
+            this._activitiesFlushTimeout = undefined
+          }
           await this.clearSessionActivities()
 
-          this.syncSessionStore()
+          await this.syncSessionStoreNow()
           return { success: true, data, message: '' }
         })
         .catch((error) => {
@@ -1172,7 +1232,7 @@ export const useSessionStore = defineStore('session', {
           this.setSessionMeasurement(data, is_comment)
 
           // record session activities
-          await this.addSessionActivity({
+          this.addSessionActivity({
             action_label: 'api_success',
             recordable: 'Measurement',
             recordable_id: id,
@@ -1188,7 +1248,7 @@ export const useSessionStore = defineStore('session', {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
-          await this.addSessionActivity({
+          this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: id,
@@ -1283,7 +1343,7 @@ export const useSessionStore = defineStore('session', {
             )
 
             // record session activities
-            await this.addSessionActivity({
+            this.addSessionActivity({
               action_label: 'api_success',
               recordable: 'Measurement',
               recordable_id: id,
@@ -1320,7 +1380,7 @@ export const useSessionStore = defineStore('session', {
             // Retry jika timeout dan belum max attempts
             if (attempt < maxRetries && isAxiosError(err) && err.code === 'ECONNABORTED') {
               // record session activities
-              await this.addSessionActivity({
+              this.addSessionActivity({
                 action_label: 'api_failed',
                 recordable: 'Measurement',
                 recordable_id: id,
@@ -1379,7 +1439,7 @@ export const useSessionStore = defineStore('session', {
         if (isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
             // record session activities
-            await this.addSessionActivity({
+            this.addSessionActivity({
               action_label: 'api_failed',
               recordable: 'Measurement',
               recordable_id: id,
@@ -1399,7 +1459,7 @@ export const useSessionStore = defineStore('session', {
           // Handle conflict (409)
           if (error.response?.status === 409) {
             // record session activities
-            await this.addSessionActivity({
+            this.addSessionActivity({
               action_label: 'api_failed',
               recordable: 'Measurement',
               recordable_id: id,
@@ -1419,7 +1479,7 @@ export const useSessionStore = defineStore('session', {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
-          await this.addSessionActivity({
+          this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: id,
@@ -1451,7 +1511,7 @@ export const useSessionStore = defineStore('session', {
           this.setSessionMeasurement(data)
 
           // record session activities
-          await this.addSessionActivity({
+          this.addSessionActivity({
             action_label: 'api_success',
             recordable: 'Measurement',
             recordable_id: id,
@@ -1468,7 +1528,7 @@ export const useSessionStore = defineStore('session', {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
-          await this.addSessionActivity({
+          this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: id,
@@ -1768,38 +1828,53 @@ export const useSessionStore = defineStore('session', {
     // ========================================
     // SESSION ACTIVITIES FUNCTIONS
     // ========================================
-    async addSessionActivity(params: AddSessionActivity): Promise<void> {
+
+    /**
+     * Tambah aktivitas ke in-memory buffer.
+     * Buffer ditulis ke storage secara batched (setiap 10 aktivitas ATAU setiap 15 detik),
+     * bukan setiap kali aktivitas ditambahkan — menghindari O(n²) read-modify-write.
+     */
+    addSessionActivity(params: AddSessionActivity): void {
       if (!this.session?.id) return
-      // ignore for not ongoing session
       if (this.session?.status !== 'ongoing') return
 
-      try {
-        const key = `session_activities_${this.session.id}`
-        const result = await getStorage(key)
-        const backup = typeof result.data === 'string' ? JSON.parse(result.data) : result.data
+      // Inisialisasi buffer jika belum ada
+      if (!this._activitiesBuffer) this._activitiesBuffer = []
 
-        if (!backup) {
-          const data = {
-            session_id: this.session.id,
-            activities: [params],
-            timestamp: Date.now()
-          }
-          await setStorage({
-            key,
-            value: JSON.stringify(data)
-          })
-          return
-        }
+      this._activitiesBuffer.push(params)
 
-        backup.activities.push(params)
-        backup.timestamp = Date.now()
-        await setStorage({
-          key,
-          value: JSON.stringify(backup)
-        })
-      } catch (error) {
-        console.error('[saveLocalBackup] Failed:', error)
+      // Flush segera kalau buffer sudah cukup besar (setiap 10 aktivitas)
+      if (this._activitiesBuffer.length >= 10) {
+        this._flushActivitiesBuffer()
+        return
       }
-    }
+
+      // Jadwalkan flush delayed (15 detik setelah aktivitas terakhir)
+      if (this._activitiesFlushTimeout !== undefined) {
+        clearTimeout(this._activitiesFlushTimeout)
+      }
+      this._activitiesFlushTimeout = setTimeout(() => {
+        this._activitiesFlushTimeout = undefined
+        this._flushActivitiesBuffer()
+      }, 15000)
+    },
+
+    /**
+     * Tulis buffer ke storage (tidak async di caller, jalan di background).
+     * @internal
+     */
+    async _flushActivitiesBuffer(): Promise<void> {
+      if (!this.session?.id) return
+      if (!this._activitiesBuffer || this._activitiesBuffer.length === 0) return
+
+      const sessionId = this.session.id
+      const toFlush = [...this._activitiesBuffer]
+
+      try {
+        await flushSessionActivities(sessionId, toFlush)
+      } catch (error) {
+        console.error('[_flushActivitiesBuffer] Failed:', error)
+      }
+    },
   }
 })

@@ -228,7 +228,7 @@ watch(
       showOffline.value = true
 
       // record session activities
-      await sessionStore.addSessionActivity({
+      sessionStore.addSessionActivity({
         action_label: `network_offline`,
         recordable: 'Network',
         notes: `Network disconnected`,
@@ -247,7 +247,7 @@ watch(
       }
 
       // record session activities
-      await sessionStore.addSessionActivity({
+      sessionStore.addSessionActivity({
         action_label: `network_online`,
         recordable: 'Network',
         notes: `Network reconnected`,
@@ -392,7 +392,7 @@ const scrollListener = async (e: any) => {
       isRefreshing.value = true
       cycleLoading.value = true
 
-      await sessionStore.addSessionActivity({
+      sessionStore.addSessionActivity({
         action_label: `session_refresh`,
         recordable: 'Session',
         recordable_id: sessionStore.session?.id,

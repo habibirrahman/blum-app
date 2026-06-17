@@ -197,7 +197,7 @@ const onChangeScore = async (prompt: any, score: number) => {
   typeLoadingBox.value = score
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: score === 1 ? `prompting_add` : `prompting_subtract`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,

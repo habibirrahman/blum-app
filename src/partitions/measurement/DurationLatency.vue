@@ -404,17 +404,17 @@ onMounted(() => {
 
 <template>
   <!-- duration latency -->
-  <div v-if="!isOpenResetConfirmation" class="flex flex-col flex-grow gap-2 justify-between h-full">
+  <div v-if="!isOpenResetConfirmation" class="flex h-full flex-grow flex-col justify-between gap-2">
     <div
       v-if="submitLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
 
     <div
-      class="flex flex-col flex-grow gap-x-3 justify-center content-center items-center h-full"
+      class="flex h-full flex-grow flex-col content-center items-center justify-center gap-x-3"
       :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 px-3': isCollapsed }"
     >
       <div v-if="isCollapsed" class="font-semibold text-slate-7">Lap {{ lapLength }}</div>
@@ -429,7 +429,7 @@ onMounted(() => {
         <div class="flex justify-center">{{ displayTimer.split(':')[2] }}</div>
       </div>
 
-      <div class="flex gap-3 items-center w-full">
+      <div class="flex w-full items-center gap-3">
         <AppButton
           kind="plain"
           class="grow rounded-full !bg-prim-2"
@@ -448,7 +448,7 @@ onMounted(() => {
         <AppButton
           kind="plain"
           :color="isStarted ? 'tomato' : 'grass'"
-          class="rounded-full grow"
+          class="grow rounded-full"
           :class="[isStarted ? '!bg-tomato-2' : '!bg-grass-2']"
           :loading="submitLoading"
           :disabled="isDisabledAction || sessionStore.session?.status !== 'ongoing'"
@@ -470,7 +470,7 @@ onMounted(() => {
 
       <div
         v-if="lapLength > 0 && !isCollapsed"
-        class="overflow-scroll mt-2 w-full"
+        class="mt-2 w-full overflow-scroll"
         :style="{
           maxHeight: 'calc(100vh - 10rem)',
           scrollbarWidth: 'none'
@@ -479,9 +479,9 @@ onMounted(() => {
         <div
           v-for="lap in [...laps].reverse()"
           :key="lap.lapIndex"
-          class="flex gap-2 justify-between items-center border-b border-slate-4"
+          class="flex items-center justify-between gap-2 border-b border-slate-4"
         >
-          <div class="flex gap-2 justify-between py-2 w-full" :class="getTextColorClass(lap)">
+          <div class="flex w-full justify-between gap-2 py-2" :class="getTextColorClass(lap)">
             <div>{{ `Lap ${lap.lapIndex + 1}` }}</div>
             <div class="font-semibold">{{ getLapDisplayTime(lap) }}</div>
           </div>
@@ -502,7 +502,7 @@ onMounted(() => {
 
     <div
       v-if="!isCollapsed && !isOpenResetConfirmation"
-      class="pb-3 text-xs font-medium text-center shrink-0 text-slate-7"
+      class="shrink-0 pb-3 text-center text-xs font-medium text-slate-7"
     >
       Goal:
       {{ measurement.target?.success_metric === 'equal to or greater than goal' ? '≥' : '' }}
@@ -515,7 +515,7 @@ onMounted(() => {
   <!-- confirm reset laps -->
   <div
     v-if="isOpenResetConfirmation"
-    class="flex flex-col flex-grow gap-2 justify-center items-center h-full"
+    class="flex h-full flex-grow flex-col items-center justify-center gap-2"
   >
     <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
     <div class="text-center text-slate-8">
@@ -531,8 +531,8 @@ onMounted(() => {
 
   <!-- edit lap modal -->
   <AppActionSheet v-if="editLapInput" :show="isOpenEdit" @close="isOpenEdit = false">
-    <div class="flex flex-col gap-4 py-3 w-full">
-      <div class="text-xl font-semibold text-left">Edit lap {{ measurement.target?.name }}</div>
+    <div class="flex w-full flex-col gap-4 py-3">
+      <div class="text-left text-xl font-semibold">Edit lap {{ measurement.target?.name }}</div>
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1">
           <div class="text-sm font-semibold text-slate-8">
@@ -548,7 +548,7 @@ onMounted(() => {
           :disabled="submitLoading"
         />
       </div>
-      <div class="grid grid-cols-2 gap-4 items-center">
+      <div class="grid grid-cols-2 items-center gap-4">
         <AppButton kind="plain" @click="isOpenEdit = false">Cancel</AppButton>
         <AppButton :loading="submitLoading" @click="onUpdateLap">Save</AppButton>
       </div>
