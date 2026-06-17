@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import {
-  useSessionStore,
-  type UpdateMeasurementParams,
-  type UpdateMeasurementResultsParams
-} from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
-import { type MeasurementType, type Measurement, type Target, type TargetType } from '@/lib/types'
+import {
+  type MeasurementType,
+  type Measurement,
+  type Target,
+  type TargetType,
+  type MeasurementFrequency,
+  type MeasurementDurationOrLatency,
+  type MeasurementPir,
+  type MeasurementPrompting,
+  type MeasurementTaskAnalysis,
+  type MeasurementSbt
+} from '@/lib/types'
 import AppToggle from '@/components/AppToggle.vue'
 import { getRandomString, getTargetTasks, getTargetType } from '@/lib/func'
 import Prompting from './measurement/Prompting.vue'
@@ -32,102 +39,50 @@ const sessionStore = useSessionStore()
 
 interface Props {
   measurement: Measurement
-  counter?: number
   isCollapsed?: boolean
   reviewMode?: boolean
-  isRunning?: boolean
   isDisabledAction?: boolean
   useLock?: boolean
   isChecked?: boolean
 }
 interface Emits {
   (e: 'toggle-updated', payload: { id: Measurement['id']; updated: boolean }): void
-  (e: 'toggle-running'): void
   (e: 'toggle-saved', payload: { id: Measurement['id']; saved: boolean }): void
+  (e: 'check-completed-cold-probe', payload: { id: Measurement['id']; isCompleted: boolean }): void
   (e: 'toggle-collapsed', bool: boolean): void
   (e: 'fetch-session'): void
-  (e: 'check-completed-cold-probe', payload: { id: Measurement['id']; isCompleted: boolean }): void
   (e: 'toggle-lock'): void
   (e: 'toggle-check'): void
   (e: 'after-commit'): void
 }
+
 const props = withDefaults(defineProps<Props>(), {
-  counter: 0,
   isCollapsed: false,
   reviewMode: false
 })
 const emit = defineEmits<Emits>()
 
+/** === DATA === */
+
+const dropLoading = ref<boolean>(false)
+const cardLoading = ref<boolean>(true)
+const commentLoading = ref<boolean>(false)
+
+const isDropped = ref<boolean>(false)
+
+const commentInput = ref<string>('')
+
+const display = ref<'target' | 'description' | 'comment'>('target')
+const cardId = ref<string>('card-random-id')
+
 const measurementResults = ref<Measurement['results']>(props.measurement.results)
 
-watch(
-  () => props.measurement.results,
-  async (val) => {
-    await generateResults(val)
-    cardLoading.value = false
-  },
-  { deep: true }
-)
+/** === COMPUTEDS === */
 
-const generateResults = async (res: Measurement['results']) => {
-  measurementResults.value = res
-
-  // Restore dari backup jika ada
-  const measurementId = Number(props.measurement.id)
-  const backup = await sessionStore.restoreFromBackup(measurementId)
-  if (backup) {
-    if (backup.status === 'pending') {
-      measurementResults.value = backup.data.results
-      toast.info('Data restored from backup`')
-    }
-  }
-
-  if (
-    props.measurement.type === 'Measurement::Duration' ||
-    props.measurement.type === 'Measurement::Latency'
-  ) {
-    generateLaps(measurementResults.value)
-  }
-}
-
-const cardLoading = ref<boolean>(true)
 const measurementType = computed<MeasurementType | TargetType | ''>(() => {
   const targetData: Target = props.measurement?.target || {}
   return props.measurement?.type || targetData?.type || ''
 })
-
-const display = ref<'target' | 'description' | 'comment'>('target')
-watch(
-  () => props.isCollapsed || props.reviewMode,
-  (val) => {
-    if (val) display.value = 'target'
-  }
-)
-const onChangeDisplay = async (val: 'target' | 'description' | 'comment') => {
-  if (display.value === val) {
-    display.value = 'target'
-    // record session activities
-    await sessionStore.addSessionActivity({
-      action_label: `${val}_close`,
-      recordable: 'Measurement',
-      recordable_id: props.measurement.id,
-      notes: `Closed ${val}, and open target measurement`,
-      timestamp: new Date().toISOString()
-    })
-    return
-  }
-
-  display.value = val
-  // record session activities
-  await sessionStore.addSessionActivity({
-    action_label: `${val}_open`,
-    recordable: 'Measurement',
-    recordable_id: props.measurement.id,
-    timestamp: new Date().toISOString()
-  })
-}
-
-const cardId = ref<string>('card-random-id')
 
 // 🔧 Tambahkan computed untuk monitoring
 const hasPendingSync = computed(() => {
@@ -152,8 +107,102 @@ const syncStatusText = computed(() => {
   return 'Syncing...'
 })
 
-// drop measurement property
-const isDropped = ref<boolean>(false)
+const isDisabledSaveComment = computed<boolean>(
+  () => commentInput.value === (props.measurement.comment || '')
+)
+
+// maintenance property
+const isMaintenanceDisplayable = computed<boolean>(() => {
+  const target = props.measurement.target
+  if (!target || !target.in_maintenance) return false
+  if (!target.maintenance_next_date) return false
+
+  const nextDate = dayjs(new Date(target.maintenance_next_date))
+  const today = dayjs().startOf('day')
+
+  if (
+    (nextDate.isSame(today) || nextDate.isBefore(today)) &&
+    target.maintenance_status === 'overdue'
+  ) {
+    return true
+  }
+  if (nextDate.isSame(today)) {
+    return true
+  }
+  return false
+})
+
+const promptingPrompts = computed(() => {
+  if (!measurementResults.value) return ''
+  const promptKeys = Object.keys(measurementResults.value)
+  if (!promptKeys.length) return ''
+
+  const prompts = props.measurement.target?.prompts || []
+  if (!prompts.length) return ''
+
+  const usedPrompts = promptKeys?.map((key) => {
+    const prompt = prompts?.find((i) => i.id === Number(key))
+    const percentage = prompt?.score || 0
+    return { ...measurementResults.value[key], percentage }
+  })
+  const sorted = usedPrompts?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+  const format = props.measurement.target?.prompting_format
+
+  return sorted
+    ?.map((prompt) => {
+      if (format === 'custom') `${prompt?.name} (${prompt?.percentage}%)`
+      return prompt?.name
+    })
+    ?.join(', ')
+})
+
+const sbtPrompts = computed(() => {
+  const prompts = props.measurement.target?.prompts || []
+  if (!prompts.length) return ''
+
+  const sorted = prompts?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+
+  return sorted?.map((prompt) => `${prompt.name} (${prompt.score}%)`)?.join(', ')
+})
+
+// task analysis property
+const taskAnalysisPrompts = computed(() => {
+  const prompts = props.measurement.target?.prompts || []
+  if (!prompts.length) return ''
+
+  const sorted = prompts?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
+  const format = props.measurement.target?.prompting_format
+
+  return sorted
+    ?.map((prompt) => {
+      if (format === 'custom') `${prompt.name} (${prompt.score}%)`
+      const score = prompt.abbreviation === 'Id' && prompt.name === 'Independent' ? 100 : 0
+      return `${prompt.name} (${score}%)`
+    })
+    ?.join(', ')
+})
+
+/** === WATCHERS === */
+
+// Catatan: `results` selalu di-assign sebagai object baru oleh store (lihat
+// `setSessionMeasurement` — pakai `arr[idx] = data`, bukan mutasi in-place),
+// sehingga shallow watch (tanpa `deep: true`) sudah cukup mendeteksi perubahan
+// dan menghindari overhead traverse seluruh object pada setiap update.
+watch(
+  () => props.measurement.results,
+  async (val) => {
+    await generateResults(val)
+    cardLoading.value = false
+  }
+)
+
+watch(
+  () => props.isCollapsed || props.reviewMode,
+  (val) => {
+    if (val) display.value = 'target'
+  }
+)
+
 watch(
   () => props.measurement.is_dropped,
   (val) => {
@@ -161,7 +210,54 @@ watch(
     cardId.value = getRandomString('card-random-id')
   }
 )
-const isDropLoading = ref<boolean>(false)
+
+watch(
+  () => display.value,
+  (val) => {
+    if (val === 'comment') commentInput.value = props.measurement.comment || ''
+  }
+)
+
+/** === METHODS === */
+
+const generateResults = async (res: Measurement['results']) => {
+  measurementResults.value = res
+
+  // Restore dari backup jika ada
+  const measurementId = Number(props.measurement.id)
+  const backup = await sessionStore.restoreFromBackup(measurementId)
+  if (backup) {
+    if (backup.status === 'pending') {
+      measurementResults.value = backup.data.results
+      toast.info('Data restored from backup`')
+    }
+  }
+}
+
+const onChangeDisplay = async (val: 'target' | 'description' | 'comment') => {
+  if (display.value === val) {
+    display.value = 'target'
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `${val}_close`,
+      recordable: 'Measurement',
+      recordable_id: props.measurement.id,
+      notes: `Closed ${val}, and open target measurement`,
+      timestamp: new Date().toISOString()
+    })
+    return
+  }
+
+  display.value = val
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `${val}_open`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    timestamp: new Date().toISOString()
+  })
+}
+
 const onDrop = async (bool: boolean) => {
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
@@ -169,7 +265,7 @@ const onDrop = async (bool: boolean) => {
     data_result: { ...props.measurement, is_dropped: !bool }
   }
 
-  isDropLoading.value = true
+  dropLoading.value = true
 
   // record session activities
   await sessionStore.addSessionActivity({
@@ -183,37 +279,30 @@ const onDrop = async (bool: boolean) => {
   })
 
   const { success, message, data } = await sessionStore.updateMeasurement(params)
-  isDropLoading.value = false
+  dropLoading.value = false
   if (!success) {
     toast.error(message)
     return
   }
   isDropped.value = data.is_dropped
-  if (data.is_dropped && props.isRunning) {
-    emit('toggle-running')
-  }
   // Force the cold probe to be marked as completed if is_dropped is true
   if (data.is_dropped && props.measurement.type?.includes('ColdProbe')) {
     handleCompletedColdProbe(true)
   }
-}
-const handleCompletedColdProbe = (isCompleted: boolean) => {
-  emit('check-completed-cold-probe', { id: props.measurement.id, isCompleted })
 }
 
 const onToggleUpdated = (updated: boolean) => {
   emit('toggle-updated', { id: props.measurement.id, updated })
 }
 
-// comment property
-const commentInput = ref<string>('')
-const commentLoading = ref<boolean>(false)
-watch(display, (val) => {
-  if (val === 'comment') commentInput.value = props.measurement.comment || ''
-})
-const isDisabledSaveComment = computed<boolean>(
-  () => commentInput.value === (props.measurement.comment || '')
-)
+const onToggleSaved = (saved: boolean) => {
+  emit('toggle-saved', { id: props.measurement.id, saved })
+}
+
+const handleCompletedColdProbe = (isCompleted: boolean) => {
+  emit('check-completed-cold-probe', { id: props.measurement.id, isCompleted })
+}
+
 const onSaveComment = async () => {
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
@@ -244,397 +333,6 @@ const onSaveComment = async () => {
   display.value = 'target'
 }
 
-// duration property
-interface DurationLap {
-  lapNumber: number
-  time: string
-  seconds: number
-}
-
-const durationCounter = ref<number>(0)
-const isDurationLatencyStarted = ref<boolean>(false)
-const durationInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
-const isDurationLatencyLoading = ref<boolean>(false)
-const lapLoading = ref<boolean>(false)
-const laps = ref<DurationLap[]>([])
-const lastLapTime = ref<string | null>(null)
-const lastTimer = ref<string | null>(null)
-const resetConfirmation = ref<boolean>(false)
-const lapTimer = ref<number>(0)
-
-const timerRunning = computed<string>(() => {
-  let baseSeconds = 0
-  if (lastTimer.value) {
-    const [h, m, s] = lastTimer.value.split(':').map(Number)
-    baseSeconds = h * 3600 + m * 60 + s
-  }
-
-  const totalSeconds = baseSeconds + (durationCounter.value || 0)
-
-  const seconds = String(totalSeconds % 60).padStart(2, '0')
-  const minutes = String(Math.floor((totalSeconds / 60) % 60)).padStart(2, '0')
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
-
-  return `${hours}:${minutes}:${seconds}`
-})
-
-const currentLapTime = computed<string>(() => {
-  let baseSeconds = 0
-  if (lastLapTime.value) {
-    const [h, m, s] = lastLapTime.value.split(':').map(Number)
-    baseSeconds = h * 3600 + m * 60 + s
-  }
-
-  const totalSeconds = baseSeconds + (lapTimer.value || 0)
-
-  const seconds = String(totalSeconds % 60).padStart(2, '0')
-  const minutes = String(Math.floor((totalSeconds / 60) % 60)).padStart(2, '0')
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
-
-  return `${hours}:${minutes}:${seconds}`
-})
-
-const isMaintenanceDisplayable = computed<boolean>(() => {
-  const target = props.measurement.target
-  if (!target || !target.in_maintenance) return false
-  if (!target.maintenance_next_date) return false
-
-  const nextDate = dayjs(new Date(target.maintenance_next_date))
-  const today = dayjs().startOf('day')
-
-  if (
-    (nextDate.isSame(today) || nextDate.isBefore(today)) &&
-    target.maintenance_status === 'overdue'
-  ) {
-    return true
-  }
-  if (nextDate.isSame(today)) {
-    return true
-  }
-  return false
-})
-
-const generateLaps = (results: Measurement['results']) => {
-  if (props.isRunning) return
-  laps.value = []
-  lastLapTime.value = null
-  lastTimer.value = null
-  lapTimer.value = 0
-  durationCounter.value = 0
-
-  Object.keys(results).forEach((lapIndex) => {
-    const lap = results[lapIndex]
-    if (parseInt(lapIndex) !== 0 || (lap.string !== '00:00:00' && lap.seconds !== 0)) {
-      laps.value.push({
-        lapNumber: parseInt(lapIndex),
-        time: lap.string,
-        seconds: lap.seconds
-      })
-    }
-  })
-
-  let totalSeconds = 0
-  if (laps.value.length > 0) {
-    laps.value.forEach((lap) => {
-      const [h, m, s] = lap.time.split(':').map(Number)
-      totalSeconds += h * 3600 + m * 60 + s
-    })
-    const seconds = String(totalSeconds % 60).padStart(2, '0')
-    const minutes = String(Math.floor((totalSeconds / 60) % 60)).padStart(2, '0')
-    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
-
-    lastTimer.value = `${hours}:${minutes}:${seconds}`
-    lastLapTime.value = laps.value[laps.value.length - 1].time
-  }
-}
-
-const onStartDurationTimer = () => {
-  durationInterval.value = setInterval(() => {
-    durationCounter.value++
-    lapTimer.value++
-  }, 1000)
-
-  return () => {
-    if (durationInterval.value) {
-      clearInterval(durationInterval.value)
-      durationInterval.value = undefined
-    }
-  }
-}
-
-// Toggle timer start/stop
-const onToggleDurationLatencyTimer = async () => {
-  if (isDurationLatencyLoading.value) return
-
-  if (!isDurationLatencyStarted.value) {
-    // Start timer
-    isDurationLatencyStarted.value = true
-    onStartDurationTimer()
-    if (laps.value.length === 0) {
-      const lapTime = currentLapTime.value
-      laps.value.push({
-        lapNumber: 0,
-        time: lapTime,
-        seconds: lapTimer.value
-      })
-    }
-    emit('toggle-running')
-
-    const finalResults = Object.fromEntries(
-      laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
-    )
-
-    // record session activities
-    await sessionStore.addSessionActivity({
-      action_label: `duration_start`,
-      recordable: 'Measurement',
-      recordable_id: props.measurement.id,
-      params: { measurement: { results: finalResults } },
-      notes: `Target: ${props.measurement.target?.name}`,
-      timestamp: new Date().toISOString()
-    })
-  } else {
-    // const capturedDurationTime = timerRunning.value
-    const capturedLapTime = currentLapTime.value
-    const capturedLapSeconds = lapTimer.value
-
-    if (durationInterval.value) {
-      clearInterval(durationInterval.value)
-      durationInterval.value = undefined
-    }
-
-    if (laps.value.length > 0) {
-      laps.value[laps.value.length - 1].time = capturedLapTime
-      laps.value[laps.value.length - 1].seconds = capturedLapSeconds
-    }
-
-    const finalResults = Object.fromEntries(
-      laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
-    )
-
-    const params: UpdateMeasurementResultsParams = {
-      id: props.measurement.id,
-      measurement: { results: finalResults },
-      data_result: { ...props.measurement, results: finalResults },
-      last_data: { ...props.measurement }
-    }
-
-    isDurationLatencyLoading.value = true
-
-    // record session activities
-    await sessionStore.addSessionActivity({
-      action_label: `duration_stop`,
-      recordable: 'Measurement',
-      recordable_id: props.measurement.id,
-      params: { measurement: { results: finalResults } },
-      notes: `Target: ${props.measurement.target?.name}`,
-      timestamp: new Date().toISOString()
-    })
-
-    const { data } = await sessionStore.updateMeasurementResults(params)
-    isDurationLatencyLoading.value = false
-
-    // if (!success) {
-    //   resumeTimerFromString(capturedDurationTime, capturedLapTime)
-    //   toast.error(message)
-    //   return
-    // }
-
-    generateLaps(data.results)
-    isDurationLatencyStarted.value = false
-    emit('toggle-running')
-  }
-}
-const onRecordLap = async () => {
-  if ((!isDurationLatencyStarted.value && !laps.value.length) || lapLoading.value) {
-    return
-  }
-
-  // const capturedDurationTime = timerRunning.value
-  const capturedLapTime = currentLapTime.value
-  const capturedLapSeconds = lapTimer.value
-
-  if (durationInterval.value) {
-    clearInterval(durationInterval.value)
-    durationInterval.value = undefined
-  }
-
-  lapLoading.value = true
-
-  if (laps.value.length > 0) {
-    laps.value[laps.value.length - 1].time = capturedLapTime
-    laps.value[laps.value.length - 1].seconds = capturedLapSeconds
-  }
-
-  const lapNumber = laps.value.length
-  laps.value.push({
-    lapNumber,
-    time: '00:00:00',
-    seconds: 0
-  })
-
-  const finalResults = Object.fromEntries(
-    laps.value.map((i: any, idx: number) => [idx, { string: i.time, seconds: i.seconds }])
-  )
-
-  const params: UpdateMeasurementResultsParams = {
-    id: props.measurement.id,
-    measurement: { results: finalResults },
-    data_result: { ...props.measurement, results: finalResults },
-    last_data: { ...props.measurement }
-  }
-
-  // record session activities
-  await sessionStore.addSessionActivity({
-    action_label: `duration_lap`,
-    recordable: 'Measurement',
-    recordable_id: props.measurement.id,
-    params: { measurement: { results: finalResults } },
-    notes: `Target: ${props.measurement.target?.name}`,
-    timestamp: new Date().toISOString()
-  })
-
-  const { data } = await sessionStore.updateMeasurementResults(params)
-
-  // if (!success) {
-  //   laps.value.pop()
-  //   resumeTimerFromString(capturedDurationTime, capturedLapTime)
-  //   return
-  // }
-
-  lapTimer.value = 0
-  lastLapTime.value = null
-
-  // Mulai timer lagi
-  generateLaps(data.results)
-
-  if (!isDurationLatencyStarted.value) {
-    onToggleDurationLatencyTimer()
-  } else {
-    startTimerAfterLap()
-  }
-  lapLoading.value = false
-}
-
-const startTimerAfterLap = () => {
-  durationInterval.value = setInterval(() => {
-    durationCounter.value++
-    lapTimer.value++
-  }, 1000)
-
-  return () => {
-    if (durationInterval.value) {
-      clearInterval(durationInterval.value)
-      durationInterval.value = undefined
-    }
-  }
-}
-
-// const resumeTimerFromString = (durationString: string, lapString: string) => {
-//   const [dHours, dMinutes, dSeconds] = durationString.split(':').map(Number)
-//   durationCounter.value = dHours * 3600 + dMinutes * 60 + dSeconds
-
-//   if (lapString) {
-//     const [lHours, lMinutes, lSeconds] = lapString.split(':').map(Number)
-//     lapTimer.value = lHours * 3600 + lMinutes * 60 + lSeconds
-//     lastLapTime.value = lapString
-//   }
-// }
-
-const onResetLaps = async () => {
-  if (resetConfirmation.value) {
-    laps.value = []
-    lastLapTime.value = null
-    lastTimer.value = null
-    lapTimer.value = 0
-    durationCounter.value = 0
-
-    const finalResults = {
-      0: { string: '00:00:00', seconds: 0 }
-    }
-
-    const params: UpdateMeasurementResultsParams = {
-      id: props.measurement.id,
-      measurement: { results: finalResults },
-      data_result: { ...props.measurement, results: finalResults },
-      last_data: { ...props.measurement }
-    }
-
-    // record session activities
-    await sessionStore.addSessionActivity({
-      action_label: `duration_reset`,
-      recordable: 'Measurement',
-      recordable_id: props.measurement.id,
-      params: { measurement: { results: finalResults } },
-      notes: `Target: ${props.measurement.target?.name}`,
-      timestamp: new Date().toISOString()
-    })
-
-    const { success, data } = await sessionStore.updateMeasurementResults(params)
-
-    if (!success) {
-      return
-    }
-    generateLaps(data.results)
-  }
-  resetConfirmation.value = false
-}
-
-// prompting & sbt property
-const onToggleSaved = (saved: boolean) => {
-  emit('toggle-saved', { id: props.measurement.id, saved })
-}
-const promptingPrompts = computed(() => {
-  console.log('[promptingPrompts] measurementResults.value', measurementResults.value)
-  if (!measurementResults.value) return ''
-  const promptKeys = Object.keys(measurementResults.value)
-  console.log('[promptingPrompts] promptKeys', promptKeys)
-  if (!promptKeys.length) return ''
-
-  const prompts = props.measurement.target?.prompts || []
-  if (!prompts.length) return ''
-
-  const usedPrompts = promptKeys?.map((key) => {
-    const prompt = prompts?.find((i) => i.id === Number(key))
-    const percentage = prompt?.score || 0
-    return { ...measurementResults.value[key], percentage }
-  })
-  const sorted = usedPrompts?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-  const format = props.measurement.target?.prompting_format
-
-  return sorted
-    ?.map((prompt) => {
-      if (format === 'custom') `${prompt?.name} (${prompt?.percentage}%)`
-      return prompt?.name
-    })
-    ?.join(', ')
-})
-const sbtPrompts = computed(() => {
-  const prompts = props.measurement.target?.prompts || []
-  if (!prompts.length) return ''
-
-  const sorted = prompts?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-
-  return sorted?.map((prompt) => `${prompt.name} (${prompt.score}%)`)?.join(', ')
-})
-
-// task analysis property
-const taskAnalysisPrompts = computed(() => {
-  const prompts = props.measurement.target?.prompts || []
-  if (!prompts.length) return ''
-
-  const sorted = prompts?.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-  const format = props.measurement.target?.prompting_format
-
-  return sorted
-    ?.map((prompt) => {
-      if (format === 'custom') `${prompt.name} (${prompt.score}%)`
-      const score = prompt.abbreviation === 'Id' && prompt.name === 'Independent' ? 100 : 0
-      return `${prompt.name} (${score}%)`
-    })
-    ?.join(', ')
-})
-
 onMounted(async () => {
   if (sessionStore.session?.status === 'ongoing') {
     // Setup auto-sync (hanya sekali)
@@ -659,10 +357,6 @@ onMounted(async () => {
 // Cleanup saat unmount
 onUnmounted(() => {
   // Clear timeout to prevent memory leaks
-  if (durationInterval.value) {
-    clearInterval(durationInterval.value)
-    durationInterval.value = undefined
-  }
 })
 </script>
 
@@ -735,7 +429,7 @@ onUnmounted(() => {
             <AppToggle
               :name="`toggle_measurement_${measurement.id}`"
               :checked="!isDropped"
-              :loading="isDropLoading"
+              :loading="dropLoading"
               :disabled="sessionStore.session?.status !== 'ongoing'"
               @change="onDrop"
             />
@@ -806,9 +500,9 @@ onUnmounted(() => {
             class="flex min-h-full flex-grow flex-col items-center justify-center gap-4"
           >
             <Icon icon="solar:clipboard-remove-bold" class="h-20 w-20 text-tulip-6" />
-            <div v-if="!isCollapsed" class="w-72 space-y-2">
+            <div class="w-72 space-y-2">
               <div class="text-center font-semibold">Entry not recorded</div>
-              <div class="text-center text-sm text-slate-8">
+              <div v-if="!isCollapsed" class="text-center text-sm text-slate-8">
                 This entry will not be saved when the Session ends. Toggle back to save this entry
                 recording.
               </div>
@@ -826,42 +520,29 @@ onUnmounted(() => {
               </div>
             </div>
 
+            <ColdProbe
+              v-if="measurementType.includes('ColdProbe') && measurement?.target"
+              :measurement="measurement"
+              :measurement-results="measurementResults"
+              :target="measurement?.target"
+              :is-collapsed="isCollapsed"
+              @toggle-updated="onToggleUpdated($event)"
+              @fetch-session="emit('fetch-session')"
+              @check-completed-cold-probe="handleCompletedColdProbe"
+            />
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
               :measurement="measurement"
-              :measurement-results="measurementResults"
-              :is-started="isDurationLatencyStarted"
-              :timer="timerRunning"
-              :update-loading="isDurationLatencyLoading"
-              :lap-loading="lapLoading"
-              :laps="laps"
-              :current-lap-time="currentLapTime"
+              :measurement-results="measurementResults as MeasurementDurationOrLatency['results']"
               :is-collapsed="isCollapsed"
-              :reset-confirmation="resetConfirmation"
               :is-disabled-action="isDisabledAction"
               @toggle-updated="onToggleUpdated($event)"
-              @toggle-timer="onToggleDurationLatencyTimer"
-              @record-lap="onRecordLap"
-              @reset-laps-confirm="resetConfirmation = true"
-              @reset-laps-cancel="resetConfirmation = false"
-              @generate-laps="generateLaps"
               @fetch-session="emit('fetch-session')"
-              @reset-laps="onResetLaps"
             />
             <Frequency
               v-if="measurementType.includes('Frequency')"
               :measurement="measurement"
-              :measurement-results="measurementResults"
-              :counter="counter"
-              :is-collapsed="isCollapsed"
-              @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetch-session')"
-            />
-            <PartialIntervalRecording
-              v-if="measurementType.includes('Pir')"
-              :measurement="measurement"
-              :measurement-results="measurementResults"
-              :counter="counter"
+              :measurement-results="measurementResults as MeasurementFrequency['results']"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
@@ -875,14 +556,13 @@ onUnmounted(() => {
               @fetch-session="emit('fetch-session')"
               @after-commit="emit('after-commit')"
             />
-            <TrialByTrial
-              v-if="measurementType.includes('TrialByTrial')"
+            <PartialIntervalRecording
+              v-if="measurementType.includes('Pir')"
               :measurement="measurement"
-              :measurement-results="measurementResults"
+              :measurement-results="measurementResults as MeasurementPir['results']"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
-              @after-commit="emit('after-commit')"
             />
             <Probing
               v-if="measurementType.includes('Probing')"
@@ -901,45 +581,40 @@ onUnmounted(() => {
                 !measurement.target?.is_group
               "
               :measurement="measurement"
-              :measurement-results="measurementResults"
+              :measurement-results="measurementResults as MeasurementPrompting['results']"
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetch-session')"
-            />
-            <TaskAnalysis
-              v-if="
-                measurementType.includes('Prompting') &&
-                measurement.target &&
-                measurement.target?.is_group
-              "
-              :measurement="measurement"
-              :measurement-results="measurementResults"
-              :target="measurement?.target"
-              :is-collapsed="isCollapsed"
-              @toggle-updated="onToggleUpdated($event)"
-              @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
             />
             <SkillBasedTreatment
               v-if="measurementType.includes('Sbt') && measurement?.target"
               :measurement="measurement"
-              :measurement-results="measurementResults"
+              :measurement-results="measurementResults as MeasurementSbt['results']"
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
               @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
             />
-            <ColdProbe
-              v-if="measurementType.includes('ColdProbe') && measurement?.target"
+            <TaskAnalysis
+              v-if="measurementType.includes('Prompting') && measurement.target?.is_group"
               :measurement="measurement"
-              :measurement-results="measurementResults"
+              :measurement-results="measurementResults as MeasurementTaskAnalysis['results']"
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
+              @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
-              @check-completed-cold-probe="handleCompletedColdProbe"
+            />
+            <TrialByTrial
+              v-if="measurementType.includes('TrialByTrial')"
+              :measurement="measurement"
+              :measurement-results="measurementResults"
+              :is-collapsed="isCollapsed"
+              @toggle-updated="onToggleUpdated($event)"
+              @fetch-session="emit('fetch-session')"
+              @after-commit="emit('after-commit')"
             />
           </div>
           <div
@@ -1157,7 +832,7 @@ onUnmounted(() => {
             v-model="commentInput"
             class="mt-2 h-full"
           />
-          <div class="sticky -bottom-3 z-10 w-full bg-white py-3">
+          <div class="z-1 sticky -bottom-3 w-full bg-white py-3">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"

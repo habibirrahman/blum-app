@@ -164,7 +164,7 @@ const onAdd = async (bool: boolean) => {
   else reduceProbingLoading.value = true
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: bool ? `probing_success` : `probing_failed`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
@@ -213,7 +213,7 @@ const onRemove = async (circle: ProbingCircle) => {
   removeProbingLoading.value = true
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: `probing_delete`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
@@ -249,7 +249,7 @@ const onSubmitProbing = async () => {
   isProbingPassed.value = probingScore.value >= (props.measurement.target?.probing_goal || 0)
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: `probing_submit`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
@@ -389,7 +389,7 @@ const onSelectProbingAction = async (act: ProbingAction) => {
   probingAction.value = act
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: `probing_select_action`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
@@ -411,7 +411,7 @@ const onSave = async () => {
   saveLoading.value = true
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: `probing_post_action`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,

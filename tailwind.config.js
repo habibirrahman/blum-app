@@ -169,6 +169,15 @@ export default {
           2: '#AADCF0',
           1: '#CCEAF6'
         }
+      },
+      keyframes: {
+        recordingColor: {
+          '0%, 100%': { backgroundColor: '#DD3F30' }, // bg-tomato-7
+          '50%': { backgroundColor: '#98A2B3' } // bg-slate-6
+        }
+      },
+      animation: {
+        'pulse-recording': 'recordingColor 1s cubic-bezier(0.4, 0, 0.6, 1) infinite'
       }
     }
   },

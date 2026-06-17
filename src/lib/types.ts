@@ -185,44 +185,120 @@ export type MeasurementType =
   | 'Measurement::Sbt'
   | 'Measurement::TrialByTrial'
 export type DurationArray = [number, string]
-export interface Measurement {
-  id?: number
-  type?: MeasurementType
-  marked_as?: TargetStatus
+export type Measurement = MeasurementBase | MeasurementDurationOrLatency | MeasurementFrequency | MeasurementPir | MeasurementPrompting | MeasurementTaskAnalysis | MeasurementSbt
 
+interface MeasurementBase {
+  id?: number
   position?: number
   duration?: number
-  overtime_duration?: DurationArray | number
-
-  results?: any
-
-  comment?: string
 
   is_fixed?: boolean
   is_dropped?: boolean
   visible?: boolean
 
+  type?: MeasurementType
+
+  overtime_duration?: DurationArray | number
+
+  comment?: string
   recording_started_at?: string
   overtime_started_at?: string
   overtime_ended_at?: string
+  marked_as?: string
   submitted_at?: string
   deleted_at?: string
   created_at?: string
   updated_at?: string
 
-  session_id?: Session['id']
+
   target_id?: Target['id']
   target?: Target
+  session_id?: Session['id']
+
   comment_user_id?: User['id']
   comment_user?: Comment
+
   used_targets?: UsedTargetMeasurement[]
+
+  results: Record<string, unknown> | unknown
 }
 export interface UsedTargetMeasurement {
-  target_id?: Target['id']
-  description: Target['description']
+  target_id: Target['id']
   target_code: Target['code_definition']
   target_name: Target['name']
+  goal: Target['goal']
+  success_metric: Target['success_metric']
+  description: Target['description']
 }
+
+// Duration or Latency
+export interface MeasurementDurationOrLatency extends MeasurementBase {
+  type: 'Measurement::Duration' | 'Measurement::Latency'
+  results: Record<string, MeasurementResultsDurationOrLatency>
+}
+
+export interface MeasurementResultsDurationOrLatency {
+  seconds: number
+  string: string
+  started_at?: string | null
+  ended_at?: string | null
+}
+
+// Frequency
+export interface MeasurementFrequency extends MeasurementBase {
+  type: 'Measurement::Frequency'
+  results: MeasurementResultsFrequency
+}
+export interface MeasurementResultsFrequency {
+  score: number
+}
+
+// Pir
+export interface MeasurementPir extends MeasurementBase {
+  type: 'Measurement::Pir'
+  results: Record<string, number>
+}
+
+// Prompting
+export interface MeasurementPrompting extends MeasurementBase {
+  type: 'Measurement::Prompting'
+  results: Record<string, MeasurementResultsPrompting>
+}
+export interface MeasurementResultsPrompting {
+  abbreviation: Prompt['abbreviation']
+  color: Prompt['color']
+  name: Prompt['name']
+  position: Prompt['position']
+  shape: Prompt['shape']
+  enabled: boolean
+  score: number
+}
+
+// Task Analysis
+export interface MeasurementTaskAnalysis extends MeasurementBase {
+  type: 'Measurement::Prompting'
+  results: Record<string, MeasurementResultsTaskAnalysis>
+}
+export interface MeasurementResultsTaskAnalysis {
+  key: number | string
+  target_id: number
+  prompt_id: number
+  prompt_parent_id: number | null
+  target_problem_behavior_id: number | null
+}
+
+// SBT
+export interface MeasurementSbt extends MeasurementBase {
+  type: 'Measurement::Sbt'
+  results: Record<string, MeasurementResultsSbt>
+}
+export interface MeasurementResultsSbt {
+  key: number | string
+  target_task_id: number
+  prompt_id: number
+  target_problem_behavior_id: number | null
+}
+
 
 export type TargetType =
   | 'Target::ColdProbe'

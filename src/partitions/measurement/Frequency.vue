@@ -2,33 +2,51 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, onMounted, ref, watch } from 'vue'
-import type { Measurement } from '@/lib/types'
+import type { Measurement, MeasurementResultsFrequency } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import { debounce } from '@/lib/func'
-
-const sessionStore = useSessionStore()
-const toast = useToast()
+import { useClock } from '@/composable/use-clock'
+import dayjs from 'dayjs'
 
 interface Props {
   measurement: Measurement
-  measurementResults: Measurement['results']
-  counter: number
+  measurementResults: MeasurementResultsFrequency
   isCollapsed: boolean
 }
 interface Emits {
   (e: 'toggle-updated', bool: boolean): void
   (e: 'fetch-session'): void
 }
+
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
+
+const sessionStore = useSessionStore()
+const toast = useToast()
+const { now } = useClock()
+
+/** DATA */
 
 const currentScore = ref<number>(0)
 const scoreLoading = ref<boolean>(false)
 
+/** COMPUTED */
+
 const durationInMinutes = computed(() => {
   if (!props.measurement) return 0
   return props.measurement.duration || props.measurement?.target?.duration || 0
+})
+
+const counterFromStartTimeInSeconds = computed(() => {
+  // Hanya butuh tick `now` setiap detik kalau format custom (perlu auto-disable saat durasi habis).
+  // Untuk format lain, tidak perlu depend ke `now` sama sekali — menghindari re-render tiap detik.
+  if (props.measurement?.target?.frequency_format !== 'custom') return 0
+
+  const session = sessionStore.session
+  if (!session) return 0
+  const diff = now.value.diff(dayjs(session.start_time), 'second')
+  return diff
 })
 
 const isDisabled = computed(() => {
@@ -37,8 +55,10 @@ const isDisabled = computed(() => {
   if (!durationInMinutes.value) return false
   if (props.measurement.target.frequency_format !== 'custom') return false
 
-  return props.counter > durationInMinutes.value * 60
+  return counterFromStartTimeInSeconds.value > durationInMinutes.value * 60
 })
+
+/** WATHCER */
 
 watch(
   () => scoreLoading.value,
@@ -51,9 +71,7 @@ watch(
   }
 )
 
-onMounted(() => {
-  currentScore.value = props.measurement?.results?.score || 0
-})
+/** METHODS */
 
 const onSaveScore = debounce(async function (score: number) {
   const finalScore = props.measurementResults.score + score
@@ -84,7 +102,7 @@ const onChangeScore = async (score: number) => {
   currentScore.value += score
 
   // save state
-  const gapScore = currentScore.value - (props.measurement?.results?.score || 0)
+  const gapScore = currentScore.value - (props.measurementResults?.score || 0)
 
   // record session activities
   await sessionStore.addSessionActivity({
@@ -99,6 +117,10 @@ const onChangeScore = async (score: number) => {
 
   onSaveScore(gapScore)
 }
+
+onMounted(() => {
+  currentScore.value = props.measurementResults?.score || 0
+})
 </script>
 
 <template>

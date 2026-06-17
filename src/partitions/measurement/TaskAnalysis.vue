@@ -172,13 +172,16 @@ watch(
   }
 )
 
+// Catatan: `measurementResults` selalu berupa referensi baru setiap update
+// (diturunkan dari `measurement.results` yang di-reassign, bukan dimutasi
+// in-place oleh store), sehingga shallow watch sudah cukup dan menghindari
+// overhead deep-traverse pada object trial yang bisa cukup besar.
 watch(
   () => props.measurementResults,
   (val) => {
     resultsState.value = val
     generateRatioScores()
-  },
-  { deep: true }
+  }
 )
 
 watch(

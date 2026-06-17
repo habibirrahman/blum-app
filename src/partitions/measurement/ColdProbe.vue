@@ -97,7 +97,7 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
   }
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: value === 'yes' ? `cold_probe_success` : `cold_probe_failed`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
@@ -147,7 +147,7 @@ const saveMultipleVariableResult = async (id: number, value: 'yes' | 'no') => {
   }
 
   // record session activities
-  await sessionStore.addSessionActivity({
+  sessionStore.addSessionActivity({
     action_label: value === 'yes' ? `cold_probe_success` : `cold_probe_failed`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,

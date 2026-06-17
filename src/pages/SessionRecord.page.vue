@@ -10,23 +10,59 @@ import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app.store'
 import AppButton from '@/components/AppButton.vue'
 import MeasurementRecord from '@/partitions/MeasurementRecord.vue'
-import type { Measurement, Session, Target } from '@/lib/types'
+import type { Measurement, MeasurementResultsDurationOrLatency, Session, Target } from '@/lib/types'
 import SessionComments from '@/partitions/SessionComments.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import { useToast } from 'vue-toastification'
 import { TransitionRoot } from '@headlessui/vue'
 import AppChip from '@/components/AppChip.vue'
+import { useClock } from '@/composable/use-clock'
+import dayjs from 'dayjs'
+import { secondsToDuration } from '@/lib/func'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const appStore = useAppStore()
 const sessionStore = useSessionStore()
+const { now } = useClock()
+
+/** === DATA === */
 
 const sessionLoading = ref<boolean>(true)
 const cycleLoading = ref<boolean>(false)
-const redirect = ref<string>('/home')
+const isRefreshing = ref<boolean>(false)
+const showOffline = ref<boolean>(false)
+const isScrolling = ref<boolean>(false)
+const showReviewMode = ref<boolean>(false)
+const showSessionComments = ref<boolean>(false)
+const isMeasurementCollapsed = ref<boolean>(true)
+const showEndSession = ref<boolean>(false)
+const endSessionLoading = ref<boolean>(false)
+const showActionRecommendations = ref<boolean>(false)
+const isOpenMastered = ref<boolean>(true)
+const isOpenMaintenance = ref<boolean>(true)
+const exitSessionLoading = ref<boolean>(false)
+
 const heightReload = 112
+
+const endSessionStatus = ref<'normal' | 'group_reason' | 'empty_record'>('normal')
+const redirect = ref<string>('/home')
+const containerHeight = ref<string>('100%')
+const groupReasons = ref<string[]>([])
+
+const focusMeasurement = ref<Measurement['id']>(0)
+const updatingMeasurementIds = ref<Measurement['id'][]>([])
+const unsavedSbtIds = ref<Measurement['id'][]>([])
+const unCompletedColdProbeIds = ref<Measurement['id'][]>([])
+const runningDurationLatency = ref<Measurement[]>([])
+
+const scrollingTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
+const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
+// Periodic check untuk stuck items
+const periodicCheckInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
+
+/** === COMPUTEDS === */
 
 // Tambahkan computed untuk monitoring
 const hasPendingSync = computed(() => {
@@ -34,136 +70,6 @@ const hasPendingSync = computed(() => {
 })
 
 const pendingSyncStats = computed(() => sessionStore.pendingSyncStats)
-
-interface FetchSessionProps {
-  first?: boolean
-  isSwipe?: boolean
-}
-
-// Improved syncSession dengan proper feedback
-async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) {
-  if (!appStore.network_status.connected) {
-    console.log('[syncSession] Skipped - offline')
-    return
-  }
-
-  const pendingCount = sessionStore.pending_progress.length
-
-  if (pendingCount > 0) {
-    console.log(`[syncSession] Syncing ${pendingCount} pending items...`)
-  }
-
-  const { success, data } = await sessionStore.resolvePendingProgress()
-  sessionLoading.value = false
-
-  if (!success) return
-
-  if (isSwipe && appStore.network_status.connected) {
-    if (data && data.succeeded > 0) {
-      toast.success(`${data.succeeded} item(s) synced`)
-    } else {
-      toast.success('Results are now up-to-date!')
-    }
-  }
-}
-
-async function fetchSession(
-  { first, isSwipe }: FetchSessionProps = { first: false, isSwipe: false }
-) {
-  const slug = route.params?.slug as string
-  const { success, data } = await sessionStore.getSession({ slug })
-  const session = data as Session
-  await sessionStore.getSessionComments({ id: session?.id, filter: '' })
-  sessionLoading.value = false
-  if (!success) return
-
-  const app = document.getElementById('app')
-  const recordingTime = session.current_recording_time
-    ? (session.current_recording_time[0] as number)
-    : 0
-
-  if (session.status === 'ongoing') {
-    if (isSwipe && appStore.network_status.connected) {
-      toast.success('Results are now up-to-date!')
-    }
-    counter.value = recordingTime
-    counterTimer()
-
-    if (first) {
-      syncSession()
-      app?.scroll({ top: heightReload, behavior: 'smooth' })
-      app?.addEventListener('scroll', scrollListener)
-    }
-  }
-
-  if (session.status === 'completed' || session.status === 'cancelled') {
-    await appStore.getRunningSessions()
-
-    if (counterInterval.value) {
-      clearInterval(counterInterval.value)
-      counterInterval.value = undefined
-    }
-
-    counter.value = recordingTime
-    app?.removeEventListener('scroll', scrollListener)
-  }
-
-  // reset all state
-  runningDurationIds.value = []
-  unsavedSbtIds.value = []
-  unCompletedColdProbeIds.value = []
-}
-
-const showOffline = ref<boolean>(false)
-
-// Watch network status dengan auto-sync
-watch(
-  () => appStore.network_status.connected,
-  async (isConnected, wasConnected) => {
-    if (!isConnected) {
-      showOffline.value = true
-
-      // record session activities
-      await sessionStore.addSessionActivity({
-        action_label: `network_offline`,
-        recordable: 'Network',
-        notes: `Network disconnected`,
-        timestamp: new Date().toISOString()
-      })
-
-      return
-    }
-
-    if (isConnected && !wasConnected) {
-      console.log('[Session Page] Network reconnected')
-
-      // Show syncing notification if there are pending items
-      if (sessionStore.pending_progress.length > 0) {
-        toast.info('Syncing data...')
-      }
-
-      // record session activities
-      await sessionStore.addSessionActivity({
-        action_label: `network_online`,
-        recordable: 'Network',
-        notes: `Network reconnected`,
-        timestamp: new Date().toISOString()
-      })
-
-      await syncSession({ isSwipe: true })
-    }
-  }
-)
-
-// Watch untuk notifikasi saat sync berhasil
-watch(hasPendingSync, (isPending, wasPending) => {
-  if (wasPending && !isPending) {
-    console.log('[Session Page] All data synced')
-  }
-})
-
-const scrollingTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-const isScrolling = ref<boolean>(false)
 
 const isDisabledAction = computed(() => {
   return (
@@ -175,224 +81,21 @@ const isDisabledAction = computed(() => {
   )
 })
 
-const isRefreshing = ref<boolean>(false)
-
-const scrollListener = async (e: any) => {
-  let top = e.currentTarget.scrollTop
-
-  isScrolling.value = true
-
-  if (!appStore.network_status.connected && top < heightReload) {
-    document.getElementById('app')?.scroll({ top: heightReload, behavior: 'instant' })
-  }
-
-  let timer = 1000
-  if (scrollingTimeout.value) {
-    clearTimeout(scrollingTimeout.value)
-    scrollingTimeout.value = undefined
-  }
-
-  if (top <= 0 && runningDurationIds.value.length) {
-    top = 1
-    timer = 2000
-  }
-
-  if (top >= heightReload) {
-    isScrolling.value = false
-    return
-  }
-
-  scrollingTimeout.value = setTimeout(async () => {
-    if (top === 0 && !isRefreshing.value) {
-      isRefreshing.value = true
-      cycleLoading.value = true
-
-      await sessionStore.addSessionActivity({
-        action_label: `session_refresh`,
-        recordable: 'Session',
-        recordable_id: sessionStore.session?.id,
-        notes: `Refresh session (swipe up)`,
-        timestamp: new Date().toISOString()
-      })
-      await fetchSession({ isSwipe: true })
-
-      isRefreshing.value = false
-      cycleLoading.value = false
-    }
-    if (top < heightReload) {
-      document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
-    }
-    isScrolling.value = false
-  }, timer)
-
-  return () => {
-    if (scrollingTimeout.value) {
-      clearTimeout(scrollingTimeout.value)
-      scrollingTimeout.value = undefined
-    }
-  }
-}
-
-const counter = ref<number>(0)
-const counterInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
-const unCompletedColdProbeIds = ref<Measurement['id'][]>([])
-const counterTimer = () => {
-  if (counterInterval.value) {
-    clearInterval(counterInterval.value)
-    counterInterval.value = undefined
-  }
-
-  counterInterval.value = setInterval(() => {
-    counter.value += 1
-  }, 1000)
-
-  return () => {
-    if (counterInterval.value) {
-      clearInterval(counterInterval.value)
-      counterInterval.value = undefined
-    }
-  }
-}
 const recordingTime = computed<string>(() => {
-  let hours: number | string = '00'
-  let minutes: number | string = '00'
-  let seconds: number | string = '00'
-  seconds = (counter.value % 60).toString().padStart(2, '0')
-  if (counter.value >= 60) {
-    minutes = Math.floor(counter.value / 60)
-    if (counter.value >= 3600) minutes = minutes % 60
-    minutes = minutes.toString().padStart(2, '0')
-  }
-  if (counter.value >= 3600) {
-    hours = Math.floor(counter.value / 3600)
-      .toString()
-      .padStart(2, '0')
-  }
-  return `${hours}:${minutes}:${seconds}`
+  const time = sessionStore.session?.start_time
+  const diff = now.value.diff(dayjs(time), 'second')
+  return secondsToDuration(diff)
 })
-
-const updatingMeasurementIds = ref<Measurement['id'][]>([])
-const onToggleUpdatedMeasurement = (payload: { id: Measurement['id']; updated: boolean }) => {
-  if (payload.updated) {
-    updatingMeasurementIds.value = updatingMeasurementIds.value.filter((i) => i !== payload.id)
-  } else {
-    if (!updatingMeasurementIds.value.includes(payload.id)) {
-      updatingMeasurementIds.value.push(payload.id)
-    }
-  }
-}
-
-const runningDurationIds = ref<Measurement['id'][]>([])
-const onToggleRunningDuration = (data: Measurement) => {
-  const found = runningDurationIds.value.includes(data.id)
-  if (found) {
-    runningDurationIds.value = runningDurationIds.value.filter((i) => i !== data.id)
-  } else {
-    runningDurationIds.value.push(data.id)
-  }
-}
-
-const unsavedSbtIds = ref<Measurement['id'][]>([])
-const onToggleSavedSbt = (payload: { id: Measurement['id']; saved: boolean }) => {
-  if (payload.saved) {
-    unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== payload.id)
-  } else {
-    if (!unsavedSbtIds.value.includes(payload.id)) {
-      unsavedSbtIds.value.push(payload.id)
-    }
-  }
-}
-
-const showReviewMode = ref<boolean>(false)
-const containerHeight = ref<string>('100%')
-
-const updateHeightTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-watch(showReviewMode, (val) => {
-  if (sessionStore.session?.status === 'ongoing') {
-    document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
-  }
-  if (val) focusMeasurement.value = 0
-  updateHeightTimeout.value = setTimeout(() => {
-    const el = document.getElementById('container-record-measurement')
-    let realHeight = el?.clientHeight || 0
-    if (val) realHeight = realHeight / 2
-    if (fixedMeasurement.value) realHeight = realHeight + 128
-    else realHeight = realHeight + 64
-    containerHeight.value = `${realHeight + 44}px`
-  }, 1000)
-
-  return () => {
-    if (updateHeightTimeout.value) {
-      clearTimeout(updateHeightTimeout.value)
-      updateHeightTimeout.value = undefined
-    }
-  }
-})
-
-const focusMeasurement = ref<Measurement['id']>(0)
-
-const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
-  let timer = 500
-  if (val.id === focusMeasurement.value) return
-  focusMeasurement.value = val.id
-
-  if (checkReviewMode) {
-    if (!showReviewMode.value) return
-    showReviewMode.value = false
-  }
-
-  const measurements = sessionStore.session_measurements
-  let isFirst = false
-  if (measurements.length <= 1) return
-  else {
-    const first = fixedMeasurement.value
-      ? sessionStore.session_measurements[1]
-      : sessionStore.session_measurements[0]
-    if (first.id === val.id) isFirst = true
-  }
-
-  collapseTimeout.value = setTimeout(() => {
-    if (val.is_fixed) {
-      isMeasurementCollapsed.value = false
-    } else {
-      if (isFirst) {
-        const app = document.getElementById(`app`)
-        app?.scrollTo({ top: 112, behavior: 'smooth' })
-      } else {
-        const record = document.getElementById(`measurement-record-${val.id}`)
-        record?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-      }
-
-      const menu = document.getElementById(`measurement-nav-${val.id}`)
-      menu?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-    }
-  }, timer)
-
-  return () => {
-    if (collapseTimeout.value) {
-      clearTimeout(collapseTimeout.value)
-      collapseTimeout.value = undefined
-    }
-  }
-}
-const showSessionComments = ref<boolean>(false)
 
 const normalMeasurements = computed<Measurement[]>(() => {
   if (showReviewMode.value) return sessionStore.session_measurements
   return sessionStore.session_measurements.filter((i) => !i.is_fixed)
 })
+
 const fixedMeasurement = computed<Measurement | undefined>(() =>
   sessionStore.session_measurements.find((i) => i.is_fixed)
 )
-const isMeasurementCollapsed = ref<boolean>(true)
-watch(isMeasurementCollapsed, () => {
-  document.getElementById('fixed-measurement')?.scrollTo({ top: 0, behavior: 'smooth' })
-})
 
-const endSessionStatus = ref<'normal' | 'group_reason' | 'empty_record'>('normal')
-const groupReasons = ref<string[]>([])
 const isAllMeasurementResultEmpty = computed<boolean>(() => {
   const isAllEmpty = []
   const recordMeasurments = sessionStore.session_measurements.filter((i) => !i.is_dropped)
@@ -468,189 +171,6 @@ const isAllMeasurementResultEmpty = computed<boolean>(() => {
   return !isAllEmpty.includes(false)
 })
 
-const showEndSession = ref<boolean>(false)
-const endSessionLoading = ref<boolean>(false)
-
-const openEndSession = () => {
-  const unfinishedProbings: Measurement[] = sessionStore.session_measurements.filter(
-    (i) => i?.type === 'Measurement::Probing' && !i.submitted_at && !i.is_dropped
-  )
-  let isNotCompletedProbes = false
-  let isNotSavedProbing = false
-  unfinishedProbings.forEach((i) => {
-    const probes = Object.keys(i.results).length
-    const trials = i.target?.probing_number_of_trial || 0
-    if (probes < trials) isNotCompletedProbes = true
-    else isNotSavedProbing = true
-  })
-
-  groupReasons.value = []
-  const runningDuration = runningDurationIds.value.length
-  const unsavedSbt = unsavedSbtIds.value.length
-  const unCompletedColdProbe = unCompletedColdProbeIds.value.length
-
-  if (
-    isNotCompletedProbes ||
-    isNotSavedProbing ||
-    runningDuration ||
-    unsavedSbt ||
-    unCompletedColdProbe
-  ) {
-    endSessionStatus.value = 'group_reason'
-    if (runningDuration) groupReasons.value.push(`${runningDuration} timer(s) are still running`)
-    if (isNotCompletedProbes) groupReasons.value.push('Minimum required probes have not been met')
-    if (isNotSavedProbing) groupReasons.value.push('Actions for probing have not been saved')
-    if (unsavedSbt) groupReasons.value.push("The target with SBT hasn't saved its result")
-    if (unCompletedColdProbe)
-      groupReasons.value.push("You haven't completed data collection for the cold probe")
-  } else if (isAllMeasurementResultEmpty.value) {
-    endSessionStatus.value = 'empty_record'
-  } else {
-    endSessionStatus.value = 'normal'
-  }
-  showEndSession.value = true
-}
-
-const trunOffTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-const onTrunOffAllAndEndSession = async () => {
-  showEndSession.value = false
-  showReviewMode.value = true
-  cycleLoading.value = true
-  const length = sessionStore.session_measurements.length
-
-  for (let idx = 0; idx < length; idx++) {
-    const measurement: Measurement = sessionStore.session_measurements[idx]
-    if (!measurement.is_dropped) {
-      if (runningDurationIds.value.includes(measurement.id)) {
-        runningDurationIds.value = runningDurationIds.value.filter((i) => i !== measurement.id)
-      }
-      if (unsavedSbtIds.value.includes(measurement.id)) {
-        unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== measurement.id)
-      }
-
-      if (unCompletedColdProbeIds.value.includes(measurement.id)) {
-        unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter(
-          (i) => i !== measurement.id
-        )
-      }
-
-      const params: UpdateMeasurementParams = {
-        id: measurement.id,
-        measurement: { is_dropped: true },
-        data_result: { ...measurement, is_dropped: true }
-      }
-      const { success, message } = await sessionStore.updateMeasurement(params)
-      if (!success) {
-        toast.error(message)
-      }
-    }
-  }
-
-  endSessionStatus.value = 'normal'
-  trunOffTimeout.value = setTimeout(() => {
-    cycleLoading.value = false
-    showEndSession.value = true
-  }, 500)
-
-  return () => {
-    if (trunOffTimeout.value) {
-      clearTimeout(trunOffTimeout.value)
-      trunOffTimeout.value = undefined
-    }
-  }
-}
-
-const keepActiveTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-const onKeepActiveAndEndSession = () => {
-  showEndSession.value = false
-  showReviewMode.value = true
-  endSessionStatus.value = 'normal'
-  keepActiveTimeout.value = setTimeout(() => {
-    showEndSession.value = true
-  }, 500)
-
-  return () => {
-    if (keepActiveTimeout.value) {
-      clearTimeout(keepActiveTimeout.value)
-      keepActiveTimeout.value = undefined
-    }
-  }
-}
-
-const onEndSession = async () => {
-  endSessionLoading.value = true
-
-  // ✅ Resolve semua pending dulu sebelum end session
-  if (sessionStore.pending_progress.length > 0) {
-    await sessionStore.resolvePendingProgress()
-  }
-
-  const measurements = sessionStore.session_measurements || []
-  const payload: ResolveAllMeasurementsParams = {
-    params: measurements?.map((i) => {
-      /** skip checking results normalize -- to temporarily skip missing data */
-
-      // let results: Measurement['results'] = {}
-
-      // if (i.type === 'Measurement::Sbt') {
-      //   const res = Object.values(i.results).filter(
-      //     (i: any) => Number(i.prompt_id) && Number(i.target_task_id)
-      //   )
-      //   results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
-      // } else if (i.type === 'Measurement::Prompting' && i.target?.is_group) {
-      //   const res = Object.values(i.results).filter(
-      //     (i: any) => Number(i.prompt_id) && Number(i.target_id)
-      //   )
-      //   results = Object.fromEntries(res.map((i, idx) => [idx + 1, i]))
-      // } else {
-      //   results = { ...i.results }
-      // }
-
-      return { id: i.id, results: i.results }
-    })
-  }
-
-  const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements(payload)
-  if (!s1) {
-    endSessionLoading.value = false
-    toast.error(m1)
-    return
-  }
-
-  const { success: s2, message: m2 } = await sessionStore.endSession()
-  if (!s2) {
-    endSessionLoading.value = false
-    toast.error(m2)
-    return
-  }
-
-  checkActionRecommendations()
-  duplicateImageCommentsToClientDocument()
-}
-
-const showActionRecommendations = ref<boolean>(false)
-const checkActionRecommendations = async () => {
-  const { success, data } = await sessionStore.getSessionRecommendations()
-  endSessionLoading.value = false
-  showEndSession.value = false
-
-  toast.success('The session has been completed.')
-
-  if (!success) {
-    onExitSession()
-    return
-  }
-
-  if (data.action_recommendations.length) {
-    showActionRecommendations.value = true
-  } else {
-    onExitSession()
-  }
-}
-
-const isOpenMastered = ref<boolean>(true)
-const isOpenMaintenance = ref<boolean>(true)
-
 const masteredRecommendations = computed(() => {
   return sessionStore.session_recommendations.filter((r) => r.recommended_action === 'mastered')
 })
@@ -698,6 +218,426 @@ const passedCompleteMaintenanceTargets = computed(() => {
   })
 })
 
+/** === WATCHERS === */
+
+// Watch network status dengan auto-sync
+watch(
+  () => appStore.network_status.connected,
+  async (isConnected, wasConnected) => {
+    if (!isConnected) {
+      showOffline.value = true
+
+      // record session activities
+      sessionStore.addSessionActivity({
+        action_label: `network_offline`,
+        recordable: 'Network',
+        notes: `Network disconnected`,
+        timestamp: new Date().toISOString()
+      })
+
+      return
+    }
+
+    if (isConnected && !wasConnected) {
+      console.log('[Session Page] Network reconnected')
+
+      // Show syncing notification if there are pending items
+      if (sessionStore.pending_progress.length > 0) {
+        toast.info('Syncing data...')
+      }
+
+      // record session activities
+      sessionStore.addSessionActivity({
+        action_label: `network_online`,
+        recordable: 'Network',
+        notes: `Network reconnected`,
+        timestamp: new Date().toISOString()
+      })
+
+      await syncSession({ isSwipe: true })
+    }
+  }
+)
+
+// Watch untuk notifikasi saat sync berhasil
+watch(
+  () => hasPendingSync.value,
+  (isPending, wasPending) => {
+    if (wasPending && !isPending) {
+      console.log('[Session Page] All data synced')
+    }
+  }
+)
+
+watch(
+  () => showReviewMode.value,
+  (val) => {
+    if (sessionStore.session?.status === 'ongoing') {
+      document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
+    }
+    if (val) focusMeasurement.value = 0
+
+    const el = document.getElementById('container-record-measurement')
+    let realHeight = el?.clientHeight || 0
+    if (val) realHeight = realHeight / 2
+    if (fixedMeasurement.value) realHeight = realHeight + 128
+    else realHeight = realHeight + 64
+    containerHeight.value = `${realHeight + 44}px`
+  }
+)
+
+watch(
+  () => isMeasurementCollapsed.value,
+  () => {
+    document.getElementById('fixed-measurement')?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+)
+
+/** === METHODS === */
+
+interface FetchSessionProps {
+  first?: boolean
+  isSwipe?: boolean
+}
+// Improved syncSession dengan proper feedback
+async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) {
+  if (!appStore.network_status.connected) {
+    console.log('[syncSession] Skipped - offline')
+    return
+  }
+
+  const pendingCount = sessionStore.pending_progress.length
+
+  if (pendingCount > 0) {
+    console.log(`[syncSession] Syncing ${pendingCount} pending items...`)
+  }
+
+  const { success, data } = await sessionStore.resolvePendingProgress()
+  sessionLoading.value = false
+
+  if (!success) return
+
+  if (isSwipe && appStore.network_status.connected) {
+    if (data && data.succeeded > 0) {
+      toast.success(`${data.succeeded} item(s) synced`)
+    } else {
+      toast.success('Results are now up-to-date!')
+    }
+  }
+}
+
+async function fetchSession(
+  { first, isSwipe }: FetchSessionProps = { first: false, isSwipe: false }
+) {
+  const slug = route.params?.slug as string
+  const { success, data } = await sessionStore.getSession({ slug })
+  const session = data as Session
+  await sessionStore.getSessionComments({ id: session?.id, filter: '' })
+  sessionLoading.value = false
+  if (!success) return
+
+  const app = document.getElementById('app')
+
+  if (session.status === 'ongoing') {
+    if (isSwipe && appStore.network_status.connected) {
+      toast.success('Results are now up-to-date!')
+    }
+
+    if (first) {
+      syncSession()
+      app?.scroll({ top: heightReload, behavior: 'smooth' })
+      app?.addEventListener('scroll', scrollListener)
+    }
+  }
+
+  if (session.status === 'completed' || session.status === 'cancelled') {
+    await appStore.getRunningSessions()
+
+    app?.removeEventListener('scroll', scrollListener)
+  }
+
+  // reset all state
+  runningDurationLatency.value = []
+  unsavedSbtIds.value = []
+  unCompletedColdProbeIds.value = []
+}
+
+const scrollListener = async (e: any) => {
+  let top = e.currentTarget.scrollTop
+
+  isScrolling.value = true
+
+  if (!appStore.network_status.connected && top < heightReload) {
+    document.getElementById('app')?.scroll({ top: heightReload, behavior: 'instant' })
+  }
+
+  let timer = 1000
+  if (scrollingTimeout.value) {
+    clearTimeout(scrollingTimeout.value)
+    scrollingTimeout.value = undefined
+  }
+
+  if (top <= 0 && runningDurationLatency.value.length) {
+    top = 1
+    timer = 2000
+  }
+
+  if (top >= heightReload) {
+    isScrolling.value = false
+    return
+  }
+
+  scrollingTimeout.value = setTimeout(async () => {
+    if (top === 0 && !isRefreshing.value) {
+      isRefreshing.value = true
+      cycleLoading.value = true
+
+      sessionStore.addSessionActivity({
+        action_label: `session_refresh`,
+        recordable: 'Session',
+        recordable_id: sessionStore.session?.id,
+        notes: `Refresh session (swipe up)`,
+        timestamp: new Date().toISOString()
+      })
+      await fetchSession({ isSwipe: true })
+
+      isRefreshing.value = false
+      cycleLoading.value = false
+    }
+    if (top < heightReload) {
+      document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
+    }
+    isScrolling.value = false
+  }, timer)
+
+  return () => {
+    if (scrollingTimeout.value) {
+      clearTimeout(scrollingTimeout.value)
+      scrollingTimeout.value = undefined
+    }
+  }
+}
+
+const onToggleUpdatedMeasurement = (payload: { id: Measurement['id']; updated: boolean }) => {
+  if (payload.updated) {
+    updatingMeasurementIds.value = updatingMeasurementIds.value.filter((i) => i !== payload.id)
+  } else {
+    if (!updatingMeasurementIds.value.includes(payload.id)) {
+      updatingMeasurementIds.value.push(payload.id)
+    }
+  }
+}
+
+const onToggleSavedSbt = (payload: { id: Measurement['id']; saved: boolean }) => {
+  if (payload.saved) {
+    unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== payload.id)
+  } else {
+    if (!unsavedSbtIds.value.includes(payload.id)) {
+      unsavedSbtIds.value.push(payload.id)
+    }
+  }
+}
+
+const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
+  let timer = 300
+  if (val.id === focusMeasurement.value) return
+  focusMeasurement.value = val.id
+
+  if (checkReviewMode) {
+    if (!showReviewMode.value) return
+    showReviewMode.value = false
+  }
+
+  const measurements = sessionStore.session_measurements
+  let isFirst = false
+  if (measurements.length <= 1) return
+  else {
+    const first = fixedMeasurement.value
+      ? sessionStore.session_measurements[1]
+      : sessionStore.session_measurements[0]
+    if (first.id === val.id) isFirst = true
+  }
+
+  collapseTimeout.value = setTimeout(() => {
+    if (val.is_fixed) {
+      isMeasurementCollapsed.value = false
+    } else {
+      if (isFirst) {
+        const app = document.getElementById(`app`)
+        app?.scrollTo({ top: 112, behavior: 'smooth' })
+      } else {
+        const record = document.getElementById(`measurement-record-${val.id}`)
+        record?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+      }
+
+      const menu = document.getElementById(`measurement-nav-${val.id}`)
+      menu?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+    }
+  }, timer)
+
+  return () => {
+    if (collapseTimeout.value) {
+      clearTimeout(collapseTimeout.value)
+      collapseTimeout.value = undefined
+    }
+  }
+}
+
+const openEndSession = () => {
+  const measurements = sessionStore.session_measurements || []
+
+  const unfinishedProbings: Measurement[] = measurements.filter(
+    (i) => i?.type === 'Measurement::Probing' && !i.submitted_at && !i.is_dropped
+  )
+  let isNotCompletedProbes = false
+  let isNotSavedProbing = false
+  unfinishedProbings.forEach((i) => {
+    const probes = Object.keys(i.results || {}).length
+    const trials = i.target?.probing_number_of_trial || 0
+    if (probes < trials) isNotCompletedProbes = true
+    else isNotSavedProbing = true
+  })
+
+  groupReasons.value = []
+  runningDurationLatency.value = measurements.filter((i) => {
+    const res = Object.values(i.results || {}) as MeasurementResultsDurationOrLatency[]
+    return (
+      (i.type === 'Measurement::Duration' || i.type === 'Measurement::Latency') &&
+      !i.submitted_at &&
+      !i.is_dropped &&
+      res.some((r) => r.started_at && !r.ended_at)
+    )
+  })
+  const unsavedSbt = unsavedSbtIds.value.length
+  const unCompletedColdProbe = unCompletedColdProbeIds.value.length
+
+  if (
+    isNotCompletedProbes ||
+    isNotSavedProbing ||
+    runningDurationLatency.value.length ||
+    unsavedSbt ||
+    unCompletedColdProbe
+  ) {
+    endSessionStatus.value = 'group_reason'
+    if (runningDurationLatency.value.length) {
+      groupReasons.value.push(`${runningDurationLatency.value.length} timer(s) are still running`)
+    }
+
+    if (isNotCompletedProbes) groupReasons.value.push('Minimum required probes have not been met')
+    if (isNotSavedProbing) groupReasons.value.push('Actions for probing have not been saved')
+    if (unsavedSbt) groupReasons.value.push("The target with SBT hasn't saved its result")
+
+    if (unCompletedColdProbe) {
+      groupReasons.value.push("You haven't completed data collection for the cold probe")
+    }
+  } else if (isAllMeasurementResultEmpty.value) {
+    endSessionStatus.value = 'empty_record'
+  } else {
+    endSessionStatus.value = 'normal'
+  }
+  showEndSession.value = true
+}
+
+const onTrunOffAllAndEndSession = async () => {
+  showEndSession.value = false
+  showReviewMode.value = true
+  cycleLoading.value = true
+  const length = sessionStore.session_measurements.length
+
+  for (let idx = 0; idx < length; idx++) {
+    const measurement: Measurement = sessionStore.session_measurements[idx]
+    if (!measurement.is_dropped) {
+      if (runningDurationLatency.value.find((i) => i.id === measurement.id)) {
+        runningDurationLatency.value = runningDurationLatency.value.filter(
+          (i) => i.id !== measurement.id
+        )
+      }
+      if (unsavedSbtIds.value.includes(measurement.id)) {
+        unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== measurement.id)
+      }
+
+      if (unCompletedColdProbeIds.value.includes(measurement.id)) {
+        unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter(
+          (i) => i !== measurement.id
+        )
+      }
+
+      const params: UpdateMeasurementParams = {
+        id: measurement.id,
+        measurement: { is_dropped: true },
+        data_result: { ...measurement, is_dropped: true }
+      }
+      const { success, message } = await sessionStore.updateMeasurement(params)
+      if (!success) {
+        toast.error(message)
+      }
+    }
+  }
+
+  endSessionStatus.value = 'normal'
+  cycleLoading.value = false
+  showEndSession.value = true
+}
+
+const onKeepActiveAndEndSession = () => {
+  showEndSession.value = false
+  showReviewMode.value = true
+  endSessionStatus.value = 'normal'
+  showEndSession.value = true
+}
+
+const onEndSession = async () => {
+  endSessionLoading.value = true
+
+  // ✅ Resolve semua pending dulu sebelum end session
+  if (sessionStore.pending_progress.length > 0) {
+    await sessionStore.resolvePendingProgress()
+  }
+
+  const measurements = sessionStore.session_measurements || []
+  const payload: ResolveAllMeasurementsParams = {
+    params: measurements?.map((i) => {
+      return { id: i.id, results: i.results }
+    })
+  }
+
+  const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements(payload)
+  if (!s1) {
+    endSessionLoading.value = false
+    toast.error(m1)
+    return
+  }
+
+  const { success: s2, message: m2 } = await sessionStore.endSession()
+  if (!s2) {
+    endSessionLoading.value = false
+    toast.error(m2)
+    return
+  }
+
+  checkActionRecommendations()
+  duplicateImageCommentsToClientDocument()
+}
+
+const checkActionRecommendations = async () => {
+  const { success, data } = await sessionStore.getSessionRecommendations()
+  endSessionLoading.value = false
+  showEndSession.value = false
+
+  toast.success('The session has been completed.')
+
+  if (!success) {
+    onExitSession()
+    return
+  }
+
+  if (data.action_recommendations.length) {
+    showActionRecommendations.value = true
+  } else {
+    onExitSession()
+  }
+}
+
 const generateSuccessMetric = (target?: Target) => {
   if (!target) return ''
   let prefix = ''
@@ -732,7 +672,6 @@ const generateSuccessMetric = (target?: Target) => {
   return prefix + goalText + suffix
 }
 
-const exitSessionLoading = ref<boolean>(false)
 const onExitSession = async () => {
   exitSessionLoading.value = true
   await appStore.getRunningSessions()
@@ -799,9 +738,6 @@ const duplicateImageCommentsToClientDocument = async () => {
   }
 }
 
-// Periodic check untuk stuck items
-const periodicCheckInterval = ref<ReturnType<typeof setInterval> | undefined>(undefined)
-
 onMounted(async () => {
   const app = document.getElementById('app')
   if (app) {
@@ -867,31 +803,15 @@ onUnmounted(() => {
     clearInterval(periodicCheckInterval.value)
     periodicCheckInterval.value = undefined
   }
-  if (counterInterval.value) {
-    clearInterval(counterInterval.value)
-    counterInterval.value = undefined
-  }
 
   // Clear timeout to prevent memory leaks
   if (scrollingTimeout.value) {
     clearTimeout(scrollingTimeout.value)
     scrollingTimeout.value = undefined
   }
-  if (updateHeightTimeout.value) {
-    clearTimeout(updateHeightTimeout.value)
-    updateHeightTimeout.value = undefined
-  }
   if (collapseTimeout.value) {
     clearTimeout(collapseTimeout.value)
     collapseTimeout.value = undefined
-  }
-  if (trunOffTimeout.value) {
-    clearTimeout(trunOffTimeout.value)
-    trunOffTimeout.value = undefined
-  }
-  if (keepActiveTimeout.value) {
-    clearTimeout(keepActiveTimeout.value)
-    keepActiveTimeout.value = undefined
   }
 
   // Trigger sync sebelum unmount jika ada perubahan
@@ -944,7 +864,9 @@ onUnmounted(() => {
       <div class="text-xs font-medium text-slate-6">ID {{ sessionStore.session?.id }}</div>
       <div
         class="h-2 w-2 shrink-0 rounded-full transition-colors"
-        :class="{ 'bg-tomato-7': counter % 2 === 0, 'bg-slate-6': counter % 2 === 1 }"
+        :class="[
+          sessionStore.session?.status === 'ongoing' ? 'animate-pulse-recording' : 'bg-slate-6'
+        ]"
       ></div>
       <div class="grid w-16 grid-cols-5 items-center text-xs font-semibold text-slate-8">
         <div class="flex justify-center">{{ recordingTime.split(':')[0] }}</div>
@@ -986,7 +908,7 @@ onUnmounted(() => {
     v-if="!sessionLoading && sessionStore.session?.status === 'ongoing'"
     class="flex h-28 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
   >
-    <div v-if="runningDurationIds.length">
+    <div v-if="runningDurationLatency.length">
       <div>Can't refresh while the timer is running.</div>
       <div>Please stop the timer first.</div>
     </div>
@@ -1034,12 +956,9 @@ onUnmounted(() => {
           :key="measurement.id"
           :id="`measurement-record-${measurement.id}`"
           :measurement="measurement"
-          :counter="counter"
           :review-mode="showReviewMode"
           :is-disabled-action="isDisabledAction"
-          :is-running="runningDurationIds.includes(measurement.id)"
           @toggle-updated="onToggleUpdatedMeasurement($event)"
-          @toggle-running="onToggleRunningDuration(measurement)"
           @toggle-saved="onToggleSavedSbt($event)"
           @check-completed-cold-probe="handleCompletedColdProbe"
           @click="onFocusMeasurement(measurement, true)"
@@ -1070,12 +989,9 @@ onUnmounted(() => {
       </div>
       <MeasurementRecord
         :measurement="fixedMeasurement"
-        :counter="counter"
         :is-collapsed="isMeasurementCollapsed"
         :is-disabled-action="isDisabledAction"
-        :is-running="runningDurationIds.includes(fixedMeasurement.id)"
         @toggle-updated="onToggleUpdatedMeasurement($event)"
-        @toggle-running="onToggleRunningDuration(fixedMeasurement)"
         @toggle-saved="onToggleSavedSbt($event)"
         @toggle-collapsed="isMeasurementCollapsed = $event"
         @check-completed-cold-probe="handleCompletedColdProbe"
