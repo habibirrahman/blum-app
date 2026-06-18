@@ -559,10 +559,8 @@ onUnmounted(() => {
             <PartialIntervalRecording
               v-if="measurementType.includes('Pir')"
               :measurement="measurement"
-              :measurement-results="measurementResults as MeasurementPir['results']"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
-              @fetch-session="emit('fetch-session')"
             />
             <Probing
               v-if="measurementType.includes('Probing')"
