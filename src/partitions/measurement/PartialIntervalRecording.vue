@@ -10,6 +10,7 @@ import { useToast } from 'vue-toastification'
 import { Icon } from '@iconify/vue/dist/iconify.js'
 import AppButton from '@/components/AppButton.vue'
 import { useClock } from '@/composable/use-clock'
+import dayjs from 'dayjs'
 
 interface Props {
   measurement: Measurement
@@ -84,8 +85,9 @@ const elapsedTime = computed<number>(() => {
   }
 
   // Ab sini kita butuh now.value (recording sedang berjalan / overtime running)
-  const datetimeNow = now.value.valueOf()
-
+  const datetimeNow: number = isFinished.value
+    ? dayjs(sessionStore.session?.end_time).valueOf()
+    : now.value.valueOf()
   // Overtime sedang berjalan
   if (isOvertimeRunning.value && props.measurement.overtime_started_at) {
     const overtimeStart = new Date(props.measurement.overtime_started_at).getTime()
@@ -239,7 +241,9 @@ const remainingDurationString = computed<string>(() => {
 const overtimeDurationString = computed<string>(() => {
   if (!props.measurement.overtime_started_at) return '00:00:00'
 
-  const datetimeNow = now.value.valueOf()
+  const datetimeNow: number = isFinished.value
+    ? dayjs(sessionStore.session?.end_time).valueOf()
+    : now.value.valueOf()
 
   const start = new Date(props.measurement.overtime_started_at).getTime()
   const diff = Math.max(0, Math.floor((datetimeNow - start) / 1000))
@@ -346,7 +350,9 @@ const formatTime = (seconds: number): string => {
 const getOvertimeSeconds = (): number => {
   if (!props.measurement.overtime_started_at) return 0
 
-  const datetimeNow = now.value.valueOf()
+  const datetimeNow: number = isFinished.value
+    ? dayjs(sessionStore.session?.end_time).valueOf()
+    : now.value.valueOf()
   let end = datetimeNow
 
   if (props.measurement.overtime_ended_at) {
@@ -442,7 +448,9 @@ const onStartOvertime = async () => {
 }
 
 const roundOvertimeDuration = (overtimeStartedAt: string) => {
-  const datetimeNow = now.value.valueOf()
+  const datetimeNow: number = isFinished.value
+    ? dayjs(sessionStore.session?.end_time).valueOf()
+    : now.value.valueOf()
 
   const start = new Date(overtimeStartedAt).getTime()
   const durationSeconds = Math.floor((datetimeNow - start) / 1000)
