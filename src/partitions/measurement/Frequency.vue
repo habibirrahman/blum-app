@@ -55,6 +55,9 @@ const isDisabled = computed(() => {
   if (!durationInMinutes.value) return false
   if (props.measurement.target.frequency_format !== 'custom') return false
 
+  const session = sessionStore.session
+  if (session?.status !== 'ongoing') return true
+
   return counterFromStartTimeInSeconds.value > durationInMinutes.value * 60
 })
 

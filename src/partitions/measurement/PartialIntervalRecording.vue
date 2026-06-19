@@ -36,13 +36,15 @@ const nearEndToastShown = ref<boolean>(false)
 /** COMPUTED */
 
 const counter = computed(() => {
-  if (
-    sessionStore.session?.status === 'completed' ||
-    sessionStore.session?.status === 'cancelled'
-  ) {
-    return dayjs(sessionStore.session?.end_time).valueOf()
+  if (sessionStore.session?.status === 'draft') {
+    return 0
   }
-  return now.value.valueOf()
+  if (sessionStore.session?.status === 'ongoing') {
+    return now.value.valueOf()
+  }
+
+  // for completed or cancelled
+  return dayjs(sessionStore.session?.end_time).valueOf()
 })
 
 const target = computed(() => props.measurement.target || {})
