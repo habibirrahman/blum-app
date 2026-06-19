@@ -35,6 +35,16 @@ const nearEndToastShown = ref<boolean>(false)
 
 /** COMPUTED */
 
+const counter = computed(() => {
+  if (
+    sessionStore.session?.status === 'completed' ||
+    sessionStore.session?.status === 'cancelled'
+  ) {
+    return dayjs(sessionStore.session?.end_time).valueOf()
+  }
+  return now.value.valueOf()
+})
+
 const target = computed(() => props.measurement.target || {})
 
 const intervalSeconds = computed(() => (target.value.interval || 1) * 60)
@@ -84,21 +94,17 @@ const elapsedTime = computed<number>(() => {
     return start ? Math.floor((endTime - start) / 1000) : 0
   }
 
-  // Ab sini kita butuh now.value (recording sedang berjalan / overtime running)
-  const datetimeNow: number = isFinished.value
-    ? dayjs(sessionStore.session?.end_time).valueOf()
-    : now.value.valueOf()
   // Overtime sedang berjalan
   if (isOvertimeRunning.value && props.measurement.overtime_started_at) {
     const overtimeStart = new Date(props.measurement.overtime_started_at).getTime()
-    const diff = Math.floor((datetimeNow - overtimeStart) / 1000)
+    const diff = Math.floor((counter.value - overtimeStart) / 1000)
     return durationSeconds.value + diff
   }
 
   // Recording sedang berjalan (custom_start atau start_with_session)
   if (props.measurement.recording_started_at) {
     const start = new Date(props.measurement.recording_started_at).getTime()
-    return Math.floor((datetimeNow - start) / 1000)
+    return Math.floor((counter.value - start) / 1000)
   }
 
   return 0
@@ -241,12 +247,8 @@ const remainingDurationString = computed<string>(() => {
 const overtimeDurationString = computed<string>(() => {
   if (!props.measurement.overtime_started_at) return '00:00:00'
 
-  const datetimeNow: number = isFinished.value
-    ? dayjs(sessionStore.session?.end_time).valueOf()
-    : now.value.valueOf()
-
   const start = new Date(props.measurement.overtime_started_at).getTime()
-  const diff = Math.max(0, Math.floor((datetimeNow - start) / 1000))
+  const diff = Math.max(0, Math.floor((counter.value - start) / 1000))
   return formatTime(diff)
 })
 
@@ -350,13 +352,12 @@ const formatTime = (seconds: number): string => {
 const getOvertimeSeconds = (): number => {
   if (!props.measurement.overtime_started_at) return 0
 
-  const datetimeNow: number = isFinished.value
-    ? dayjs(sessionStore.session?.end_time).valueOf()
-    : now.value.valueOf()
-  let end = datetimeNow
+  let end = 0
 
   if (props.measurement.overtime_ended_at) {
     end = new Date(props.measurement.overtime_ended_at).getTime()
+  } else {
+    end = counter.value
   }
   const start = new Date(props.measurement.overtime_started_at).getTime()
   return Math.max(0, Math.floor((end - start) / 1000))
@@ -448,12 +449,8 @@ const onStartOvertime = async () => {
 }
 
 const roundOvertimeDuration = (overtimeStartedAt: string) => {
-  const datetimeNow: number = isFinished.value
-    ? dayjs(sessionStore.session?.end_time).valueOf()
-    : now.value.valueOf()
-
   const start = new Date(overtimeStartedAt).getTime()
-  const durationSeconds = Math.floor((datetimeNow - start) / 1000)
+  const durationSeconds = Math.floor((counter.value - start) / 1000)
 
   // Round duration to nearest minute (>= 30s rounds up, < 30s rounds down)
   const remainderSeconds = durationSeconds % 60
