@@ -55,6 +55,10 @@ const isDisabled = computed(() => {
   if (!durationInMinutes.value) return false
   if (props.measurement.target.frequency_format !== 'custom') return false
 
+  const session = sessionStore.session
+  if (session?.status === 'draft') return false
+  if (session?.status === 'completed' || session?.status === 'cancelled') return false
+
   return counterFromStartTimeInSeconds.value > durationInMinutes.value * 60
 })
 
@@ -96,7 +100,8 @@ const onSaveScore = debounce(async function (score: number) {
 }, 1000)
 
 const onChangeScore = async (score: number) => {
-  if (isDisabled.value) return
+  const session = sessionStore.session
+  if (session?.status !== 'ongoing' || isDisabled.value) return
 
   // change state
   currentScore.value += score
