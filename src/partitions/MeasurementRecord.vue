@@ -11,7 +11,6 @@ import {
   type TargetType,
   type MeasurementFrequency,
   type MeasurementDurationOrLatency,
-  type MeasurementPir,
   type MeasurementPrompting,
   type MeasurementTaskAnalysis,
   type MeasurementSbt
