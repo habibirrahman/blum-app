@@ -82,8 +82,12 @@ const isDisabledAction = computed(() => {
 })
 
 const recordingTime = computed<string>(() => {
+  if (sessionStore.session?.status === 'draft') return '00:00:00'
+
   const time = sessionStore.session?.start_time
-  const diff = now.value.diff(dayjs(time), 'second')
+  let n = dayjs(sessionStore.session?.end_time)
+  if (sessionStore.session?.status === 'ongoing') n = now.value
+  const diff = n.diff(dayjs(time), 'second')
   return secondsToDuration(diff)
 })
 

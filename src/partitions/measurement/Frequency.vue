@@ -56,7 +56,8 @@ const isDisabled = computed(() => {
   if (props.measurement.target.frequency_format !== 'custom') return false
 
   const session = sessionStore.session
-  if (session?.status !== 'ongoing') return true
+  if (session?.status === 'draft') return false
+  if (session?.status === 'completed' || session?.status === 'cancelled') return false
 
   return counterFromStartTimeInSeconds.value > durationInMinutes.value * 60
 })
@@ -99,7 +100,8 @@ const onSaveScore = debounce(async function (score: number) {
 }, 1000)
 
 const onChangeScore = async (score: number) => {
-  if (isDisabled.value) return
+  const session = sessionStore.session
+  if (session?.status !== 'ongoing' || isDisabled.value) return
 
   // change state
   currentScore.value += score
@@ -127,17 +129,17 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
     <div
       v-if="scoreLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-20 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <div
-      class="flex h-full flex-grow flex-wrap content-center items-center justify-center gap-x-3 gap-y-4"
+      class="flex flex-wrap flex-grow gap-x-3 gap-y-4 justify-center content-center items-center h-full"
       :class="{ 'scale-90': isCollapsed }"
     >
       <div
@@ -160,7 +162,7 @@ onMounted(() => {
           <Icon v-else icon="stash:plus-solid" class="text-5xl" />
         </div>
         <div
-          class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"
+          class="flex justify-center items-center h-5 rounded border border-slate-5 bg-pure-white"
           :class="{
             'pointer-events-none':
               scoreLoading ||
@@ -171,7 +173,7 @@ onMounted(() => {
           @click="onChangeScore(-1)"
         >
           <div
-            class="h-1 w-6 shrink-0 rounded"
+            class="w-6 h-1 rounded shrink-0"
             :class="{
               'bg-slate-5': !currentScore,
               'bg-slate-6': currentScore
@@ -183,15 +185,15 @@ onMounted(() => {
 
     <div
       v-if="!isCollapsed"
-      class="shrink-0 space-y-2 pb-3 text-center text-xs font-medium text-slate-7"
+      class="pb-3 space-y-2 text-xs font-medium text-center shrink-0 text-slate-7"
     >
-      <div class="flex items-center justify-between">
+      <div class="flex justify-between items-center">
         <div>Goal</div>
         <div>{{ measurement.target?.goal }} attempt(s)</div>
       </div>
       <div
         v-if="measurement.target?.frequency_format === 'custom'"
-        class="flex items-center justify-between"
+        class="flex justify-between items-center"
       >
         <div>Duration</div>
         <div>{{ measurement.duration }} minute(s)</div>
