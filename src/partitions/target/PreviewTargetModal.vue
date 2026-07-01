@@ -246,7 +246,7 @@ const onImportTarget = async (targetId: Target['id']) => {
           <div class="text-sm">{{ getTargetType(target?.type) }}</div>
         </div>
         <div
-          v-if="target?.type === 'Target::Duration' || target?.type === 'Target::Latency'"
+          v-if="(target?.type === 'Target::Duration' || target?.type === 'Target::Latency') && !target?.is_group"
           class="flex flex-col"
         >
           <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
@@ -258,7 +258,7 @@ const onImportTarget = async (targetId: Target['id']) => {
             <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
           </div>
         </div>
-        <div v-if="target?.type === 'Target::Percentage'" class="flex flex-col">
+        <div v-if="target?.type === 'Target::Percentage' && !target?.is_group" class="flex flex-col">
           <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
             <div class="text-xs text-slate-8">Goal:</div>
             <div class="text-sm">{{ target?.goal }}%</div>
@@ -275,7 +275,7 @@ const onImportTarget = async (targetId: Target['id']) => {
         <div
           v-if="
             (target?.type === 'Target::Percentage' || target?.type === 'Target::TrialByTrial') &&
-            target?.probing_enable
+            target?.probing_enable && !target?.is_group
           "
           class="flex flex-col"
         >
@@ -293,7 +293,7 @@ const onImportTarget = async (targetId: Target['id']) => {
             </div>
           </div>
         </div>
-        <div v-if="target?.type === 'Target::TrialByTrial'" class="flex flex-col">
+        <div v-if="target?.type === 'Target::TrialByTrial' && !target?.is_group" class="flex flex-col">
           <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
             <div class="text-xs text-slate-8">Goal:</div>
             <div class="text-sm">{{ target?.goal }}%</div>
@@ -307,7 +307,7 @@ const onImportTarget = async (targetId: Target['id']) => {
             <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
           </div>
         </div>
-        <div v-if="target?.type === 'Target::Pir'" class="flex flex-col">
+        <div v-if="target?.type === 'Target::Pir' && !target?.is_group" class="flex flex-col">
           <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
             <div class="text-xs text-slate-8">Goal:</div>
             <div class="text-sm">{{ target?.goal }}%</div>
@@ -341,7 +341,7 @@ const onImportTarget = async (targetId: Target['id']) => {
             </div>
           </div>
         </div>
-        <div v-if="target?.type === 'Target::Frequency'" class="flex flex-col">
+        <div v-if="target?.type === 'Target::Frequency' && !target?.is_group" class="flex flex-col">
           <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
             <div class="text-xs text-slate-8">Goal:</div>
             <div class="text-sm">{{ target?.goal }} attempt(s) per session</div>
@@ -358,7 +358,7 @@ const onImportTarget = async (targetId: Target['id']) => {
             <div class="capitalize-first text-sm">{{ target?.duration }} minute(s)</div>
           </div>
         </div>
-        <div v-if="target?.type === 'Target::Prompting'" class="flex flex-col">
+        <div v-if="target?.type === 'Target::Prompting' && !target?.is_group" class="flex flex-col">
           <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
             <div class="text-xs text-slate-8">Format:</div>
             <div class="capitalize-first text-sm">
@@ -378,38 +378,6 @@ const onImportTarget = async (targetId: Target['id']) => {
                   })
                   ?.join(', ')
               }}
-            </div>
-          </div>
-          <div v-if="target?.is_group" class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Targets within this group:</div>
-            <div class="flex flex-col gap-2">
-              <div
-                v-for="member in target?.members"
-                :key="member?.id"
-                class="text-sm text-slate-10"
-              >
-                <div class="font-semibold">{{ member?.code_definition }} - {{ member?.name }}</div>
-                <div class="whitespace-pre-line">
-                  {{ member?.description || '-' }}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div v-if="target?.is_group" class="flex flex-col gap-1 border-b border-slate-3 py-3">
-            <div class="text-xs text-slate-8">Problem behaviors:</div>
-            <div class="flex flex-col gap-2">
-              <div
-                v-for="problemBehavior in target?.target_problem_behaviors"
-                :key="problemBehavior?.id"
-                class="text-sm text-slate-10"
-              >
-                <div class="font-semibold">
-                  {{ problemBehavior?.code }} - {{ problemBehavior?.code_definition }}
-                </div>
-                <div class="whitespace-pre-line">
-                  {{ problemBehavior?.description || '-' }}
-                </div>
-              </div>
             </div>
           </div>
           <div
@@ -436,6 +404,40 @@ const onImportTarget = async (targetId: Target['id']) => {
           >
             <div class="text-xs text-slate-8">Success metric:</div>
             <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
+          </div>
+        </div>
+        <div v-if="target?.is_group" class="flex flex-col">
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Targets within this group:</div>
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="member in target?.members"
+                :key="member?.id"
+                class="text-sm text-slate-10"
+              >
+                <div class="font-semibold">{{ member?.code_definition }} - {{ member?.name }}</div>
+                <div class="whitespace-pre-line">
+                  {{ member?.description || '-' }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+            <div class="text-xs text-slate-8">Problem behaviors:</div>
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="problemBehavior in target?.target_problem_behaviors"
+                :key="problemBehavior?.id"
+                class="text-sm text-slate-10"
+              >
+                <div class="font-semibold">
+                  {{ problemBehavior?.code }} - {{ problemBehavior?.code_definition }}
+                </div>
+                <div class="whitespace-pre-line">
+                  {{ problemBehavior?.description || '-' }}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div v-if="target?.type === 'Target::Sbt'" class="flex flex-col">
