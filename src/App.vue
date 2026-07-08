@@ -17,14 +17,11 @@ const appStore = useAppStore()
 const loadingApp = ref<boolean>(true)
 const updateRequired = ref<boolean>(false)
 const routeName = computed<string>(() => route.name?.toString() || 'signin')
-const isShowRunningSession = computed<boolean>(
-  () => appStore.running_sessions.length > 0 && routeName.value !== 'session-record'
-)
+
 const isUseNav = computed<boolean>(
   () =>
     routeName.value !== 'signin' &&
     !routeName.value.includes('record') &&
-    !isShowRunningSession.value &&
     routeName.value !== 'new-client-target' &&
     routeName.value !== 'edit-client-target' &&
     routeName.value !== 'session-draft' &&
@@ -209,7 +206,7 @@ const navigations = computed<Nav[]>(() => {
 })
 
 const isHeightFull = computed<boolean>(
-  () => routeName.value === 'signin' || routeName.value === 'profile' || isShowRunningSession.value
+  () => routeName.value === 'signin' || routeName.value === 'profile'
 )
 </script>
 
@@ -217,81 +214,26 @@ const isHeightFull = computed<boolean>(
   <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
   <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
-  <div v-if="loadingApp" class="grid h-full w-full place-items-center font-blum tracking-wide">
-    <div class="flex animate-pulse items-center font-logo text-4xl font-bold text-light-purple-5">
+  <div v-if="loadingApp" class="grid place-items-center w-full h-full tracking-wide font-blum">
+    <div class="flex items-center text-4xl font-bold animate-pulse font-logo text-light-purple-5">
       Blüm
     </div>
   </div>
   <div
     v-else
-    class="font-blum tracking-wide"
+    class="tracking-wide font-blum"
     :class="{ 'pb-14': isUseNav, 'h-full': isHeightFull }"
   >
     <div v-if="routeName !== 'session-record'" class="sticky left-0 top-0 z-[999]">
       <div
-        class="flex w-full items-center justify-center bg-rose-3 text-sm font-medium text-rose-7"
+        class="flex justify-center items-center w-full text-sm font-medium bg-rose-3 text-rose-7"
         :class="{ 'h-8': !networkStatus.connected, 'h-0': networkStatus.connected }"
       >
         <div v-if="!networkStatus.connected">You're offline. Connect to sync your data.</div>
       </div>
     </div>
 
-    <div
-      v-if="isShowRunningSession"
-      class="flex h-full w-full items-center justify-center bg-white"
-    >
-      <div
-        class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
-      ></div>
-      <div class="z-[2] flex max-h-full flex-col items-center gap-4 px-6">
-        <div class="flex flex-col items-center gap-2 pt-6">
-          <div class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3">
-            <div class="text-xl font-semibold uppercase text-lime-8">
-              {{ appStore.running_sessions[0].client?.name?.charAt(0) }}
-            </div>
-          </div>
-          <div class="text-center text-xl font-semibold text-dark-purple-1">
-            You've started {{ appStore.running_sessions.length }} session(s) on the web:
-          </div>
-          <div class="flex w-full flex-col items-center gap-2">
-            <div
-              v-for="session in appStore.running_sessions"
-              :key="session.id"
-              class="max-w-[calc(100vw-48px)] truncate text-center text-sm text-light-purple-4"
-            >
-              <span v-if="!session?.name">Session ID </span>
-              <span>{{ session?.id }}</span>
-              <span v-if="session?.name"> - {{ session?.name }}</span>
-              <span> for {{ session.client?.name }} </span>
-            </div>
-          </div>
-          <div
-            v-if="appStore.running_sessions.length > 1"
-            class="text-center text-sm text-light-purple-4"
-          >
-            You'll automatically join the earliest session (Session ID
-            {{ appStore.running_sessions[0].id }}), then proceed to the other.
-          </div>
-        </div>
-        <RouterLink
-          :to="{
-            name: 'session-record',
-            params: { slug: appStore.running_sessions[0].slug },
-            query: { redirect: '/home' }
-          }"
-          class="w-full pb-6"
-          :class="{ 'pointer-events-none': !networkStatus.connected }"
-        >
-          <AppButton class="w-full" :disabled="!networkStatus.connected">
-            <span v-if="networkStatus.connected">
-              Join Session ID {{ appStore.running_sessions[0].id }}
-            </span>
-            <span v-else>Offline: connect to join session</span>
-          </AppButton>
-        </RouterLink>
-      </div>
-    </div>
-    <RouterView v-else />
+    <RouterView />
   </div>
 
   <footer
@@ -299,20 +241,20 @@ const isHeightFull = computed<boolean>(
     class="fixed bottom-0 z-[100] flex w-screen bg-white font-blum tracking-wide px-safe pb-safe"
   >
     <nav
-      class="grid h-14 w-full items-center"
+      class="grid items-center w-full h-14"
       :style="{ gridTemplateColumns: `repeat(${navigations.length}, minmax(0, 1fr))` }"
     >
       <RouterLink
         v-for="nav in navigations"
         :key="nav.route_name"
         :to="{ name: nav.route_name }"
-        class="flex h-full w-full flex-col items-center justify-center gap-1 transition-colors"
+        class="flex flex-col gap-1 justify-center items-center w-full h-full transition-colors"
         :class="{ 'bg-prim-1': nav.is_active }"
       >
         <Icon v-if="nav.is_active" :icon="nav.active_icon" class="text-xl text-light-purple-5" />
         <Icon v-else :icon="nav.icon" class="text-xl text-slate-7" />
         <div
-          class="w-full truncate px-3 text-center text-xs transition-colors"
+          class="px-3 w-full text-xs text-center truncate transition-colors"
           :class="{ 'text-light-purple-5': nav.is_active, 'text-slate-7': !nav.is_active }"
         >
           {{ nav.label }}
@@ -323,9 +265,9 @@ const isHeightFull = computed<boolean>(
 
   <!-- Update Required Modal -->
   <AppActionSheet :show="updateRequired">
-    <div class="space-y-5 py-3 font-blum tracking-wide">
-      <div class="text-center text-2xl font-semibold text-slate-10">Update required</div>
-      <div class="text-center text-sm text-slate-8">
+    <div class="py-3 space-y-5 tracking-wide font-blum">
+      <div class="text-2xl font-semibold text-center text-slate-10">Update required</div>
+      <div class="text-sm text-center text-slate-8">
         To continue using Blüm, please update to the latest version. We've made important
         improvements to ensure everything runs smoothly.
       </div>

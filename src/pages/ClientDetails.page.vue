@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, type RouteParamsRaw } from 'vue-router'
-import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import SessionsDraft from '@/partitions/client/SessionsDraft.vue'
 import PastSessions from '@/partitions/client/PastSessions.vue'
@@ -10,7 +9,6 @@ import Profile from '@/partitions/client/Profile.vue'
 import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
 
 const route = useRoute()
-const appStore = useAppStore()
 const clientStore = useClientStore()
 
 const clientLoading = ref<boolean>(true)
@@ -65,8 +63,6 @@ async function fetchClient() {
 }
 
 onMounted(() => {
-  appStore.getRunningSessions()
-
   fetchClient()
 })
 
@@ -81,14 +77,14 @@ onUnmounted(() => {
 
 <template>
   <div class="sticky top-0 z-10 bg-chestnut-1">
-    <div class="flex h-10 w-full items-center justify-center font-semibold text-dark-purple-1">
-      <div class="truncate px-4">
+    <div class="flex justify-center items-center w-full h-10 font-semibold text-dark-purple-1">
+      <div class="px-4 truncate">
         {{ clientStore.client?.name }}
       </div>
     </div>
-    <div class="flex h-10 items-end">
+    <div class="flex items-end h-10">
       <div
-        class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth border-b border-chestnut-2 px-4"
+        class="flex overflow-x-auto gap-2 px-4 border-b snap-x snap-mandatory scroll-smooth border-chestnut-2"
       >
         <RouterLink
           v-for="tab in tabs"
@@ -111,20 +107,20 @@ onUnmounted(() => {
 
   <div v-if="clientLoading">
     <div class="px-4 pt-3">
-      <div class="h-8 w-56 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="w-56 h-8 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
     </div>
     <div class="px-4 pt-3">
-      <div class="h-9 w-full shrink-0 animate-pulse rounded bg-slate-3"></div>
+      <div class="w-full h-9 rounded animate-pulse shrink-0 bg-slate-3"></div>
     </div>
     <div class="flex gap-2 px-4 pt-3">
       <div
         v-for="n in 3"
         :key="n"
-        class="h-8 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"
+        class="w-24 h-8 rounded-full animate-pulse shrink-0 bg-slate-3"
       ></div>
     </div>
     <div class="flex flex-col px-4 pt-5">
-      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="w-24 h-4 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
       <SessionItemLoader v-for="n in 12" :key="n" />
     </div>
     <!-- <div class="flex flex-col gap-3 items-center px-4 py-6">
