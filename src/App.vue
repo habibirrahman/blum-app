@@ -28,7 +28,8 @@ const isUseNav = computed<boolean>(
     routeName.value !== 'new-client-target' &&
     routeName.value !== 'edit-client-target' &&
     routeName.value !== 'session-draft' &&
-    routeName.value !== 'session-select-target'
+    routeName.value !== 'session-select-target' &&
+    routeName.value !== 'databank-client-target'
 )
 const networkStatus: NetworkStatus = reactive({
   connected: false,

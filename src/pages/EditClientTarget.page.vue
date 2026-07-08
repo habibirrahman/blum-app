@@ -50,6 +50,7 @@ const initialDataStr = ref('')
 // Basic fields
 const name = ref('')
 const description = ref('')
+const simplifiedDescription = ref('')
 const status = ref<TargetStatus | ''>('')
 const selectStatus = ref<TargetStatus | ''>('')
 
@@ -304,6 +305,7 @@ function initializeFormData(curriculums: Curriculum[]) {
   // Basic fields
   name.value = target.name || ''
   description.value = target.description || ''
+  simplifiedDescription.value = target.simplified_description || ''
   status.value = target.status as TargetStatus
   selectStatus.value = target.status as TargetStatus
 
@@ -406,6 +408,7 @@ function buildTargetData() {
       type: targetType.value,
       curriculum_id: selectedCurriculum.value?.value,
       description: description.value,
+      simplified_description: simplifiedDescription.value,
       status: status.value,
       date_introduce: clientStore.target?.date_introduce,
       date_mastered: clientStore.target?.date_mastered
@@ -759,6 +762,7 @@ function onChangeSuccessMetrics(val: {
 }
 
 function onChangeNextTarget(val: boolean) {
+  if (!nextTargetDetails.value) return
   nextTargetChecked.value = val
 }
 
@@ -866,13 +870,24 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Description -->
+        <!-- Clinical description -->
         <AppTextInput
-          name="description"
-          label="Description"
+          name="clinical_description"
+          label="Clinical description"
           type="textarea"
+          placeholder="Describe the target in clinical terms."
           :rows="isGroup ? 10 : 4"
           v-model="description"
+        />
+
+        <!-- Simplified description -->
+        <AppTextInput
+          name="simplified_description"
+          label="Simplified description"
+          type="textarea"
+          :rows="isGroup ? 10 : 4"
+          v-model="simplifiedDescription"
+          placeholder="Describe the target in simplified language that's easy for non-clinical readers to understand (e.g., parents). This description can also be included in reports."
         />
 
         <!-- Divider for Prompting Types -->
@@ -1310,6 +1325,7 @@ onUnmounted(() => {
             <AppToggle
               name="next_target"
               :checked="nextTargetChecked"
+              :disabled="!nextTargetDetails"
               @change="onChangeNextTarget(!nextTargetChecked)"
             />
             <div class="text-sm font-semibold text-slate-10">Next target recommendation</div>

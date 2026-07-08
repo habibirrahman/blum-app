@@ -14,6 +14,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { promptColors } from '@/lib/data'
+import { VueDraggable } from 'vue-draggable-plus'
 
 // ========== CONSTANTS ==========
 const STATUS_OPTIONS: { value: TargetStatus; label: string }[] = [
@@ -102,7 +103,6 @@ const showPromptLevel = ref(false)
 const isClosePromptingFormat = ref(false)
 const showCustomPromptRepoSheet = ref(false)
 const selectedRepoPrompts = ref<any[]>([])
-const showCustomSuccessMetricSheet = ref(false)
 const centerPrompts = ref<any[]>([])
 const promptOptions = computed(() => {
   return centerPrompts.value.filter((prompt) => {
@@ -307,8 +307,8 @@ watch(selectedMethod, (val) => {
   successMetric.value = ''
 
   // Reset action recommendation defaults
-  totalSuccessChecked.value = false
-  consecutiveSuccessChecked.value = false
+  totalSuccessChecked.value = true
+  consecutiveSuccessChecked.value = true
   totalSuccessInput.value = 2
   consecutiveSuccessInput.value = 2
 
@@ -426,6 +426,8 @@ async function onSubmit() {
   submitLoading.value = true
 
   const data: any = {
+    client_id: clientId.value,
+    kind: 'client',
     target: {
       name: name.value,
       type: selectedMethod.value,
@@ -707,7 +709,21 @@ function onDeletePrompt() {
   if (!activePromptKey.value) return
   const index = promptsAttributes.value.findIndex((p) => p.key === activePromptKey.value)
   if (index > -1) {
-    const deletedPromptName = promptsAttributes.value[index].name
+    const prompt = promptsAttributes.value[index]
+    if (promptingFormat.value === 'classic' && promptsAttributes.value.length <= 1) {
+      toast.error('At least 1 prompt is required.')
+      showPromptActionSheet.value = false
+      activePromptKey.value = null
+      return
+    }
+    if (promptingFormat.value === 'custom' && prompt.is_default) {
+      toast.error('Default prompts cannot be deleted.')
+      showPromptActionSheet.value = false
+      activePromptKey.value = null
+      return
+    }
+
+    const deletedPromptName = prompt.name
     promptsAttributes.value.splice(index, 1)
     promptsAttributes.value.forEach((p, idx) => {
       p.position = idx + 1
@@ -822,15 +838,10 @@ function applySymbolSelect(color: string, shape: string) {
   showSymbolSelectSheet.value = false
 }
 
-const draggedIndex = ref<number | null>(null)
-function onDropPrompt(targetIndex: number) {
-  if (draggedIndex.value === null) return
-  const item = promptsAttributes.value.splice(draggedIndex.value, 1)[0]
-  promptsAttributes.value.splice(targetIndex, 0, item)
+function onDragEnd() {
   promptsAttributes.value.forEach((p, index) => {
     p.position = index + 1
   })
-  draggedIndex.value = null
 }
 
 const promptSuccessMetricOptions = computed(() => {
@@ -859,9 +870,9 @@ onMounted(() => {
 
 <template>
   <!-- Header -->
-  <div class="sticky top-0 z-10 flex items-center gap-3 bg-white px-4 pb-3 pt-3">
+  <div class="flex sticky top-0 z-10 gap-3 items-center px-4 pt-3 pb-3 bg-white">
     <RouterLink :to="{ name: 'client', params: { id: clientId, tab: 'targets' } }">
-      <div class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-2">
+      <div class="flex justify-center items-center w-8 h-8 rounded-full cursor-pointer bg-slate-2">
         <Icon icon="tabler:chevron-left" class="text-2xl text-slate-7" />
       </div>
     </RouterLink>
@@ -869,19 +880,19 @@ onMounted(() => {
   </div>
 
   <!-- Main Content -->
-  <div class="h-full min-h-svh w-full space-y-5 bg-prim-3 p-4">
+  <div class="p-4 pb-20 space-y-5 w-full h-full min-h-svh bg-prim-3">
     <!-- Target Details Section -->
-    <div class="space-y-4 rounded bg-white p-4">
+    <div class="p-4 space-y-4 bg-white rounded">
       <!-- Section Header -->
       <div
         @click="isCloseTargetDetails = !isCloseTargetDetails"
-        class="flex cursor-pointer items-center justify-between"
+        class="flex justify-between items-center cursor-pointer"
         :class="{ 'border-b border-slate-4 pb-2': !isCloseTargetDetails }"
       >
         <div class="text-sm font-semibold text-slate-10">Target details</div>
         <Icon
           icon="ph:caret-up-bold"
-          class="h-5 w-5 text-slate-10 transition-transform"
+          class="w-5 h-5 transition-transform text-slate-10"
           :class="{ 'rotate-180': isCloseTargetDetails }"
         />
       </div>
@@ -899,9 +910,9 @@ onMounted(() => {
           </div>
           <div
             @click="showMethod = true"
-            class="flex cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-4 py-2"
+            class="flex justify-between items-center px-4 py-2 bg-white rounded border cursor-pointer border-slate-4"
           >
-            <div class="truncate text-[16px]" :class="selectedMethodLabel ? 'text-slate-10' : 'text-slate-5'">
+            <div class="truncate text-[16px]" :class="selectedMethodLabel ? 'text-slate-10' : 'text-slate-6'">
               {{ selectedMethodLabel || 'Select type' }}
             </div>
             <Icon icon="ph:caret-down" class="text-2xl text-slate-8" />
@@ -916,18 +927,18 @@ onMounted(() => {
           </div>
           <div
             @click="showCurriculum = true"
-            class="flex cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-4 py-2"
+            class="flex justify-between items-center px-4 py-2 bg-white rounded border cursor-pointer border-slate-4"
           >
-            <div v-if="selectedCurriculum" class="flex items-center gap-2 truncate">
+            <div v-if="selectedCurriculum" class="flex gap-2 items-center truncate">
               <div
-                class="h-6 w-6 flex-shrink-0 rounded-full"
+                class="flex-shrink-0 w-6 h-6 rounded-full"
                 :style="{ backgroundColor: selectedCurriculum.color }"
               />
               <div class="truncate text-[16px] text-slate-10">
                 {{ selectedCurriculum.label }}
               </div>
             </div>
-            <div v-else class="text-[16px] text-slate-5">Select curriculum</div>
+            <div v-else class="text-[16px] text-slate-6">Select curriculum</div>
             <Icon icon="ph:caret-down" class="text-2xl text-slate-8" />
           </div>
         </div>
@@ -940,7 +951,7 @@ onMounted(() => {
           </div>
           <div
             @click="showStatus = true"
-            class="flex cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-4 py-2"
+            class="flex justify-between items-center px-4 py-2 bg-white rounded border cursor-pointer border-slate-4"
           >
             <AppChip :chip="status as TargetStatus" />
             <Icon icon="ph:caret-down" class="text-2xl text-slate-8" />
@@ -1039,25 +1050,25 @@ onMounted(() => {
             <span class="ml-1 text-tomato-7">*</span>
           </div>
 
-          <div v-if="!isLatencyType" class="mb-3 flex items-center gap-2">
+          <div v-if="!isLatencyType" class="flex gap-2 items-center mb-3">
             <input
               type="radio"
               name="success_metric"
               :checked="successMetric === 'equal to or greater than goal'"
               value="equal to or greater than goal"
-              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="successMetric = 'equal to or greater than goal'"
             />
             <label class="w-full text-sm">Equal to or greater than goal</label>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex gap-2 items-center">
             <input
               type="radio"
               name="success_metric"
               :checked="successMetric === 'less than goal'"
               value="less than goal"
-              class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
               @click="successMetric = 'less than goal'"
             />
             <label class="w-full text-sm">Less than goal</label>
@@ -1067,40 +1078,40 @@ onMounted(() => {
     </div>
 
     <!-- Cold Probe Format Section -->
-    <div v-if="isColdProbeType" class="space-y-4 rounded bg-white p-4">
+    <div v-if="isColdProbeType" class="p-4 space-y-4 bg-white rounded">
       <!-- Section Header -->
       <div
         @click="isCloseColdProbeFormat = !isCloseColdProbeFormat"
-        class="flex cursor-pointer items-center justify-between"
+        class="flex justify-between items-center cursor-pointer"
       >
-        <div class="flex items-center gap-2">
+        <div class="flex gap-2 items-center">
           <div class="text-sm font-semibold text-slate-10">Cold probe format</div>
           <div
             v-if="isCloseColdProbeFormat"
-            class="rounded bg-slate-2 px-2 py-0.5 text-xs font-medium text-slate-7"
+            class="px-2 py-0.5 text-xs font-medium rounded bg-slate-2 text-slate-7"
           >
             {{ coldProbeFormat === 'classic' ? 'Classic' : 'Custom' }}
           </div>
         </div>
         <Icon
           icon="ph:caret-up-bold"
-          class="h-5 w-5 text-slate-10 transition-transform"
+          class="w-5 h-5 transition-transform text-slate-10"
           :class="{ 'rotate-180': isCloseColdProbeFormat }"
         />
       </div>
 
       <div v-if="!isCloseColdProbeFormat" class="space-y-4">
         <!-- Classic / Custom Toggle -->
-        <div class="flex rounded-lg border border-slate-4 bg-slate-2 p-1">
+        <div class="flex p-1 rounded-lg border border-slate-4 bg-slate-2">
           <div
-            class="flex w-full cursor-pointer items-center justify-center rounded py-1.5 text-xs font-semibold transition-colors duration-300"
+            class="flex justify-center items-center py-1.5 w-full text-xs font-semibold rounded transition-colors duration-300 cursor-pointer"
             :class="coldProbeFormat === 'classic' ? 'bg-white text-slate-10' : 'text-slate-7'"
             @click="coldProbeFormat = 'classic'"
           >
             Classic
           </div>
           <div
-            class="flex w-full cursor-pointer items-center justify-center rounded py-1.5 text-xs font-semibold transition-colors duration-300"
+            class="flex justify-center items-center py-1.5 w-full text-xs font-semibold rounded transition-colors duration-300 cursor-pointer"
             :class="coldProbeFormat === 'custom' ? 'bg-white text-slate-10' : 'text-slate-7'"
             @click="coldProbeFormat = 'custom'"
           >
@@ -1125,20 +1136,20 @@ onMounted(() => {
         </div>
 
         <!-- Preview -->
-        <div class="flex items-center justify-center rounded border border-slate-4 bg-slate-1 py-6">
+        <div class="flex justify-center items-center py-6 rounded border border-slate-4 bg-slate-1">
           <div class="flex gap-4">
             <template v-if="coldProbeFormat === 'classic'">
-              <div class="flex flex-col items-center gap-2">
+              <div class="flex flex-col gap-2 items-center">
                 <div class="text-xs text-slate-7">Probe</div>
                 <div
-                  class="flex h-12 w-12 items-center justify-center rounded-full border border-dotted border-slate-4"
+                  class="flex justify-center items-center w-12 h-12 rounded-full border border-dotted border-slate-4"
                 >
-                  <Icon icon="ph:check-bold" class="text-xl text-slate-5" />
+                  <Icon icon="ph:check-bold" class="text-xl text-slate-6" />
                 </div>
                 <div
-                  class="flex h-12 w-12 items-center justify-center rounded-full border border-dotted border-slate-4"
+                  class="flex justify-center items-center w-12 h-12 rounded-full border border-dotted border-slate-4"
                 >
-                  <Icon icon="ph:x-bold" class="text-xl text-slate-5" />
+                  <Icon icon="ph:x-bold" class="text-xl text-slate-6" />
                 </div>
               </div>
             </template>
@@ -1146,7 +1157,7 @@ onMounted(() => {
               <div
                 v-for="(variable, index) in targetVariableInputs"
                 :key="index"
-                class="flex flex-col items-center gap-2"
+                class="flex flex-col gap-2 items-center"
                 :class="{
                   'border-r-2 border-slate-3 pr-4': index !== targetVariableInputs.length - 1
                 }"
@@ -1155,14 +1166,14 @@ onMounted(() => {
                   {{ variable.code?.slice(0, 5) }}{{ (variable.code?.length || 0) > 5 ? '...' : '' }}
                 </div>
                 <div
-                  class="flex h-12 w-12 items-center justify-center rounded-full border-2 border-dotted border-slate-4"
+                  class="flex justify-center items-center w-12 h-12 rounded-full border-2 border-dotted border-slate-4"
                 >
-                  <Icon icon="ph:check-bold" class="text-xl text-slate-5" />
+                  <Icon icon="ph:check-bold" class="text-xl text-slate-6" />
                 </div>
                 <div
-                  class="flex h-12 w-12 items-center justify-center rounded-full border-2 border-dotted border-slate-4"
+                  class="flex justify-center items-center w-12 h-12 rounded-full border-2 border-dotted border-slate-4"
                 >
-                  <Icon icon="ph:x-bold" class="text-xl text-slate-5" />
+                  <Icon icon="ph:x-bold" class="text-xl text-slate-6" />
                 </div>
               </div>
             </template>
@@ -1196,40 +1207,40 @@ onMounted(() => {
     </div>
 
     <!-- Frequency Format Section -->
-    <div v-if="isFrequencyType" class="space-y-4 rounded bg-white p-4">
+    <div v-if="isFrequencyType" class="p-4 space-y-4 bg-white rounded">
       <!-- Section Header -->
       <div
         @click="isCloseFrequencyFormat = !isCloseFrequencyFormat"
-        class="flex cursor-pointer items-center justify-between"
+        class="flex justify-between items-center cursor-pointer"
       >
-        <div class="flex items-center gap-2">
+        <div class="flex gap-2 items-center">
           <div class="text-sm font-semibold text-slate-10">Frequency format</div>
           <div
             v-if="isCloseFrequencyFormat"
-            class="rounded bg-slate-2 px-2 py-0.5 text-xs font-medium text-slate-7"
+            class="px-2 py-0.5 text-xs font-medium rounded bg-slate-2 text-slate-7"
           >
             {{ frequencyFormat === 'classic' ? 'Classic' : 'Custom' }}
           </div>
         </div>
         <Icon
           icon="ph:caret-up-bold"
-          class="h-5 w-5 text-slate-10 transition-transform"
+          class="w-5 h-5 transition-transform text-slate-10"
           :class="{ 'rotate-180': isCloseFrequencyFormat }"
         />
       </div>
 
       <div v-if="!isCloseFrequencyFormat" class="space-y-4">
         <!-- Classic / Custom Toggle -->
-        <div class="flex rounded-lg border border-slate-4 bg-slate-2 p-1">
+        <div class="flex p-1 rounded-lg border border-slate-4 bg-slate-2">
           <div
-            class="flex w-full cursor-pointer items-center justify-center rounded py-1.5 text-xs font-semibold transition-colors duration-300"
+            class="flex justify-center items-center py-1.5 w-full text-xs font-semibold rounded transition-colors duration-300 cursor-pointer"
             :class="frequencyFormat === 'classic' ? 'bg-white text-slate-10' : 'text-slate-7'"
             @click="frequencyFormat = 'classic'"
           >
             Classic
           </div>
           <div
-            class="flex w-full cursor-pointer items-center justify-center rounded py-1.5 text-xs font-semibold transition-colors duration-300"
+            class="flex justify-center items-center py-1.5 w-full text-xs font-semibold rounded transition-colors duration-300 cursor-pointer"
             :class="frequencyFormat === 'custom' ? 'bg-white text-slate-10' : 'text-slate-7'"
             @click="frequencyFormat = 'custom'"
           >
@@ -1253,26 +1264,26 @@ onMounted(() => {
         </div>
 
         <!-- Preview -->
-        <div class="flex items-center justify-center rounded border border-slate-4 bg-slate-1 py-6">
+        <div class="flex justify-center items-center py-6 rounded border border-slate-4 bg-slate-1">
           <div
-            class="border-light-purple-5 relative w-80 rounded-lg border-t-4 bg-white p-4 shadow-sm"
+            class="relative p-4 w-80 bg-white rounded-lg border-t-4 shadow-sm border-light-purple-5"
           >
             <div class="space-y-2">
-              <div class="bg-slate-2 h-4 w-16 rounded-full" />
-              <div class="bg-slate-2 h-4 w-64 rounded-full" />
-              <div class="bg-slate-2 h-4 w-48 rounded-full" />
+              <div class="w-16 h-4 rounded-full bg-slate-2" />
+              <div class="w-64 h-4 rounded-full bg-slate-2" />
+              <div class="w-48 h-4 rounded-full bg-slate-2" />
             </div>
-            <div class="flex items-center justify-center py-8">
-              <div class="space-y-2 flex flex-col items-center">
+            <div class="flex justify-center items-center py-8">
+              <div class="flex flex-col items-center space-y-2">
                 <div
-                  class="bg-light-purple-5 flex h-18 w-18 cursor-pointer items-center justify-center rounded-3xl font-bold text-white shadow"
+                  class="flex justify-center items-center font-bold text-white rounded-3xl shadow cursor-pointer bg-light-purple-5 h-18 w-18"
                 >
                   <Icon icon="ph:plus-bold" class="text-4xl" />
                 </div>
                 <div
-                  class="border-slate-5 flex h-6 w-18 cursor-pointer items-center justify-center rounded border bg-white shadow-sm"
+                  class="flex justify-center items-center h-6 bg-white rounded border shadow-sm cursor-pointer border-slate-5 w-18"
                 >
-                  <Icon icon="ph:minus-bold" class="text-xs text-slate-5" />
+                  <Icon icon="ph:minus-bold" class="text-xs text-slate-6" />
                 </div>
               </div>
             </div>
@@ -1302,17 +1313,17 @@ onMounted(() => {
     </div>
 
     <!-- PIR Settings Section -->
-    <div v-if="isPirType" class="space-y-4 rounded bg-white p-4">
+    <div v-if="isPirType" class="p-4 space-y-4 bg-white rounded">
       <!-- Section Header -->
       <div
         @click="isClosePirSettings = !isClosePirSettings"
-        class="flex cursor-pointer items-center justify-between"
+        class="flex justify-between items-center cursor-pointer"
         :class="{ 'border-b border-slate-4 pb-2': !isClosePirSettings }"
       >
         <div class="text-sm font-semibold text-slate-10">Partial interval recording settings</div>
         <Icon
           icon="ph:caret-up-bold"
-          class="h-5 w-5 text-slate-10 transition-transform"
+          class="w-5 h-5 transition-transform text-slate-10"
           :class="{ 'rotate-180': isClosePirSettings }"
         />
       </div>
@@ -1352,26 +1363,26 @@ onMounted(() => {
         <!-- Interval start timing -->
         <div class="space-y-2">
           <div class="text-sm font-medium text-slate-8">Interval start timing</div>
-          <div class="text-xs text-slate-5">Choose how intervals begin during the sessions.</div>
-          <div class="space-y-2 pt-1">
-            <div class="flex items-center gap-2">
+          <div class="text-xs text-slate-6">Choose how intervals begin during the sessions.</div>
+          <div class="pt-1 space-y-2">
+            <div class="flex gap-2 items-center">
               <input
                 type="radio"
                 name="interval_start_timing"
                 :checked="intervalStartTiming === 'start_with_session'"
                 value="start_with_session"
-                class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+                class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
                 @click="intervalStartTiming = 'start_with_session'"
               />
               <label class="text-sm">Start with session</label>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex gap-2 items-center">
               <input
                 type="radio"
                 name="interval_start_timing"
                 :checked="intervalStartTiming === 'custom_start'"
                 value="custom_start"
-                class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+                class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
                 @click="intervalStartTiming = 'custom_start'"
               />
               <label class="text-sm">Custom start</label>
@@ -1380,8 +1391,8 @@ onMounted(() => {
         </div>
 
         <!-- Allow overtime recording -->
-        <div class="space-y-2 border-t border-slate-4 pt-4">
-          <div class="flex items-center justify-between">
+        <div class="pt-4 space-y-2 border-t border-slate-4">
+          <div class="flex justify-between items-center">
             <div class="text-sm font-medium text-slate-9">Allow overtime recording</div>
             <AppToggle
               name="allow_overtime_recording"
@@ -1389,7 +1400,7 @@ onMounted(() => {
               @change="allowOvertimeRecording = !allowOvertimeRecording"
             />
           </div>
-          <div class="text-xs text-slate-5">
+          <div class="text-xs text-slate-6">
             Control whether recording can continue after the planned duration ends.
           </div>
         </div>
@@ -1397,8 +1408,8 @@ onMounted(() => {
     </div>
 
     <!-- Probing Section -->
-    <div v-if="useProbing" class="space-y-4 rounded bg-white p-4">
-      <div class="flex items-center justify-between">
+    <div v-if="useProbing" class="p-4 space-y-4 bg-white rounded">
+      <div class="flex justify-between items-center">
         <div class="text-sm font-semibold text-slate-10">Probing</div>
         <AppToggle
           name="probing_enable"
@@ -1407,8 +1418,8 @@ onMounted(() => {
         />
       </div>
 
-      <div v-if="probingEnable" class="space-y-4 border-t border-slate-4 pt-4">
-        <p class="text-xs text-slate-8 leading-relaxed">
+      <div v-if="probingEnable" class="pt-4 space-y-4 border-t border-slate-4">
+        <p class="text-xs leading-relaxed text-slate-8">
           Probing can be employed to assess a skill at various stages of the therapy. Activating probing gives you additional option to conduct probes during the session.
         </p>
 
@@ -1444,35 +1455,35 @@ onMounted(() => {
     </div>
 
     <!-- Prompting Format Section -->
-    <div v-if="isPromptingType" class="space-y-4 rounded bg-white p-4">
+    <div v-if="isPromptingType" class="p-4 space-y-4 bg-white rounded">
       <div
         @click="isClosePromptingFormat = !isClosePromptingFormat"
-        class="flex cursor-pointer items-center justify-between"
+        class="flex justify-between items-center cursor-pointer"
       >
-        <div class="flex items-center gap-2">
-          <div class="rounded bg-light-purple-1 p-1">
+        <div class="flex gap-2 items-center">
+          <div class="p-1 rounded bg-light-purple-1">
             <Icon icon="ph:gear-six-fill" class="text-[20px] text-light-purple-6" />
           </div>
           <div class="text-sm font-semibold text-slate-10">Prompting format</div>
         </div>
-        <div class="flex items-center gap-1.5">
-          <span v-if="isClosePromptingFormat" class="text-xs text-slate-5 capitalize font-medium">
+        <div class="flex gap-1.5 items-center">
+          <span v-if="isClosePromptingFormat" class="text-xs font-medium capitalize text-slate-6">
             {{ promptingFormat }}
           </span>
           <Icon
             icon="ph:caret-up-bold"
-            class="h-5 w-5 text-slate-10 transition-transform"
+            class="w-5 h-5 transition-transform text-slate-10"
             :class="{ 'rotate-180': isClosePromptingFormat }"
           />
         </div>
       </div>
 
-      <div v-if="!isClosePromptingFormat" class="space-y-4 border-t border-slate-4 pt-4">
+      <div v-if="!isClosePromptingFormat" class="pt-4 space-y-4 border-t border-slate-4">
         <!-- Toggle classic vs custom -->
-        <div class="flex rounded bg-slate-1 p-1">
+        <div class="flex p-1 rounded bg-slate-1">
           <button
             type="button"
-            class="flex-1 rounded py-1.5 text-center text-xs font-semibold transition-colors"
+            class="flex-1 py-1.5 text-xs font-semibold text-center rounded transition-colors"
             :class="promptingFormat === 'classic' ? 'bg-white text-slate-10 shadow-sm font-bold' : 'text-slate-6 font-medium'"
             @click="promptingFormat = 'classic'"
           >
@@ -1480,7 +1491,7 @@ onMounted(() => {
           </button>
           <button
             type="button"
-            class="flex-1 rounded py-1.5 text-center text-xs font-semibold transition-colors"
+            class="flex-1 py-1.5 text-xs font-semibold text-center rounded transition-colors"
             :class="promptingFormat === 'custom' ? 'bg-white text-slate-10 shadow-sm font-bold' : 'text-slate-6 font-medium'"
             @click="promptingFormat = 'custom'"
           >
@@ -1493,7 +1504,7 @@ onMounted(() => {
           <div class="text-sm font-bold text-slate-9">
             {{ promptingFormat === 'classic' ? 'Frequency-based prompting' : 'Score-based prompting' }}
           </div>
-          <div class="text-xs text-slate-6 mt-1 leading-normal">
+          <div class="mt-1 text-xs leading-normal text-slate-6">
             {{
               promptingFormat === 'classic'
                 ? 'Tracks how many times each type of prompt is used during the session.'
@@ -1504,38 +1515,38 @@ onMounted(() => {
 
         <!-- Alert warning/info -->
         <div v-if="promptingFormat === 'classic'" class="flex gap-3 rounded-lg bg-[#E0EFFF] p-3 text-[#1D4ED8]">
-          <Icon icon="ph:info-bold" class="h-5 w-5 shrink-0" />
+          <Icon icon="ph:info-bold" class="w-5 h-5 shrink-0" />
           <div class="text-xs leading-normal">
             Customize default prompts for the entire center by creating them in the Repository.
-            <span class="font-semibold underline">Create default prompts</span>
+            <span class="block mt-1 font-semibold text-blue-900">only available on desktop app</span>
           </div>
         </div>
 
         <div v-if="promptingFormat === 'custom'" class="flex gap-3 rounded-lg bg-[#E0EFFF] p-3 text-[#1D4ED8]">
-          <Icon icon="ph:megaphone-fill" class="h-5 w-5 shrink-0" />
-          <div class="text-xs leading-normal space-y-1">
+          <Icon icon="ph:megaphone-fill" class="w-5 h-5 shrink-0" />
+          <div class="space-y-1 text-xs leading-normal">
             <div class="font-semibold text-blue-900">Prompts now centralized in Repository</div>
             <div class="text-blue-800">
               With the latest update, prompts for Custom format targets can only be created or edited in the Repository.
             </div>
-            <div class="font-semibold underline text-blue-900">Go to Repository</div>
+            <div class="font-semibold text-blue-900">only available on desktop app</div>
           </div>
         </div>
 
         <!-- Dynamic Preview container (Real implementation of PromptPreview) -->
-        <div class="border-slate-2 bg-slate-50 flex h-72 items-center justify-center rounded-xl border p-4">
-          <div class="relative w-64 rounded-lg border-t-4 border-light-purple-6 bg-white p-3 shadow-sm flex flex-col gap-2">
+        <div class="flex justify-center items-center p-4 h-72 rounded-xl border border-slate-2 bg-slate-50">
+          <div class="flex relative flex-col gap-2 p-3 w-64 bg-white rounded-lg border-t-4 shadow-sm border-light-purple-6">
             <!-- Mock app header -->
             <div class="space-y-1">
-              <div class="h-1.5 w-8 bg-slate-2 rounded-full"></div>
-              <div class="h-1.5 w-16 bg-slate-2 rounded-full"></div>
-              <div class="h-1.5 w-12 bg-slate-2 rounded-full"></div>
+              <div class="w-8 h-1.5 rounded-full bg-slate-2"></div>
+              <div class="w-16 h-1.5 rounded-full bg-slate-2"></div>
+              <div class="w-12 h-1.5 rounded-full bg-slate-2"></div>
             </div>
             <!-- Mock grids of buttons -->
             <div class="flex flex-wrap content-center items-center justify-center gap-x-2 gap-y-3 py-4 min-h-[140px]">
-              <div v-for="prompt in visiblePrompts" :key="prompt.key" class="space-y-1 flex flex-col items-center shrink-0">
+              <div v-for="prompt in visiblePrompts" :key="prompt.key" class="flex flex-col items-center space-y-1 shrink-0">
                 <div
-                  class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border"
+                  class="flex relative justify-center items-center w-10 h-10 rounded-xl border shrink-0"
                   :style="{
                     backgroundColor: promptColors[prompt.color || 'grey']?.primaryColor,
                     borderColor: promptColors[prompt.color || 'grey']?.secondaryColor,
@@ -1547,21 +1558,21 @@ onMounted(() => {
                   </div>
                   <div class="text-[14px] font-bold mt-1.5">+</div>
                 </div>
-                <div class="border-slate-2 flex h-2 w-10 items-center justify-center rounded border">
-                  <div class="bg-slate-2 h-0.5 w-4 shrink-0 rounded" />
+                <div class="flex justify-center items-center w-10 h-2 rounded border border-slate-2">
+                  <div class="w-4 h-0.5 rounded bg-slate-2 shrink-0" />
                 </div>
               </div>
-              <div v-if="!promptsAttributes.length" class="text-xs text-slate-4 text-center py-4">
+              <div v-if="!promptsAttributes.length" class="py-4 text-xs text-center text-slate-6">
                 No active prompts to preview
               </div>
             </div>
             <!-- Pagination dots -->
-            <div v-if="promptPageCount > 1" class="flex items-center justify-center gap-1.5 pb-1">
+            <div v-if="promptPageCount > 1" class="flex gap-1.5 justify-center items-center pb-1">
               <button
                 v-for="n in promptPageCount"
                 :key="n"
                 :class="n - 1 === promptPageIndex ? 'bg-light-purple-6' : 'bg-slate-3'"
-                class="h-1.5 w-1.5 rounded-full border-none outline-none"
+                class="w-1.5 h-1.5 rounded-full border-none outline-none"
                 @click.prevent="promptPageIndex = n - 1"
               />
             </div>
@@ -1569,7 +1580,7 @@ onMounted(() => {
         </div>
 
         <!-- Prompts list title -->
-        <div class="text-xs font-bold uppercase tracking-wider text-slate-5">Prompts list</div>
+        <div class="text-xs font-bold tracking-wider uppercase text-slate-6">Prompts list</div>
 
         <!-- Table headers -->
         <div v-if="promptingFormat === 'classic'" class="grid grid-cols-[auto_40px_60px_1fr_auto] items-center gap-3 border-b border-slate-3 pb-2 text-[10px] font-semibold text-slate-6 uppercase tracking-wider px-2">
@@ -1590,18 +1601,21 @@ onMounted(() => {
 
         <!-- Prompts List Representation -->
         <!-- Classic (Draggable) -->
-        <div v-if="promptingFormat === 'classic'" class="space-y-1">
+        <VueDraggable
+          v-if="promptingFormat === 'classic'"
+          v-model="promptsAttributes"
+          :animation="150"
+          handle=".drag-handle"
+          @end="onDragEnd"
+          class="space-y-1"
+        >
           <div
-            v-for="(prompt, index) in promptsAttributes"
+            v-for="prompt in promptsAttributes"
             :key="prompt.key"
-            draggable="true"
-            @dragstart="draggedIndex = index"
-            @dragover.prevent
-            @drop="onDropPrompt(index)"
-            class="grid grid-cols-[auto_40px_60px_1fr_auto] items-center gap-3 bg-white hover:bg-slate-50 border border-slate-2 rounded-lg py-2 px-2 transition-colors cursor-grab active:cursor-grabbing"
+            class="grid grid-cols-[auto_40px_60px_1fr_auto] items-center gap-3 bg-white hover:bg-slate-50 border border-slate-2 rounded-lg py-2 px-2 transition-colors"
           >
             <!-- Drag handle -->
-            <div class="flex items-center justify-center text-slate-4 w-6">
+            <div class="flex justify-center items-center w-6 drag-handle text-slate-6 cursor-grab active:cursor-grabbing">
               <Icon icon="ph:dots-six-vertical-bold" class="text-lg" />
             </div>
 
@@ -1629,7 +1643,7 @@ onMounted(() => {
             </div>
 
             <!-- Prompt Name -->
-            <div class="text-sm font-medium text-slate-8 truncate">
+            <div class="text-sm font-medium truncate text-slate-8">
               {{ prompt.name }}
             </div>
 
@@ -1637,29 +1651,29 @@ onMounted(() => {
             <button
               type="button"
               @click.stop="openPromptAction(prompt)"
-              class="flex h-8 w-8 items-center justify-center rounded-full text-slate-5 hover:bg-slate-2 transition-colors"
+              class="flex justify-center items-center w-8 h-8 rounded-full transition-colors text-slate-6 hover:bg-slate-2"
             >
               <Icon icon="ph:dots-three-outline-vertical-fill" class="text-base" />
             </button>
           </div>
-        </div>
+        </VueDraggable>
 
         <!-- Custom (Grouped by Score) -->
         <div v-if="promptingFormat === 'custom'" class="space-y-2">
           <div
             v-for="group in groupedPromptInputs"
             :key="group.score ?? 0"
-            class="flex border border-slate-2 rounded-lg bg-white overflow-hidden shadow-xs"
+            class="flex overflow-hidden bg-white rounded-lg border border-slate-2 shadow-xs"
           >
             <!-- Score badge column on the left -->
-            <div class="w-14 shrink-0 flex items-center justify-center bg-slate-50 border-r border-slate-2 py-3">
-              <span class="rounded bg-light-purple-1 border border-light-purple-2 text-light-purple-6 text-xs font-bold px-1.5 py-0.5">
+            <div class="flex justify-center items-center py-3 w-14 border-r shrink-0 bg-slate-50 border-slate-2">
+              <span class="px-1.5 py-0.5 text-xs font-bold rounded border bg-light-purple-1 border-light-purple-2 text-light-purple-6">
                 {{ group.score }}
               </span>
             </div>
             
             <!-- Prompts inside this group -->
-            <div class="grow flex flex-col divide-y divide-slate-100">
+            <div class="flex flex-col divide-y grow divide-slate-100">
               <div
                 v-for="prompt in group.prompts"
                 :key="prompt.key"
@@ -1689,22 +1703,24 @@ onMounted(() => {
                 </div>
 
                 <!-- Prompt Name -->
-                <div class="text-sm font-medium text-slate-8 truncate">
+                <div class="text-sm font-medium truncate text-slate-8">
                   {{ prompt.name }}
                 </div>
 
                 <!-- Action Menu trigger -->
                 <button
+                  v-if="!prompt.is_default"
                   type="button"
                   @click.stop="openPromptAction(prompt)"
-                  class="flex h-8 w-8 items-center justify-center rounded-full text-slate-5 hover:bg-slate-2 transition-colors"
+                  class="flex justify-center items-center w-8 h-8 rounded-full transition-colors text-slate-6 hover:bg-slate-2"
                 >
                   <Icon icon="ph:dots-three-outline-vertical-fill" class="text-base" />
                 </button>
+                <div v-else class="w-8 h-8 shrink-0" />
               </div>
             </div>
           </div>
-          <div v-if="!promptsAttributes.length" class="text-xs text-slate-4 text-center py-4 bg-slate-50 border border-slate-2 rounded-lg">
+          <div v-if="!promptsAttributes.length" class="py-4 text-xs text-center rounded-lg border text-slate-6 bg-slate-50 border-slate-2">
             No active prompts. Add prompts from repository.
           </div>
         </div>
@@ -1714,7 +1730,7 @@ onMounted(() => {
           v-if="promptingFormat === 'classic'"
           type="button"
           @click="onAddPrompt"
-          class="flex items-center gap-2 text-sm font-semibold text-light-purple-6 hover:text-light-purple-7 py-2 transition-colors"
+          class="flex gap-2 items-center py-2 text-sm font-semibold transition-colors text-light-purple-6 hover:text-light-purple-7"
         >
           <Icon icon="ph:plus-circle-bold" class="text-xl text-light-purple-6" />
           Add prompt
@@ -1724,7 +1740,7 @@ onMounted(() => {
           v-if="promptingFormat === 'custom'"
           type="button"
           @click="onOpenCustomPromptRepo"
-          class="flex items-center gap-2 text-sm font-semibold text-light-purple-6 hover:text-light-purple-7 py-2 transition-colors"
+          class="flex gap-2 items-center py-2 text-sm font-semibold transition-colors text-light-purple-6 hover:text-light-purple-7"
         >
           <Icon icon="ph:plus-circle-bold" class="text-xl text-light-purple-6" />
           Add prompt
@@ -1732,9 +1748,9 @@ onMounted(() => {
 
         <!-- Goal and success metric sub-section -->
         <!-- Classic Goal & Success Metric -->
-        <div v-if="promptingFormat === 'classic'" class="border-t border-slate-4 pt-4 space-y-4">
+        <div v-if="promptingFormat === 'classic'" class="pt-4 space-y-4 border-t border-slate-4">
           <div class="text-sm font-semibold text-slate-10">Goal and success metric</div>
-          <div class="text-xs text-slate-8 leading-relaxed">
+          <div class="text-xs leading-relaxed text-slate-8">
             Mark this target as successful when the client uses a specific prompt at least a certain number of times.
           </div>
 
@@ -1742,13 +1758,13 @@ onMounted(() => {
           <div class="space-y-1">
             <span class="text-xs font-semibold text-slate-7">Prompt level *</span>
             <div
-              class="flex h-10 w-full cursor-pointer items-center justify-between rounded border border-slate-3 bg-white px-3"
+              class="flex justify-between items-center px-3 w-full h-10 bg-white rounded border cursor-pointer border-slate-3"
               @click="showPromptLevel = true"
             >
               <div class="text-[16px] text-slate-9">
                 {{ selectedPromptSuccessMetric || 'Select prompt' }}
               </div>
-              <Icon icon="tabler:chevron-down" class="text-[20px] text-slate-5" />
+              <Icon icon="tabler:chevron-down" class="text-[20px] text-slate-6" />
             </div>
           </div>
 
@@ -1764,9 +1780,9 @@ onMounted(() => {
         </div>
 
         <!-- Custom Goal & Success Metric -->
-        <div v-if="promptingFormat === 'custom'" class="border-t border-slate-4 pt-4 space-y-4">
+        <div v-if="promptingFormat === 'custom'" class="pt-4 space-y-4 border-t border-slate-4">
           <div class="text-sm font-semibold text-slate-10">Goal and success metric</div>
-          <div class="text-xs text-slate-8 leading-relaxed">
+          <div class="text-xs leading-relaxed text-slate-8">
             The target passes if the client's score meets the goal you set.
           </div>
 
@@ -1786,17 +1802,37 @@ onMounted(() => {
             "
           />
 
-          <!-- Success metric select -->
-          <div class="space-y-1">
-            <span class="text-xs font-semibold text-slate-7">Success metric *</span>
-            <div
-              class="flex h-10 w-full cursor-pointer items-center justify-between rounded border border-slate-3 bg-white px-3"
-              @click="showCustomSuccessMetricSheet = true"
-            >
-              <div class="text-[16px] text-slate-9 capitalize">
-                {{ successMetric || 'Select success metric' }}
-              </div>
-              <Icon icon="tabler:chevron-down" class="text-[20px] text-slate-5" />
+          <!-- Success metric radio buttons -->
+          <div class="space-y-2">
+            <div class="text-xs font-semibold text-slate-7">
+              <span>Success metric</span>
+              <span class="ml-1 text-tomato-7">*</span>
+            </div>
+
+            <div class="flex gap-2 items-center mb-3">
+              <input
+                type="radio"
+                name="custom_prompting_success_metric"
+                id="custom_prompting_success_metric_greater"
+                :checked="successMetric === 'equal to or greater than goal'"
+                value="equal to or greater than goal"
+                class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+                @click="successMetric = 'equal to or greater than goal'"
+              />
+              <label for="custom_prompting_success_metric_greater" class="w-full text-sm text-slate-8">Equal to or greater than goal</label>
+            </div>
+
+            <div class="flex gap-2 items-center">
+              <input
+                type="radio"
+                name="custom_prompting_success_metric"
+                id="custom_prompting_success_metric_less"
+                :checked="successMetric === 'less than goal'"
+                value="less than goal"
+                class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+                @click="successMetric = 'less than goal'"
+              />
+              <label for="custom_prompting_success_metric_less" class="w-full text-sm text-slate-8">Less than goal</label>
             </div>
           </div>
         </div>
@@ -1804,37 +1840,37 @@ onMounted(() => {
     </div>
 
     <!-- Action Recommendations Section -->
-    <div v-if="isUseActionRecommendation" class="space-y-3 rounded bg-white p-4">
+    <div v-if="isUseActionRecommendation" class="p-4 space-y-3 bg-white rounded">
       <div
         @click="isCloseActionRecommendation = !isCloseActionRecommendation"
-        class="flex cursor-pointer items-center justify-between"
+        class="flex justify-between items-center cursor-pointer"
       >
-        <div class="flex items-center gap-2">
-          <div class="rounded bg-orange-3 p-1">
+        <div class="flex gap-2 items-center">
+          <div class="p-1 rounded bg-orange-3">
             <Icon icon="mynaui:info-waves-solid" class="rotate-180 text-[20px] text-[#FD853A]" />
           </div>
           <div class="text-sm font-semibold text-slate-10">Action recommendations</div>
         </div>
         <Icon
           icon="ph:caret-up-bold"
-          class="h-5 w-5 text-slate-10 transition-transform"
+          class="w-5 h-5 transition-transform text-slate-10"
           :class="{ 'rotate-180': isCloseActionRecommendation }"
         />
       </div>
 
       <div v-if="!isCloseActionRecommendation" class="space-y-2">
         <!-- Passing success metric -->
-        <div class="space-y-2 border-t border-slate-4 py-2">
+        <div class="py-2 space-y-2 border-t border-slate-4">
           <div class="text-sm font-semibold text-slate-10">Passing success metric</div>
           <div class="text-xs text-slate-8">Updating the current target's status from</div>
-          <div class="flex items-center gap-2">
+          <div class="flex gap-2 items-center">
             <AppChip chip="in_progress" />
             <div class="text-sm text-slate-8">to</div>
             <AppChip chip="mastered" />
           </div>
 
           <!-- Total success -->
-          <div class="flex items-center gap-2 pt-2">
+          <div class="flex gap-2 items-center pt-2">
             <AppToggle
               name="total_success"
               :checked="totalSuccessChecked"
@@ -1845,7 +1881,7 @@ onMounted(() => {
           <div class="text-xs font-medium text-slate-8">
             Receive a recommendation after completing at least
           </div>
-          <div class="flex items-center gap-2 pt-1">
+          <div class="flex gap-2 items-center pt-1">
             <input
               type="number"
               pattern="[0-9]*"
@@ -1860,7 +1896,7 @@ onMounted(() => {
           </div>
 
           <!-- Consecutive success -->
-          <div class="flex items-center gap-2 pt-2">
+          <div class="flex gap-2 items-center pt-2">
             <AppToggle
               name="consecutive_success"
               :checked="consecutiveSuccessChecked"
@@ -1871,7 +1907,7 @@ onMounted(() => {
           <div class="text-xs font-medium text-slate-8">
             Receive a recommendation only if the session is successful for
           </div>
-          <div class="flex items-center gap-2 pt-1">
+          <div class="flex gap-2 items-center pt-1">
             <input
               type="number"
               pattern="[0-9]*"
@@ -1887,21 +1923,21 @@ onMounted(() => {
         </div>
 
         <!-- Next target recommendation -->
-        <div class="space-y-2 border-t border-slate-4 py-2">
-          <div class="flex items-center gap-2">
+        <div class="py-2 space-y-2 border-t border-slate-4">
+          <div class="flex gap-2 items-center">
             <AppToggle name="next_target" :checked="false" :disabled="true" />
             <div class="text-sm font-semibold text-slate-10">Next target recommendation</div>
           </div>
           <div class="text-xs text-slate-8">
             When this target is mastered, the next target will be recommended to change from
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex gap-2 items-center">
             <AppChip chip="pending" />
             <div class="text-sm text-slate-8">to</div>
             <AppChip chip="in_progress" />
           </div>
-          <div class="flex gap-2 rounded bg-cornflower-2 px-3 py-2">
-            <Icon icon="ph:info-fill" class="shrink-0 text-2xl text-cornflower-8" />
+          <div class="flex gap-2 px-3 py-2 rounded bg-cornflower-2">
+            <Icon icon="ph:info-fill" class="text-2xl shrink-0 text-cornflower-8" />
             <div class="text-xs text-cornflower-8">
               This setting is available only when creating a target in the Databank.
             </div>
@@ -1909,8 +1945,8 @@ onMounted(() => {
         </div>
 
         <!-- Maintenance -->
-        <div class="space-y-4 border-t border-slate-4 py-2">
-          <div class="flex items-center gap-2">
+        <div class="py-2 space-y-4 border-t border-slate-4">
+          <div class="flex gap-2 items-center">
             <AppToggle
               name="maintenance"
               :checked="maintenanceChecked"
@@ -1921,23 +1957,23 @@ onMounted(() => {
           <div class="text-xs text-slate-8">
             Set up a maintenance plan for a mastered target. If failed, target status will be moved
             from
-            <div class="mt-2 flex items-center gap-2">
+            <div class="flex gap-2 items-center mt-2">
               <AppChip chip="mastered" /> to <AppChip chip="in_progress" />
             </div>
           </div>
 
           <div v-if="maintenanceChecked" class="space-y-4">
             <!-- Approach Selection -->
-            <div class="flex rounded-lg border border-slate-4 bg-slate-2 p-1">
+            <div class="flex p-1 rounded-lg border border-slate-4 bg-slate-2">
               <div
-                class="flex w-full cursor-pointer items-center justify-center rounded py-1 text-xs font-semibold text-slate-7 transition-colors duration-300"
+                class="flex justify-center items-center py-1 w-full text-xs font-semibold rounded transition-colors duration-300 cursor-pointer text-slate-7"
                 :class="maintenanceApproach === 'manual' ? 'bg-white' : 'text-slate-7'"
                 @click="maintenanceApproach = 'manual'"
               >
                 Manual
               </div>
               <div
-                class="flex w-full cursor-pointer items-center justify-center rounded py-1 text-xs font-semibold text-slate-7 transition-colors duration-300"
+                class="flex justify-center items-center py-1 w-full text-xs font-semibold rounded transition-colors duration-300 cursor-pointer text-slate-7"
                 :class="maintenanceApproach === 'automation' ? 'bg-white' : 'text-slate-7'"
                 @click="maintenanceApproach = 'automation'"
               >
@@ -1953,24 +1989,24 @@ onMounted(() => {
                 setting is turned off.
               </div>
 
-              <div class="space-y-1 pt-2">
+              <div class="pt-2 space-y-1">
                 <div class="text-[13px] font-semibold text-slate-10">
                   Recommended maintenance frequency
                 </div>
-                <div class="flex items-center justify-between gap-2 pt-1">
+                <div class="flex gap-2 justify-between items-center pt-1">
                   <span class="text-xs">Every</span>
                   <div class="flex gap-2">
                     <input
                       type="number"
                       v-model="manualIntervalAmount"
-                      class="h-10 w-20 appearance-none rounded border border-slate-4 px-2 text-sm outline-none focus:border-light-purple-5 focus:ring-light-purple-2"
+                      class="px-2 w-20 h-10 text-sm rounded border appearance-none outline-none border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2"
                     />
                     <div
                       @click="showManualUnitSheet = true"
                       class="flex h-10 min-w-[90px] cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-3"
                     >
                       <span class="text-sm">{{ UNIT_OPTIONS.find((o) => o.value === manualIntervalUnit)?.label || 'day' }}</span>
-                      <Icon icon="ph:caret-down" class="text-slate-500" />
+                      <Icon icon="ph:caret-down" class="text-slate-600" />
                     </div>
                   </div>
                 </div>
@@ -1997,7 +2033,7 @@ onMounted(() => {
                 />
               </div>
 
-              <div class="space-y-4 pt-2">
+              <div class="pt-2 space-y-4">
                 <div
                   v-for="(schedule, index) in automationSchedules"
                   :key="index"
@@ -2006,11 +2042,11 @@ onMounted(() => {
                   <div class="text-[13px] font-semibold text-slate-10">
                     {{ ordinalSuffix(index + 1) }} maintenance schedule
                   </div>
-                  <div class="flex items-center gap-2">
+                  <div class="flex gap-2 items-center">
                     <input
                       type="number"
                       v-model="schedule.interval_amount"
-                      class="h-10 w-2/4 appearance-none rounded border border-slate-4 px-2 text-sm outline-none focus:border-light-purple-5 focus:ring-light-purple-2"
+                      class="px-2 w-2/4 h-10 text-sm rounded border appearance-none outline-none border-slate-4 focus:border-light-purple-5 focus:ring-light-purple-2"
                     />
                     <div
                       @click="
@@ -2024,7 +2060,7 @@ onMounted(() => {
                       <span class="text-sm">{{
                         UNIT_OPTIONS.find((o) => o.value === schedule.interval_unit)?.label || 'day'
                       }}</span>
-                      <Icon icon="ph:caret-down" class="text-slate-500" />
+                      <Icon icon="ph:caret-down" class="text-slate-600" />
                     </div>
                   </div>
                   <div
@@ -2038,19 +2074,19 @@ onMounted(() => {
                 </div>
               </div>
 
-              <div class="space-y-2 pt-2">
+              <div class="pt-2 space-y-2">
                 <div class="text-[13px] font-medium text-slate-8">
                   When a maintenance session fails
                 </div>
                 <div
                   @click="showFailureSheet = true"
-                  class="flex h-10 w-full cursor-pointer items-center justify-between rounded border border-slate-4 bg-white px-3"
+                  class="flex justify-between items-center px-3 w-full h-10 bg-white rounded border cursor-pointer border-slate-4"
                   :class="{ 'cursor-not-allowed opacity-50': automationSchedules.length <= 1 }"
                 >
-                  <span class="truncate pr-2 text-sm">{{
+                  <span class="pr-2 text-sm truncate">{{
                     FAILURE_OPTIONS.find((o) => o.value === automationOnFailure)?.label
                   }}</span>
-                  <Icon icon="ph:caret-down" class="shrink-0 text-slate-500" />
+                  <Icon icon="ph:caret-down" class="shrink-0 text-slate-600" />
                 </div>
               </div>
             </div>
@@ -2061,8 +2097,8 @@ onMounted(() => {
   </div>
 
   <!-- Bottom Submit Button -->
-  <div class="fixed bottom-0 z-20 w-full bg-pure-white px-4 pb-safe">
-    <div class="flex h-16 w-full items-center">
+  <div class="fixed bottom-0 z-20 px-4 w-full bg-pure-white pb-safe">
+    <div class="flex items-center w-full h-16">
       <AppButton
         class="grow"
         kind="outline"
@@ -2078,7 +2114,7 @@ onMounted(() => {
   <!-- Data Collection Method Sheet -->
   <AppActionSheet :show="showMethod" @close="showMethod = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
         <div class="text-xl font-semibold">Data collection method</div>
         <div class="cursor-pointer" @click="showMethod = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -2089,7 +2125,7 @@ onMounted(() => {
         <div
           v-for="opt in METHOD_OPTIONS"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex justify-between items-center w-full h-14 border-b border-slate-3"
         >
           <label :for="`method_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
           <input
@@ -2098,13 +2134,13 @@ onMounted(() => {
             :id="`method_${opt.value}`"
             :checked="selectMethodTemp === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="selectMethodTemp = opt.value"
           />
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 flex w-full items-center justify-center bg-white py-3">
+      <div class="flex sticky bottom-0 z-10 justify-center items-center py-3 w-full bg-white">
         <AppButton class="w-full" @click="onApplyMethod">Apply</AppButton>
       </div>
     </div>
@@ -2125,7 +2161,7 @@ onMounted(() => {
   <!-- Status Sheet -->
   <AppActionSheet :show="showStatus" @close="showStatus = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
         <div class="text-xl font-semibold">Status</div>
         <div class="cursor-pointer" @click="showStatus = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -2136,9 +2172,9 @@ onMounted(() => {
         <div
           v-for="opt in STATUS_OPTIONS"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex justify-between items-center w-full h-14 border-b border-slate-3"
         >
-          <label :for="`status_${opt.value}`" class="w-full text-sm">
+          <label :for="`status_${opt.value}`" class="text-sm w-fit">
             <AppChip :chip="opt.value" />
           </label>
           <input
@@ -2147,13 +2183,13 @@ onMounted(() => {
             :id="`status_${opt.value}`"
             :checked="selectStatus === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="selectStatus = opt.value"
           />
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 flex w-full items-center justify-center bg-white py-3">
+      <div class="flex sticky bottom-0 z-10 justify-center items-center py-3 w-full bg-white">
         <AppButton class="w-full" @click="onApplyStatus(selectStatus)">Apply</AppButton>
       </div>
     </div>
@@ -2162,7 +2198,7 @@ onMounted(() => {
   <!-- Manual Interval Unit Action Sheet -->
   <AppActionSheet :show="showManualUnitSheet" @close="showManualUnitSheet = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
         <div class="text-xl font-semibold">Interval unit</div>
         <div class="cursor-pointer" @click="showManualUnitSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -2172,9 +2208,9 @@ onMounted(() => {
         <div
           v-for="opt in UNIT_OPTIONS"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-4"
+          class="flex justify-between items-center w-full h-14 border-b border-slate-4"
         >
-          <label :for="`manual_unit_${opt.value}`" class="w-full cursor-pointer text-sm">
+          <label :for="`manual_unit_${opt.value}`" class="w-full text-sm cursor-pointer">
             {{ opt.label }}
           </label>
           <input
@@ -2183,7 +2219,7 @@ onMounted(() => {
             :id="`manual_unit_${opt.value}`"
             :checked="manualIntervalUnit === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="
               () => {
                 manualIntervalUnit = opt.value
@@ -2199,7 +2235,7 @@ onMounted(() => {
   <!-- Schedule Interval Unit Action Sheet -->
   <AppActionSheet :show="showScheduleUnitSheet" @close="showScheduleUnitSheet = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
         <div class="text-xl font-semibold">Interval unit</div>
         <div class="cursor-pointer" @click="showScheduleUnitSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -2209,9 +2245,9 @@ onMounted(() => {
         <div
           v-for="opt in UNIT_OPTIONS"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-4"
+          class="flex justify-between items-center w-full h-14 border-b border-slate-4"
         >
-          <label :for="`sched_unit_${opt.value}`" class="w-full cursor-pointer text-sm">
+          <label :for="`sched_unit_${opt.value}`" class="w-full text-sm cursor-pointer">
             {{ opt.label }}
           </label>
           <input
@@ -2220,7 +2256,7 @@ onMounted(() => {
             :id="`sched_unit_${opt.value}`"
             :checked="automationSchedules[editingScheduleIndex]?.interval_unit === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="
               () => {
                 automationSchedules[editingScheduleIndex].interval_unit = opt.value
@@ -2236,7 +2272,7 @@ onMounted(() => {
   <!-- Failure Strategy Action Sheet -->
   <AppActionSheet :show="showFailureSheet" @close="showFailureSheet = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
         <div class="text-xl font-semibold">When a maintenance session fails</div>
         <div class="cursor-pointer" @click="showFailureSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -2246,9 +2282,9 @@ onMounted(() => {
         <div
           v-for="opt in FAILURE_OPTIONS"
           :key="opt.value"
-          class="flex w-full items-center justify-between border-b border-slate-4 py-4"
+          class="flex justify-between items-center py-4 w-full border-b border-slate-4"
         >
-          <label :for="`failure_${opt.value}`" class="w-full cursor-pointer pr-4 text-sm">
+          <label :for="`failure_${opt.value}`" class="pr-4 w-full text-sm cursor-pointer">
             {{ opt.label }}
           </label>
           <input
@@ -2257,7 +2293,7 @@ onMounted(() => {
             :id="`failure_${opt.value}`"
             :checked="automationOnFailure === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="
               () => {
                 automationOnFailure = opt.value
@@ -2273,7 +2309,7 @@ onMounted(() => {
   <!-- Prompt Level Select Sheet -->
   <AppActionSheet :show="showPromptLevel" @close="showPromptLevel = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
         <div class="text-xl font-semibold">Prompt level</div>
         <div class="cursor-pointer" @click="showPromptLevel = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -2283,9 +2319,9 @@ onMounted(() => {
         <div
           v-for="opt in promptSuccessMetricOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex justify-between items-center w-full h-14 border-b border-slate-3"
         >
-          <label :for="`prompt_metric_${opt.value}`" class="w-full cursor-pointer text-sm">
+          <label :for="`prompt_metric_${opt.value}`" class="w-full text-sm cursor-pointer">
             {{ opt.label }}
           </label>
           <input
@@ -2294,7 +2330,7 @@ onMounted(() => {
             :id="`prompt_metric_${opt.value}`"
             :checked="selectedPromptSuccessMetric === opt.value"
             :value="opt.value"
-            class="shrink-0 rounded-full border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+            class="rounded-full shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
             @click="
               () => {
                 selectedPromptSuccessMetric = opt.value
@@ -2310,7 +2346,7 @@ onMounted(() => {
   <!-- Prompt Action Sheet -->
   <AppActionSheet :show="showPromptActionSheet" @close="showPromptActionSheet = false">
     <div class="py-2">
-      <div class="flex items-center justify-between border-b border-slate-3 pb-3 mb-2">
+      <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-3">
         <div class="text-lg font-bold text-slate-9">{{ activePromptName }}</div>
         <div class="cursor-pointer" @click="showPromptActionSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -2322,16 +2358,17 @@ onMounted(() => {
           v-if="promptingFormat === 'classic'"
           type="button"
           @click="onEditPrompt"
-          class="flex w-full items-center gap-3 py-3 px-2 rounded-lg text-slate-8 hover:bg-slate-50 transition-colors text-left"
+          class="flex gap-3 items-center px-2 py-3 w-full text-left rounded-lg transition-colors text-slate-8 hover:bg-slate-50"
         >
-          <Icon icon="ph:pencil-simple-line-bold" class="text-xl text-slate-5" />
+          <Icon icon="ph:pencil-simple-line-bold" class="text-xl text-slate-6" />
           <span class="text-sm font-medium">Edit prompt</span>
         </button>
         <!-- Delete prompt button -->
         <button
+          v-if="promptingFormat !== 'classic' || promptsAttributes.length > 1"
           type="button"
           @click="onDeletePrompt"
-          class="flex w-full items-center gap-3 py-3 px-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors text-left"
+          class="flex gap-3 items-center px-2 py-3 w-full text-left text-red-600 rounded-lg transition-colors hover:bg-red-50"
         >
           <Icon icon="ph:trash-bold" class="text-red-5" />
           <span class="text-sm font-medium">Delete prompt</span>
@@ -2343,26 +2380,26 @@ onMounted(() => {
   <!-- Add/Edit Prompt Form Sheet -->
   <AppActionSheet :show="showPromptFormSheet" @close="showPromptFormSheet = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
         <div class="text-xl font-semibold">{{ isEditingPrompt ? 'Edit prompt' : 'Add new prompt' }}</div>
         <div class="cursor-pointer" @click="showPromptFormSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
         </div>
       </div>
 
-      <div class="space-y-4 py-2">
+      <div class="py-2 space-y-4">
         <!-- Code field with max 3 char helper inside label row -->
         <div class="space-y-1">
           <div class="flex justify-between items-center text-xs font-semibold text-slate-7">
             <span>Code *</span>
-            <span class="text-slate-5 font-normal">Max. 3 char</span>
+            <span class="font-normal text-slate-6">Max. 3 char</span>
           </div>
           <input
             type="text"
             maxlength="3"
             placeholder="Type code"
             v-model="promptFormCode"
-            class="h-10 w-full rounded border border-slate-3 px-3 text-sm outline-none focus:border-light-purple-5 focus:ring-light-purple-2"
+            class="px-3 w-full h-10 text-sm rounded border outline-none border-slate-3 focus:border-light-purple-5 focus:ring-light-purple-2"
           />
         </div>
 
@@ -2371,23 +2408,17 @@ onMounted(() => {
           <span class="text-xs font-semibold text-slate-7">Symbol</span>
           <div
             @click="openSymbolSelect"
-            class="flex h-10 w-full cursor-pointer items-center justify-between rounded border border-slate-3 bg-white px-3"
+            class="flex justify-between items-center px-3 w-full h-10 bg-white rounded border cursor-pointer border-slate-3"
           >
-            <div class="flex items-center gap-2">
-              <!-- Colored Dot representing selected color -->
-              <div
-                class="h-4 w-4 rounded-full border border-slate-3"
-                :style="{ backgroundColor: promptColors[promptFormColor]?.primaryColor }"
-              ></div>
+            <div class="flex gap-2 items-center">
               <!-- Shape icon representing selected shape -->
               <Icon
                 :icon="promptFormShape === 'square' ? 'ph:square-fill' : promptFormShape === 'circle' ? 'ph:circle-fill' : promptFormShape === 'triangle' ? 'ph:triangle-fill' : 'ph:diamond-fill'"
                 class="text-lg"
                 :style="{ color: promptColors[promptFormColor]?.primaryColor }"
               />
-              <span class="text-sm text-slate-8 capitalize">{{ promptFormColor }} / {{ promptFormShape }}</span>
             </div>
-            <Icon icon="ph:caret-down" class="text-slate-5" />
+            <Icon icon="ph:caret-down" class="text-slate-6" />
           </div>
         </div>
 
@@ -2398,12 +2429,12 @@ onMounted(() => {
             type="text"
             placeholder="Type name"
             v-model="promptFormName"
-            class="h-10 w-full rounded border border-slate-3 px-3 text-sm outline-none focus:border-light-purple-5 focus:ring-light-purple-2"
+            class="px-3 w-full h-10 text-sm rounded border outline-none border-slate-3 focus:border-light-purple-5 focus:ring-light-purple-2"
           />
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 flex w-full items-center justify-center gap-3 bg-white py-4">
+      <div class="flex sticky bottom-0 z-10 gap-3 justify-center items-center py-4 w-full bg-white">
         <AppButton class="flex-1" kind="plain" @click="showPromptFormSheet = false">Cancel</AppButton>
         <AppButton class="flex-1" @click="onSavePromptForm">
           {{ isEditingPrompt ? 'Update' : 'Add' }}
@@ -2415,7 +2446,7 @@ onMounted(() => {
   <!-- Symbol Selection Sheet -->
   <AppActionSheet :show="showSymbolSelectSheet" @close="showSymbolSelectSheet = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3 border-b border-slate-2">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white border-b border-slate-2">
         <div class="text-xl font-semibold">Symbol</div>
         <div class="cursor-pointer" @click="showSymbolSelectSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -2425,7 +2456,7 @@ onMounted(() => {
       <!-- Temporary local selections inside sheet -->
       <div class="py-2 space-y-4">
         <div>
-          <div class="text-xs font-bold text-slate-5 uppercase tracking-wider mb-2">Colors</div>
+          <div class="mb-2 text-xs font-bold tracking-wider uppercase text-slate-6">Colors</div>
           <div class="divide-y divide-slate-1 max-h-[220px] overflow-y-auto pr-1">
             <div
               v-for="colorOpt in [
@@ -2442,21 +2473,21 @@ onMounted(() => {
               ]"
               :key="colorOpt.value"
               @click="promptFormColor = colorOpt.value"
-              class="flex items-center justify-between py-2.5 cursor-pointer hover:bg-slate-50 transition-colors"
+              class="flex justify-between items-center py-2.5 transition-colors cursor-pointer hover:bg-slate-50"
             >
-              <div class="flex items-center gap-3">
+              <div class="flex gap-3 items-center">
                 <div
-                  class="h-5 w-5 rounded-full border border-slate-3 shrink-0"
+                  class="w-5 h-5 rounded-full border border-slate-3 shrink-0"
                   :style="{ backgroundColor: promptColors[colorOpt.value]?.primaryColor }"
                 ></div>
                 <span class="text-sm text-slate-8">{{ colorOpt.label }}</span>
               </div>
-              <div class="flex items-center justify-center">
+              <div class="flex justify-center items-center">
                 <input
                   type="radio"
                   name="symbol_color"
                   :checked="promptFormColor === colorOpt.value"
-                  class="shrink-0 rounded-full border-slate-3 text-light-purple-5 focus:ring-light-purple-3"
+                  class="rounded-full shrink-0 border-slate-3 text-light-purple-5 focus:ring-light-purple-3"
                 />
               </div>
             </div>
@@ -2464,7 +2495,7 @@ onMounted(() => {
         </div>
 
         <div>
-          <div class="text-xs font-bold text-slate-5 uppercase tracking-wider mb-2 border-t border-slate-2 pt-3">Shapes</div>
+          <div class="pt-3 mb-2 text-xs font-bold tracking-wider uppercase border-t text-slate-6 border-slate-2">Shapes</div>
           <div class="divide-y divide-slate-1">
             <div
               v-for="shapeOpt in [
@@ -2475,9 +2506,9 @@ onMounted(() => {
               ]"
               :key="shapeOpt.value"
               @click="promptFormShape = shapeOpt.value"
-              class="flex items-center justify-between py-2.5 cursor-pointer hover:bg-slate-50 transition-colors"
+              class="flex justify-between items-center py-2.5 transition-colors cursor-pointer hover:bg-slate-50"
             >
-              <div class="flex items-center gap-3">
+              <div class="flex gap-3 items-center">
                 <Icon
                   :icon="shapeOpt.value === 'square' ? 'ph:square-fill' : shapeOpt.value === 'circle' ? 'ph:circle-fill' : shapeOpt.value === 'triangle' ? 'ph:triangle-fill' : 'ph:diamond-fill'"
                   class="text-xl"
@@ -2485,12 +2516,12 @@ onMounted(() => {
                 />
                 <span class="text-sm text-slate-8">{{ shapeOpt.label }}</span>
               </div>
-              <div class="flex items-center justify-center">
+              <div class="flex justify-center items-center">
                 <input
                   type="radio"
                   name="symbol_shape"
                   :checked="promptFormShape === shapeOpt.value"
-                  class="shrink-0 rounded-full border-slate-3 text-light-purple-5 focus:ring-light-purple-3"
+                  class="rounded-full shrink-0 border-slate-3 text-light-purple-5 focus:ring-light-purple-3"
                 />
               </div>
             </div>
@@ -2498,7 +2529,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 flex w-full items-center justify-center bg-white py-3 border-t border-slate-2">
+      <div class="flex sticky bottom-0 z-10 justify-center items-center py-3 w-full bg-white border-t border-slate-2">
         <AppButton class="w-full font-semibold" @click="showSymbolSelectSheet = false">Apply</AppButton>
       </div>
     </div>
@@ -2507,26 +2538,26 @@ onMounted(() => {
   <!-- Add Prompts from Repository Action Sheet -->
   <AppActionSheet :show="showCustomPromptRepoSheet" @close="showCustomPromptRepoSheet = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
         <div class="text-lg font-bold">Add prompts from repository</div>
         <div class="cursor-pointer" @click="showCustomPromptRepoSheet = false">
           <Icon icon="ph:x" class="text-2xl" />
         </div>
       </div>
       
-      <div class="text-xs text-slate-6 mb-4 leading-normal">
+      <div class="mb-4 text-xs leading-normal text-slate-6">
         This prompt is from the Repository and is shared across all targets in your center. To add a new prompt, please visit the Repository.
       </div>
 
-      <div class="max-h-80 overflow-y-auto divide-y divide-slate-100 pr-1">
+      <div class="overflow-y-auto pr-1 max-h-80 divide-y divide-slate-100">
         <div
           v-for="opt in promptOptions"
           :key="opt.id"
-          class="flex items-center justify-between py-3"
+          class="flex justify-between items-center py-3"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex gap-3 items-center">
             <!-- Score badge -->
-            <span class="rounded bg-light-purple-1 border border-light-purple-2 text-light-purple-6 text-xs font-bold px-1.5 py-0.5 w-10 text-center shrink-0">
+            <span class="px-1.5 py-0.5 w-10 text-xs font-bold text-center rounded border bg-light-purple-1 border-light-purple-2 text-light-purple-6 shrink-0">
               {{ opt.score ?? 0 }}
             </span>
             <!-- Code badge -->
@@ -2552,17 +2583,17 @@ onMounted(() => {
           <!-- Checkbox -->
           <input
             type="checkbox"
-            class="h-5 w-5 rounded border-slate-3 text-light-purple-5 focus:ring-light-purple-2 shrink-0 cursor-pointer"
+            class="w-5 h-5 rounded cursor-pointer border-slate-6 text-light-purple-5 focus:ring-light-purple-2 shrink-0"
             :checked="selectedRepoPrompts.some((i) => i.id === opt.id)"
             @change="onChangeNewCustomPrompt(opt)"
           />
         </div>
-        <div v-if="!promptOptions.length" class="text-xs text-slate-4 text-center py-8">
+        <div v-if="!promptOptions.length" class="py-8 text-xs text-center text-slate-6">
           No more prompts available in repository.
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 flex w-full items-center justify-center gap-3 bg-white py-3 border-t border-slate-2 mt-4">
+      <div class="flex sticky bottom-0 z-10 gap-3 justify-center items-center py-3 mt-4 w-full bg-white border-t border-slate-2">
         <AppButton class="flex-1" kind="plain" @click="showCustomPromptRepoSheet = false">Cancel</AppButton>
         <AppButton
           class="flex-1 font-semibold"
@@ -2571,47 +2602,6 @@ onMounted(() => {
         >
           Add {{ selectedRepoPrompts.length }} prompt(s)
         </AppButton>
-      </div>
-    </div>
-  </AppActionSheet>
-
-  <!-- Custom Success Metric Action Sheet -->
-  <AppActionSheet :show="showCustomSuccessMetricSheet" @close="showCustomSuccessMetricSheet = false">
-    <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3 border-b border-slate-2 mb-2">
-        <div class="text-lg font-bold">Success metric</div>
-        <div class="cursor-pointer" @click="showCustomSuccessMetricSheet = false">
-          <Icon icon="ph:x" class="text-2xl" />
-        </div>
-      </div>
-
-      <div class="space-y-1">
-        <!-- Equal to or greater than goal -->
-        <div
-          class="flex h-12 w-full cursor-pointer items-center justify-between border-b border-slate-1 py-1"
-          @click="() => { successMetric = 'equal to or greater than goal'; showCustomSuccessMetricSheet = false; }"
-        >
-          <span class="text-sm font-medium text-slate-8">Equal to or greater than goal</span>
-          <input
-            type="radio"
-            name="custom_success_metric"
-            :checked="successMetric === 'equal to or greater than goal'"
-            class="shrink-0 rounded-full border-slate-3 text-light-purple-5 focus:ring-light-purple-2"
-          />
-        </div>
-        <!-- Less than goal -->
-        <div
-          class="flex h-12 w-full cursor-pointer items-center justify-between border-b border-slate-1 py-1"
-          @click="() => { successMetric = 'less than goal'; showCustomSuccessMetricSheet = false; }"
-        >
-          <span class="text-sm font-medium text-slate-8">Less than goal</span>
-          <input
-            type="radio"
-            name="custom_success_metric"
-            :checked="successMetric === 'less than goal'"
-            class="shrink-0 rounded-full border-slate-3 text-light-purple-5 focus:ring-light-purple-2"
-          />
-        </div>
       </div>
     </div>
   </AppActionSheet>
