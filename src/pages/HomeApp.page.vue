@@ -152,8 +152,6 @@ async function fetchSessions() {
 }
 
 onMounted(() => {
-  appStore.getRunningSessions()
-
   upcomingLoading.value = true
   /** generate session.store from storage */
   sessionStore.generateSessionStore()
