@@ -4,13 +4,13 @@ defineOptions({
 })
 
 /**
- * tambahkan file package sesuai yg dibutuhkan.
+ * tambahkan file package sesuai yg dibutuhkan
  *
  * contoh menambahkan ph
  * bun i -D @iconify-json/ph
  */
 
-// silakan menambahkan sesuai alphabet
+// silakan menambahkan berurutan berdasarkan alphabet
 export type IconSet =
   | 'ph:file'
   | 'ph:file-fill'

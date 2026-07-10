@@ -1325,10 +1325,7 @@ const onSaveEditTrial = async () => {
           </AppButton>
         </div>
         <div
-          v-if="
-            target.enable_problem_behavior &&
-            (Object.keys(resultsState).length > 1 || currentTrial.prompt_id)
-          "
+          v-if="target.enable_problem_behavior && currentTrial.prompt_id"
           class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-colors duration-300 hover:brightness-90"
           :class="{
             'bg-tomato-2': !currentTrial.target_problem_behavior_id,
