@@ -693,6 +693,14 @@ const onExitSession = async () => {
   router.push(redirect.value)
 }
 
+// Back to client session draft
+const onLeaaveSession = async () => {
+  const clientId = sessionStore.session?.client_id
+  if (clientId) {
+    router.push(`/clients/${clientId}/sessions-draft`)
+  }
+}
+
 const handleCompletedColdProbe = ({
   id,
   isCompleted
@@ -1130,7 +1138,7 @@ onUnmounted(() => {
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
         <AppButton kind="plain" @click="showLeaveSession = false">Cancel</AppButton>
-        <AppButton @click="onExitSession">Leave</AppButton>
+        <AppButton @click="onLeaaveSession">Leave</AppButton>
       </div>
     </div>
   </AppActionSheet>
