@@ -19,6 +19,8 @@ import AppChip from '@/components/AppChip.vue'
 import { useClock } from '@/composable/use-clock'
 import dayjs from 'dayjs'
 import { secondsToDuration } from '@/lib/func'
+import type { PluginListenerHandle } from '@capacitor/core'
+import { App } from '@capacitor/app'
 
 const route = useRoute()
 const router = useRouter()
@@ -753,7 +755,19 @@ const duplicateImageCommentsToClientDocument = async () => {
   }
 }
 
+let backButtonListener: PluginListenerHandle | undefined = undefined
+
 onMounted(async () => {
+  backButtonListener = await App.addListener('backButton', () => {
+    if (showLeaveSession.value) {
+      // modal udah kebuka, back kedua = tutup modal aja (opsional)
+      showLeaveSession.value = false
+      return
+    }
+    // tampilkan modal, JANGAN langsung navigasi
+    showLeaveSession.value = true
+  })
+
   const app = document.getElementById('app')
   if (app) {
     app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
@@ -807,6 +821,8 @@ onMounted(async () => {
 
 // Cleanup saat unmount
 onUnmounted(() => {
+  backButtonListener?.remove()
+
   const app = document.getElementById('app')
   if (app) {
     app.style.backgroundColor = 'rgb(255 255 255 / var(--tw-bg-opacity))' /* #ffffff */
