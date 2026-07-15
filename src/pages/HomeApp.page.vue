@@ -52,11 +52,11 @@ watch(query, () => {
   }
 })
 
-type Date = 'days' | 'isoWeeks' | 'months' | ''
+type Date = 'days' | 'weeks' | 'months' | ''
 const date = ref<Date>('')
 const dateOptions: { value: Date; label: string }[] = [
   { value: 'days', label: 'Today' },
-  { value: 'isoWeeks', label: 'This week' },
+  { value: 'weeks', label: 'This week' },
   { value: 'months', label: 'This month' }
 ]
 watch(date, (val) => {
@@ -68,12 +68,13 @@ watch(date, (val) => {
   fetchSessions()
 })
 
-type Status = 'scheduled' | 'unscheduled' | ''
+type Status = 'scheduled' | 'unscheduled' | 'ongoing' | ''
 const status = ref<Status>('')
 const selectStatus = ref<Status>('')
-const statusOptions: { value: Status; label: string }[] = [
+const statusOptions: { value: Status; label: string; caption?: string }[] = [
   { value: 'scheduled', label: 'Scheduled' },
-  { value: 'unscheduled', label: 'Unscheduled' }
+  { value: 'unscheduled', label: 'Unscheduled' },
+  { value: 'ongoing', label: 'In progress', caption: 'Sessions running right now' }
 ]
 const showStatus = ref<boolean>(false)
 watch(showStatus, () => {
@@ -127,9 +128,9 @@ const params = computed<string>(() => {
   let p = `?page=${page.value}&per_page=25`
   if (query.value) p += `&query=${query.value}`
   if (date.value) {
-    const d = dayjs(date.value)
-    p += `&start_date=${d.startOf('days').format('YYYY-MM-DD')}`
-    p += `&end_date=${d.endOf('days').format('YYYY-MM-DD')}`
+    const d = dayjs()
+    p += `&start_date=${d.startOf(date.value).format('YYYY-MM-DD')}`
+    p += `&end_date=${d.endOf(date.value).format('YYYY-MM-DD')}`
   }
   if (status.value) p += `&status=${status.value}`
   p += `&sort=${sort.value}`
@@ -143,27 +144,15 @@ async function fetchUpcoming() {
   if (!success) return
 }
 
-const fetchSessionTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchSessions() {
   sessionsLoading.value = true
   const { success } = await sessionStore.getSessions({ params: params.value })
   sessionsLoading.value = false
   if (!success) return
-  fetchSessionTimeout.value = setTimeout(() => {
-    document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
-  }, 100)
-
-  return () => {
-    if (fetchSessionTimeout.value) {
-      clearTimeout(fetchSessionTimeout.value)
-      fetchSessionTimeout.value = undefined
-    }
-  }
+  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
 }
 
 onMounted(() => {
-  appStore.getRunningSessions()
-
   upcomingLoading.value = true
   /** generate session.store from storage */
   sessionStore.generateSessionStore()
@@ -176,10 +165,6 @@ onUnmounted(() => {
   if (queryTimeout.value) {
     clearTimeout(queryTimeout.value)
     queryTimeout.value = undefined
-  }
-  if (fetchSessionTimeout.value) {
-    clearTimeout(fetchSessionTimeout.value)
-    fetchSessionTimeout.value = undefined
   }
 })
 
@@ -320,7 +305,7 @@ const onOpenSession = (session: Session) => {
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
       No upcoming scheduled for
-      {{ date === 'days' ? 'today' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
+      {{ date === 'days' ? 'today' : date === 'weeks' ? 'this week' : 'this month' }}.
     </div>
     <div v-else class="text-center text-sm text-slate-8">
       Oops! No upcoming sessions fit your filter criteria. Try changing the filter to find more
@@ -370,7 +355,10 @@ const onOpenSession = (session: Session) => {
           :key="opt.value"
           class="flex h-14 w-full items-center justify-between border-b border-slate-3"
         >
-          <label :for="`status_filter_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
+          <label :for="`status_filter_${opt.value}`" class="flex w-full flex-col">
+            <span class="text-sm">{{ opt.label }}</span>
+            <span v-if="opt.caption" class="text-xs text-slate-6">{{ opt.caption }}</span>
+          </label>
           <input
             type="radio"
             name="status_filter"
@@ -446,19 +434,15 @@ const onOpenSession = (session: Session) => {
           </div>
         </div>
         <div class="text-sm text-light-purple-4">Session ID {{ sessionToJoin?.id }}</div>
-        <div class="text-center text-xl font-semibold text-dark-purple-1">
+        <div class="text-center text-xl font-bold text-light-purple-5">
           Session in progress for {{ sessionToJoin?.client?.name }}
         </div>
-        <div class="flex flex-col items-center gap-4 text-sm text-light-purple-5">
+        <div class="flex flex-col items-center gap-4 text-sm text-dark-purple-2">
           <div class="text-center">
             This session with
             <span class="font-semibold">{{ sessionToJoin?.client?.name }}</span>
             is currently being conducted by
             <span class="font-semibold">{{ sessionToJoin?.user?.name }}.</span>
-          </div>
-          <div class="text-center">
-            If you join,
-            <span class="font-semibold">you won't be able to leave until the session ends.</span>
           </div>
           <div class="text-center">Are you sure you want to join?</div>
         </div>
@@ -471,9 +455,11 @@ const onOpenSession = (session: Session) => {
         }"
         class="w-full"
       >
-        <AppButton kind="outline" class="w-full">Join this session</AppButton>
+        <AppButton class="w-full">Join this session</AppButton>
       </RouterLink>
-      <AppButton class="w-full" @click="showJoinConfirmation = false">Cancel</AppButton>
+      <AppButton kind="outline" class="w-full" @click="showJoinConfirmation = false">
+        Cancel
+      </AppButton>
     </div>
   </TransitionRoot>
 </template>

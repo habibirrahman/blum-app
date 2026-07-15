@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAppStore } from '@/stores/app.store'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
 import type { Target, TargetStatus } from '@/lib/types'
@@ -18,7 +17,6 @@ import { useToast } from 'vue-toastification'
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-const appStore = useAppStore()
 const clientStore = useClientStore()
 const sessionStore = useSessionStore()
 
@@ -215,8 +213,6 @@ onMounted(async () => {
     app.scroll({ top: 0, behavior: 'smooth' })
   }
 
-  appStore.getRunningSessions()
-
   await fetchSession()
   await fetchTargets()
 })
@@ -232,9 +228,9 @@ onUnmounted(() => {
 
 <template>
   <div class="sticky top-0 z-10 bg-white">
-    <div class="flex h-14 items-center justify-between gap-4 px-4">
-      <div class="flex items-center gap-3 truncate">
-        <RouterLink :to="redirect" class="flex h-8 w-8 shrink-0 items-center justify-center">
+    <div class="flex gap-4 justify-between items-center px-4 h-14">
+      <div class="flex gap-3 items-center truncate">
+        <RouterLink :to="redirect" class="flex justify-center items-center w-8 h-8 shrink-0">
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </RouterLink>
         <div class="truncate text-[22px] text-xl font-bold">Select targets</div>
@@ -243,8 +239,8 @@ onUnmounted(() => {
   </div>
 
   <div>
-    <div class="sticky top-14 z-10 space-y-3 bg-white pt-3">
-      <div class="flex items-center gap-4 px-4">
+    <div class="sticky top-14 z-10 pt-3 space-y-3 bg-white">
+      <div class="flex gap-4 items-center px-4">
         <AppTextInput
           name="query"
           placeholder="Search target by name"
@@ -254,9 +250,9 @@ onUnmounted(() => {
         />
       </div>
       <div class="pl-4">
-        <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+        <div class="flex overflow-x-auto gap-2 pr-4 pb-3 snap-x snap-mandatory scroll-smooth">
           <div
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
+            class="flex items-center px-3 h-8 text-xs font-medium rounded-full border transition-colors cursor-pointer shrink-0 snap-start"
             :class="[
               selected
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -270,7 +266,7 @@ onUnmounted(() => {
           <div
             v-for="opt in statusOptions"
             :key="opt.value"
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
+            class="flex items-center px-3 h-8 text-xs font-medium rounded-full border transition-colors cursor-pointer shrink-0 snap-start"
             :class="[
               statuses.includes(opt.value)
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -286,7 +282,7 @@ onUnmounted(() => {
 
     <div v-if="targetsLoading">
       <div class="px-4 pt-2">
-        <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+        <div class="w-24 h-4 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
       </div>
       <div class="px-4">
         <TargetItemLoader v-for="n in perPage" :key="n" />
@@ -294,23 +290,23 @@ onUnmounted(() => {
     </div>
     <div
       v-else-if="!filteredTargetsCount"
-      class="flex h-64 w-full items-center justify-center px-4"
+      class="flex justify-center items-center px-4 w-full h-64"
     >
-      <div v-if="statuses.length" class="text-center text-sm text-slate-8">
+      <div v-if="statuses.length" class="text-sm text-center text-slate-8">
         Oops! No targets fit your filter criteria. Try changing the filter to find more results!
       </div>
-      <div v-else-if="query" class="text-center text-sm text-slate-8">
+      <div v-else-if="query" class="text-sm text-center text-slate-8">
         Sorry, no targets match your search. Try searching with a different name.
       </div>
-      <div v-else-if="selected" class="text-center text-sm text-slate-8">
+      <div v-else-if="selected" class="text-sm text-center text-slate-8">
         No target has been added yet.
       </div>
-      <div v-else class="text-center text-sm text-slate-8">
+      <div v-else class="text-sm text-center text-slate-8">
         Looks like there are no targets for this client. Create them and they'll show up here.
       </div>
     </div>
     <div v-else class="mb-24">
-      <div class="flex items-center justify-between px-4 pt-2 text-xs text-slate-7">
+      <div class="flex justify-between items-center px-4 pt-2 text-xs text-slate-7">
         <div v-if="selected" class="h-5">
           <span>Showing </span>
           <span> {{ checkedTargetIds.length }} </span>
@@ -346,9 +342,9 @@ onUnmounted(() => {
                 />
               </div>
 
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
+              <div class="flex justify-between items-center">
+                <div class="flex gap-2 items-center">
+                  <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
                   <div class="text-sm font-semibold text-slate-10">
                     {{ target.name }}
                   </div>
@@ -383,8 +379,8 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div class="fixed bottom-0 z-20 w-full bg-pure-white px-4 pb-safe">
-    <div class="flex h-16 w-full items-center">
+  <div class="fixed bottom-0 z-20 px-4 w-full bg-pure-white pb-safe">
+    <div class="flex items-center w-full h-16">
       <AppButton
         class="grow"
         :loading="addLoading"

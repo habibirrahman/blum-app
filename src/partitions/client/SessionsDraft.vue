@@ -16,6 +16,7 @@ import { displayDate } from '@/lib/func'
 import SessionItemLoader from '@/components/skeletons/SessionItemLoader.vue'
 import { useSessionStore } from '@/stores/session.store'
 import { useToast } from 'vue-toastification'
+import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
@@ -57,11 +58,11 @@ watch(query, () => {
   }
 })
 
-type Date = 'days' | 'isoWeeks' | 'months' | ''
+type Date = 'days' | 'weeks' | 'months' | ''
 const date = ref<Date>('')
 const dateOptions: { value: Date; label: string }[] = [
   { value: 'days', label: 'Today' },
-  { value: 'isoWeeks', label: 'This week' },
+  { value: 'weeks', label: 'This week' },
   { value: 'months', label: 'This month' }
 ]
 watch(date, (val) => {
@@ -73,12 +74,13 @@ watch(date, (val) => {
   fetchDraftSession()
 })
 
-type Status = 'scheduled' | 'unscheduled' | ''
+type Status = 'scheduled' | 'unscheduled' | 'ongoing' | ''
 const status = ref<Status>('')
 const selectStatus = ref<Status>('')
-const statusOptions: { value: Status; label: string }[] = [
+const statusOptions: { value: Status; label: string; caption?: string }[] = [
   { value: 'scheduled', label: 'Scheduled' },
-  { value: 'unscheduled', label: 'Unscheduled' }
+  { value: 'unscheduled', label: 'Unscheduled' },
+  { value: 'ongoing', label: 'In progress', caption: 'Sessions running right now' }
 ]
 const showStatus = ref<boolean>(false)
 watch(showStatus, () => {
@@ -131,7 +133,19 @@ const onApplySort = () => {
 const params = computed<string>(() => {
   let p = `?page=${page.value}&per_page=${perPage.value}`
   if (query.value) p += `&query=${query.value}`
-  p += `&status=draft,ongoing`
+  if (date.value) {
+    const d = dayjs()
+    p += `&start_date=${d.startOf(date.value).format('YYYY-MM-DD')}`
+    p += `&end_date=${d.endOf(date.value).format('YYYY-MM-DD')}`
+  }
+  if (status.value) {
+    p += `&status=${status.value}`
+    if (status.value !== 'ongoing') {
+      p += `,draft`
+    }
+  } else {
+    p += `&status=draft,ongoing`
+  }
   return p
 })
 
@@ -143,7 +157,6 @@ async function fetchUpcomingSessions() {
   if (!success) return
 }
 
-const fetchDraftSessionTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchDraftSession() {
   sessionsLoading.value = true
   const id = Number(route.params.id)
@@ -151,16 +164,7 @@ async function fetchDraftSession() {
   sessionsLoading.value = false
   if (!success) return
 
-  fetchDraftSessionTimeout.value = setTimeout(() => {
-    document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
-  }, 100)
-
-  return () => {
-    if (fetchDraftSessionTimeout.value) {
-      clearTimeout(fetchDraftSessionTimeout.value)
-      fetchDraftSessionTimeout.value = undefined
-    }
-  }
+  document.getElementById('app')?.scroll({ top: 0, behavior: 'smooth' })
 }
 
 onMounted(() => {
@@ -173,10 +177,6 @@ onUnmounted(() => {
   if (queryTimeout.value) {
     clearTimeout(queryTimeout.value)
     queryTimeout.value = undefined
-  }
-  if (fetchDraftSessionTimeout.value) {
-    clearTimeout(fetchDraftSessionTimeout.value)
-    fetchDraftSessionTimeout.value = undefined
   }
 })
 
@@ -352,7 +352,7 @@ const onCreateSession = async () => {
   >
     <div v-if="date" class="text-center text-sm text-slate-8">
       No sessions draft scheduled for
-      {{ date === 'days' ? 'today' : date === 'isoWeeks' ? 'this week' : 'this month' }}.
+      {{ date === 'days' ? 'today' : date === 'weeks' ? 'this week' : 'this month' }}.
     </div>
     <div v-else-if="query" class="text-center text-sm text-slate-8">
       Sorry, no drafts match your search. Try searching with a different therapist name or session
@@ -405,7 +405,10 @@ const onCreateSession = async () => {
           :key="opt.value"
           class="flex h-14 w-full items-center justify-between border-b border-slate-3"
         >
-          <label :for="`status_filter_${opt.value}`" class="w-full text-sm">{{ opt.label }}</label>
+          <label :for="`status_filter_${opt.value}`" class="flex w-full flex-col">
+            <span class="text-sm">{{ opt.label }}</span>
+            <span v-if="opt.caption" class="text-xs text-slate-6">{{ opt.caption }}</span>
+          </label>
           <input
             type="radio"
             name="status_filter"
@@ -488,19 +491,16 @@ const onCreateSession = async () => {
           <span>{{ sessionToJoin?.id }}</span>
           <span v-if="sessionToJoin?.name"> - {{ sessionToJoin?.name }}</span>
         </div>
-        <div class="text-center text-xl font-semibold text-dark-purple-1">
+        <div class="text-center text-xl font-bold text-light-purple-5">
           Session in progress for {{ sessionToJoin?.client?.name }}
         </div>
-        <div class="flex flex-col items-center gap-4 text-sm text-light-purple-5">
+        <div class="flex flex-col items-center gap-4 text-sm text-dark-purple-2">
           <div class="text-center">
             This session with
-            <span class="font-semibold">{{ sessionToJoin?.client?.name }}</span> is currently being
-            conducted by <span class="font-semibold">{{ sessionToJoin?.user?.name }}</span
+            <span class="font-semibold">{{ sessionToJoin?.client?.name }}</span>
+            is currently being conducted by
+            <span class="font-semibold">{{ sessionToJoin?.user?.name }}</span
             >.
-          </div>
-          <div class="text-center">
-            If you join,
-            <span class="font-semibold">you won't be able to leave until the session ends.</span>
           </div>
           <div class="text-center">Are you sure you want to join?</div>
         </div>
@@ -513,9 +513,11 @@ const onCreateSession = async () => {
         }"
         class="w-full"
       >
-        <AppButton kind="outline" class="w-full">Join this session</AppButton>
+        <AppButton class="w-full">Join this session</AppButton>
       </RouterLink>
-      <AppButton class="w-full" @click="showJoinConfirmation = false">Cancel</AppButton>
+      <AppButton kind="outline" class="w-full" @click="showJoinConfirmation = false">
+        Cancel
+      </AppButton>
     </div>
   </TransitionRoot>
 </template>

@@ -87,8 +87,6 @@ onMounted(async () => {
     app.scroll({ top: 0, behavior: 'smooth' })
   }
 
-  appStore.getRunningSessions()
-
   await fetchSession()
 })
 
@@ -261,23 +259,23 @@ const onUpdateSessionName = async () => {
 
 <template>
   <div class="sticky top-0 z-10 bg-white">
-    <div class="flex h-14 items-center justify-between gap-4 px-4">
-      <div class="flex items-center gap-3 truncate">
-        <RouterLink :to="redirect" class="flex h-8 w-8 shrink-0 items-center justify-center">
+    <div class="flex gap-4 justify-between items-center px-4 h-14">
+      <div class="flex gap-3 items-center truncate">
+        <RouterLink :to="redirect" class="flex justify-center items-center w-8 h-8 shrink-0">
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </RouterLink>
         <div class="space-y-1">
-          <div class="truncate font-bold">
+          <div class="font-bold truncate">
             {{ sessionStore.session?.client?.name }}
           </div>
-          <div class="shrink-0 text-xs text-slate-8">
+          <div class="text-xs shrink-0 text-slate-8">
             <span v-if="!sessionStore.session?.name">Session ID </span>
             <span>{{ sessionStore.session?.id }}</span>
             <span v-if="sessionStore.session?.name"> - {{ sessionStore.session?.name }}</span>
           </div>
         </div>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex gap-2 items-center">
         <AppButton @click="showMenu = true">
           <Icon icon="ph:pencil" />
         </AppButton>
@@ -296,52 +294,52 @@ const onUpdateSessionName = async () => {
 
   <div class="relative z-[2] pb-12">
     <div v-if="isScheduled" class="flex flex-col">
-      <div class="py-3 text-center text-xs text-slate-7">This session is scheduled:</div>
+      <div class="py-3 text-xs text-center text-slate-7">This session is scheduled:</div>
       <div class="pl-4">
-        <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+        <div class="flex overflow-x-auto gap-2 pr-4 pb-3 snap-x snap-mandatory scroll-smooth">
           <div
             v-for="(item, idx) in scheduleDetails"
             :key="item.title"
-            class="flex snap-start gap-2"
+            class="flex gap-2 snap-start"
           >
-            <div v-if="idx > 0" class="h-10 w-0.5 shrink-0 bg-slate-3"></div>
-            <div class="flex h-10 items-center gap-2">
+            <div v-if="idx > 0" class="w-0.5 h-10 shrink-0 bg-slate-3"></div>
+            <div class="flex gap-2 items-center h-10">
               <div
-                class="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-light-purple-1"
+                class="flex justify-center items-center w-7 h-7 rounded shrink-0 bg-light-purple-1"
               >
                 <Icon :icon="item.icon" class="text-light-purple-4" />
               </div>
               <div class="flex h-10 w-[104px] flex-col justify-between truncate">
                 <div class="text-xs text-slate-7">{{ item.title }}</div>
-                <div class="truncate text-sm font-medium text-dark-purple-1">{{ item.label }}</div>
+                <div class="text-sm font-medium truncate text-dark-purple-1">{{ item.label }}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div class="space-y-6 py-6">
+    <div class="py-6 space-y-6">
       <div v-if="sessionLoading">
-        <div class="h-4 w-64 shrink-0 animate-pulse rounded-full bg-prim-1"></div>
+        <div class="w-64 h-4 rounded-full animate-pulse shrink-0 bg-prim-1"></div>
       </div>
       <div
         v-else-if="sessionStore.session_measurements.length"
-        class="px-4 text-center text-sm text-dark-purple-1"
+        class="px-4 text-sm text-center text-dark-purple-1"
       >
         Before you begin this session, take a moment to review the targets and the comments.
       </div>
 
-      <div v-if="commentsLoading" class="space-y-2 px-4">
+      <div v-if="commentsLoading" class="px-4 space-y-2">
         <div class="flex h-[30px] items-center justify-center">
-          <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-prim-1"></div>
+          <div class="w-32 h-4 rounded-full animate-pulse shrink-0 bg-prim-1"></div>
         </div>
         <div
           v-for="n in 2"
           :key="n"
-          class="h-32 w-full shrink-0 animate-pulse rounded bg-prim-1"
+          class="w-full h-32 rounded animate-pulse shrink-0 bg-prim-1"
         ></div>
       </div>
-      <div v-else-if="sessionStore.session_comments.length" class="space-y-2 px-4">
+      <div v-else-if="sessionStore.session_comments.length" class="px-4 space-y-2">
         <div
           class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1"
           @click="showComments = !showComments"
@@ -354,7 +352,7 @@ const onUpdateSessionName = async () => {
             :class="{ 'rotate-180': !showComments }"
           />
         </div>
-        <div class="space-y-2 overflow-hidden" :class="{ 'h-0': !showComments }">
+        <div class="overflow-hidden space-y-2" :class="{ 'h-0': !showComments }">
           <CommentItem
             v-for="comment in sessionStore.session_comments"
             :key="comment.id"
@@ -363,14 +361,14 @@ const onUpdateSessionName = async () => {
         </div>
       </div>
 
-      <div v-if="sessionLoading" class="space-y-2 px-4">
+      <div v-if="sessionLoading" class="px-4 space-y-2">
         <div class="flex h-[30px] items-center justify-center">
-          <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-prim-1"></div>
+          <div class="w-32 h-4 rounded-full animate-pulse shrink-0 bg-prim-1"></div>
         </div>
         <div
           v-for="n in 8"
           :key="n"
-          class="h-32 w-full shrink-0 animate-pulse rounded bg-prim-1"
+          class="w-full h-32 rounded animate-pulse shrink-0 bg-prim-1"
         ></div>
       </div>
       <div
@@ -380,7 +378,7 @@ const onUpdateSessionName = async () => {
         <div>Whoops, no targets here!</div>
         <div>Add targets before kick off your session.</div>
       </div>
-      <div v-else class="space-y-2 px-4">
+      <div v-else class="px-4 space-y-2">
         <div class="flex h-[30px] items-center justify-center gap-1 text-dark-purple-1">
           <div class="text-2xl font-bold">{{ sessionStore.session_measurements.length }}</div>
           <div class="text-sm">target(s)</div>
@@ -388,7 +386,7 @@ const onUpdateSessionName = async () => {
         <div
           v-for="measurement in sessionStore.session_measurements"
           :key="measurement.id"
-          class="w-full rounded border border-prim-4 bg-white"
+          class="w-full bg-white rounded border border-prim-4"
           :style="{
             boxShadow: '4px 4px 0px 0px #D6C7E066'
           }"
@@ -402,27 +400,27 @@ const onUpdateSessionName = async () => {
             class="h-[6px] w-full shrink-0 rounded-t"
             :style="{ backgroundColor: measurement.target?.curriculum_color }"
           ></div>
-          <div class="space-y-2 px-4 py-3">
-            <div v-if="measurement.target?.is_group" class="flex items-center gap-2">
-              <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
+          <div class="px-4 py-3 space-y-2">
+            <div v-if="measurement.target?.is_group" class="flex gap-2 items-center">
+              <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
               <div class="text-sm font-semibold text-slate-9">
                 {{ measurement.target?.name }}
               </div>
             </div>
             <div v-else class="space-y-0.5 truncate">
-              <div class="truncate text-xs font-medium">
+              <div class="text-xs font-medium truncate">
                 {{ measurement.target?.curriculum_name }}
               </div>
-              <div class="truncate text-sm font-semibold">{{ measurement.target?.name }}</div>
+              <div class="text-sm font-semibold truncate">{{ measurement.target?.name }}</div>
             </div>
             <!-- target information -->
             <div
               v-if="measurement.target?.is_group"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               <div>Grouped targets - {{ getTargetType(measurement.target?.type) }}</div>
             </div>
-            <div v-else class="space-y-0.5 text-wrap text-sm text-slate-8">
+            <div v-else class="space-y-0.5 text-sm text-wrap text-slate-8">
               <div>{{ getTargetType(measurement?.target?.type) }}</div>
               <div
                 v-if="
@@ -521,11 +519,11 @@ const onUpdateSessionName = async () => {
             <!-- probing -->
             <div
               v-if="measurement.type === 'Measurement::Probing'"
-              class="h-0.5 w-full shrink-0 bg-slate-3"
+              class="w-full h-0.5 shrink-0 bg-slate-3"
             ></div>
             <div
               v-if="measurement.type === 'Measurement::Probing'"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               <div>Probing activated</div>
               <div>
@@ -539,8 +537,8 @@ const onUpdateSessionName = async () => {
             </div>
             <!-- end probing -->
             <!-- target description -->
-            <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
-            <div class="space-y-0.5 text-wrap text-sm text-slate-8">
+            <div class="w-full h-0.5 shrink-0 bg-slate-3"></div>
+            <div class="space-y-0.5 text-sm text-wrap text-slate-8">
               <div v-if="!measurement.target?.description" class="italic">No description</div>
               <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
@@ -548,11 +546,11 @@ const onUpdateSessionName = async () => {
             <!-- last phase line -->
             <div
               v-if="measurement.target?.last_phase_line"
-              class="h-0.5 w-full shrink-0 bg-slate-3"
+              class="w-full h-0.5 shrink-0 bg-slate-3"
             ></div>
             <div
               v-if="measurement.target?.last_phase_line && !measurement.target?.in_maintenance"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               Data from this session will be added to the
               <span class="font-semibold">{{ measurement.target.last_phase_line?.label }}</span>
@@ -564,7 +562,7 @@ const onUpdateSessionName = async () => {
                 measurement.target?.in_maintenance &&
                 isMaintenanceDisplayable(measurement.target)
               "
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               Data from this session will be added to the
               <span class="font-semibold"
@@ -583,7 +581,7 @@ const onUpdateSessionName = async () => {
                 measurement.target?.in_maintenance &&
                 isMaintenanceDisplayable(measurement.target)
               "
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               Data from this session will be added to the
               <span class="font-semibold">Maintenance</span>
@@ -591,7 +589,7 @@ const onUpdateSessionName = async () => {
             </div>
             <div
               v-if="!isMaintenanceDisplayable(measurement.target)"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               Data from this session will be added to the
               <span class="font-semibold">Teaching</span>
@@ -601,7 +599,7 @@ const onUpdateSessionName = async () => {
             <!-- sbt -->
             <div v-if="measurement.target?.type === 'Target::Sbt'">
               <!-- sbt taks -->
-              <div class="space-y-3 border-t-2 border-slate-3 py-3">
+              <div class="py-3 space-y-3 border-t-2 border-slate-3">
                 <div
                   v-for="taskCode in getTargetTasks(measurement.target)"
                   :key="taskCode.id"
@@ -610,13 +608,13 @@ const onUpdateSessionName = async () => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ taskCode.code }} - {{ taskCode.title }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ taskCode.description }}
                   </div>
                 </div>
               </div>
               <!-- sbt problem behavior -->
-              <div class="space-y-3 border-t-2 border-slate-3 py-3">
+              <div class="py-3 space-y-3 border-t-2 border-slate-3">
                 <div
                   v-for="problemBehavior in measurement.target?.target_problem_behaviors"
                   :key="problemBehavior.id"
@@ -625,7 +623,7 @@ const onUpdateSessionName = async () => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>
@@ -635,7 +633,7 @@ const onUpdateSessionName = async () => {
             <!-- group targets -->
             <div v-if="measurement.target?.is_group">
               <!-- group targets members -->
-              <div class="space-y-3 border-t-2 border-slate-3 py-3">
+              <div class="py-3 space-y-3 border-t-2 border-slate-3">
                 <div
                   v-for="member in measurement.used_targets"
                   :key="member.target_id"
@@ -644,13 +642,13 @@ const onUpdateSessionName = async () => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ member.target_code }} - {{ member.target_name }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ member.description }}
                   </div>
                 </div>
               </div>
               <!-- group targets problem behavior -->
-              <div class="space-y-3 border-t-2 border-slate-3 py-3">
+              <div class="py-3 space-y-3 border-t-2 border-slate-3">
                 <div
                   v-for="problemBehavior in measurement.target?.target_problem_behaviors"
                   :key="problemBehavior.id"
@@ -659,7 +657,7 @@ const onUpdateSessionName = async () => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>
@@ -673,7 +671,7 @@ const onUpdateSessionName = async () => {
   </div>
 
   <div class="fixed bottom-0 z-[10] w-screen bg-prim-3 px-safe pb-safe">
-    <div v-if="isOrphanAppointment" class="px-4 pt-4 text-center text-sm text-dark-purple-1">
+    <div v-if="isOrphanAppointment" class="px-4 pt-4 text-sm text-center text-dark-purple-1">
       This appointment doesn't have a therapist assigned and cannot be started.
     </div>
     <div class="flex h-[68px] grow items-center px-4">
@@ -695,39 +693,39 @@ const onUpdateSessionName = async () => {
   </div>
 
   <AppActionSheet :show="showActionBeforeLunch" @close="showActionBeforeLunch = false">
-    <div class="flex flex-col items-center gap-4 py-3">
+    <div class="flex flex-col gap-4 items-center py-3">
       <div
         v-if="actionBeforeLunchStatus === 'before_schedule'"
-        class="flex flex-col items-center gap-4"
+        class="flex flex-col gap-4 items-center"
       >
-        <div class="text-center text-xl font-semibold">Session launch before schedule</div>
-        <div class="text-center text-sm">This session is scheduled for:</div>
-        <div class="flex w-full flex-wrap justify-center gap-3">
+        <div class="text-xl font-semibold text-center">Session launch before schedule</div>
+        <div class="text-sm text-center">This session is scheduled for:</div>
+        <div class="flex flex-wrap gap-3 justify-center w-full">
           <div
             v-for="item in lunchDetails"
             :key="item.icon"
             class="flex h-8 max-w-[calc((100%-0.75rem)/2)] shrink-0 items-center gap-2 rounded bg-light-purple-1 px-3"
           >
             <Icon :icon="item.icon" class="text-light-purple-4" />
-            <div class="truncate text-sm font-medium text-dark-purple-1">{{ item.label }}</div>
+            <div class="text-sm font-medium truncate text-dark-purple-1">{{ item.label }}</div>
           </div>
         </div>
-        <div class="text-center text-sm">Are you sure you want to start the session now?</div>
+        <div class="text-sm text-center">Are you sure you want to start the session now?</div>
       </div>
       <div
         v-if="actionBeforeLunchStatus === 'not_assigned'"
-        class="flex flex-col items-center gap-4"
+        class="flex flex-col gap-4 items-center"
       >
-        <div class="text-center text-xl font-semibold">You're not assigned to this session</div>
-        <div class="text-center text-sm">
+        <div class="text-xl font-semibold text-center">You're not assigned to this session</div>
+        <div class="text-sm text-center">
           This session is assigned to
           <span class="font-medium">{{ sessionStore.session?.appointment?.user?.name }}.</span> Do
           you wish to proceed?
         </div>
       </div>
-      <div v-if="actionBeforeLunchStatus === 'both'" class="flex flex-col items-center gap-4">
-        <div class="text-center text-xl font-semibold">Early start for unassigned session</div>
-        <div class="text-center text-sm">
+      <div v-if="actionBeforeLunchStatus === 'both'" class="flex flex-col gap-4 items-center">
+        <div class="text-xl font-semibold text-center">Early start for unassigned session</div>
+        <div class="text-sm text-center">
           The session scheduled for
           <span class="font-medium">{{
             displayDate({ date: sessionStore.session?.appointment?.date, format: 'DD MMM YYYY' })
@@ -741,7 +739,7 @@ const onUpdateSessionName = async () => {
           early and not assigned to you. Are you sure you want to start?
         </div>
       </div>
-      <div class="grid w-full grid-cols-2 gap-2">
+      <div class="grid grid-cols-2 gap-2 w-full">
         <AppButton kind="plain" @click="showActionBeforeLunch = false">Cancel</AppButton>
         <AppButton :loading="startSessionLoading" @click="onLaunchSession">Proceed</AppButton>
       </div>
@@ -757,9 +755,9 @@ const onUpdateSessionName = async () => {
   />
 
   <AppActionSheet :show="showMenu" @close="showMenu = false">
-    <div class="space-y-4 py-3">
-      <div class="flex w-full items-center justify-between">
-        <div class="text-center text-xl font-semibold">
+    <div class="py-3 space-y-4">
+      <div class="flex justify-between items-center w-full">
+        <div class="text-xl font-semibold text-center">
           <span v-if="!sessionStore.session?.name">Session ID </span>
           <span>{{ sessionStore.session?.id }}</span>
           <span v-if="sessionStore.session?.name"> - {{ sessionStore.session?.name }}</span>
@@ -770,7 +768,7 @@ const onUpdateSessionName = async () => {
       </div>
       <div>
         <div
-          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
+          class="flex gap-3 items-center w-full h-14 border-b border-slate-3"
           @click="showEditSessionName = true"
         >
           <icon icon="ph:pencil-simple" />
@@ -782,7 +780,7 @@ const onUpdateSessionName = async () => {
             params: { slug: sessionStore.session?.slug },
             query: { redirect: `/pre-session-record/${sessionStore.session?.slug}` }
           }"
-          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
+          class="flex gap-3 items-center w-full h-14 border-b border-slate-3"
         >
           <icon icon="ph:pencil-simple" />
           <div class="text-sm text-slate-8">Edit session target(s)</div>
@@ -797,7 +795,7 @@ const onUpdateSessionName = async () => {
 
       <AppTextInput name="session_name" placeholder="Session Name" v-model="sessionName" />
 
-      <div class="grid w-full grid-cols-2 gap-2">
+      <div class="grid grid-cols-2 gap-2 w-full">
         <AppButton kind="plain" @click="showEditSessionName = false">Cancel</AppButton>
         <AppButton :loading="editSessionNameLoading" @click="onUpdateSessionName">Update</AppButton>
       </div>

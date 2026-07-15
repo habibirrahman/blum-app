@@ -24,19 +24,19 @@ import type {
 interface SessionPendingProgress {
   key: string
   name:
-  | 'update_measurement'
-  | 'update_measurement_result'
-  | 'create_comment'
-  | 'update_comment'
-  | 'delete_comment'
-  | 'duplicate_images'
+    | 'update_measurement'
+    | 'update_measurement_result'
+    | 'create_comment'
+    | 'update_comment'
+    | 'delete_comment'
+    | 'duplicate_images'
   params:
-  | UpdateMeasurementParams
-  | UpdateMeasurementResultsParams
-  | CreateSessionCommentParams
-  | UpdateSessionCommentParams
-  | DeleteSessionCommentParams
-  | DuplicateImagesToClientDocumentParams
+    | UpdateMeasurementParams
+    | UpdateMeasurementResultsParams
+    | CreateSessionCommentParams
+    | UpdateSessionCommentParams
+    | DeleteSessionCommentParams
+    | DuplicateImagesToClientDocumentParams
   timestamp?: number
   retryCount?: number
   lastError?: string
@@ -272,8 +272,9 @@ export const useSessionStore = defineStore('session', {
           { key: 'sessions_count.session-store' },
           { key: 'pending_progress.session-store' }
         ]
-        const [ses, sesCom, sesMea, , upcSes, upcSesCou, sess, sessCou, penPro] =
-          await Promise.all(arr.map((a) => getStorage(a.key)))
+        const [ses, sesCom, sesMea, , upcSes, upcSesCou, sess, sessCou, penPro] = await Promise.all(
+          arr.map((a) => getStorage(a.key))
+        )
 
         this.session = ses.data || null
         this.session_comments = sesCom.data || []
@@ -1112,8 +1113,6 @@ export const useSessionStore = defineStore('session', {
         })
     },
     async endSession() {
-      const { getRunningSessions } = useAppStore()
-
       // Flush buffer aktivitas in-memory ke storage terlebih dahulu
       if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
         await flushSessionActivities(this.session.id, this._activitiesBuffer)
@@ -1137,8 +1136,6 @@ export const useSessionStore = defineStore('session', {
           session: { status: 'completed', session_activities: activities }
         })
         .then(async ({ data }) => {
-          await getRunningSessions()
-
           this.session = data
 
           // ✅ Clear backups setelah session berhasil di-end
@@ -1683,7 +1680,6 @@ export const useSessionStore = defineStore('session', {
               retryCount: 0
             })
           }
-
         } else {
           type CreateParams = CreateSessionCommentParams
           const idx = this.pending_progress.findIndex((i) => {
@@ -1698,7 +1694,6 @@ export const useSessionStore = defineStore('session', {
             this.pending_progress[idx].params = newParams
             this.pending_progress[idx].timestamp = Date.now()
           }
-
         }
         this.setSessionComment(data_result)
         return { success: true, data: data_result }
@@ -1784,7 +1779,6 @@ export const useSessionStore = defineStore('session', {
               retryCount: 0
             })
           }
-
         } else {
           const arr = this.pending_progress.filter((i) => {
             return (i.params as CreateSessionCommentParams).data_result.id !== comment_id
@@ -1875,6 +1869,6 @@ export const useSessionStore = defineStore('session', {
       } catch (error) {
         console.error('[_flushActivitiesBuffer] Failed:', error)
       }
-    },
+    }
   }
 })
