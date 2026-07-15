@@ -8,9 +8,6 @@ workflows:
     environment:
       groups:
         - vue_env_production
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: id.simpul.blum
       vars:
         BUNDLE_ID: 'id.simpul.blum'
         XCODE_WORKSPACE: 'ios/App/App.xcworkspace'
@@ -81,9 +78,6 @@ workflows:
     environment:
       groups:
         - vue_env_staging
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: id.simpul.blum
       vars:
         BUNDLE_ID: 'id.simpul.blum'
         XCODE_WORKSPACE: 'ios/App/App.xcworkspace'
