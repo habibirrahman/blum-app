@@ -25,7 +25,7 @@ workflows:
       - name: Install bun
         script: |
           curl -fsSL https://bun.sh/install | bash
-          echo "export PATH=\$HOME/.bun/bin:\$PATH" >> $CM_ENV
+          echo "PATH=$HOME/.bun/bin:$PATH" >> $CM_ENV
       - name: Install dependencies
         script: |
           bun install
@@ -95,7 +95,7 @@ workflows:
       - name: Install bun
         script: |
           curl -fsSL https://bun.sh/install | bash
-          echo "export PATH=\$HOME/.bun/bin:\$PATH" >> $CM_ENV
+          echo "PATH=$HOME/.bun/bin:$PATH" >> $CM_ENV
       - name: Install dependencies
         script: |
           bun install
