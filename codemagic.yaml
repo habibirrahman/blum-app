@@ -16,12 +16,6 @@ workflows:
       node: latest
       xcode: latest
       cocoapods: default
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
     scripts:
       - name: Install bun
         script: |
@@ -53,10 +47,6 @@ workflows:
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
-      - name: Increment build number
-        script: |
-          cd $CM_BUILD_DIR/ios/App
-          agvtool new-version -all $BUILD_NUMBER
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
@@ -87,12 +77,6 @@ workflows:
       node: latest
       xcode: latest
       cocoapods: default
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: staging
-          include: true
     scripts:
       - name: Install bun
         script: |
@@ -124,10 +108,6 @@ workflows:
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
-      - name: Increment build number
-        script: |
-          cd $CM_BUILD_DIR/ios/App
-          agvtool new-version -all $BUILD_NUMBER
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
