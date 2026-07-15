@@ -12,6 +12,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: id.simpul.blum
       vars:
+        BUNDLE_ID: 'id.simpul.blum'
         XCODE_WORKSPACE: 'ios/App/App.xcworkspace'
         XCODE_SCHEME: 'App'
       node: latest
@@ -40,7 +41,18 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios/App && pod install
-      - name: Set up code signing
+      - name: Set up keychain
+        script: |
+          keychain initialize
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Add certificates to keychain
+        script: |
+          keychain add-certificates
+      - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
       - name: Increment build number
@@ -73,6 +85,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: id.simpul.blum
       vars:
+        BUNDLE_ID: 'id.simpul.blum'
         XCODE_WORKSPACE: 'ios/App/App.xcworkspace'
         XCODE_SCHEME: 'App'
       node: latest
@@ -101,7 +114,18 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios/App && pod install
-      - name: Set up code signing
+      - name: Set up keychain
+        script: |
+          keychain initialize
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Add certificates to keychain
+        script: |
+          keychain add-certificates
+      - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
       - name: Increment build number
