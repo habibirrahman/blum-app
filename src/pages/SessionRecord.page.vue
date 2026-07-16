@@ -86,6 +86,7 @@ const isDisabledAction = computed(() => {
 
 const recordingTime = computed<string>(() => {
   if (sessionStore.session?.status === 'draft') return '00:00:00'
+  if (sessionStore.session?.status === 'cancelled') return '00:00:00'
 
   const time = sessionStore.session?.start_time
   let n = dayjs(sessionStore.session?.end_time)
@@ -427,6 +428,59 @@ const scrollListener = async (e: any) => {
   }
 }
 
+const checkActionRecommendations = async () => {
+  const { success, data } = await sessionStore.getSessionRecommendations()
+  endSessionLoading.value = false
+  showEndSession.value = false
+
+  toast.success('The session has been completed.')
+
+  if (!success) {
+    onExitSession()
+    return
+  }
+
+  if (data.action_recommendations.length) {
+    showActionRecommendations.value = true
+  } else {
+    onExitSession()
+  }
+}
+
+const generateSuccessMetric = (target?: Target) => {
+  if (!target) return ''
+  let prefix = ''
+  let goalText: string | number | undefined = ''
+  let suffix = ''
+  // prefix
+  if (
+    target.success_metric === 'equal to or greater than goal' ||
+    target.type_name === 'Prompting'
+  ) {
+    prefix = '≥ '
+  }
+  if (target.success_metric === 'less than goal') {
+    prefix = '< '
+  }
+  // goal text
+  if (target.type_name === 'Duration') {
+    goalText = target.goal_time
+  } else {
+    goalText = target.goal
+  }
+  // suffix
+  if (target.type_name === 'Percentage' || target.type_name === 'Partial interval recording') {
+    suffix = '%'
+  }
+  if (target.type_name === 'Frequency') {
+    suffix = ' attempt(s)'
+  }
+  if (target.type_name === 'Prompting') {
+    suffix = ` attempt(s) ${target.success_metric} prompts`
+  }
+  return prefix + goalText + suffix
+}
+
 const onToggleUpdatedMeasurement = (payload: { id: Measurement['id']; updated: boolean }) => {
   if (payload.updated) {
     updatingMeasurementIds.value = updatingMeasurementIds.value.filter((i) => i !== payload.id)
@@ -443,6 +497,23 @@ const onToggleSavedSbt = (payload: { id: Measurement['id']; saved: boolean }) =>
   } else {
     if (!unsavedSbtIds.value.includes(payload.id)) {
       unsavedSbtIds.value.push(payload.id)
+    }
+  }
+}
+
+const handleCompletedColdProbe = ({
+  id,
+  isCompleted
+}: {
+  id: number | undefined
+  isCompleted: boolean
+}) => {
+  if (id === undefined) return
+  if (isCompleted) {
+    unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter((i) => i !== id)
+  } else {
+    if (!unCompletedColdProbeIds.value.includes(id)) {
+      unCompletedColdProbeIds.value.push(id)
     }
   }
 }
@@ -489,6 +560,68 @@ const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
       clearTimeout(collapseTimeout.value)
       collapseTimeout.value = undefined
     }
+  }
+}
+
+const onTrunOffAllAndEndSession = async () => {
+  showEndSession.value = false
+  showReviewMode.value = true
+  cycleLoading.value = true
+  const length = sessionStore.session_measurements.length
+
+  for (let idx = 0; idx < length; idx++) {
+    const measurement: Measurement = sessionStore.session_measurements[idx]
+    if (!measurement.is_dropped) {
+      if (runningDurationLatency.value.find((i) => i.id === measurement.id)) {
+        runningDurationLatency.value = runningDurationLatency.value.filter(
+          (i) => i.id !== measurement.id
+        )
+      }
+      if (unsavedSbtIds.value.includes(measurement.id)) {
+        unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== measurement.id)
+      }
+
+      if (unCompletedColdProbeIds.value.includes(measurement.id)) {
+        unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter(
+          (i) => i !== measurement.id
+        )
+      }
+
+      const params: UpdateMeasurementParams = {
+        id: measurement.id,
+        measurement: { is_dropped: true },
+        data_result: { ...measurement, is_dropped: true }
+      }
+      const { success, message } = await sessionStore.updateMeasurement(params)
+      if (!success) {
+        toast.error(message)
+      }
+    }
+  }
+
+  endSessionStatus.value = 'normal'
+  cycleLoading.value = false
+  showEndSession.value = true
+}
+
+const onKeepActiveAndEndSession = () => {
+  showEndSession.value = false
+  showReviewMode.value = true
+  endSessionStatus.value = 'normal'
+  showEndSession.value = true
+}
+
+const openLeaveSession = () => {
+  if (sessionStore.session?.status === 'ongoing') showLeaveSession.value = true
+  else if (sessionStore.session?.status === 'paused') showLeaveSession.value = true
+  else onBackToClientSessionDraft()
+}
+
+// Back to client session draft
+const onBackToClientSessionDraft = async () => {
+  const clientId = sessionStore.session?.client_id
+  if (clientId) {
+    router.push(`/clients/${clientId}/sessions-draft`)
   }
 }
 
@@ -547,54 +680,6 @@ const openEndSession = () => {
   showEndSession.value = true
 }
 
-const onTrunOffAllAndEndSession = async () => {
-  showEndSession.value = false
-  showReviewMode.value = true
-  cycleLoading.value = true
-  const length = sessionStore.session_measurements.length
-
-  for (let idx = 0; idx < length; idx++) {
-    const measurement: Measurement = sessionStore.session_measurements[idx]
-    if (!measurement.is_dropped) {
-      if (runningDurationLatency.value.find((i) => i.id === measurement.id)) {
-        runningDurationLatency.value = runningDurationLatency.value.filter(
-          (i) => i.id !== measurement.id
-        )
-      }
-      if (unsavedSbtIds.value.includes(measurement.id)) {
-        unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== measurement.id)
-      }
-
-      if (unCompletedColdProbeIds.value.includes(measurement.id)) {
-        unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter(
-          (i) => i !== measurement.id
-        )
-      }
-
-      const params: UpdateMeasurementParams = {
-        id: measurement.id,
-        measurement: { is_dropped: true },
-        data_result: { ...measurement, is_dropped: true }
-      }
-      const { success, message } = await sessionStore.updateMeasurement(params)
-      if (!success) {
-        toast.error(message)
-      }
-    }
-  }
-
-  endSessionStatus.value = 'normal'
-  cycleLoading.value = false
-  showEndSession.value = true
-}
-
-const onKeepActiveAndEndSession = () => {
-  showEndSession.value = false
-  showReviewMode.value = true
-  endSessionStatus.value = 'normal'
-  showEndSession.value = true
-}
-
 const onEndSession = async () => {
   endSessionLoading.value = true
 
@@ -628,59 +713,6 @@ const onEndSession = async () => {
   duplicateImageCommentsToClientDocument()
 }
 
-const checkActionRecommendations = async () => {
-  const { success, data } = await sessionStore.getSessionRecommendations()
-  endSessionLoading.value = false
-  showEndSession.value = false
-
-  toast.success('The session has been completed.')
-
-  if (!success) {
-    onExitSession()
-    return
-  }
-
-  if (data.action_recommendations.length) {
-    showActionRecommendations.value = true
-  } else {
-    onExitSession()
-  }
-}
-
-const generateSuccessMetric = (target?: Target) => {
-  if (!target) return ''
-  let prefix = ''
-  let goalText: string | number | undefined = ''
-  let suffix = ''
-  // prefix
-  if (
-    target.success_metric === 'equal to or greater than goal' ||
-    target.type_name === 'Prompting'
-  ) {
-    prefix = '≥ '
-  }
-  if (target.success_metric === 'less than goal') {
-    prefix = '< '
-  }
-  // goal text
-  if (target.type_name === 'Duration') {
-    goalText = target.goal_time
-  } else {
-    goalText = target.goal
-  }
-  // suffix
-  if (target.type_name === 'Percentage' || target.type_name === 'Partial interval recording') {
-    suffix = '%'
-  }
-  if (target.type_name === 'Frequency') {
-    suffix = ' attempt(s)'
-  }
-  if (target.type_name === 'Prompting') {
-    suffix = ` attempt(s) ${target.success_metric} prompts`
-  }
-  return prefix + goalText + suffix
-}
-
 const onExitSession = async () => {
   exitSessionLoading.value = true
   // await appStore.getRunningSessions()
@@ -693,31 +725,6 @@ const onExitSession = async () => {
   }
 
   router.push(redirect.value)
-}
-
-// Back to client session draft
-const onLeaaveSession = async () => {
-  const clientId = sessionStore.session?.client_id
-  if (clientId) {
-    router.push(`/clients/${clientId}/sessions-draft`)
-  }
-}
-
-const handleCompletedColdProbe = ({
-  id,
-  isCompleted
-}: {
-  id: number | undefined
-  isCompleted: boolean
-}) => {
-  if (id === undefined) return
-  if (isCompleted) {
-    unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter((i) => i !== id)
-  } else {
-    if (!unCompletedColdProbeIds.value.includes(id)) {
-      unCompletedColdProbeIds.value.push(id)
-    }
-  }
 }
 
 const duplicateImageCommentsToClientDocument = async () => {
@@ -765,7 +772,7 @@ onMounted(async () => {
       return
     }
     // tampilkan modal, JANGAN langsung navigasi
-    showLeaveSession.value = true
+    openLeaveSession()
   })
 
   const app = document.getElementById('app')
@@ -856,7 +863,7 @@ onUnmounted(() => {
 <template>
   <div class="sticky top-0 z-[10] flex h-14 shrink-0 items-center gap-3 bg-white px-4">
     <div class="flex gap-2 items-center">
-      <AppButton kind="plain" @click="showLeaveSession = true">
+      <AppButton kind="plain" @click="openLeaveSession">
         <Icon :icon="'ph:caret-left'" class="text-xl" />
       </AppButton>
 
@@ -1154,7 +1161,7 @@ onUnmounted(() => {
       </div>
       <div class="grid grid-cols-2 gap-2 w-full">
         <AppButton kind="plain" @click="showLeaveSession = false">Cancel</AppButton>
-        <AppButton @click="onLeaaveSession">Leave</AppButton>
+        <AppButton @click="onBackToClientSessionDraft">Leave</AppButton>
       </div>
     </div>
   </AppActionSheet>

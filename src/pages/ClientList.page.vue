@@ -234,11 +234,11 @@ onUnmounted(() => {
         class="flex overflow-x-auto gap-2 pr-4 pb-3 snap-x snap-mandatory scroll-smooth"
       >
         <div
-          v-if="appStore.account?.center_enable_branch && branchLoading"
+          v-if="appStore.center?.enable_branch && branchLoading"
           class="w-32 h-8 rounded-full animate-pulse shrink-0 bg-slate-3"
         ></div>
         <div
-          v-else-if="appStore.account?.center_enable_branch"
+          v-else-if="appStore.center?.enable_branch"
           class="flex gap-1 items-center px-4 h-8 text-xs font-medium truncate rounded-full border cursor-pointer transition-alcolorsl max-w-32 shrink-0 snap-start"
           :class="[
             branches.length

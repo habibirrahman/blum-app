@@ -26,7 +26,7 @@ const clientTags = computed<ClientTag[]>(() => {
     id: i.id || 0,
     name: i.name || 'Tag'
   }))
-  if (appStore.account?.center_enable_branch) {
+  if (appStore.center?.enable_branch) {
     return [...branches, ...labels]
   } else {
     return labels
@@ -35,7 +35,7 @@ const clientTags = computed<ClientTag[]>(() => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-3 px-4 py-6">
+  <div class="flex flex-col gap-3 items-center px-4 py-6">
     <div
       class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full"
       :class="{
@@ -46,13 +46,13 @@ const clientTags = computed<ClientTag[]>(() => {
     >
       <div class="text-2xl font-bold uppercase">{{ clientStore.client?.name?.charAt(0) }}</div>
     </div>
-    <div class="flex flex-col items-center gap-2">
+    <div class="flex flex-col gap-2 items-center">
       <div class="text-lg font-semibold text-center">{{ clientStore.client?.name }}</div>
       <AppChip :chip="clientStore.client?.status" />
     </div>
     <div
       v-if="clientTags.length"
-      class="flex flex-wrap items-center content-center justify-center gap-1"
+      class="flex flex-wrap gap-1 justify-center content-center items-center"
     >
       <div
         v-for="tag in clientTags"
@@ -69,48 +69,48 @@ const clientTags = computed<ClientTag[]>(() => {
   </div>
 
   <div class="px-4">
-    <div class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
+    <div class="flex flex-col gap-1.5 py-3 border-b border-slate-3">
       <div class="text-xs text-slate-8">Date of birth</div>
       <div class="text-sm">
         {{ displayDate({ date: clientStore.client?.birthday, empty: '-' }) }}
       </div>
     </div>
-    <div class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
+    <div class="flex flex-col gap-1.5 py-3 border-b border-slate-3">
       <div class="text-xs text-slate-8">Date admitted</div>
       <div class="text-sm">
         {{ displayDate({ date: clientStore.client?.admitted_at, empty: '-' }) }}
       </div>
     </div>
-    <div class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
+    <div class="flex flex-col gap-1.5 py-3 border-b border-slate-3">
       <div class="text-xs text-slate-8">Date of discharged</div>
       <div class="text-sm">
         {{ displayDate({ date: clientStore.client?.archived_at, empty: '-' }) }}
       </div>
     </div>
-    <div class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
+    <div class="flex flex-col gap-1.5 py-3 border-b border-slate-3">
       <div class="text-xs text-slate-8">Discharge reason</div>
       <div class="text-sm">
         {{ getClientDischargeReason(clientStore.client?.discharge_reason) || '-' }}
       </div>
     </div>
-    <div class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
+    <div class="flex flex-col gap-1.5 py-3 border-b border-slate-3">
       <div class="text-xs text-slate-8">Gender</div>
       <div class="text-sm">{{ clientStore.client?.gender || '-' }}</div>
     </div>
-    <div class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
+    <div class="flex flex-col gap-1.5 py-3 border-b border-slate-3">
       <div class="text-xs text-slate-8">Email</div>
       <div class="text-sm">{{ clientStore.client?.email || '-' }}</div>
     </div>
-    <div class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
+    <div class="flex flex-col gap-1.5 py-3 border-b border-slate-3">
       <div class="text-xs text-slate-8">Note</div>
       <div class="text-sm">{{ clientStore.client?.note || '-' }}</div>
     </div>
-    <div class="flex flex-col gap-1.5 border-b border-slate-3 py-3">
+    <div class="flex flex-col gap-1.5 py-3 border-b border-slate-3">
       <div class="text-xs text-slate-8">Assigned therapist</div>
       <div v-if="!clientStore.client?.accesses || !clientStore.client?.accesses?.length">
         <div class="flex items-center h-5 text-sm font-medium text-grass-8">-</div>
       </div>
-      <div v-else class="flex flex-wrap items-center gap-1">
+      <div v-else class="flex flex-wrap gap-1 items-center">
         <div
           v-for="access in clientStore.client?.accesses"
           :key="access.id"
