@@ -28,7 +28,7 @@ const clientTags = computed<ClientTag[]>(() => {
     id: i.id || 0,
     name: i.name || 'Tag'
   }))
-  if (appStore.account?.center_enable_branch) {
+  if (appStore.center?.enable_branch) {
     return [...branches, ...labels]
   } else {
     return labels
@@ -38,14 +38,14 @@ const clientTags = computed<ClientTag[]>(() => {
 
 <template>
   <div
-    class="flex items-center justify-between gap-4 truncate border-b h-14 shrink-0 border-slate-3"
+    class="flex gap-4 justify-between items-center h-14 truncate border-b shrink-0 border-slate-3"
   >
     <div
-      class="flex items-center flex-grow flex-shrink-0 gap-3 truncate"
+      class="flex flex-grow flex-shrink-0 gap-3 items-center truncate"
       :class="{ 'max-w-[50%]': clientTags.length > 2 }"
     >
       <div
-        class="flex items-center justify-center w-8 h-8 rounded-full shrink-0"
+        class="flex justify-center items-center w-8 h-8 rounded-full shrink-0"
         :class="{
           'bg-lime-3 text-lime-8': client.status === 'active',
           'bg-rose-4 text-rose-8': client.status === 'archived',
@@ -56,11 +56,11 @@ const clientTags = computed<ClientTag[]>(() => {
       </div>
       <div class="flex flex-grow text-sm font-medium truncate">{{ client.name }}</div>
     </div>
-    <div class="flex items-center gap-1 truncate" :class="{ 'max-w-[50%]': clientTags.length > 2 }">
+    <div class="flex gap-1 items-center truncate" :class="{ 'max-w-[50%]': clientTags.length > 2 }">
       <div
         v-for="tag in clientTags.slice(0, 2)"
         :key="tag.id"
-        class="flex items-center justify-center h-5 px-2 text-sm font-medium truncate rounded"
+        class="flex justify-center items-center px-2 h-5 text-sm font-medium truncate rounded"
         :style="{
           color: tag.color || 'var(--slate-8, #475467)',
           backgroundColor: tag.background_color || 'var(--slate-3, #F2F4F7)'
@@ -70,7 +70,7 @@ const clientTags = computed<ClientTag[]>(() => {
       </div>
       <div v-if="clientTags.slice(2).length">
         <div
-          class="flex items-center justify-center h-5 px-1 text-xs font-medium rounded min-w-5 bg-slate-3 text-slate-8"
+          class="flex justify-center items-center px-1 h-5 text-xs font-medium rounded min-w-5 bg-slate-3 text-slate-8"
         >
           +{{ clientTags.slice(2).length }}
         </div>
