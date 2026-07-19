@@ -29,6 +29,7 @@ const sessionStore = useSessionStore()
 const sessionDate = computed<string>(() => {
   if (props.session.status === 'draft') return props.session.appointment?.date || ''
   if (props.session.status === 'ongoing') return props.session.appointment?.date || ''
+  if (props.session.status === 'paused') return props.session.appointment?.date || ''
   if (props.session.status === 'completed') return props.session.end_time || ''
   if (props.session.status === 'cancelled') return props.session.appointment?.date || ''
   return ''
@@ -103,17 +104,24 @@ const onDeleteSession = async () => {
           'bg-orange-3 text-orange-7': session.appointment_id && session.status === 'draft',
           'bg-slate-3': !session.appointment_id && session.status === 'draft',
           'bg-cornflower-2 text-cornflower-7': session.status === 'ongoing',
+          'bg-light-purple-1 text-light-purple-5': session.status === 'paused',
           'bg-lime-2 text-lime-7': session.status === 'completed',
           'bg-rose-2 text-rose-7': session.status === 'cancelled'
         }"
       >
-        {{ displayDate({ date: sessionDate, format: 'MMM' }) }}
+        <span v-if="sessionDate"> {{ displayDate({ date: sessionDate, format: 'MMM' }) }} </span>
+        <span v-else class="text-[6px] capitalize">
+          <span v-if="session.status === 'draft'">Draft</span>
+          <span v-if="session.status === 'ongoing'">In progress</span>
+          <span v-if="session.status === 'paused'">Paused</span>
+        </span>
       </div>
       <div
         class="flex h-[34px] shrink-0 items-center justify-center rounded-b-sm text-xs"
         :class="{
           'text-orange-7': session.appointment_id && session.status === 'draft',
           'text-cornflower-7': session.status === 'ongoing',
+          ' text-light-purple-5': session.status === 'paused',
           'text-lime-7': session.status === 'completed',
           'text-rose-7': session.status === 'cancelled'
         }"
@@ -157,6 +165,14 @@ const onDeleteSession = async () => {
           </span>
         </div>
       </div>
+      <div v-else-if="session.status === 'paused'" class="flex gap-1.5 items-center text-xs">
+        <div class="font-medium truncate text-slate-8">
+          <span>Paused</span>
+          <span v-if="session.user?.name">
+            with <b>{{ session.user?.name }}</b>
+          </span>
+        </div>
+      </div>
       <div
         v-else-if="session.status === 'completed'"
         class="flex gap-1.5 items-center text-xs truncate"
@@ -172,7 +188,9 @@ const onDeleteSession = async () => {
       </div>
       <div v-else-if="session.status === 'cancelled'" class="text-xs text-slate-7">Cancelled</div>
       <div
-        v-if="session.status === 'draft' || session.status === 'ongoing'"
+        v-if="
+          session.status === 'draft' || session.status === 'ongoing' || session.status === 'paused'
+        "
         class="text-xs text-slate-7"
       >
         {{ session.number_of_measurements }} target(s)

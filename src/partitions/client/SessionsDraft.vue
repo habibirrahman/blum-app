@@ -74,13 +74,13 @@ watch(date, (val) => {
   fetchDraftSession()
 })
 
-type Status = 'scheduled' | 'unscheduled' | 'ongoing' | ''
+type Status = 'scheduled' | 'unscheduled,draft' | 'ongoing,paused' | ''
 const status = ref<Status>('')
 const selectStatus = ref<Status>('')
 const statusOptions: { value: Status; label: string; caption?: string }[] = [
   { value: 'scheduled', label: 'Scheduled' },
-  { value: 'unscheduled', label: 'Unscheduled' },
-  { value: 'ongoing', label: 'In progress', caption: 'Sessions running right now' }
+  { value: 'unscheduled,draft', label: 'Unscheduled' },
+  { value: 'ongoing,paused', label: 'In progress', caption: 'Sessions running right now' }
 ]
 const showStatus = ref<boolean>(false)
 watch(showStatus, () => {
@@ -95,7 +95,7 @@ const onResetStatus = () => {
 }
 const onApplyStatus = () => {
   status.value = selectStatus.value
-  if (selectStatus.value === 'unscheduled') {
+  if (selectStatus.value === 'unscheduled,draft') {
     date.value = ''
   }
   showStatus.value = false
@@ -138,14 +138,9 @@ const params = computed<string>(() => {
     p += `&start_date=${d.startOf(date.value).format('YYYY-MM-DD')}`
     p += `&end_date=${d.endOf(date.value).format('YYYY-MM-DD')}`
   }
-  if (status.value) {
-    p += `&status=${status.value}`
-    if (status.value !== 'ongoing') {
-      p += `,draft`
-    }
-  } else {
-    p += `&status=ongoing,draft`
-  }
+  if (status.value) p += `&status=${status.value}`
+  else p += `&status=ongoing,paused,draft`
+
   return p
 })
 

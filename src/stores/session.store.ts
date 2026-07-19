@@ -1112,6 +1112,56 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message }
         })
     },
+    async pauseSession() {
+      // Flush buffer aktivitas in-memory ke storage terlebih dahulu
+      if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
+        await flushSessionActivities(this.session.id, this._activitiesBuffer)
+      }
+
+      // Baca activities dari buffer in-memory (lebih efisien, tidak perlu baca storage)
+      const activities: AddSessionActivity[] = [...(this._activitiesBuffer || [])]
+
+      activities.push({
+        action_label: `session_pause`,
+        recordable: 'Session',
+        recordable_id: this.session?.id,
+        api: `PATCH /api/v1/sessions/${this.session?.id}`,
+        params: { session: { status: 'paused', session_activities: 'SessionActivity[]' } }, // prevent infinite array
+        notes: `Pause session`,
+        timestamp: new Date().toISOString()
+      })
+
+      return axios
+        .patch(`/api/v1/sessions/${this.session?.id}`, {
+          session: { status: 'paused', session_activities: activities }
+        })
+        .then(async ({ data }) => {
+          this.session = data
+
+          // ✅ Clear backups setelah session berhasil di-pause
+          const measurementIds = this.session_measurements.map((m) => Number(m.id)).filter((i) => i)
+          const result = await this.clearSessionMeasurementBackups(measurementIds)
+
+          if (result.success) {
+            console.log(`[pauseSession] Cleared ${result.count} backup(s)`)
+          }
+
+          // ✅ Clear activities buffer in-memory dan storage
+          this._activitiesBuffer = []
+          if (this._activitiesFlushTimeout !== undefined) {
+            clearTimeout(this._activitiesFlushTimeout)
+            this._activitiesFlushTimeout = undefined
+          }
+          await this.clearSessionActivities()
+
+          await this.syncSessionStoreNow()
+          return { success: true, data, message: '' }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
     async endSession() {
       // Flush buffer aktivitas in-memory ke storage terlebih dahulu
       if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
@@ -1828,7 +1878,7 @@ export const useSessionStore = defineStore('session', {
      * Buffer ditulis ke storage secara batched (setiap 10 aktivitas ATAU setiap 15 detik),
      * bukan setiap kali aktivitas ditambahkan — menghindari O(n²) read-modify-write.
      */
-    addSessionActivity(params: AddSessionActivity): void {
+    async addSessionActivity(params: AddSessionActivity): Promise<void> {
       if (!this.session?.id) return
       if (this.session?.status !== 'ongoing') return
 
