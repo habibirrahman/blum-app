@@ -32,10 +32,6 @@ import { useAppStore } from '@/stores/app.store'
 import AppCheckInput from '@/components/AppCheckInput.vue'
 import dayjs from 'dayjs'
 
-const toast = useToast()
-const appStore = useAppStore()
-const sessionStore = useSessionStore()
-
 interface Props {
   measurement: Measurement
   isCollapsed?: boolean
@@ -60,6 +56,10 @@ const props = withDefaults(defineProps<Props>(), {
   reviewMode: false
 })
 const emit = defineEmits<Emits>()
+
+const toast = useToast()
+const appStore = useAppStore()
+const sessionStore = useSessionStore()
 
 /** === DATA === */
 
@@ -258,6 +258,8 @@ const onChangeDisplay = async (val: 'target' | 'description' | 'comment') => {
 }
 
 const onDrop = async (bool: boolean) => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
     measurement: { is_dropped: !bool },
@@ -303,6 +305,8 @@ const handleCompletedColdProbe = (isCompleted: boolean) => {
 }
 
 const onSaveComment = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
     measurement: { comment: commentInput.value },
@@ -361,7 +365,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="relative shrink-0 rounded"
+    class="relative rounded shrink-0"
     :class="{
       'h-[600px] w-[320px]': !isCollapsed,
       'h-[160px] w-full': isCollapsed,
@@ -370,12 +374,12 @@ onUnmounted(() => {
   >
     <div
       v-if="reviewMode && measurement.is_fixed"
-      class="absolute -top-6 left-0 flex h-16 w-16 items-center justify-center rounded-full bg-white"
+      class="flex absolute left-0 -top-6 justify-center items-center w-16 h-16 bg-white rounded-full"
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
     <div
-      class="flex h-full flex-col"
+      class="flex flex-col h-full"
       :class="{ 'pointer-events-none': reviewMode && sessionStore.session?.status !== 'draft' }"
     >
       <div
@@ -385,11 +389,11 @@ onUnmounted(() => {
       <div v-if="!isCollapsed" id="measurememt-header">
         <div
           v-if="sessionStore.session?.status === 'draft'"
-          class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-2"
+          class="flex justify-between items-center px-2 w-full h-9 shrink-0 bg-prim-2"
         >
           <div
             v-if="useLock"
-            class="flex h-7 w-7 items-center justify-center rounded bg-white"
+            class="flex justify-center items-center w-7 h-7 bg-white rounded"
             @click="emit('toggle-lock')"
           >
             <Icon icon="ph:lock-open-fill" class="text-2xl text-light-purple-5" />
@@ -405,22 +409,22 @@ onUnmounted(() => {
             />
           </div>
         </div>
-        <div v-else class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-4">
+        <div v-else class="flex justify-between items-center px-4 w-full h-9 shrink-0 bg-prim-2">
           <div
-            class="flex h-6 w-6 items-center justify-center rounded transition-colors"
+            class="flex justify-center items-center w-6 h-6 rounded transition-colors"
             :class="{ 'bg-white': display === 'description' }"
             @click="onChangeDisplay('description')"
           >
             <Icon icon="ph:article" class="text-2xl text-light-purple-5" />
           </div>
           <div
-            class="relative flex h-6 w-6 items-center justify-center rounded transition-colors"
+            class="flex relative justify-center items-center w-6 h-6 rounded transition-colors"
             :class="{ 'bg-white': display === 'comment' }"
             @click="onChangeDisplay('comment')"
           >
             <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
             <div
-              class="absolute right-px top-px h-2 w-2 rounded-full bg-light-purple-5 transition-colors"
+              class="absolute top-px right-px w-2 h-2 rounded-full transition-colors bg-light-purple-5"
               :class="[measurement.comment ? 'opacity-100' : 'opacity-0']"
             ></div>
           </div>
@@ -436,18 +440,18 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-if="cardLoading" class="flex h-full flex-col items-center justify-center bg-white">
-        <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <div v-if="cardLoading" class="flex flex-col justify-center items-center h-full bg-white">
+        <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
       </div>
       <div
         v-else
         id="measurememt-body"
-        class="flex h-full flex-col gap-2 rounded-b bg-white px-4 pb-3"
+        class="flex flex-col gap-2 px-4 pb-3 h-full bg-white rounded-b"
         :class="[isCollapsed ? 'pt-3' : 'no-scrollbar overflow-y-auto']"
       >
         <div v-if="!isCollapsed" id="card-title" class="pt-3">
-          <div v-if="measurement.target?.is_group" class="flex items-center gap-2">
-            <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
+          <div v-if="measurement.target?.is_group" class="flex gap-2 items-center">
+            <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
             <div
               class="text-sm font-semibold text-slate-9"
               :class="{ 'line-clamp-2': display === 'target' || display === 'comment' }"
@@ -457,7 +461,7 @@ onUnmounted(() => {
           </div>
           <div v-else class="flex flex-col gap-1">
             <div
-              class="flex items-center gap-x-2"
+              class="flex gap-x-2 items-center"
               :class="{ 'flex-wrap': display === 'target' || display === 'comment' }"
             >
               <div class="text-sm font-semibold text-slate-7">
@@ -465,21 +469,21 @@ onUnmounted(() => {
               </div>
               <div v-if="isMaintenanceDisplayable" class="shrink-0">
                 <div
-                  class="flex h-6 items-center rounded-full bg-orange-2 px-2 text-xs font-semibold text-orange-7"
+                  class="flex items-center px-2 h-6 text-xs font-semibold rounded-full bg-orange-2 text-orange-7"
                 >
                   {{ measurement.target?.maintenance_badge || 'Maintenance' }}
                 </div>
               </div>
               <div v-if="measurementType.includes('Probing')" class="shrink-0">
                 <div
-                  class="flex h-6 items-center rounded-full bg-lime-2 px-2 text-xs font-semibold text-lime-7"
+                  class="flex items-center px-2 h-6 text-xs font-semibold rounded-full bg-lime-2 text-lime-7"
                 >
                   Probing
                 </div>
               </div>
               <div v-if="measurement.target?.allow_overtime_recording" class="shrink-0">
                 <div
-                  class="flex h-6 items-center rounded-full bg-slate-3 px-2 text-xs text-slate-8"
+                  class="flex items-center px-2 h-6 text-xs rounded-full bg-slate-3 text-slate-8"
                 >
                   Overtime on
                 </div>
@@ -493,28 +497,28 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        <div v-if="display === 'target'" class="flex h-full gap-3">
+        <div v-if="display === 'target'" class="flex gap-3 h-full">
           <div
             v-if="isDropped"
-            class="flex min-h-full flex-grow flex-col items-center justify-center gap-4"
+            class="flex flex-col flex-grow gap-4 justify-center items-center min-h-full"
           >
-            <Icon icon="solar:clipboard-remove-bold" class="h-20 w-20 text-tulip-6" />
-            <div class="w-72 space-y-2">
-              <div class="text-center font-semibold">Entry not recorded</div>
-              <div v-if="!isCollapsed" class="text-center text-sm text-slate-8">
+            <Icon icon="solar:clipboard-remove-bold" class="w-20 h-20 text-tulip-6" />
+            <div class="space-y-2 w-72">
+              <div class="font-semibold text-center">Entry not recorded</div>
+              <div v-if="!isCollapsed" class="text-sm text-center text-slate-8">
                 This entry will not be saved when the Session ends. Toggle back to save this entry
                 recording.
               </div>
             </div>
           </div>
 
-          <div v-else :key="`measurement-card-${cardId}`" class="h-full w-full">
+          <div v-else :key="`measurement-card-${cardId}`" class="w-full h-full">
             <!-- Tambahkan sync status indicator (optional) -->
             <div
               v-if="sessionStore.session?.status === 'ongoing' && hasPendingSync && !isCollapsed"
               class="flex"
             >
-              <div class="rounded bg-tulip-1 px-2 py-1 text-xs text-tulip-7">
+              <div class="px-2 py-1 text-xs rounded bg-tulip-1 text-tulip-7">
                 {{ syncStatusText }}
               </div>
             </div>
@@ -616,7 +620,7 @@ onUnmounted(() => {
           </div>
           <div
             v-if="isCollapsed"
-            class="flex w-8 shrink-0 items-center justify-center rounded-full bg-slate-4"
+            class="flex justify-center items-center w-8 rounded-full shrink-0 bg-slate-4"
             @click="emit('toggle-collapsed', false)"
           >
             <Icon icon="ph:caret-double-up" class="text-xl text-slate-7" />
@@ -627,11 +631,11 @@ onUnmounted(() => {
             <!-- target information -->
             <div
               v-if="measurement.target?.is_group"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               <div>Grouped targets - {{ getTargetType(measurement.target?.type) }}</div>
             </div>
-            <div class="space-y-0.5 text-wrap text-sm text-slate-8">
+            <div class="space-y-0.5 text-sm text-wrap text-slate-8">
               <div v-if="!measurement.target?.is_group">
                 {{ getTargetType(measurement.target?.type) }}
               </div>
@@ -707,7 +711,7 @@ onUnmounted(() => {
             <!-- probing -->
             <div
               v-if="measurementType.includes('Probing')"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               <div>Probing activated</div>
               <div>
@@ -721,7 +725,7 @@ onUnmounted(() => {
             </div>
             <!-- end probing -->
             <!-- target description -->
-            <div class="space-y-0.5 text-wrap text-sm text-slate-8">
+            <div class="space-y-0.5 text-sm text-wrap text-slate-8">
               <div v-if="!measurement.target?.description" class="italic">No description</div>
               <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
@@ -729,7 +733,7 @@ onUnmounted(() => {
             <!-- last past line -->
             <div
               v-if="measurement.target?.last_phase_line"
-              class="space-y-0.5 text-wrap text-sm text-slate-8"
+              class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               Data from this session will be added to the
               <span class="font-semibold">{{ measurement.target.last_phase_line?.label }}</span>
@@ -739,7 +743,7 @@ onUnmounted(() => {
             <!-- sbt -->
             <div v-if="measurement.target?.type === 'Target::Sbt'">
               <!-- sbt taks -->
-              <div class="space-y-3 border-t-2 border-slate-4 py-3">
+              <div class="py-3 space-y-3 border-t-2 border-slate-4">
                 <div
                   v-for="taskCode in getTargetTasks(measurement.target)"
                   :key="taskCode.id"
@@ -748,13 +752,13 @@ onUnmounted(() => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ taskCode.code }} - {{ taskCode.title }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ taskCode.description }}
                   </div>
                 </div>
               </div>
               <!-- sbt problem behavior -->
-              <div class="space-y-3 border-t-2 border-slate-4 py-3">
+              <div class="py-3 space-y-3 border-t-2 border-slate-4">
                 <div
                   v-for="problemBehavior in measurement.target?.target_problem_behaviors"
                   :key="problemBehavior.id"
@@ -763,7 +767,7 @@ onUnmounted(() => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>
@@ -773,7 +777,7 @@ onUnmounted(() => {
             <!-- group targets -->
             <div v-if="measurement.target?.is_group">
               <!-- group targets members -->
-              <div class="space-y-3 border-t-2 border-slate-4 py-3">
+              <div class="py-3 space-y-3 border-t-2 border-slate-4">
                 <div
                   v-for="member in measurement.used_targets"
                   :key="member.target_id"
@@ -782,13 +786,13 @@ onUnmounted(() => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ member.target_code }} - {{ member.target_name }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ member.description }}
                   </div>
                 </div>
               </div>
               <!-- group targets problem behavior -->
-              <div class="space-y-3 border-t-2 border-slate-4 py-3">
+              <div class="py-3 space-y-3 border-t-2 border-slate-4">
                 <div
                   v-for="problemBehavior in measurement.target?.target_problem_behaviors"
                   :key="problemBehavior.id"
@@ -797,7 +801,7 @@ onUnmounted(() => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
                   </div>
-                  <div class="whitespace-pre-line text-sm text-slate-8">
+                  <div class="text-sm whitespace-pre-line text-slate-8">
                     {{ problemBehavior.description }}
                   </div>
                 </div>
@@ -817,7 +821,7 @@ onUnmounted(() => {
         >
           <div
             v-if="sessionStore.session?.status !== 'ongoing'"
-            class="text-wrap pt-3 text-sm text-slate-8"
+            class="pt-3 text-sm text-wrap text-slate-8"
           >
             {{ measurement.comment || '-' }}
           </div>
@@ -827,9 +831,10 @@ onUnmounted(() => {
             type="textarea"
             placeholder="Type your comment here..."
             v-model="commentInput"
+            :disabled="sessionStore.session?.status !== 'ongoing'"
             class="mt-2 h-full"
           />
-          <div class="z-1 sticky -bottom-3 w-full bg-white py-3">
+          <div class="sticky -bottom-3 py-3 w-full bg-white z-1">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"

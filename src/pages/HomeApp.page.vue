@@ -68,13 +68,13 @@ watch(date, (val) => {
   fetchSessions()
 })
 
-type Status = 'scheduled' | 'unscheduled' | 'ongoing' | ''
+type Status = 'scheduled' | 'unscheduled' | 'ongoing,paused' | ''
 const status = ref<Status>('')
 const selectStatus = ref<Status>('')
 const statusOptions: { value: Status; label: string; caption?: string }[] = [
   { value: 'scheduled', label: 'Scheduled' },
   { value: 'unscheduled', label: 'Unscheduled' },
-  { value: 'ongoing', label: 'In progress', caption: 'Sessions running right now' }
+  { value: 'ongoing,paused', label: 'In progress', caption: 'Sessions running right now' }
 ]
 const showStatus = ref<boolean>(false)
 watch(showStatus, () => {
@@ -98,11 +98,11 @@ const onApplyStatus = () => {
 }
 
 type Sort =
+  | ''
   | 'newest_session_id'
   | 'oldest_session_id'
   | 'most_recent_schedule'
   | 'earliest_schedule'
-  | ''
 const sort = ref<Sort>('')
 const selectSort = ref<Sort>('')
 const sortOptions: { value: Sort; label: string }[] = [
