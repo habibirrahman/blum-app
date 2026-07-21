@@ -966,18 +966,20 @@ export const useSessionStore = defineStore('session', {
       return axios
         .get(`/api/v1/sessions/${id}/measurements`)
         .then(async ({ data }) => {
-          this.session_measurements = data
-          // async
-          // sering race condition
-          /*
-          // lebih baik pakai ini
-          setState((prev) => {
-            return { ...prev, ...data }
+          // Merge per-item berdasarkan `updated_at`, bukan full replace.
+          // GET list ini bisa butuh waktu lama (koneksi lapangan), dan selama itu
+          // updateMeasurementResults() bisa saja sudah menyimpan hasil yang lebih baru
+          // lewat request terpisah (lihat setSessionMeasurement). Kalau di sini kita
+          // langsung `this.session_measurements = data`, snapshot lama dari response ini
+          // akan menimpa balik hasil yang sudah benar tersimpan -> "missing results".
+          const incoming: Measurement[] = data || []
+          this.session_measurements = incoming.map((item: Measurement) => {
+            const local = this.session_measurements.find((i) => i.id === item.id)
+            if (local?.updated_at && item.updated_at && local.updated_at > item.updated_at) {
+              return local
+            }
+            return item
           })
-
-          // ini sering race condition jika dipanggil bersamaan
-          setState({...this.state, ...data})
-          **/
 
           const session: Session = {
             ...this.session,

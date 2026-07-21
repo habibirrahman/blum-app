@@ -356,39 +356,48 @@ async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) 
 async function fetchSession(
   { first, isSwipe }: FetchSessionProps = { first: false, isSwipe: false }
 ) {
-  const slug = route.params?.slug as string
-  const { success, data } = await sessionStore.getSession({ slug })
-  const session = data as Session
-  await sessionStore.getSessionComments({ id: session?.id, filter: '' })
-  sessionLoading.value = false
-  if (!success) return
+  // Loading lock: dikunci di sini (bukan cuma di pemanggil) supaya SEMUA jalur yang
+  // memicu fetchSession (swipe refresh, event @fetch-session dari komponen measurement,
+  // dst) ikut memblokir input skor selama request masih berjalan. Ini menutup celah
+  // race saat terapis sempat input skor di tengah-tengah refresh session yang lama
+  // (koneksi lapangan) - lihat getSessionMeasurements() di session.store.ts.
+  cycleLoading.value = true
+  try {
+    const slug = route.params?.slug as string
+    const { success, data } = await sessionStore.getSession({ slug })
+    const session = data as Session
+    await sessionStore.getSessionComments({ id: session?.id, filter: '' })
+    sessionLoading.value = false
+    if (!success) return
 
-  const app = document.getElementById('app')
+    const app = document.getElementById('app')
 
-  if (session.status === 'ongoing' || session.status === 'paused') {
-    if (isSwipe && appStore.network_status.connected) {
-      toast.success('Results are now up-to-date!')
+    if (session.status === 'ongoing' || session.status === 'paused') {
+      if (isSwipe && appStore.network_status.connected) {
+        toast.success('Results are now up-to-date!')
+      }
+
+      if (first) {
+        syncSession()
+        app?.scroll({ top: heightReload, behavior: 'smooth' })
+        app?.addEventListener('scroll', scrollListener)
+      }
     }
 
-    if (first) {
-      syncSession()
-      app?.scroll({ top: heightReload, behavior: 'smooth' })
-      app?.addEventListener('scroll', scrollListener)
+    if (session.status === 'completed' || session.status === 'cancelled') {
+      // await appStore.getRunningSessions()
+
+      app?.removeEventListener('scroll', scrollListener)
     }
+
+    // reset all state
+    updatingMeasurementIds.value = []
+    runningDurationLatency.value = []
+    unsavedSbtIds.value = []
+    unCompletedColdProbeIds.value = []
+  } finally {
+    cycleLoading.value = false
   }
-
-  if (session.status === 'completed' || session.status === 'cancelled') {
-    // await appStore.getRunningSessions()
-
-    app?.removeEventListener('scroll', scrollListener)
-  }
-
-  // reset all state
-  cycleLoading.value = false
-  updatingMeasurementIds.value = []
-  runningDurationLatency.value = []
-  unsavedSbtIds.value = []
-  unCompletedColdProbeIds.value = []
 }
 
 const scrollListener = async (e: any) => {
@@ -419,7 +428,6 @@ const scrollListener = async (e: any) => {
   scrollingTimeout.value = setTimeout(async () => {
     if (top === 0 && !isRefreshing.value) {
       isRefreshing.value = true
-      cycleLoading.value = true
 
       sessionStore.addSessionActivity({
         action_label: `session_refresh`,
@@ -431,7 +439,6 @@ const scrollListener = async (e: any) => {
       await fetchSession({ isSwipe: true })
 
       isRefreshing.value = false
-      cycleLoading.value = false
     }
     if (top < heightReload) {
       document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })

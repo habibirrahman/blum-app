@@ -512,7 +512,13 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div v-else :key="`measurement-card-${cardId}`" class="w-full h-full">
+          <div
+            v-else
+            :key="`measurement-card-${cardId}`"
+            class="w-full h-full"
+            :class="{ 'pointer-events-none opacity-50': isDisabledAction }"
+            :title="isDisabledAction ? 'Refreshing session data, please wait...' : ''"
+          >
             <!-- Tambahkan sync status indicator (optional) -->
             <div
               v-if="sessionStore.session?.status === 'ongoing' && hasPendingSync && !isCollapsed"
