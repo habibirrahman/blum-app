@@ -44,6 +44,13 @@ const editSessionNameLoading = ref<boolean>(false)
 const showDelete = ref<boolean>(false)
 const deleteLoading = ref<boolean>(false)
 
+const lastRecordedBy = computed<string | null | undefined>(() => {
+  const names = (props.session?.recording_timeline || []).map((i) => i.recorded_by_name)
+  const userName = props.session?.user?.name
+  const recording = [userName, ...names].pop()
+  return recording
+})
+
 watch(
   () => showEditSessionName.value,
   (show) => {
@@ -169,7 +176,7 @@ const onDeleteSession = async () => {
         <div class="font-medium truncate text-slate-8">
           <span>Paused</span>
           <span v-if="session.user?.name">
-            with <b>{{ session.user?.name }}</b>
+            with <b>{{ lastRecordedBy }}</b>
           </span>
         </div>
       </div>

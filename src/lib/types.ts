@@ -265,6 +265,7 @@ interface MeasurementBase {
 
   comment?: string
   recording_started_at?: string
+  timer_started_at?: string
   overtime_started_at?: string
   overtime_ended_at?: string
   marked_as?: string

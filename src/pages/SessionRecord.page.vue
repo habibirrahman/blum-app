@@ -77,6 +77,13 @@ const isEnded = computed(() =>
   ['completed', 'cancelled'].includes(sessionStore.session?.status || '')
 )
 
+const recordingBy = computed(() => {
+  const names = (sessionStore.session?.recording_timeline || []).map((i) => i.recorded_by_name)
+  const userName = sessionStore.session?.user?.name
+  const recording = [userName, ...names].pop()
+  return recording
+})
+
 const recordedBys = computed(() => {
   const names = (sessionStore.session?.recording_timeline || [])
     .filter((i) => i.recorded_by !== sessionStore.session?.user_id && i.recorded_by_name)
@@ -1014,15 +1021,11 @@ onUnmounted(() => {
       <!-- Bottom row -->
       <div class="flex gap-2 items-center h-10">
         <!-- Therapist name -->
-        <div
-          class="flex justify-center items-center px-3 h-6 text-sm font-medium truncate rounded-full bg-grass-2 text-grass-7"
-        >
-          <div class="truncate">
-            {{
-              sessionStore.session?.user?.name ||
-              sessionStore.session?.user?.email ||
-              'No therapist assigned'
-            }}
+        <div class="lg:max-w-auto max-w-[20vw] shrink-0 truncate lg:text-clip lg:whitespace-normal">
+          <div
+            class="flex justify-center items-center px-3 h-6 text-sm font-medium truncate rounded-full bg-grass-2 text-grass-7"
+          >
+            <span class="truncate"> {{ recordingBy || 'No therapist assigned' }} </span>
           </div>
         </div>
 
@@ -1104,7 +1107,9 @@ onUnmounted(() => {
       <!-- Button row -->
       <div class="flex gap-2 justify-end items-center h-10">
         <!-- Session ID -->
-        <div class="text-xs font-medium text-slate-6">ID {{ sessionStore.session?.id }}</div>
+        <div class="text-xs font-medium shrink-0 text-slate-6">
+          ID {{ sessionStore.session?.id }}
+        </div>
 
         <!-- Indicator -->
         <div v-if="sessionStore.session?.status === 'paused'" class="flex gap-2 items-center">
