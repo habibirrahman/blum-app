@@ -878,9 +878,15 @@ export const useSessionStore = defineStore('session', {
         if (is_comment) {
           this.session_measurements[idx].comment = data.comment
         } else {
-          const arr = [...this.session_measurements]
-          arr[idx] = data
-          this.session_measurements = arr
+          const local = this.session_measurements.find((i) => i.id === data.id)
+          if (local?.updated_at && data.updated_at && local.updated_at > data.updated_at) {
+            // use local: do nothing
+          } else {
+            // use data
+            const arr = [...this.session_measurements]
+            arr[idx] = data
+            this.session_measurements = arr
+          }
         }
       }
       this.syncSessionStore()

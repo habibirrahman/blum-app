@@ -238,8 +238,6 @@ onMounted(async () => {
 
   const currentResults = props.measurementResults || {}
 
-  generateRatioScores()
-
   const results = Object.keys(currentResults).map((key) => ({
     ...currentResults[key],
     key
@@ -293,6 +291,8 @@ onMounted(async () => {
   }
 
   resultsState.value = currentResults
+
+  generateRatioScores()
 })
 
 // Cleanup saat unmount

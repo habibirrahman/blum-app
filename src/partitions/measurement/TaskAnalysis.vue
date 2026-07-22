@@ -263,9 +263,6 @@ onMounted(async () => {
   TAProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
 
   const currentResults = props.measurementResults || {}
-
-  generateRatioScores()
-
   const results = Object.keys(currentResults).map((key) => ({
     ...currentResults[key],
     key
@@ -323,6 +320,8 @@ onMounted(async () => {
   }
 
   resultsState.value = currentResults
+
+  generateRatioScores()
 })
 
 // Cleanup saat unmount
