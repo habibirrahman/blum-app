@@ -238,8 +238,12 @@ const onImportTarget = async (targetId: Target['id']) => {
           <div class="text-sm">{{ target?.curriculum_name }}</div>
         </div>
         <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="text-xs text-slate-8">Description:</div>
-          <div class="whitespace-pre-line text-sm">{{ target?.description }}</div>
+          <div class="text-xs text-slate-8">Clinical description:</div>
+          <div class="whitespace-pre-line text-sm">{{ target?.description || '-' }}</div>
+        </div>
+        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="text-xs text-slate-8">Simplified description:</div>
+          <div class="whitespace-pre-line text-sm">{{ target?.simplified_description || '-' }}</div>
         </div>
         <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
           <div class="text-xs text-slate-8">Data collection method:</div>

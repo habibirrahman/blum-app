@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useClientStore } from '@/stores/client.store'
 import { Icon } from '@iconify/vue'
 import type { Target, TargetStatus } from '@/lib/types'
@@ -15,7 +15,10 @@ import PreviewTargetModal from '@/partitions/target/PreviewTargetModal.vue'
 import TargetJobProgression from '../target/TargetJobProgression.vue'
 
 const route = useRoute()
+const router = useRouter()
 const clientStore = useClientStore()
+
+const showAddMenu = ref<boolean>(false)
 
 const targetsLoading = ref<boolean>(false)
 
@@ -187,9 +190,7 @@ const onToggleGroup = (id: Target['id']) => {
         v-model="query"
         suffix-icon="ph:magnifying-glass"
       />
-      <RouterLink :to="{ name: 'new-client-target', params: { id: clientStore.client?.id } }">
-        <AppButton class="flex-shrink-0"><Icon icon="ph:plus-bold" /></AppButton>
-      </RouterLink>
+      <AppButton class="flex-shrink-0" @click="showAddMenu = true"><Icon icon="ph:plus-bold" /></AppButton>
     </div>
     <div class="pl-4">
       <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
@@ -382,4 +383,30 @@ const onToggleGroup = (id: Target['id']) => {
     :target="targetDetails"
     :loading="targetLoading"
   />
+
+  <AppActionSheet :show="showAddMenu" @close="showAddMenu = false">
+    <div>
+      <div class="sticky top-0 z-10 flex w-full items-center justify-end bg-white py-3">
+        <div class="cursor-pointer" @click="showAddMenu = false">
+          <Icon icon="ph:x" class="text-2xl" />
+        </div>
+      </div>
+      <div class="pb-4">
+        <div
+          class="flex h-14 w-full cursor-pointer items-center gap-3 border-b border-slate-3"
+          @click="showAddMenu = false; router.push({ name: 'new-client-target', params: { id: clientStore.client?.id } })"
+        >
+          <Icon icon="ph:plus" class="text-lg text-slate-8" />
+          <span class="text-sm font-medium text-slate-10">New target</span>
+        </div>
+        <div
+          class="flex h-14 w-full cursor-pointer items-center gap-3"
+          @click="showAddMenu = false; router.push({ name: 'databank-client-target', params: { id: clientStore.client?.id } })"
+        >
+          <Icon icon="ph:plus" class="text-lg text-slate-8" />
+          <span class="text-sm font-medium text-slate-10">Targets from databank</span>
+        </div>
+      </div>
+    </div>
+  </AppActionSheet>
 </template>
