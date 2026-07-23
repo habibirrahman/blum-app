@@ -22,10 +22,12 @@ import Frequency from './measurement/Frequency.vue'
 import PartialIntervalRecording from './measurement/PartialIntervalRecording.vue'
 import DurationLatency from './measurement/DurationLatency.vue'
 import Percentage from './measurement/Percentage.vue'
+import PercentageGroup from './measurement/PercentageGroup.vue'
 import Probing from './measurement/Probing.vue'
 import SkillBasedTreatment from './measurement/SkillBasedTreatment.vue'
 import { useToast } from 'vue-toastification'
 import TrialByTrial from './measurement/TrialByTrial.vue'
+import TrialByTrialGroup from './measurement/TrialByTrialGroup.vue'
 import ColdProbe from './measurement/ColdProbe.vue'
 import TaskAnalysis from './measurement/TaskAnalysis.vue'
 import { useAppStore } from '@/stores/app.store'
@@ -556,8 +558,18 @@ onUnmounted(() => {
               @toggle-updated="onToggleUpdated($event)"
               @fetch-session="emit('fetch-session')"
             />
+            <PercentageGroup
+              v-if="measurementType.includes('Percentage') && measurement.target?.is_group"
+              :measurement="measurement"
+              :measurement-results="measurementResults"
+              :is-collapsed="isCollapsed"
+              @toggle-updated="onToggleUpdated($event)"
+              @fetch-session="emit('fetch-session')"
+              @after-commit="emit('after-commit')"
+            />
             <Percentage
-              v-if="measurementType.includes('Percentage')"
+              v-slot="percentageProps"
+              v-if="measurementType.includes('Percentage') && !measurement.target?.is_group"
               :measurement="measurement"
               :measurement-results="measurementResults"
               :is-collapsed="isCollapsed"
@@ -582,6 +594,7 @@ onUnmounted(() => {
               @after-commit="emit('after-commit')"
             />
             <Prompting
+              v-slot="promptingProps"
               v-if="
                 measurementType.includes('Prompting') &&
                 measurement.target &&
@@ -614,8 +627,17 @@ onUnmounted(() => {
               @toggle-saved="onToggleSaved($event)"
               @fetch-session="emit('fetch-session')"
             />
+            <TrialByTrialGroup
+              v-if="measurementType.includes('TrialByTrial') && measurement.target?.is_group"
+              :measurement="measurement"
+              :measurement-results="measurementResults"
+              :is-collapsed="isCollapsed"
+              @toggle-updated="onToggleUpdated($event)"
+              @fetch-session="emit('fetch-session')"
+              @after-commit="emit('after-commit')"
+            />
             <TrialByTrial
-              v-if="measurementType.includes('TrialByTrial')"
+              v-if="measurementType.includes('TrialByTrial') && !measurement.target?.is_group"
               :measurement="measurement"
               :measurement-results="measurementResults"
               :is-collapsed="isCollapsed"

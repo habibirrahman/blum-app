@@ -1555,6 +1555,34 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
+    async setMeasurementProbing(payload: {
+      id: number
+      probing: boolean
+      member_id?: number
+    }): Promise<ResponseSchema> {
+      try {
+        const reqData: Record<string, any> = { probing: payload.probing }
+        if (payload.member_id !== undefined) {
+          reqData.member_id = payload.member_id
+        }
+        const { data } = await axios.patch(
+          `/api/v1/measurements/${payload.id}/set_probing`,
+          reqData
+        )
+        this.setSessionMeasurement(data)
+        return { success: true, data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          return {
+            success: false,
+            data: null,
+            message: error.response?.data?.error || 'Unable to update probing setting.'
+          }
+        }
+        return { success: false, data: null, message: 'Unexpected error' }
+      }
+    },
+
     async updateMeasurementMarkProbing({
       id,
       visible,

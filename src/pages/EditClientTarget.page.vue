@@ -207,12 +207,13 @@ const useSuccessMetric = computed(() => {
   )
 })
 
-const useProbing = computed(() => isPercentageType.value || isTrialByTrialType.value)
+const useProbing = computed(() => (isPercentageType.value || isTrialByTrialType.value) && !isGroup.value)
 
 // Validation
 const isDisabledSubmit = computed(() => {
   // Basic validation
-  if (!name.value || !selectedCurriculum.value) return true
+  if (!name.value || (!isGroup.value && !selectedCurriculum.value)) return true
+  if (isGroup.value) return false
 
   // Type-specific validation
   if (isPercentageType.value || isTrialByTrialType.value) {
@@ -421,68 +422,70 @@ function buildTargetData() {
   }
 
   // Type-specific data
-  if (isPercentageType.value || isTrialByTrialType.value) {
-    Object.assign(data.target, {
-      success_metric: successMetric.value,
-      goal: Number(goal.value),
-      number_of_trial: Number(numberOfTrial.value)
-    })
-  }
-
-  if (isDurationType.value || isLatencyType.value) {
-    Object.assign(data.target, {
-      success_metric: successMetric.value,
-      goal_time: goalTime.value
-    })
-  }
-
-  if (isPirType.value) {
-    Object.assign(data.target, {
-      duration: Number(duration.value),
-      goal: Number(goal.value),
-      success_metric: successMetric.value,
-      interval: clientStore.target?.interval,
-      interval_start_timing: intervalStartTiming.value,
-      allow_overtime_recording: allowOvertimeRecording.value
-    })
-  }
-
-  if (isFrequencyType.value) {
-    Object.assign(data.target, {
-      goal: Number(goal.value),
-      success_metric: successMetric.value
-    })
-    if (isFrequencyCustom.value) {
-      data.target.duration = Number(duration.value)
-    }
-  }
-
-  if (isPromptingType.value) {
-    Object.assign(data.target, {
-      goal: Number(goal.value),
-      prompting_format: clientStore.target?.prompting_format
-    })
-
-    if (isPromptingClassic.value) {
-      data.target.success_metric = selectedPromptSuccessMetric.value
+  if (!isGroup.value) {
+    if (isPercentageType.value || isTrialByTrialType.value) {
+      Object.assign(data.target, {
+        success_metric: successMetric.value,
+        goal: Number(goal.value),
+        number_of_trial: Number(numberOfTrial.value)
+      })
     }
 
-    if (isPromptingCustom.value) {
-      data.target.success_metric = successMetric.value
+    if (isDurationType.value || isLatencyType.value) {
+      Object.assign(data.target, {
+        success_metric: successMetric.value,
+        goal_time: goalTime.value
+      })
     }
 
-    if (isGroup.value) {
+    if (isPirType.value) {
+      Object.assign(data.target, {
+        duration: Number(duration.value),
+        goal: Number(goal.value),
+        success_metric: successMetric.value,
+        interval: clientStore.target?.interval,
+        interval_start_timing: intervalStartTiming.value,
+        allow_overtime_recording: allowOvertimeRecording.value
+      })
+    }
+
+    if (isFrequencyType.value) {
+      Object.assign(data.target, {
+        goal: Number(goal.value),
+        success_metric: successMetric.value
+      })
+      if (isFrequencyCustom.value) {
+        data.target.duration = Number(duration.value)
+      }
+    }
+
+    if (isPromptingType.value) {
+      Object.assign(data.target, {
+        goal: Number(goal.value),
+        prompting_format: clientStore.target?.prompting_format
+      })
+
+      if (isPromptingClassic.value) {
+        data.target.success_metric = selectedPromptSuccessMetric.value
+      }
+
+      if (isPromptingCustom.value) {
+        data.target.success_metric = successMetric.value
+      }
+    }
+
+    // Probing
+    if (useProbing.value) {
+      Object.assign(data.target, {
+        probing_enable: probingEnabled.value,
+        probing_number_of_trial: probingEnabled.value ? Number(probingTrial.value) : null,
+        probing_goal: probingEnabled.value ? Number(probingGoal.value) : null
+      })
+    }
+  } else {
+    if (isPromptingType.value) {
       data.target.success_metric = clientStore.target?.success_metric
     }
-  }
-
-  // Probing
-  if (useProbing.value) {
-    Object.assign(data.target, {
-      probing_enable: probingEnabled.value,
-      probing_number_of_trial: probingEnabled.value ? Number(probingTrial.value) : null,
-      probing_goal: probingEnabled.value ? Number(probingGoal.value) : null
-    })
   }
 
   // Action recommendations for target members
@@ -950,7 +953,7 @@ onUnmounted(() => {
 
         <!-- Duration/Latency Time Input -->
         <AppInputTime
-          v-if="isDurationType || isLatencyType"
+          v-if="(isDurationType || isLatencyType) && !isGroup"
           v-model="goalTime"
           name="duration"
           label="Goal time (hours/minutes/seconds)"
@@ -959,14 +962,14 @@ onUnmounted(() => {
         />
 
         <!-- PIR Interval Display -->
-        <div v-if="isPirType">
+        <div v-if="isPirType && !isGroup">
           <div class="mb-1 text-sm font-medium">Interval</div>
           <div class="text-sm text-slate-10">{{ clientStore.target?.interval }} Minutes</div>
         </div>
 
         <!-- PIR Duration -->
         <AppTextInput
-          v-if="isPirType"
+          v-if="isPirType && !isGroup"
           name="duration"
           label="Duration"
           required
@@ -984,7 +987,7 @@ onUnmounted(() => {
 
         <!-- PIR Goal -->
         <AppTextInput
-          v-if="isPirType"
+          v-if="isPirType && !isGroup"
           name="goal"
           label="Goal"
           required
@@ -1002,7 +1005,7 @@ onUnmounted(() => {
 
         <!-- Frequency Goal -->
         <AppTextInput
-          v-if="isFrequencyType"
+          v-if="isFrequencyType && !isGroup"
           name="goal"
           label="Goal"
           required
@@ -1015,7 +1018,7 @@ onUnmounted(() => {
 
         <!-- Percentage Goal -->
         <AppTextInput
-          v-if="isPercentageType"
+          v-if="isPercentageType && !isGroup"
           name="goal"
           label="Goal"
           required
@@ -1033,7 +1036,7 @@ onUnmounted(() => {
 
         <!-- Trial by Trial Goal -->
         <AppTextInput
-          v-if="isTrialByTrialType"
+          v-if="isTrialByTrialType && !isGroup"
           name="goal"
           label="Goal"
           required
@@ -1083,7 +1086,7 @@ onUnmounted(() => {
 
         <!-- Minimum Number of Trials -->
         <AppTextInput
-          v-if="isPercentageType || isTrialByTrialType"
+          v-if="(isPercentageType || isTrialByTrialType) && !isGroup"
           name="number_of_trial"
           label="Minimum number of trials"
           required
@@ -1094,7 +1097,7 @@ onUnmounted(() => {
 
         <!-- Frequency (custom) Duration -->
         <AppTextInput
-          v-if="isFrequencyCustom"
+          v-if="isFrequencyCustom && !isGroup"
           name="duration"
           label="Duration"
           required
@@ -1112,7 +1115,7 @@ onUnmounted(() => {
         </AppTextInput>
 
         <!-- PIR Interval start timing -->
-        <div v-if="isPirType" class="space-y-2">
+        <div v-if="isPirType && !isGroup" class="space-y-2">
           <div class="text-sm font-medium text-slate-8">
             <span>Interval start timing</span>
             <span class="ml-1 text-tomato-7">*</span>
@@ -1144,7 +1147,7 @@ onUnmounted(() => {
         </div>
 
         <!-- PIR Allow overtime recording -->
-        <div v-if="isPirType" class="space-y-2">
+        <div v-if="isPirType && !isGroup" class="space-y-2">
           <div class="text-sm font-medium text-slate-8">
             <span>Overtime handling</span>
           </div>
