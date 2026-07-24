@@ -385,13 +385,14 @@ onUnmounted(() => {
     <AppButton
       v-if="sessionStore.session?.status === 'draft'"
       kind="outline"
+      class="pointer-events-auto"
       @click="showCustomize = !showCustomize"
     >
       Customize prompt visibility
     </AppButton>
   </div>
 
-  <AppActionSheet :show="showCustomize" @close="showCustomize = false">
+  <AppActionSheet :show="showCustomize" @close="showCustomize = false" class="pointer-events-auto">
     <div>
       <div class="sticky top-0 z-10 flex items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">Customize prompt visibility</div>

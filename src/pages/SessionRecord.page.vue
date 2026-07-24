@@ -1154,6 +1154,7 @@ onUnmounted(() => {
       (sessionStore.session?.status === 'ongoing' || sessionStore.session?.status === 'paused')
     "
     class="flex h-28 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
+    :class="[sessionStore.session?.status === 'paused' ? 'brightness-90' : '']"
   >
     <div v-if="runningDurationLatency.length">
       <div>Can't refresh while the timer is running.</div>
