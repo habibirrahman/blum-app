@@ -128,6 +128,7 @@ const onSavePercentage = debounce(async function (box: PercentageBox) {
 }, 1000)
 
 const onChangePercentage = async (box: PercentageBox) => {
+  if (sessionStore.session?.status !== 'ongoing') return
   if (percentageLoadingBox.value && percentageLoadingBox.value !== box.key) {
     return
   }
@@ -313,7 +314,7 @@ onUnmounted(() => {
 
       <div
         v-if="sessionStore.session?.status === 'draft' && measurement?.target?.probing_enable"
-        class="z-10 flex w-full items-center justify-between rounded-full bg-lime-2 px-4 py-2"
+        class="pointer-events-auto z-10 flex w-full items-center justify-between rounded-full bg-lime-2 px-4 py-2"
       >
         <div class="text-sm font-semibold text-lime-7">Set as probing</div>
         <div class="flex items-center gap-1">
