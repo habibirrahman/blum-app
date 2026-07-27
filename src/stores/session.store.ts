@@ -24,19 +24,19 @@ import type {
 interface SessionPendingProgress {
   key: string
   name:
-  | 'update_measurement'
-  | 'update_measurement_result'
-  | 'create_comment'
-  | 'update_comment'
-  | 'delete_comment'
-  | 'duplicate_images'
+    | 'update_measurement'
+    | 'update_measurement_result'
+    | 'create_comment'
+    | 'update_comment'
+    | 'delete_comment'
+    | 'duplicate_images'
   params:
-  | UpdateMeasurementParams
-  | UpdateMeasurementResultsParams
-  | CreateSessionCommentParams
-  | UpdateSessionCommentParams
-  | DeleteSessionCommentParams
-  | DuplicateImagesToClientDocumentParams
+    | UpdateMeasurementParams
+    | UpdateMeasurementResultsParams
+    | CreateSessionCommentParams
+    | UpdateSessionCommentParams
+    | DeleteSessionCommentParams
+    | DuplicateImagesToClientDocumentParams
   timestamp?: number
   retryCount?: number
   lastError?: string
@@ -272,8 +272,9 @@ export const useSessionStore = defineStore('session', {
           { key: 'sessions_count.session-store' },
           { key: 'pending_progress.session-store' }
         ]
-        const [ses, sesCom, sesMea, , upcSes, upcSesCou, sess, sessCou, penPro] =
-          await Promise.all(arr.map((a) => getStorage(a.key)))
+        const [ses, sesCom, sesMea, , upcSes, upcSesCou, sess, sessCou, penPro] = await Promise.all(
+          arr.map((a) => getStorage(a.key))
+        )
 
         this.session = ses.data || null
         this.session_comments = sesCom.data || []
@@ -877,9 +878,15 @@ export const useSessionStore = defineStore('session', {
         if (is_comment) {
           this.session_measurements[idx].comment = data.comment
         } else {
-          const arr = [...this.session_measurements]
-          arr[idx] = data
-          this.session_measurements = arr
+          const local = this.session_measurements.find((i) => i.id === data.id)
+          if (local?.updated_at && data.updated_at && local.updated_at > data.updated_at) {
+            // use local: do nothing
+          } else {
+            // use data
+            const arr = [...this.session_measurements]
+            arr[idx] = data
+            this.session_measurements = arr
+          }
         }
       }
       this.syncSessionStore()
@@ -965,18 +972,20 @@ export const useSessionStore = defineStore('session', {
       return axios
         .get(`/api/v1/sessions/${id}/measurements`)
         .then(async ({ data }) => {
-          this.session_measurements = data
-          // async
-          // sering race condition
-          /*
-          // lebih baik pakai ini
-          setState((prev) => {
-            return { ...prev, ...data }
+          // Merge per-item berdasarkan `updated_at`, bukan full replace.
+          // GET list ini bisa butuh waktu lama (koneksi lapangan), dan selama itu
+          // updateMeasurementResults() bisa saja sudah menyimpan hasil yang lebih baru
+          // lewat request terpisah (lihat setSessionMeasurement). Kalau di sini kita
+          // langsung `this.session_measurements = data`, snapshot lama dari response ini
+          // akan menimpa balik hasil yang sudah benar tersimpan -> "missing results".
+          const incoming: Measurement[] = data || []
+          this.session_measurements = incoming.map((item: Measurement) => {
+            const local = this.session_measurements.find((i) => i.id === item.id)
+            if (local?.updated_at && item.updated_at && local.updated_at > item.updated_at) {
+              return local
+            }
+            return item
           })
-
-          // ini sering race condition jika dipanggil bersamaan
-          setState({...this.state, ...data})
-          **/
 
           const session: Session = {
             ...this.session,
@@ -1111,9 +1120,57 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message }
         })
     },
-    async endSession() {
-      const { getRunningSessions } = useAppStore()
+    async pauseSession() {
+      // Flush buffer aktivitas in-memory ke storage terlebih dahulu
+      if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
+        await flushSessionActivities(this.session.id, this._activitiesBuffer)
+      }
 
+      // Baca activities dari buffer in-memory (lebih efisien, tidak perlu baca storage)
+      const activities: AddSessionActivity[] = [...(this._activitiesBuffer || [])]
+
+      activities.push({
+        action_label: `session_pause`,
+        recordable: 'Session',
+        recordable_id: this.session?.id,
+        api: `PATCH /api/v1/sessions/${this.session?.id}`,
+        params: { session: { status: 'paused', session_activities: 'SessionActivity[]' } }, // prevent infinite array
+        notes: `Pause session`,
+        timestamp: new Date().toISOString()
+      })
+
+      return axios
+        .patch(`/api/v1/sessions/${this.session?.id}`, {
+          session: { status: 'paused', session_activities: activities }
+        })
+        .then(async ({ data }) => {
+          this.session = data
+
+          // ✅ Clear backups setelah session berhasil di-pause
+          const measurementIds = this.session_measurements.map((m) => Number(m.id)).filter((i) => i)
+          const result = await this.clearSessionMeasurementBackups(measurementIds)
+
+          if (result.success) {
+            console.log(`[pauseSession] Cleared ${result.count} backup(s)`)
+          }
+
+          // ✅ Clear activities buffer in-memory dan storage
+          this._activitiesBuffer = []
+          if (this._activitiesFlushTimeout !== undefined) {
+            clearTimeout(this._activitiesFlushTimeout)
+            this._activitiesFlushTimeout = undefined
+          }
+          await this.clearSessionActivities()
+
+          await this.syncSessionStoreNow()
+          return { success: true, data, message: '' }
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, data: null, message }
+        })
+    },
+    async endSession() {
       // Flush buffer aktivitas in-memory ke storage terlebih dahulu
       if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
         await flushSessionActivities(this.session.id, this._activitiesBuffer)
@@ -1137,8 +1194,6 @@ export const useSessionStore = defineStore('session', {
           session: { status: 'completed', session_activities: activities }
         })
         .then(async ({ data }) => {
-          await getRunningSessions()
-
           this.session = data
 
           // ✅ Clear backups setelah session berhasil di-end
@@ -1711,7 +1766,6 @@ export const useSessionStore = defineStore('session', {
               retryCount: 0
             })
           }
-
         } else {
           type CreateParams = CreateSessionCommentParams
           const idx = this.pending_progress.findIndex((i) => {
@@ -1726,7 +1780,6 @@ export const useSessionStore = defineStore('session', {
             this.pending_progress[idx].params = newParams
             this.pending_progress[idx].timestamp = Date.now()
           }
-
         }
         this.setSessionComment(data_result)
         return { success: true, data: data_result }
@@ -1812,7 +1865,6 @@ export const useSessionStore = defineStore('session', {
               retryCount: 0
             })
           }
-
         } else {
           const arr = this.pending_progress.filter((i) => {
             return (i.params as CreateSessionCommentParams).data_result.id !== comment_id
@@ -1862,7 +1914,7 @@ export const useSessionStore = defineStore('session', {
      * Buffer ditulis ke storage secara batched (setiap 10 aktivitas ATAU setiap 15 detik),
      * bukan setiap kali aktivitas ditambahkan — menghindari O(n²) read-modify-write.
      */
-    addSessionActivity(params: AddSessionActivity): void {
+    async addSessionActivity(params: AddSessionActivity): Promise<void> {
       if (!this.session?.id) return
       if (this.session?.status !== 'ongoing') return
 
@@ -1903,6 +1955,6 @@ export const useSessionStore = defineStore('session', {
       } catch (error) {
         console.error('[_flushActivitiesBuffer] Failed:', error)
       }
-    },
+    }
   }
 })

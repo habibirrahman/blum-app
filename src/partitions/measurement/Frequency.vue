@@ -33,6 +33,11 @@ const scoreLoading = ref<boolean>(false)
 
 /** COMPUTED */
 
+const _currentRecordingTime = computed(() => {
+  const recording = sessionStore.session?.current_recording_time?.[0] || 0
+  return dayjs().add(recording * -1, 'seconds')
+})
+
 const durationInMinutes = computed(() => {
   if (!props.measurement) return 0
   return props.measurement.duration || props.measurement?.target?.duration || 0
@@ -43,9 +48,12 @@ const counterFromStartTimeInSeconds = computed(() => {
   // Untuk format lain, tidak perlu depend ke `now` sama sekali — menghindari re-render tiap detik.
   if (props.measurement?.target?.frequency_format !== 'custom') return 0
 
-  const session = sessionStore.session
-  if (!session) return 0
-  const diff = now.value.diff(dayjs(session.start_time), 'second')
+  if (sessionStore.session?.status === 'paused') {
+    return sessionStore.session?.current_recording_time?.[0] || 0
+  }
+
+  const n = now.value
+  const diff = n.diff(_currentRecordingTime.value, 'seconds')
   return diff
 })
 
@@ -55,9 +63,9 @@ const isDisabled = computed(() => {
   if (!durationInMinutes.value) return false
   if (props.measurement.target.frequency_format !== 'custom') return false
 
-  const session = sessionStore.session
-  if (session?.status === 'draft') return false
-  if (session?.status === 'completed' || session?.status === 'cancelled') return false
+  if (sessionStore.session?.status === 'draft') return false
+  if (sessionStore.session?.status === 'completed') return false
+  if (sessionStore.session?.status === 'cancelled') return false
 
   return counterFromStartTimeInSeconds.value > durationInMinutes.value * 60
 })
@@ -67,11 +75,7 @@ const isDisabled = computed(() => {
 watch(
   () => scoreLoading.value,
   (val) => {
-    if (!val) {
-      emit('toggle-updated', true)
-    } else {
-      emit('toggle-updated', false)
-    }
+    emit('toggle-updated', !val)
   }
 )
 
@@ -129,17 +133,17 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
     <div
       v-if="scoreLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-20 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <div
-      class="flex h-full flex-grow flex-wrap content-center items-center justify-center gap-x-3 gap-y-4"
+      class="flex flex-wrap flex-grow gap-x-3 gap-y-4 justify-center content-center items-center h-full"
       :class="{ 'scale-90': isCollapsed }"
     >
       <div
@@ -162,7 +166,7 @@ onMounted(() => {
           <Icon v-else icon="stash:plus-solid" class="text-5xl" />
         </div>
         <div
-          class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"
+          class="flex justify-center items-center h-5 rounded border border-slate-5 bg-pure-white"
           :class="{
             'pointer-events-none':
               scoreLoading ||
@@ -173,7 +177,7 @@ onMounted(() => {
           @click="onChangeScore(-1)"
         >
           <div
-            class="h-1 w-6 shrink-0 rounded"
+            class="w-6 h-1 rounded shrink-0"
             :class="{
               'bg-slate-5': !currentScore,
               'bg-slate-6': currentScore
@@ -185,15 +189,15 @@ onMounted(() => {
 
     <div
       v-if="!isCollapsed"
-      class="shrink-0 space-y-2 pb-3 text-center text-xs font-medium text-slate-7"
+      class="pb-3 space-y-2 text-xs font-medium text-center shrink-0 text-slate-7"
     >
-      <div class="flex items-center justify-between">
+      <div class="flex justify-between items-center">
         <div>Goal</div>
         <div>{{ measurement.target?.goal }} attempt(s)</div>
       </div>
       <div
         v-if="measurement.target?.frequency_format === 'custom'"
-        class="flex items-center justify-between"
+        class="flex justify-between items-center"
       >
         <div>Duration</div>
         <div>{{ measurement.duration }} minute(s)</div>

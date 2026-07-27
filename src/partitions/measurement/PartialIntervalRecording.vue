@@ -39,8 +39,13 @@ const counter = computed(() => {
   if (sessionStore.session?.status === 'draft') {
     return 0
   }
+
   if (sessionStore.session?.status === 'ongoing') {
     return now.value.valueOf()
+  }
+
+  if (sessionStore.session?.status === 'paused') {
+    return dayjs(sessionStore.session.paused_at).valueOf()
   }
 
   // for completed or cancelled
@@ -67,6 +72,14 @@ const measurementResults = computed((): MeasurementPir['results'] => {
   return props.measurement.results as MeasurementPir['results']
 })
 
+const trueRecordingStart = computed(() => {
+  return props.measurement.timer_started_at || props.measurement.recording_started_at || 0
+})
+
+const trueOvertimeStart = computed(() => {
+  return props.measurement.timer_started_at || props.measurement.overtime_started_at || 0
+})
+
 //
 
 const isOvertimeRunning = computed(() => {
@@ -89,23 +102,22 @@ const elapsedTime = computed<number>(() => {
       const overtimeDuration = props.measurement.overtime_duration as DurationArray
       return durationSeconds.value + overtimeDuration[0]
     }
-    const start = props.measurement.recording_started_at
-      ? new Date(props.measurement.recording_started_at).getTime()
-      : 0
+
+    const start = new Date(trueRecordingStart.value).getTime()
     const endTime = new Date(props.measurement.overtime_ended_at).getTime()
     return start ? Math.floor((endTime - start) / 1000) : 0
   }
 
   // Overtime sedang berjalan
   if (isOvertimeRunning.value && props.measurement.overtime_started_at) {
-    const overtimeStart = new Date(props.measurement.overtime_started_at).getTime()
+    const overtimeStart = new Date(trueOvertimeStart.value).getTime()
     const diff = Math.floor((counter.value - overtimeStart) / 1000)
     return durationSeconds.value + diff
   }
 
   // Recording sedang berjalan (custom_start atau start_with_session)
   if (props.measurement.recording_started_at) {
-    const start = new Date(props.measurement.recording_started_at).getTime()
+    const start = new Date(trueRecordingStart.value).getTime()
     return Math.floor((counter.value - start) / 1000)
   }
 
@@ -249,7 +261,7 @@ const remainingDurationString = computed<string>(() => {
 const overtimeDurationString = computed<string>(() => {
   if (!props.measurement.overtime_started_at) return '00:00:00'
 
-  const start = new Date(props.measurement.overtime_started_at).getTime()
+  const start = new Date(trueOvertimeStart.value).getTime()
   const diff = Math.max(0, Math.floor((counter.value - start) / 1000))
   return formatTime(diff)
 })
@@ -361,7 +373,7 @@ const getOvertimeSeconds = (): number => {
   } else {
     end = counter.value
   }
-  const start = new Date(props.measurement.overtime_started_at).getTime()
+  const start = new Date(trueOvertimeStart.value).getTime()
   return Math.max(0, Math.floor((end - start) / 1000))
 }
 
@@ -410,6 +422,7 @@ const onStartOvertime = async () => {
 
   // Fill any missing intervals up to and including the first overtime interval
   const newResults = { ...currentResults }
+
   for (let i = 0; i <= firstOvertimeIntervalIndex; i++) {
     if (!(i.toString() in newResults)) {
       newResults[i.toString()] = 0
@@ -531,6 +544,7 @@ const initializeIntervalIfNeeded = async (intervalIndex: number) => {
       measurement: { results: newResults },
       data_result: { ...props.measurement, results: newResults }
     }
+
     // record session activities
     await sessionStore.addSessionActivity({
       action_label: `measurement_pir_initialize_interval`,
@@ -591,7 +605,6 @@ const onAddScore = async () => {
 
   const { success, message } = await sessionStore.updateMeasurementResults(params)
   submitLoading.value = false
-
   if (!success) {
     toast.error(message)
     return
@@ -600,18 +613,18 @@ const onAddScore = async () => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
     <div
       v-if="submitLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-28 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <!-- Stop Recording Confirmation (replaces content) -->
     <template v-if="stopOvertimeConfirmation && !isCollapsed">
-      <div class="flex flex-grow flex-col items-center justify-center gap-4 py-6">
+      <div class="flex flex-col flex-grow gap-4 justify-center items-center py-6">
         <div class="flex flex-col gap-2 text-center">
           <div class="font-semibold text-slate-10">Stop recording?</div>
           <div class="text-sm text-slate-8">
@@ -627,15 +640,15 @@ const onAddScore = async () => {
 
     <!-- Normal PIR Content -->
     <template v-else>
-      <div class="flex items-center justify-evenly gap-3">
+      <div class="flex gap-3 justify-evenly items-center">
         <div v-if="isCollapsed"></div>
 
         <div class="space-y-2">
           <!-- Header: Timer & Status for Collapsed or nah -->
-          <div class="flex flex-col items-center justify-center gap-1">
-            <div v-if="!isCollapsed" class="flex items-center gap-1">
+          <div class="flex flex-col gap-1 justify-center items-center">
+            <div v-if="!isCollapsed" class="flex gap-1 items-center">
               <div
-                class="flex h-6 items-center rounded px-1.5"
+                class="flex items-center px-1.5 h-6 rounded"
                 :class="[isRecordingActive ? 'bg-prim-1' : 'bg-slate-2']"
               >
                 <div
@@ -652,8 +665,8 @@ const onAddScore = async () => {
             </div>
 
             <!-- Timer -->
-            <div class="flex items-center gap-2">
-              <div class="flex items-center justify-center gap-1">
+            <div class="flex gap-2 items-center">
+              <div class="flex gap-1 justify-center items-center">
                 <div
                   class="grid grid-cols-5 items-center font-bold text-slate-8"
                   :class="[isCollapsed ? 'text-xl' : 'text-2xl']"
@@ -673,7 +686,7 @@ const onAddScore = async () => {
               </div>
               <div
                 v-if="isCollapsed"
-                class="flex h-6 items-center rounded px-1.5"
+                class="flex items-center px-1.5 h-6 rounded"
                 :class="[isRecordingActive ? 'bg-prim-1' : 'bg-slate-2']"
               >
                 <div
@@ -700,7 +713,7 @@ const onAddScore = async () => {
           <!-- Main Interaction Area - Collapsed -->
           <div v-if="isCollapsed" class="grid justify-center">
             <!-- Center: Stats -->
-            <div class="flex flex-col items-center gap-1">
+            <div class="flex flex-col gap-1 items-center">
               <div class="text-3xl font-bold text-slate-8">
                 {{ totalScore }}
               </div>
@@ -733,14 +746,14 @@ const onAddScore = async () => {
           </AppButton>
 
           <!-- Finished -->
-          <AppButton v-else-if="isFinished" class="h-32 w-32 rounded-full" disabled>
+          <AppButton v-else-if="isFinished" class="w-32 h-32 rounded-full" disabled>
             Incident
           </AppButton>
 
           <!-- Running / Incident -->
           <AppButton
             v-else
-            class="h-32 w-32 rounded-full"
+            class="w-32 h-32 rounded-full"
             :class="{
               'cursor-wait': submitLoading,
               'pointer-events-none': sessionStore.session?.status !== 'ongoing'
@@ -755,7 +768,7 @@ const onAddScore = async () => {
       <!-- Main Interaction Area - Desktop (Centered Layout) -->
       <div
         v-if="!isCollapsed"
-        class="flex h-full flex-col content-center items-center justify-center gap-y-4 duration-300"
+        class="flex flex-col gap-y-4 justify-center content-center items-center h-full duration-300"
       >
         <!-- Pending Start -->
         <AppButton
@@ -770,7 +783,7 @@ const onAddScore = async () => {
         <!-- Overtime Pending or Finished - Show last interval frequency with different color -->
         <AppButton
           v-else-if="isOvertimePending || isFinished"
-          class="h-48 w-48 rounded-full"
+          class="w-48 h-48 rounded-full"
           disabled
         >
           <div class="flex flex-col gap-1">
@@ -782,7 +795,7 @@ const onAddScore = async () => {
         <!-- Running / Incident -->
         <AppButton
           v-else
-          class="h-48 w-48 rounded-full"
+          class="w-48 h-48 rounded-full"
           :class="{
             'cursor-wait': submitLoading,
             'pointer-events-none': sessionStore.session?.status !== 'ongoing'
@@ -816,12 +829,12 @@ const onAddScore = async () => {
       </div>
 
       <!-- Stats -->
-      <div v-if="!isCollapsed" class="shrink-0 space-y-1 pb-3 text-xs font-medium text-slate-7">
-        <div class="flex items-center justify-between">
+      <div v-if="!isCollapsed" class="pb-3 space-y-1 text-xs font-medium shrink-0 text-slate-7">
+        <div class="flex justify-between items-center">
           <div>Total frequency</div>
           <div>{{ totalScore }}</div>
         </div>
-        <div class="flex items-center justify-between">
+        <div class="flex justify-between items-center">
           <div>Percentage</div>
           <div>{{ percentageScore }}%</div>
         </div>

@@ -145,6 +145,8 @@ watch(
 )
 
 const onAdd = async (bool: boolean) => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   onDisplayPopup()
 
   const finalResults = props.measurementResults
@@ -188,6 +190,8 @@ const onAdd = async (bool: boolean) => {
 }
 
 const onRemove = async (circle: ProbingCircle) => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   onDisplayPopup()
 
   const lastResults = props.measurementResults
@@ -244,6 +248,8 @@ const isProbingPassed = ref<boolean>(false)
 const showCelebration = ref<boolean>(false)
 const submitPorbingTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const onSubmitProbing = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   probingAction.value = null
   showPanel.value = true
   isProbingPassed.value = probingScore.value >= (props.measurement.target?.probing_goal || 0)
@@ -665,7 +671,7 @@ onUnmounted(() => {
 
       <div
         v-if="sessionStore.session?.status === 'draft' && measurement?.target?.probing_enable"
-        class="z-10 flex w-full items-center justify-between rounded-full bg-lime-2 px-4 py-2"
+        class="pointer-events-auto z-10 flex w-full items-center justify-between rounded-full bg-lime-2 px-4 py-2"
       >
         <div class="text-sm font-semibold text-lime-7">Set as probing</div>
         <div class="flex items-center gap-1">

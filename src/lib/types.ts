@@ -1,3 +1,40 @@
+export interface Center {
+  id?: number
+  name?: string
+  slug?: string
+  logo_url?: string
+  timezone?: string
+  currency_sym?: string
+  contact_name?: string
+  contact_email?: string
+  center_address?: string
+  contact_phone_number?: string
+  xendit_api_key?: string
+  xendit_callback_token?: string
+  running_create_user_job?: string
+  availability_release_time?: string
+
+  created_at?: string
+  updated_at?: string
+  deleted_at?: string
+  deactivated_at?: string
+
+  enable_aba?: boolean
+  enable_sbt?: boolean
+  enable_branch?: boolean
+  enable_analytics?: boolean
+  enable_admin_fee?: boolean
+  enable_psychology?: boolean
+  enable_appointment?: boolean
+  enable_client_portal?: boolean
+  enable_online_branch?: boolean
+  enable_sales_pipeline?: boolean
+  is_template?: boolean
+  use_payment?: boolean
+  is_consume_credit?: boolean
+  currency_confirmed?: boolean
+}
+
 export interface User {
   id?: number
   email?: string
@@ -7,9 +44,6 @@ export interface User {
   restriction_type?: string // not
   sign_in_token?: string
   deactivated_at?: string
-  center_enable_sales_pipeline?: boolean
-  center_enable_appointment?: boolean
-  center_enable_branch?: boolean
   can_deactivate?: boolean
   parent_form_id?: number // not
   user_tags?: any[] // not
@@ -17,22 +51,44 @@ export interface User {
   branch_accesses?: any[] // not
 }
 
+export interface SessionRecordingTimeline {
+  start?: string
+  end?: string | null
+  recorded_by?: User['id'] | null
+  recorded_by_name?: User['name'] | null
+}
+
 export interface Session {
   id?: number
   slug?: string
   name?: string
-  status?: 'draft' | 'ongoing' | 'completed' | 'cancelled'
   start_time?: string
   end_time?: string
+
+  created_at?: string
+  updated_at?: string
   deleted_at?: string
-  current_recording_time?: (number | string)[]
+  paused_at?: string
+
+  status?: 'draft' | 'ongoing' | 'paused' | 'completed' | 'cancelled'
+
   number_of_measurements?: number
-  client_id?: Client['id']
-  client?: Client
-  user_id?: User['id']
-  user?: User
+  number_of_recorded_measurements?: number
+  total_paused_seconds?: number
+
+  current_recording_time?: [number, string]
+  duration?: [number, string]
+  recording_timeline?: SessionRecordingTimeline[]
+
   appointment_id?: Appointment['id']
   appointment?: Appointment
+
+  client_id?: Client['id']
+  client?: Client
+
+  user_id?: User['id']
+  user?: User
+
   comments?: Comment[]
   measurements?: Measurement[]
 }
@@ -185,7 +241,14 @@ export type MeasurementType =
   | 'Measurement::Sbt'
   | 'Measurement::TrialByTrial'
 export type DurationArray = [number, string]
-export type Measurement = MeasurementBase | MeasurementDurationOrLatency | MeasurementFrequency | MeasurementPir | MeasurementPrompting | MeasurementTaskAnalysis | MeasurementSbt
+export type Measurement =
+  | MeasurementBase
+  | MeasurementDurationOrLatency
+  | MeasurementFrequency
+  | MeasurementPir
+  | MeasurementPrompting
+  | MeasurementTaskAnalysis
+  | MeasurementSbt
 
 interface MeasurementBase {
   id?: number
@@ -202,6 +265,7 @@ interface MeasurementBase {
 
   comment?: string
   recording_started_at?: string
+  timer_started_at?: string
   overtime_started_at?: string
   overtime_ended_at?: string
   marked_as?: string
@@ -209,7 +273,6 @@ interface MeasurementBase {
   deleted_at?: string
   created_at?: string
   updated_at?: string
-
 
   target_id?: Target['id']
   target?: Target
@@ -299,7 +362,6 @@ export interface MeasurementResultsSbt {
   target_problem_behavior_id: number | null
 }
 
-
 export type TargetType =
   | 'Target::ColdProbe'
   | 'Target::Duration'
@@ -310,7 +372,13 @@ export type TargetType =
   | 'Target::Prompting'
   | 'Target::Sbt'
   | 'Target::TrialByTrial'
-export type TargetStatus = 'pending' | 'in_progress' | 'mastered' | 'paused' | 'discontinued' | 'in_maintenance'
+export type TargetStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'mastered'
+  | 'paused'
+  | 'discontinued'
+  | 'in_maintenance'
 export type TargetFrequencyFormat = 'classic' | 'custom'
 export type TargetPromptingFormat = 'classic' | 'custom'
 export type TargetColdProbeFormat = 'classic' | 'custom'
@@ -478,8 +546,8 @@ export interface ActionRecommendation {
   visible?: boolean
   passed?: boolean
   is_enabled?: boolean
-  accepted_at?: string,
-  accepted_by_id?: User['id'],
+  accepted_at?: string
+  accepted_by_id?: User['id']
   latest_session_by?: User
   target_id?: Target['id']
   target?: Target

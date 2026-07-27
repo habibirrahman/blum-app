@@ -21,9 +21,7 @@ async function onSignout() {
   }
 }
 
-onMounted(() => {
-  appStore.getRunningSessions()
-})
+onMounted(() => {})
 </script>
 
 <template>
@@ -31,13 +29,13 @@ onMounted(() => {
     class="fixed left-1/2 z-[9] -translate-x-1/2 pt-safe"
     :class="{ 'top-5': signoutLoading, '-top-10': !signoutLoading }"
   >
-    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+    <div class="flex justify-center items-center w-10 h-10 bg-white rounded-full shadow">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
   </div>
 
-  <div class="h-full w-full">
-    <div class="flex h-full flex-col justify-center gap-3 px-6">
+  <div class="w-full h-full">
+    <div class="flex flex-col gap-3 justify-center px-6 h-full">
       <div
         class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full"
         :class="{

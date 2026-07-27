@@ -19,6 +19,8 @@ import AppChip from '@/components/AppChip.vue'
 import { useClock } from '@/composable/use-clock'
 import dayjs from 'dayjs'
 import { secondsToDuration } from '@/lib/func'
+import type { PluginListenerHandle } from '@capacitor/core'
+import { App } from '@capacitor/app'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,22 +33,29 @@ const { now } = useClock()
 
 const sessionLoading = ref<boolean>(true)
 const cycleLoading = ref<boolean>(false)
+const submitLoading = ref<boolean>(false)
+
 const isRefreshing = ref<boolean>(false)
-const showOffline = ref<boolean>(false)
 const isScrolling = ref<boolean>(false)
-const showReviewMode = ref<boolean>(false)
-const showSessionComments = ref<boolean>(false)
+const isReviewMode = ref<boolean>(false)
 const isMeasurementCollapsed = ref<boolean>(true)
-const showEndSession = ref<boolean>(false)
-const endSessionLoading = ref<boolean>(false)
-const showActionRecommendations = ref<boolean>(false)
+
+const isOpenOffline = ref<boolean>(false)
+const isOpenSessionComments = ref<boolean>(false)
+const isOpenRecordedBy = ref<boolean>(false)
+const isOpenEndSession = ref<boolean>(false)
+const isOpenLeaveSession = ref<boolean>(false)
+const isOpenPauseSession = ref<boolean>(false)
+
+const isOpenActionRecommendations = ref<boolean>(false)
 const isOpenMastered = ref<boolean>(true)
 const isOpenMaintenance = ref<boolean>(true)
-const exitSessionLoading = ref<boolean>(false)
 
 const heightReload = 112
 
 const endSessionStatus = ref<'normal' | 'group_reason' | 'empty_record'>('normal')
+const pauseSessionStatus = ref<'normal' | 'group_reason'>('normal')
+
 const redirect = ref<string>('/home')
 const containerHeight = ref<string>('100%')
 const groupReasons = ref<string[]>([])
@@ -64,6 +73,27 @@ const periodicCheckInterval = ref<ReturnType<typeof setInterval> | undefined>(un
 
 /** === COMPUTEDS === */
 
+const isEnded = computed(() =>
+  ['completed', 'cancelled'].includes(sessionStore.session?.status || '')
+)
+
+const recordingBy = computed(() => {
+  const names = (sessionStore.session?.recording_timeline || []).map((i) => i.recorded_by_name)
+  const userName = sessionStore.session?.user?.name
+  const recording = [userName, ...names].pop()
+  return recording
+})
+
+const recordedBys = computed(() => {
+  const names = (sessionStore.session?.recording_timeline || [])
+    .filter((i) => i.recorded_by !== sessionStore.session?.user_id && i.recorded_by_name)
+    .map((i) => i.recorded_by_name)
+
+  const userName = sessionStore.session?.user?.name
+
+  return [...new Set([userName, ...names])]
+})
+
 // Tambahkan computed untuk monitoring
 const hasPendingSync = computed(() => {
   return sessionStore.pending_progress.length > 0
@@ -72,27 +102,27 @@ const hasPendingSync = computed(() => {
 const pendingSyncStats = computed(() => sessionStore.pendingSyncStats)
 
 const isDisabledAction = computed(() => {
-  return (
-    sessionLoading.value ||
-    cycleLoading.value ||
-    endSessionLoading.value ||
-    exitSessionLoading.value ||
-    isScrolling.value
-  )
+  return sessionLoading.value || cycleLoading.value || submitLoading.value || isScrolling.value
+})
+
+const _currentRecordingTime = computed(() => {
+  const recording = sessionStore.session?.current_recording_time?.[0] || 0
+  return dayjs().add(recording * -1, 'seconds')
 })
 
 const recordingTime = computed<string>(() => {
   if (sessionStore.session?.status === 'draft') return '00:00:00'
+  if (sessionStore.session?.status !== 'ongoing') {
+    return sessionStore.session?.current_recording_time?.[1] || '00:00:00'
+  }
 
-  const time = sessionStore.session?.start_time
-  let n = dayjs(sessionStore.session?.end_time)
-  if (sessionStore.session?.status === 'ongoing') n = now.value
-  const diff = n.diff(dayjs(time), 'second')
+  const n = now.value
+  const diff = n.diff(dayjs(_currentRecordingTime.value), 'second')
   return secondsToDuration(diff)
 })
 
 const normalMeasurements = computed<Measurement[]>(() => {
-  if (showReviewMode.value) return sessionStore.session_measurements
+  if (isReviewMode.value) return sessionStore.session_measurements
   return sessionStore.session_measurements.filter((i) => !i.is_fixed)
 })
 
@@ -229,7 +259,7 @@ watch(
   () => appStore.network_status.connected,
   async (isConnected, wasConnected) => {
     if (!isConnected) {
-      showOffline.value = true
+      isOpenOffline.value = true
 
       // record session activities
       sessionStore.addSessionActivity({
@@ -274,9 +304,9 @@ watch(
 )
 
 watch(
-  () => showReviewMode.value,
+  () => isReviewMode.value,
   (val) => {
-    if (sessionStore.session?.status === 'ongoing') {
+    if (sessionStore.session?.status === 'ongoing' || sessionStore.session?.status === 'paused') {
       document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
     }
     if (val) focusMeasurement.value = 0
@@ -333,37 +363,51 @@ async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) 
 async function fetchSession(
   { first, isSwipe }: FetchSessionProps = { first: false, isSwipe: false }
 ) {
-  const slug = route.params?.slug as string
-  const { success, data } = await sessionStore.getSession({ slug })
-  const session = data as Session
-  await sessionStore.getSessionComments({ id: session?.id, filter: '' })
-  sessionLoading.value = false
-  if (!success) return
+  // Loading lock: dikunci di sini (bukan cuma di pemanggil) supaya SEMUA jalur yang
+  // memicu fetchSession (swipe refresh, event @fetch-session dari komponen measurement,
+  // dst) ikut memblokir input skor selama request masih berjalan. Ini menutup celah
+  // race saat terapis sempat input skor di tengah-tengah refresh session yang lama
+  // (koneksi lapangan) - lihat getSessionMeasurements() di session.store.ts.
+  cycleLoading.value = true
+  try {
+    const slug = route.params?.slug as string
+    sessionLoading.value = true
 
-  const app = document.getElementById('app')
+    const { success, data } = await sessionStore.getSession({ slug })
+    const session = data as Session
+    await sessionStore.getSessionComments({ id: session?.id, filter: '' })
 
-  if (session.status === 'ongoing') {
-    if (isSwipe && appStore.network_status.connected) {
-      toast.success('Results are now up-to-date!')
+    sessionLoading.value = false
+    if (!success) return
+
+    const app = document.getElementById('app')
+
+    if (session.status === 'ongoing' || session.status === 'paused') {
+      if (isSwipe && appStore.network_status.connected) {
+        toast.success('Results are now up-to-date!')
+      }
+
+      if (first) {
+        syncSession()
+        app?.scroll({ top: heightReload, behavior: 'smooth' })
+        app?.addEventListener('scroll', scrollListener)
+      }
     }
 
-    if (first) {
-      syncSession()
-      app?.scroll({ top: heightReload, behavior: 'smooth' })
-      app?.addEventListener('scroll', scrollListener)
+    if (session.status === 'completed' || session.status === 'cancelled') {
+      // await appStore.getRunningSessions()
+
+      app?.removeEventListener('scroll', scrollListener)
     }
+
+    // reset all state
+    updatingMeasurementIds.value = []
+    runningDurationLatency.value = []
+    unsavedSbtIds.value = []
+    unCompletedColdProbeIds.value = []
+  } finally {
+    cycleLoading.value = false
   }
-
-  if (session.status === 'completed' || session.status === 'cancelled') {
-    await appStore.getRunningSessions()
-
-    app?.removeEventListener('scroll', scrollListener)
-  }
-
-  // reset all state
-  runningDurationLatency.value = []
-  unsavedSbtIds.value = []
-  unCompletedColdProbeIds.value = []
 }
 
 const scrollListener = async (e: any) => {
@@ -394,7 +438,6 @@ const scrollListener = async (e: any) => {
   scrollingTimeout.value = setTimeout(async () => {
     if (top === 0 && !isRefreshing.value) {
       isRefreshing.value = true
-      cycleLoading.value = true
 
       sessionStore.addSessionActivity({
         action_label: `session_refresh`,
@@ -406,7 +449,6 @@ const scrollListener = async (e: any) => {
       await fetchSession({ isSwipe: true })
 
       isRefreshing.value = false
-      cycleLoading.value = false
     }
     if (top < heightReload) {
       document.getElementById('app')?.scroll({ top: heightReload, behavior: 'smooth' })
@@ -420,6 +462,59 @@ const scrollListener = async (e: any) => {
       scrollingTimeout.value = undefined
     }
   }
+}
+
+const checkActionRecommendations = async () => {
+  const { success, data } = await sessionStore.getSessionRecommendations()
+  submitLoading.value = false
+  isOpenEndSession.value = false
+
+  toast.success('The session has been completed.')
+
+  if (!success) {
+    onExitSession()
+    return
+  }
+
+  if (data.action_recommendations.length) {
+    isOpenActionRecommendations.value = true
+  } else {
+    onExitSession()
+  }
+}
+
+const generateSuccessMetric = (target?: Target) => {
+  if (!target) return ''
+  let prefix = ''
+  let goalText: string | number | undefined = ''
+  let suffix = ''
+  // prefix
+  if (
+    target.success_metric === 'equal to or greater than goal' ||
+    target.type_name === 'Prompting'
+  ) {
+    prefix = '≥ '
+  }
+  if (target.success_metric === 'less than goal') {
+    prefix = '< '
+  }
+  // goal text
+  if (target.type_name === 'Duration') {
+    goalText = target.goal_time
+  } else {
+    goalText = target.goal
+  }
+  // suffix
+  if (target.type_name === 'Percentage' || target.type_name === 'Partial interval recording') {
+    suffix = '%'
+  }
+  if (target.type_name === 'Frequency') {
+    suffix = ' attempt(s)'
+  }
+  if (target.type_name === 'Prompting') {
+    suffix = ` attempt(s) ${target.success_metric} prompts`
+  }
+  return prefix + goalText + suffix
 }
 
 const onToggleUpdatedMeasurement = (payload: { id: Measurement['id']; updated: boolean }) => {
@@ -442,14 +537,31 @@ const onToggleSavedSbt = (payload: { id: Measurement['id']; saved: boolean }) =>
   }
 }
 
+const handleCompletedColdProbe = ({
+  id,
+  isCompleted
+}: {
+  id: number | undefined
+  isCompleted: boolean
+}) => {
+  if (id === undefined) return
+  if (isCompleted) {
+    unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter((i) => i !== id)
+  } else {
+    if (!unCompletedColdProbeIds.value.includes(id)) {
+      unCompletedColdProbeIds.value.push(id)
+    }
+  }
+}
+
 const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
   let timer = 300
   if (val.id === focusMeasurement.value) return
   focusMeasurement.value = val.id
 
   if (checkReviewMode) {
-    if (!showReviewMode.value) return
-    showReviewMode.value = false
+    if (!isReviewMode.value) return
+    isReviewMode.value = false
   }
 
   const measurements = sessionStore.session_measurements
@@ -484,6 +596,151 @@ const onFocusMeasurement = (val: Measurement, checkReviewMode: boolean) => {
       clearTimeout(collapseTimeout.value)
       collapseTimeout.value = undefined
     }
+  }
+}
+
+const onTrunOffAllAndEndSession = async () => {
+  isOpenEndSession.value = false
+  isReviewMode.value = true
+  cycleLoading.value = true
+  const length = sessionStore.session_measurements.length
+
+  for (let idx = 0; idx < length; idx++) {
+    const measurement: Measurement = sessionStore.session_measurements[idx]
+    if (!measurement.is_dropped) {
+      if (runningDurationLatency.value.find((i) => i.id === measurement.id)) {
+        runningDurationLatency.value = runningDurationLatency.value.filter(
+          (i) => i.id !== measurement.id
+        )
+      }
+      if (unsavedSbtIds.value.includes(measurement.id)) {
+        unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== measurement.id)
+      }
+
+      if (unCompletedColdProbeIds.value.includes(measurement.id)) {
+        unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter(
+          (i) => i !== measurement.id
+        )
+      }
+
+      const params: UpdateMeasurementParams = {
+        id: measurement.id,
+        measurement: { is_dropped: true },
+        data_result: { ...measurement, is_dropped: true }
+      }
+      const { success, message } = await sessionStore.updateMeasurement(params)
+      if (!success) {
+        toast.error(message)
+      }
+    }
+  }
+
+  endSessionStatus.value = 'normal'
+  cycleLoading.value = false
+  isOpenEndSession.value = true
+}
+
+const onKeepActiveAndEndSession = () => {
+  isOpenEndSession.value = false
+  isReviewMode.value = true
+  endSessionStatus.value = 'normal'
+  isOpenEndSession.value = true
+}
+
+function openPauseSession() {
+  const measurements = sessionStore.session_measurements || []
+
+  runningDurationLatency.value = measurements.filter((i) => {
+    const res = Object.values(i.results || {}) as MeasurementResultsDurationOrLatency[]
+    return (
+      (i.type === 'Measurement::Duration' || i.type === 'Measurement::Latency') &&
+      !i.submitted_at &&
+      !i.is_dropped &&
+      res.some((r) => r.started_at && !r.ended_at)
+    )
+  })
+
+  if (runningDurationLatency.value.length) {
+    pauseSessionStatus.value = 'group_reason'
+    if (runningDurationLatency.value.length) {
+      groupReasons.value.push(`${runningDurationLatency.value.length} timer(s) are still running`)
+    }
+  } else {
+    pauseSessionStatus.value = 'normal'
+  }
+  isOpenPauseSession.value = true
+}
+
+const openLeaveSession = () => {
+  if (sessionStore.session?.status === 'ongoing') isOpenLeaveSession.value = true
+  else if (sessionStore.session?.status === 'paused') isOpenLeaveSession.value = true
+  else onBackToClientSessionDraft()
+}
+
+async function onTogglePauseSession() {
+  const status: Session['status'] =
+    sessionStore.session?.status === 'ongoing' ? 'paused' : 'ongoing'
+
+  submitLoading.value = true
+  cycleLoading.value = true
+
+  // Resume
+  if (status === 'ongoing') {
+    sessionLoading.value = true
+
+    await sessionStore.addSessionActivity({
+      action_label: 'session_resume',
+      recordable: 'Session',
+      recordable_id: sessionStore.session?.id,
+      notes: `${appStore.account?.name} resumed session`,
+      timestamp: new Date().toISOString()
+    })
+
+    const payload = {
+      id: sessionStore.session?.id,
+      session: { status: 'ongoing' as Session['status'] }
+    }
+
+    const { success, message } = await sessionStore.updateSession(payload)
+
+    if (!success) {
+      submitLoading.value = false
+      sessionLoading.value = false
+      cycleLoading.value = true
+      toast.error(message)
+      return
+    }
+
+    await sessionStore.getSessionMeasurements({ id: sessionStore.session?.id })
+    toast.success('Session resumed')
+  }
+
+  // Pause
+  if (status === 'paused') {
+    const { success, message } = await sessionStore.pauseSession()
+
+    if (!success) {
+      submitLoading.value = false
+      sessionLoading.value = false
+      cycleLoading.value = true
+      toast.error(message)
+      return
+    }
+
+    toast.success('Session paused')
+  }
+
+  submitLoading.value = false
+  cycleLoading.value = false
+  sessionLoading.value = false
+  isOpenPauseSession.value = false
+}
+
+// Back to client session draft
+const onBackToClientSessionDraft = async () => {
+  const clientId = sessionStore.session?.client_id
+  if (clientId) {
+    router.push(`/clients/${clientId}/sessions-draft`)
   }
 }
 
@@ -539,59 +796,11 @@ const openEndSession = () => {
   } else {
     endSessionStatus.value = 'normal'
   }
-  showEndSession.value = true
-}
-
-const onTrunOffAllAndEndSession = async () => {
-  showEndSession.value = false
-  showReviewMode.value = true
-  cycleLoading.value = true
-  const length = sessionStore.session_measurements.length
-
-  for (let idx = 0; idx < length; idx++) {
-    const measurement: Measurement = sessionStore.session_measurements[idx]
-    if (!measurement.is_dropped) {
-      if (runningDurationLatency.value.find((i) => i.id === measurement.id)) {
-        runningDurationLatency.value = runningDurationLatency.value.filter(
-          (i) => i.id !== measurement.id
-        )
-      }
-      if (unsavedSbtIds.value.includes(measurement.id)) {
-        unsavedSbtIds.value = unsavedSbtIds.value.filter((i) => i !== measurement.id)
-      }
-
-      if (unCompletedColdProbeIds.value.includes(measurement.id)) {
-        unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter(
-          (i) => i !== measurement.id
-        )
-      }
-
-      const params: UpdateMeasurementParams = {
-        id: measurement.id,
-        measurement: { is_dropped: true },
-        data_result: { ...measurement, is_dropped: true }
-      }
-      const { success, message } = await sessionStore.updateMeasurement(params)
-      if (!success) {
-        toast.error(message)
-      }
-    }
-  }
-
-  endSessionStatus.value = 'normal'
-  cycleLoading.value = false
-  showEndSession.value = true
-}
-
-const onKeepActiveAndEndSession = () => {
-  showEndSession.value = false
-  showReviewMode.value = true
-  endSessionStatus.value = 'normal'
-  showEndSession.value = true
+  isOpenEndSession.value = true
 }
 
 const onEndSession = async () => {
-  endSessionLoading.value = true
+  submitLoading.value = true
 
   // ✅ Resolve semua pending dulu sebelum end session
   if (sessionStore.pending_progress.length > 0) {
@@ -607,14 +816,14 @@ const onEndSession = async () => {
 
   const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements(payload)
   if (!s1) {
-    endSessionLoading.value = false
+    submitLoading.value = false
     toast.error(m1)
     return
   }
 
   const { success: s2, message: m2 } = await sessionStore.endSession()
   if (!s2) {
-    endSessionLoading.value = false
+    submitLoading.value = false
     toast.error(m2)
     return
   }
@@ -623,64 +832,7 @@ const onEndSession = async () => {
   duplicateImageCommentsToClientDocument()
 }
 
-const checkActionRecommendations = async () => {
-  const { success, data } = await sessionStore.getSessionRecommendations()
-  endSessionLoading.value = false
-  showEndSession.value = false
-
-  toast.success('The session has been completed.')
-
-  if (!success) {
-    onExitSession()
-    return
-  }
-
-  if (data.action_recommendations.length) {
-    showActionRecommendations.value = true
-  } else {
-    onExitSession()
-  }
-}
-
-const generateSuccessMetric = (target?: Target) => {
-  if (!target) return ''
-  let prefix = ''
-  let goalText: string | number | undefined = ''
-  let suffix = ''
-  // prefix
-  if (
-    target.success_metric === 'equal to or greater than goal' ||
-    target.type_name === 'Prompting'
-  ) {
-    prefix = '≥ '
-  }
-  if (target.success_metric === 'less than goal') {
-    prefix = '< '
-  }
-  // goal text
-  if (target.type_name === 'Duration') {
-    goalText = target.goal_time
-  } else {
-    goalText = target.goal
-  }
-  // suffix
-  if (target.type_name === 'Percentage' || target.type_name === 'Partial interval recording') {
-    suffix = '%'
-  }
-  if (target.type_name === 'Frequency') {
-    suffix = ' attempt(s)'
-  }
-  if (target.type_name === 'Prompting') {
-    suffix = ` attempt(s) ${target.success_metric} prompts`
-  }
-  return prefix + goalText + suffix
-}
-
 const onExitSession = async () => {
-  exitSessionLoading.value = true
-  await appStore.getRunningSessions()
-  exitSessionLoading.value = false
-
   const clientId = sessionStore.session?.client_id
   if (redirect.value === '/home' && clientId) {
     router.push(`/clients/${clientId}/sessions-draft`)
@@ -688,23 +840,6 @@ const onExitSession = async () => {
   }
 
   router.push(redirect.value)
-}
-
-const handleCompletedColdProbe = ({
-  id,
-  isCompleted
-}: {
-  id: number | undefined
-  isCompleted: boolean
-}) => {
-  if (id === undefined) return
-  if (isCompleted) {
-    unCompletedColdProbeIds.value = unCompletedColdProbeIds.value.filter((i) => i !== id)
-  } else {
-    if (!unCompletedColdProbeIds.value.includes(id)) {
-      unCompletedColdProbeIds.value.push(id)
-    }
-  }
 }
 
 const duplicateImageCommentsToClientDocument = async () => {
@@ -742,13 +877,25 @@ const duplicateImageCommentsToClientDocument = async () => {
   }
 }
 
+let backButtonListener: PluginListenerHandle | undefined = undefined
+
 onMounted(async () => {
+  backButtonListener = await App.addListener('backButton', () => {
+    if (isOpenLeaveSession.value) {
+      // modal udah kebuka, back kedua = tutup modal aja (opsional)
+      isOpenLeaveSession.value = false
+      return
+    }
+    // tampilkan modal, JANGAN langsung navigasi
+    openLeaveSession()
+  })
+
   const app = document.getElementById('app')
   if (app) {
     app.style.backgroundColor = 'rgb(235 228 240 / var(--tw-bg-opacity))' /* #ebe4f0 */
   }
 
-  appStore.getRunningSessions()
+  // appStore.getRunningSessions()
   redirect.value = route.query.redirect?.toString() || '/home'
 
   // Generate session store dari storage
@@ -770,7 +917,7 @@ onMounted(async () => {
 
   await fetchSession({ first: true })
 
-  if (sessionStore.session?.status === 'ongoing') {
+  if (sessionStore.session?.status === 'ongoing' || sessionStore.session?.status === 'paused') {
     // Setup periodic check untuk stuck items
     periodicCheckInterval.value = setInterval(() => {
       const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
@@ -796,6 +943,8 @@ onMounted(async () => {
 
 // Cleanup saat unmount
 onUnmounted(() => {
+  backButtonListener?.remove()
+
   const app = document.getElementById('app')
   if (app) {
     app.style.backgroundColor = 'rgb(255 255 255 / var(--tw-bg-opacity))' /* #ffffff */
@@ -827,81 +976,172 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="sticky top-0 z-[10] flex h-14 shrink-0 items-center gap-3 bg-white px-4">
-    <!-- Tambahkan pending sync indicator -->
-    <div class="flex items-center gap-2">
-      <div
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-colors"
-        :class="{
-          'border-prim-3 bg-prim-1 text-light-purple-4': !showReviewMode,
-          'border-light-purple-3 bg-light-purple-1 text-dark-purple-4': showReviewMode
-        }"
-        @click="showReviewMode = !showReviewMode"
-      >
-        {{ sessionStore.session_measurements.length }}
-      </div>
+  <!-- Header -->
+  <div class="h-22 sticky top-0 z-[10] flex shrink-0 items-center gap-3 bg-white px-4">
+    <!-- Left side -->
+    <div>
+      <!-- Top row -->
+      <div class="flex h-12 items-center gap-2">
+        <AppButton kind="plain" @click="openLeaveSession">
+          <Icon :icon="'ph:caret-left'" class="text-xl" />
+        </AppButton>
 
-      <!-- Pending sync indicator -->
-      <div v-if="hasPendingSync && !sessionLoading" class="flex">
+        <!-- Measurment Counter -->
         <div
-          class="flex h-6 items-center gap-1 rounded-full bg-tulip-1 px-2 text-xs text-tulip-7"
-          :title="`${pendingSyncStats.total} item(s) pending sync`"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-colors"
+          :class="{
+            'border-prim-3 bg-prim-1 text-light-purple-4': !isReviewMode,
+            'border-light-purple-3 bg-light-purple-1 text-dark-purple-4': isReviewMode
+          }"
+          @click="isReviewMode = !isReviewMode"
         >
-          <Icon icon="ph:cloud-arrow-up" class="animate-pulse text-sm" />
-          <span class="font-medium">{{ pendingSyncStats.total }}</span>
+          {{ sessionStore.session_measurements.length }}
+        </div>
+
+        <!-- Pending sync indicator -->
+        <div v-if="hasPendingSync && !sessionLoading" class="flex">
+          <div
+            class="flex h-6 items-center gap-1 rounded-full bg-tulip-1 px-2 text-xs text-tulip-7"
+            :title="`${pendingSyncStats.total} item(s) pending sync`"
+          >
+            <Icon icon="ph:cloud-arrow-up" class="animate-pulse text-sm" />
+            <span class="font-medium">{{ pendingSyncStats.total }}</span>
+          </div>
+        </div>
+
+        <!-- Session Comment Indicator -->
+        <div
+          class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded"
+          @click="isOpenSessionComments = true"
+        >
+          <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
+          <div
+            class="absolute right-1 top-1 h-2 w-2 rounded-full bg-light-purple-5 transition-opacity"
+            :class="[sessionStore.session_comments?.length ? 'opacity-100' : 'opacity-0']"
+          ></div>
         </div>
       </div>
+      <!-- Bottom row -->
+      <div class="flex h-10 items-center gap-2">
+        <!-- Therapist name -->
+        <div class="lg:max-w-auto max-w-[20vw] shrink-0 truncate lg:text-clip lg:whitespace-normal">
+          <div
+            class="flex h-6 items-center justify-center truncate rounded-full bg-grass-2 px-3 text-sm font-medium text-grass-7"
+          >
+            <span class="truncate"> {{ recordingBy || 'No therapist assigned' }} </span>
+          </div>
+        </div>
 
-      <div
-        class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded"
-        @click="showSessionComments = true"
-      >
-        <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
+        <!-- Recorded by list name -->
         <div
-          class="absolute right-1 top-1 h-2 w-2 rounded-full bg-light-purple-5 transition-opacity"
-          :class="[sessionStore.session_comments?.length ? 'opacity-100' : 'opacity-0']"
+          class="flex h-6 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-3 text-sm font-medium transition-colors"
+          :class="[
+            isOpenRecordedBy
+              ? 'border-light-purple-2 bg-light-purple-2 text-dark-purple-2'
+              : 'border-slate-4 bg-prim-1 text-slate-8'
+          ]"
+          @click="isOpenRecordedBy = !isOpenRecordedBy"
+        >
+          <Icon icon="ph:users" class="text-lg" />
+          <span>{{ recordedBys.length }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right side -->
+    <div class="ml-auto">
+      <!-- Top row -->
+      <div class="flex h-12 items-center justify-end gap-2">
+        <!-- Pause Button -->
+        <AppButton
+          v-if="sessionStore.session?.status === 'ongoing'"
+          kind="outline"
+          :disabled="
+            !appStore.network_status.connected ||
+            updatingMeasurementIds.length > 0 ||
+            sessionLoading ||
+            cycleLoading
+          "
+          @click="openPauseSession"
+        >
+          <Icon icon="ph:pause" class="text-xl" />
+          <span>Pause</span>
+        </AppButton>
+
+        <!-- Resume Button -->
+        <AppButton
+          v-if="sessionStore.session?.status === 'paused'"
+          kind="outline"
+          :disabled="
+            !appStore.network_status.connected ||
+            updatingMeasurementIds.length > 0 ||
+            sessionLoading ||
+            cycleLoading
+          "
+          @click="onTogglePauseSession"
+        >
+          <Icon icon="ph:play" class="text-xl" />
+          <span>Resume</span>
+        </AppButton>
+
+        <!-- End Button -->
+        <AppButton
+          v-if="isEnded || sessionStore.session?.status === 'draft'"
+          kind="outline"
+          @click="onExitSession"
+        >
+          Close
+        </AppButton>
+        <AppButton
+          v-else
+          class="px-4"
+          :disabled="
+            !appStore.network_status.connected ||
+            updatingMeasurementIds.length > 0 ||
+            sessionLoading ||
+            cycleLoading
+          "
+          @click="openEndSession"
+        >
+          {{ appStore.network_status.connected ? 'End' : 'Offline' }}
+        </AppButton>
+      </div>
+
+      <!-- Button row -->
+      <div class="flex h-10 items-center justify-end gap-2">
+        <!-- Session ID -->
+        <div class="shrink-0 text-xs font-medium text-slate-6">
+          ID {{ sessionStore.session?.id }}
+        </div>
+
+        <!-- Indicator -->
+        <div v-if="sessionStore.session?.status === 'paused'" class="flex items-center gap-2">
+          <Icon icon="ph:pause-fill" class="text-lg text-slate-8" />
+          <div class="text-xs text-slate-6">Paused</div>
+        </div>
+        <div
+          v-else
+          class="h-2 w-2 shrink-0 rounded-full transition-colors"
+          :class="[
+            sessionStore.session?.status === 'ongoing' ? 'animate-pulse-recording' : 'bg-slate-6'
+          ]"
         ></div>
+
+        <!-- Recording Time -->
+        <div class="grid grid-cols-5 items-center pr-2 text-xs font-semibold text-slate-8">
+          <div class="flex justify-center">{{ recordingTime.split(':')[0] }}</div>
+          <div class="flex justify-center">:</div>
+          <div class="flex justify-center">{{ recordingTime.split(':')[1] }}</div>
+          <div class="flex justify-center">:</div>
+          <div class="flex justify-center">{{ recordingTime.split(':')[2] }}</div>
+        </div>
       </div>
     </div>
-
-    <div class="flex w-full items-center justify-end gap-2">
-      <div class="text-xs font-medium text-slate-6">ID {{ sessionStore.session?.id }}</div>
-      <div
-        class="h-2 w-2 shrink-0 rounded-full transition-colors"
-        :class="[
-          sessionStore.session?.status === 'ongoing' ? 'animate-pulse-recording' : 'bg-slate-6'
-        ]"
-      ></div>
-      <div class="grid w-16 grid-cols-5 items-center text-xs font-semibold text-slate-8">
-        <div class="flex justify-center">{{ recordingTime.split(':')[0] }}</div>
-        <div class="flex justify-center">:</div>
-        <div class="flex justify-center">{{ recordingTime.split(':')[1] }}</div>
-        <div class="flex justify-center">:</div>
-        <div class="flex justify-center">{{ recordingTime.split(':')[2] }}</div>
-      </div>
-    </div>
-
-    <AppButton
-      v-if="sessionStore.session?.status === 'ongoing'"
-      class="px-4"
-      :disabled="
-        !appStore.network_status.connected ||
-        updatingMeasurementIds.length > 0 ||
-        sessionLoading ||
-        cycleLoading
-      "
-      @click="openEndSession"
-    >
-      {{ appStore.network_status.connected ? 'End' : 'Offline' }}
-    </AppButton>
-    <AppButton v-else kind="outline" :loading="exitSessionLoading" @click="onExitSession">
-      Close
-    </AppButton>
   </div>
 
   <div
     class="fixed left-1/2 z-[9] -translate-x-1/2 pt-safe"
-    :class="{ 'top-[60px]': cycleLoading, '-top-[60px]': !cycleLoading }"
+    :class="[cycleLoading || submitLoading ? 'top-[120px]' : '-top-[120px]']"
   >
     <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
       <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
@@ -909,8 +1149,12 @@ onUnmounted(() => {
   </div>
 
   <div
-    v-if="!sessionLoading && sessionStore.session?.status === 'ongoing'"
+    v-if="
+      !sessionLoading &&
+      (sessionStore.session?.status === 'ongoing' || sessionStore.session?.status === 'paused')
+    "
     class="flex h-28 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
+    :class="[sessionStore.session?.status === 'paused' ? 'brightness-90' : '']"
   >
     <div v-if="runningDurationLatency.length">
       <div>Can't refresh while the timer is running.</div>
@@ -924,147 +1168,218 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div
-    class="flex min-h-screen w-full flex-col items-center bg-prim-3"
-    :style="{ height: containerHeight }"
-  >
+  <div :class="[sessionStore.session?.status === 'paused' ? 'brightness-90' : '']">
+    <!-- Measurements -->
     <div
-      v-if="showReviewMode"
-      class="flex w-full items-end justify-center bg-prim-3 px-4 pb-2 pt-4 text-center text-sm font-semibold text-light-purple-5"
+      class="flex min-h-screen w-full flex-col items-center bg-prim-3"
+      :style="{ height: containerHeight }"
     >
-      <div class="truncapy-3 space-y-3te">{{ sessionStore.session?.client?.name }}</div>
-    </div>
-    <div
-      id="container-record-measurement"
-      class="flex w-full flex-wrap justify-center gap-4 px-4 py-4 transition-all duration-500"
-      :class="{
-        'origin-top scale-50 object-top': showReviewMode,
-        'min-w-[calc((320px*2)+(16px*3))]': showReviewMode,
-        'sm:min-w-[calc((320px*3)+(16px*4))]': showReviewMode,
-        'md:min-w-[calc((320px*4)+(16px*5))]': showReviewMode,
-        'lg:min-w-[calc((320px*6)+(16px*7))]': showReviewMode,
-        'xl:min-w-[calc((320px*7)+(16px*8))]': showReviewMode,
-        '2xl:min-w-[calc((320px*9)+(16px*10))]': showReviewMode
-      }"
-    >
-      <div v-if="sessionLoading" class="flex w-full flex-wrap justify-center gap-4">
-        <div
-          v-for="n in 8"
-          :key="n"
-          class="h-[540px] w-[320px] shrink-0 animate-pulse rounded bg-prim-1"
-        ></div>
+      <div
+        v-if="isReviewMode"
+        class="flex w-full items-end justify-center bg-prim-3 px-4 pb-2 pt-4 text-center text-sm font-semibold text-light-purple-5"
+      >
+        <div class="truncapy-3 space-y-3te">{{ sessionStore.session?.client?.name }}</div>
       </div>
-      <div v-else class="flex w-full flex-wrap justify-center gap-4 pb-[50vh]">
+      <div
+        id="container-record-measurement"
+        class="flex w-full flex-wrap justify-center gap-4 px-4 py-4 transition-all duration-500"
+        :class="{
+          'origin-top scale-50 object-top': isReviewMode,
+          'min-w-[calc((320px*2)+(16px*3))]': isReviewMode,
+          'sm:min-w-[calc((320px*3)+(16px*4))]': isReviewMode,
+          'md:min-w-[calc((320px*4)+(16px*5))]': isReviewMode,
+          'lg:min-w-[calc((320px*6)+(16px*7))]': isReviewMode,
+          'xl:min-w-[calc((320px*7)+(16px*8))]': isReviewMode,
+          '2xl:min-w-[calc((320px*9)+(16px*10))]': isReviewMode
+        }"
+      >
+        <div v-if="sessionLoading" class="flex w-full flex-wrap justify-center gap-4">
+          <div
+            v-for="n in 8"
+            :key="n"
+            class="h-[540px] w-[320px] shrink-0 animate-pulse rounded bg-prim-1"
+          ></div>
+        </div>
+        <div v-else class="flex w-full flex-wrap justify-center gap-4 pb-[50vh]">
+          <MeasurementRecord
+            v-for="measurement in normalMeasurements"
+            :key="measurement.id"
+            :id="`measurement-record-${measurement.id}`"
+            :measurement="measurement"
+            :review-mode="isReviewMode"
+            :is-disabled-action="isDisabledAction"
+            @toggle-updated="onToggleUpdatedMeasurement($event)"
+            @toggle-saved="onToggleSavedSbt($event)"
+            @check-completed-cold-probe="handleCompletedColdProbe"
+            @click="onFocusMeasurement(measurement, true)"
+            @fetch-session="fetchSession({ first: false, isSwipe: false })"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed Measurement -->
+    <div
+      v-if="!sessionLoading && fixedMeasurement && !isReviewMode"
+      id="fixed-measurement"
+      class="fixed bottom-0 z-[9] flex w-screen bg-prim-3 px-safe pb-safe"
+    >
+      <div
+        class="flex grow"
+        :class="{
+          'max-h-[160px] justify-center': isMeasurementCollapsed,
+          'no-scrollbar h-[calc(100vh-56px)] flex-col items-center gap-4 overflow-y-auto py-4':
+            !isMeasurementCollapsed
+        }"
+      >
+        <div v-if="!isMeasurementCollapsed" class="flex flex-col items-center gap-1">
+          <Icon icon="ph:lock-fill" class="text-center text-2xl text-prim-5" />
+          <div class="text-center text-xs font-medium text-prim-5">
+            You're viewing a locked target.
+          </div>
+        </div>
         <MeasurementRecord
-          v-for="measurement in normalMeasurements"
-          :key="measurement.id"
-          :id="`measurement-record-${measurement.id}`"
-          :measurement="measurement"
-          :review-mode="showReviewMode"
+          :measurement="fixedMeasurement"
+          :is-collapsed="isMeasurementCollapsed"
           :is-disabled-action="isDisabledAction"
           @toggle-updated="onToggleUpdatedMeasurement($event)"
           @toggle-saved="onToggleSavedSbt($event)"
+          @toggle-collapsed="isMeasurementCollapsed = $event"
           @check-completed-cold-probe="handleCompletedColdProbe"
-          @click="onFocusMeasurement(measurement, true)"
           @fetch-session="fetchSession({ first: false, isSwipe: false })"
         />
+        <div
+          v-if="!isMeasurementCollapsed"
+          class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-prim-1"
+          @click="isMeasurementCollapsed = true"
+        >
+          <Icon icon="ph:x" class="text-[32px] text-light-purple-5" />
+        </div>
       </div>
     </div>
-  </div>
 
-  <div
-    v-if="!sessionLoading && fixedMeasurement && !showReviewMode"
-    id="fixed-measurement"
-    class="fixed bottom-0 z-[9] flex w-screen bg-prim-3 px-safe pb-safe"
-  >
+    <!-- Bottom Navigation -->
     <div
-      class="flex grow"
-      :class="{
-        'max-h-[160px] justify-center': isMeasurementCollapsed,
-        'no-scrollbar h-[calc(100vh-56px)] flex-col items-center gap-4 overflow-y-auto py-4':
-          !isMeasurementCollapsed
-      }"
+      v-if="!sessionLoading && !fixedMeasurement"
+      class="fixed z-20 w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
+      :class="{ 'bottom-0': !isReviewMode, '-bottom-36': isReviewMode }"
     >
-      <div v-if="!isMeasurementCollapsed" class="flex flex-col items-center gap-1">
-        <Icon icon="ph:lock-fill" class="text-center text-2xl text-prim-5" />
-        <div class="text-center text-xs font-medium text-prim-5">
-          You're viewing a locked target.
-        </div>
-      </div>
-      <MeasurementRecord
-        :measurement="fixedMeasurement"
-        :is-collapsed="isMeasurementCollapsed"
-        :is-disabled-action="isDisabledAction"
-        @toggle-updated="onToggleUpdatedMeasurement($event)"
-        @toggle-saved="onToggleSavedSbt($event)"
-        @toggle-collapsed="isMeasurementCollapsed = $event"
-        @check-completed-cold-probe="handleCompletedColdProbe"
-        @fetch-session="fetchSession({ first: false, isSwipe: false })"
-      />
-      <div
-        v-if="!isMeasurementCollapsed"
-        class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-prim-1"
-        @click="isMeasurementCollapsed = true"
-      >
-        <Icon icon="ph:x" class="text-[32px] text-light-purple-5" />
-      </div>
-    </div>
-  </div>
-
-  <div
-    v-if="!sessionLoading && !fixedMeasurement"
-    class="fixed z-[9] w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
-    :class="{ 'bottom-0': !showReviewMode, '-bottom-36': showReviewMode }"
-  >
-    <div class="flex h-16 grow items-center gap-6 pl-4">
-      <div class="relative" @click="showReviewMode = !showReviewMode">
-        <div
-          class="flex h-10 w-8 items-center justify-center rounded bg-white text-xs font-semibold text-dark-purple-1"
-        >
-          {{ sessionStore.session_measurements.length }}
+      <div class="flex h-16 grow items-center gap-6 pl-4">
+        <div class="relative" @click="isReviewMode = !isReviewMode">
+          <div
+            class="flex h-10 w-8 items-center justify-center rounded bg-white text-xs font-semibold text-dark-purple-1"
+          >
+            {{ sessionStore.session_measurements.length }}
+          </div>
+          <div
+            class="absolute top-0 -z-[1] h-10 w-8 rounded bg-prim-4 transition-all duration-500"
+            :class="{ 'left-2 rotate-[15deg]': !isReviewMode, 'left-0 rotate-0': isReviewMode }"
+          ></div>
         </div>
         <div
-          class="absolute top-0 -z-[1] h-10 w-8 rounded bg-prim-4 transition-all duration-500"
-          :class="{ 'left-2 rotate-[15deg]': !showReviewMode, 'left-0 rotate-0': showReviewMode }"
-        ></div>
-      </div>
-      <div
-        class="flex snap-x snap-mandatory items-center gap-2 overflow-x-auto scroll-smooth py-3 pr-4"
-      >
-        <div
-          v-for="opt in sessionStore.session_measurements"
-          :key="opt.id"
-          :id="`measurement-nav-${opt.id}`"
-          class="flex h-8 max-w-64 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
-          :class="[
-            focusMeasurement === opt.id
-              ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
-              : 'border-slate-4 bg-white'
-          ]"
-          @click="onFocusMeasurement(opt, false)"
+          class="flex snap-x snap-mandatory items-center gap-2 overflow-x-auto scroll-smooth py-3 pr-4"
         >
-          <div class="truncate">{{ opt.target?.name }}</div>
+          <div
+            v-for="opt in sessionStore.session_measurements"
+            :key="opt.id"
+            :id="`measurement-nav-${opt.id}`"
+            class="flex h-8 max-w-64 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
+            :class="[
+              focusMeasurement === opt.id
+                ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
+                : 'border-slate-4 bg-white'
+            ]"
+            @click="onFocusMeasurement(opt, false)"
+          >
+            <div class="truncate">{{ opt.target?.name }}</div>
+          </div>
         </div>
       </div>
     </div>
+
+    <SessionComments :show="isOpenSessionComments" @close="isOpenSessionComments = false" />
   </div>
 
-  <SessionComments :show="showSessionComments" @close="showSessionComments = false" />
-
-  <AppActionSheet :show="showOffline" @close="showOffline = false">
+  <AppActionSheet :show="isOpenOffline" @close="isOpenOffline = false">
     <div class="flex flex-col items-center gap-4 py-3">
       <div class="text-center text-xl font-semibold">Oops! You're offline</div>
       <div class="text-center text-sm">
         Your connection is lost. You can keep tracking data, but you'll need to go online to end the
         session.
       </div>
-      <AppButton kind="plain" class="w-full" @click="showOffline = false">
+      <AppButton kind="plain" class="w-full" @click="isOpenOffline = false">
         Back to session
       </AppButton>
     </div>
   </AppActionSheet>
 
-  <AppActionSheet :show="showEndSession" @close="showEndSession = false">
+  <AppActionSheet :show="isOpenRecordedBy" @close="isOpenRecordedBy = false">
+    <div class="flex flex-col gap-4 py-3">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+        <div class="text-xl font-semibold">This session recorded by · {{ recordedBys.length }}</div>
+        <div class="cursor-pointer" @click="isOpenRecordedBy = false">
+          <Icon icon="ph:x" class="text-2xl" />
+        </div>
+      </div>
+
+      <div class="mb-4 space-y-1 pb-2">
+        <div v-for="(name, idx) in recordedBys" :key="idx" class="flex truncate">
+          <div
+            class="flex h-8 items-center justify-center truncate rounded-full bg-grass-2 px-4 text-sm font-medium text-grass-7"
+          >
+            <div class="truncate">
+              {{ name }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </AppActionSheet>
+
+  <AppActionSheet :show="isOpenPauseSession" @close="isOpenPauseSession = false">
+    <div v-if="pauseSessionStatus === 'normal'" class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Pause this session?</div>
+      <div class="text-center text-sm">
+        The timer stops and no data can be recorded while paused. You or another assigned therapist
+        can resume it later — it stays one session until someone ends it.
+      </div>
+      <div class="grid w-full grid-cols-2 gap-2">
+        <AppButton kind="plain" @click="isOpenPauseSession = false">Cancel</AppButton>
+        <AppButton :loading="submitLoading" @click="onTogglePauseSession">Pause</AppButton>
+      </div>
+    </div>
+    <div v-if="pauseSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Session can't be ended</div>
+      <div class="flex w-full flex-col gap-2">
+        <div class="text-sm">You can't pause the session because of the following reason(s):</div>
+        <div class="w-full pl-4 pr-4 text-left text-sm">
+          <ul class="list-disc">
+            <li v-for="(text, idx) in groupReasons" :key="idx">{{ text }}</li>
+          </ul>
+        </div>
+        <div class="text-sm">Please address these issues before pausing the session.</div>
+      </div>
+      <AppButton kind="plain" class="w-full" @click="isOpenPauseSession = false">
+        Back to session
+      </AppButton>
+    </div>
+  </AppActionSheet>
+
+  <AppActionSheet :show="isOpenLeaveSession" @close="isOpenLeaveSession = false">
+    <div class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Leave this session?</div>
+      <div class="text-center text-sm">
+        Recording keeps running and your attempts are saved. The session stays open and won't be
+        finalized until you or another assigned therapist ends it.
+      </div>
+      <div class="grid w-full grid-cols-2 gap-2">
+        <AppButton kind="plain" @click="isOpenLeaveSession = false">Cancel</AppButton>
+        <AppButton @click="onBackToClientSessionDraft">Leave</AppButton>
+      </div>
+    </div>
+  </AppActionSheet>
+
+  <AppActionSheet :show="isOpenEndSession" @close="isOpenEndSession = false">
     <div v-if="endSessionStatus === 'normal'" class="flex flex-col items-center gap-4 py-3">
       <div class="text-center text-xl font-semibold">End this session?</div>
       <div class="text-center text-sm">
@@ -1072,8 +1387,8 @@ onUnmounted(() => {
         finalizing.
       </div>
       <div class="grid w-full grid-cols-2 gap-2">
-        <AppButton kind="plain" @click="showEndSession = false">Cancel</AppButton>
-        <AppButton :loading="endSessionLoading" @click="onEndSession">End now</AppButton>
+        <AppButton kind="plain" @click="isOpenEndSession = false">Cancel</AppButton>
+        <AppButton :loading="submitLoading" @click="onEndSession">End now</AppButton>
       </div>
     </div>
     <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4 py-3">
@@ -1087,7 +1402,7 @@ onUnmounted(() => {
         </div>
         <div class="text-sm">Please address these issues before ending the session.</div>
       </div>
-      <AppButton kind="plain" class="w-full" @click="showEndSession = false">
+      <AppButton kind="plain" class="w-full" @click="isOpenEndSession = false">
         Back to session
       </AppButton>
     </div>
@@ -1109,14 +1424,14 @@ onUnmounted(() => {
       <AppButton kind="outline" class="w-full" @click="onKeepActiveAndEndSession">
         Keep active and end session
       </AppButton>
-      <AppButton kind="plain" class="w-full" @click="showEndSession = false">
+      <AppButton kind="plain" class="w-full" @click="isOpenEndSession = false">
         Back to session
       </AppButton>
     </div>
   </AppActionSheet>
 
   <TransitionRoot
-    :show="showActionRecommendations"
+    :show="isOpenActionRecommendations"
     enter="transition-all duration-300 ease-out"
     enter-from="opacity-0 scale-75"
     enter-to="opacity-100 scale-100"
@@ -1368,9 +1683,7 @@ onUnmounted(() => {
     </div>
     <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
       <div class="flex h-16 grow items-center px-4">
-        <AppButton class="w-full" :loading="exitSessionLoading" @click="onExitSession">
-          Close session
-        </AppButton>
+        <AppButton class="w-full" @click="onExitSession"> Close session </AppButton>
       </div>
     </div>
   </TransitionRoot>

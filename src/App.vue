@@ -2,13 +2,13 @@
 import { computed, onBeforeMount, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAppStore, type NetworkStatus } from './stores/app.store'
-import { Icon } from '@iconify/vue'
 import { Network } from '@capacitor/network'
 import AppButton from './components/AppButton.vue'
 import { App } from '@capacitor/app'
 import { Device } from '@capacitor/device'
 import axios from 'axios'
 import AppActionSheet from '@/components/AppActionSheet.vue'
+import Icon, { type IconSet } from './components/Icon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,14 +17,11 @@ const appStore = useAppStore()
 const loadingApp = ref<boolean>(true)
 const updateRequired = ref<boolean>(false)
 const routeName = computed<string>(() => route.name?.toString() || 'signin')
-const isShowRunningSession = computed<boolean>(
-  () => appStore.running_sessions.length > 0 && routeName.value !== 'session-record'
-)
+
 const isUseNav = computed<boolean>(
   () =>
     routeName.value !== 'signin' &&
     !routeName.value.includes('record') &&
-    !isShowRunningSession.value &&
     routeName.value !== 'new-client-target' &&
     routeName.value !== 'edit-client-target' &&
     routeName.value !== 'session-draft' &&
@@ -176,8 +173,8 @@ onUnmounted(() => {
 
 interface Nav {
   route_name: string
-  icon: string
-  active_icon: string
+  icon: IconSet
+  active_icon: IconSet
   label: string
   is_active: boolean
 }
@@ -209,7 +206,7 @@ const navigations = computed<Nav[]>(() => {
 })
 
 const isHeightFull = computed<boolean>(
-  () => routeName.value === 'signin' || routeName.value === 'profile' || isShowRunningSession.value
+  () => routeName.value === 'signin' || routeName.value === 'profile'
 )
 </script>
 
@@ -236,62 +233,7 @@ const isHeightFull = computed<boolean>(
       </div>
     </div>
 
-    <div
-      v-if="isShowRunningSession"
-      class="flex h-full w-full items-center justify-center bg-white"
-    >
-      <div
-        class="fixed top-0 z-[1] h-[100vw] w-[100vw] -translate-y-1/2 rounded-full bg-prim-3 blur-2xl"
-      ></div>
-      <div class="z-[2] flex max-h-full flex-col items-center gap-4 px-6">
-        <div class="flex flex-col items-center gap-2 pt-6">
-          <div class="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime-3">
-            <div class="text-xl font-semibold uppercase text-lime-8">
-              {{ appStore.running_sessions[0].client?.name?.charAt(0) }}
-            </div>
-          </div>
-          <div class="text-center text-xl font-semibold text-dark-purple-1">
-            You've started {{ appStore.running_sessions.length }} session(s) on the web:
-          </div>
-          <div class="flex w-full flex-col items-center gap-2">
-            <div
-              v-for="session in appStore.running_sessions"
-              :key="session.id"
-              class="max-w-[calc(100vw-48px)] truncate text-center text-sm text-light-purple-4"
-            >
-              <span v-if="!session?.name">Session ID </span>
-              <span>{{ session?.id }}</span>
-              <span v-if="session?.name"> - {{ session?.name }}</span>
-              <span> for {{ session.client?.name }} </span>
-            </div>
-          </div>
-          <div
-            v-if="appStore.running_sessions.length > 1"
-            class="text-center text-sm text-light-purple-4"
-          >
-            You'll automatically join the earliest session (Session ID
-            {{ appStore.running_sessions[0].id }}), then proceed to the other.
-          </div>
-        </div>
-        <RouterLink
-          :to="{
-            name: 'session-record',
-            params: { slug: appStore.running_sessions[0].slug },
-            query: { redirect: '/home' }
-          }"
-          class="w-full pb-6"
-          :class="{ 'pointer-events-none': !networkStatus.connected }"
-        >
-          <AppButton class="w-full" :disabled="!networkStatus.connected">
-            <span v-if="networkStatus.connected">
-              Join Session ID {{ appStore.running_sessions[0].id }}
-            </span>
-            <span v-else>Offline: connect to join session</span>
-          </AppButton>
-        </RouterLink>
-      </div>
-    </div>
-    <RouterView v-else />
+    <RouterView />
   </div>
 
   <footer

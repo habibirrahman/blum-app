@@ -15,28 +15,28 @@ const appStore = useAppStore()
 
 <template>
   <div
-    class="h-20 w-56 shrink-0 snap-start space-y-1.5 rounded bg-white p-2"
+    class="p-2 space-y-1.5 w-56 h-20 bg-white rounded shrink-0 snap-start"
     :style="{ boxShadow: '2px 2px 0px 0px #0000001A' }"
   >
     <div class="text-sm font-semibold truncate text-dark-purple-1">
       {{ title }}
     </div>
-    <div class="flex items-center gap-1.5 text-xs text-light-purple-4">
+    <div class="flex gap-1.5 items-center text-xs text-light-purple-4">
       <Icon icon="ph:clock" />
       <div>
         {{ `${session.appointment?.start_time_string} - ${session.appointment?.end_time_string}` }}
       </div>
     </div>
-    <div class="flex items-center gap-1.5 text-xs text-light-purple-4">
+    <div class="flex gap-1.5 items-center text-xs text-light-purple-4">
       <Icon icon="ph:door" />
       <div
         class="truncate max-w-20"
-        v-if="appStore.account?.center_enable_branch && session.appointment?.room?.branch"
+        v-if="appStore.center?.enable_branch && session.appointment?.room?.branch"
       >
         {{ session.appointment?.room?.branch?.name }}
       </div>
       <div
-        v-if="appStore.account?.center_enable_branch && session.appointment?.room?.branch"
+        v-if="appStore.center?.enable_branch && session.appointment?.room?.branch"
         class="w-1 h-1 rounded shrink-0 bg-light-purple-4"
       ></div>
       <div class="truncate max-w-20">

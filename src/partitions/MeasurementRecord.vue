@@ -34,10 +34,6 @@ import { useAppStore } from '@/stores/app.store'
 import AppCheckInput from '@/components/AppCheckInput.vue'
 import dayjs from 'dayjs'
 
-const toast = useToast()
-const appStore = useAppStore()
-const sessionStore = useSessionStore()
-
 interface Props {
   measurement: Measurement
   isCollapsed?: boolean
@@ -62,6 +58,10 @@ const props = withDefaults(defineProps<Props>(), {
   reviewMode: false
 })
 const emit = defineEmits<Emits>()
+
+const toast = useToast()
+const appStore = useAppStore()
+const sessionStore = useSessionStore()
 
 /** === DATA === */
 
@@ -260,6 +260,8 @@ const onChangeDisplay = async (val: 'target' | 'description' | 'comment') => {
 }
 
 const onDrop = async (bool: boolean) => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
     measurement: { is_dropped: !bool },
@@ -305,6 +307,8 @@ const handleCompletedColdProbe = (isCompleted: boolean) => {
 }
 
 const onSaveComment = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
     measurement: { comment: commentInput.value },
@@ -510,7 +514,20 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div v-else :key="`measurement-card-${cardId}`" class="h-full w-full">
+          <div
+            v-else
+            :key="`measurement-card-${cardId}`"
+            class="h-full w-full"
+            :class="[
+              isDisabledAction ? 'pointer-events-none' : '',
+              isDisabledAction && sessionStore.session?.status !== 'draft' ? 'opacity-50' : ''
+            ]"
+            :title="
+              isDisabledAction && sessionStore.session?.status !== 'draft'
+                ? 'Refreshing session data, please wait...'
+                : ''
+            "
+          >
             <!-- Tambahkan sync status indicator (optional) -->
             <div
               v-if="sessionStore.session?.status === 'ongoing' && hasPendingSync && !isCollapsed"
@@ -849,6 +866,7 @@ onUnmounted(() => {
             type="textarea"
             placeholder="Type your comment here..."
             v-model="commentInput"
+            :disabled="sessionStore.session?.status !== 'ongoing'"
             class="mt-2 h-full"
           />
           <div class="z-1 sticky -bottom-3 w-full bg-white py-3">

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { getAppStorage, setAccessStorage, setAppStorage } from '@/plugins/preferences.plugin'
-import type { Branch, Session, Target, User } from '@/lib/types'
+import type { Branch, Center, Session, Target, User } from '@/lib/types'
 import axios from 'axios'
 import { useSessionStore } from './session.store'
 import { useClientStore } from './client.store'
@@ -8,6 +8,7 @@ import { useClientStore } from './client.store'
 export interface AppStateSchema {
   network_status: NetworkStatus
   account: User | null
+  center: Center | null
   running_sessions: Session[]
   branches: Branch[]
   center_targets: Target[]
@@ -19,10 +20,12 @@ export interface ResponseSchema {
   data?: any
   message?: string
 }
+
 export interface NetworkStatus {
   connected: boolean
   connection_type: 'wifi' | 'cellular' | 'none' | 'unknown'
 }
+
 interface SigninSchema {
   email: User['email']
   password: string
@@ -36,6 +39,7 @@ export const useAppStore = defineStore('app', {
   state: (): AppStateSchema => ({
     network_status: { connected: false, connection_type: 'none' },
     account: null,
+    center: null,
     running_sessions: [],
     branches: [],
     center_targets: [],
@@ -62,6 +66,7 @@ export const useAppStore = defineStore('app', {
         const storage = data as AppStateSchema
         this.network_status = storage.network_status
         this.account = storage.account
+        this.center = storage.center
         this.running_sessions = storage.running_sessions
         this.branches = storage.branches
         return { success: true, data }
@@ -71,6 +76,7 @@ export const useAppStore = defineStore('app', {
       const data: AppStateSchema = {
         network_status: this.network_status,
         account: this.account,
+        center: this.center,
         running_sessions: this.running_sessions,
         branches: this.branches,
         center_targets: this.center_targets,
@@ -92,8 +98,27 @@ export const useAppStore = defineStore('app', {
         .get('/api/v1/current_user')
         .then(async ({ data }) => {
           this.account = data
+          await this.getCenter()
           this.syncAppStore()
           return { success: true, data, message: 'You have signed in' }
+        })
+        .catch(async ({ response }) => {
+          console.log(response)
+          if (response?.status === 401) {
+            this.resetAppStore()
+          }
+          return { success: false, data: null, message: response?.data?.error }
+        })
+    },
+    async getCenter(): Promise<ResponseSchema> {
+      if (!this.network_status.connected) {
+        return this.generateAppStore()
+      }
+      return axios
+        .get('/api/v1/center')
+        .then(async ({ data }) => {
+          this.center = data
+          return { success: true, data }
         })
         .catch(async ({ response }) => {
           console.log(response)
@@ -108,8 +133,7 @@ export const useAppStore = defineStore('app', {
         .post('/signin', { email, password, device })
         .then(async ({ data }) => {
           await setAccessStorage(data)
-          this.account = data.user
-          this.syncAppStore()
+          await this.getAccount()
           return { success: true, message: 'Successfully signed in' }
         })
         .catch(({ response }) => {
@@ -139,7 +163,7 @@ export const useAppStore = defineStore('app', {
         })
     },
     async getBranches(): Promise<ResponseSchema> {
-      if (!this.account?.center_enable_branch) {
+      if (!this.center?.enable_branch) {
         this.branches = []
         return { success: true, data: [] }
       }
