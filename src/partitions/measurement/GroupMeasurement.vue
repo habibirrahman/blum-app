@@ -21,6 +21,7 @@ interface Props {
 interface Emits {
   (e: 'toggle-updated', val: boolean): void
   (e: 'toggle-saved', val: boolean): void
+  (e: 'toggle-collapsed', bool: boolean): void
   (e: 'fetch-measurements'): void
 }
 
@@ -456,23 +457,79 @@ function getMemberFillPct(memberId?: number) {
 }
 
 const listEntries = computed(() => {
-  return usedTargets.value.map((m) => {
-    const res = resultsState.value[String(m.target_id)]
-    const isProbe = getMemberPhase(m.target_id) === 'probe'
-    const map = (isProbe ? res?.probing : res?.teaching) || {}
-    const answered = Object.values(map).filter((v) => v !== null)
-    const correct = answered.filter((v) => v === true).length
-    const score = answered.length ? Math.round((correct / answered.length) * 100) : 0
+  const entries: Array<{
+    id: number | undefined
+    target_code: string | undefined
+    target_name: string | undefined
+    score: number
+    probing: boolean
+    locked: boolean
+  }> = []
 
-    return {
-      id: m.target_id,
-      target_code: m.target_code,
-      target_name: m.target_name,
-      score,
-      probing: isProbe,
-      locked: res?.submitted || false
+  usedTargets.value.forEach((m) => {
+    const res = resultsState.value[String(m.target_id)]
+    const currentPhase = getMemberPhase(m.target_id)
+    const probingMap = res?.probing
+    const hasProbingData =
+      probingMap !== null &&
+      probingMap !== undefined &&
+      (Object.values(probingMap).some((v) => v !== null) || res?.submitted || res?.decision !== null)
+
+    if (currentPhase === 'teach' && hasProbingData) {
+      // Add Probing entry (completed / locked probing history)
+      const probingAnswered = Object.values(probingMap || {}).filter((v) => v !== null)
+      const probingCorrect = probingAnswered.filter((v) => v === true).length
+      const probingScore = probingAnswered.length
+        ? Math.round((probingCorrect / probingAnswered.length) * 100)
+        : 0
+
+      entries.push({
+        id: m.target_id,
+        target_code: m.target_code,
+        target_name: m.target_name,
+        score: probingScore,
+        probing: true,
+        locked: true
+      })
+    }
+
+    if (currentPhase === 'teach') {
+      // Add Teaching entry
+      const teachingMap = res?.teaching || {}
+      const teachingAnswered = Object.values(teachingMap).filter((v) => v !== null)
+      const teachingCorrect = teachingAnswered.filter((v) => v === true).length
+      const teachingScore = teachingAnswered.length
+        ? Math.round((teachingCorrect / teachingAnswered.length) * 100)
+        : 0
+
+      entries.push({
+        id: m.target_id,
+        target_code: m.target_code,
+        target_name: m.target_name,
+        score: teachingScore,
+        probing: false,
+        locked: res?.submitted || false
+      })
+    } else {
+      // Active Probing entry
+      const probingAnswered = Object.values(probingMap || {}).filter((v) => v !== null)
+      const probingCorrect = probingAnswered.filter((v) => v === true).length
+      const probingScore = probingAnswered.length
+        ? Math.round((probingCorrect / probingAnswered.length) * 100)
+        : 0
+
+      entries.push({
+        id: m.target_id,
+        target_code: m.target_code,
+        target_name: m.target_name,
+        score: probingScore,
+        probing: true,
+        locked: res?.submitted || false
+      })
     }
   })
+
+  return entries
 })
 
 async function saveResultsToServer() {
@@ -699,6 +756,7 @@ function onSubmitProbing() {
   memberRes.submitted = true
   view.value = 'decision-gate'
   gateSel.value = null
+  emit('toggle-collapsed', false)
   saveResultsToServer()
 }
 
@@ -840,7 +898,7 @@ onMounted(() => {
             backgroundColor: getMemberPhase(member.target_id) === 'probe' ? 'rgba(101, 163, 13, 0.1)' : 'rgba(139, 92, 246, 0.1)'
           }"
         />
-        <span class="relative z-10 pointer-events-none">{{ member.target_code }}</span>
+        <span class="relative pointer-events-none">{{ member.target_code }}</span>
       </button>
     </div>
 
@@ -1094,43 +1152,49 @@ onMounted(() => {
           <!-- Probing view -->
           <div v-if="isProbingPhase" class="w-full">
             <!-- Collapsed Probing Row (when isCollapsed = true) -->
-            <div v-if="isCollapsed" class="flex gap-3 justify-center items-center py-1 w-full">
-              <button
-                class="flex justify-center items-center w-[4.5rem] h-[4.5rem] text-xl font-bold text-white rounded-full transition-all active:scale-95"
-                :class="[
-                  activeMemberResults.submitted || sessionStore.session?.status !== 'ongoing' || isBusy
-                    ? 'pointer-events-none bg-slate-5 opacity-50 shadow-none'
-                    : 'bg-tomato-7 hover:bg-tomato-8 shadow-md'
-                ]"
-                :disabled="
-                  sessionStore.session?.status !== 'ongoing' || activeMemberResults.submitted || isBusy
-                "
-                @click="onRecordProbe(false)"
-              >
-                <Icon icon="ph:x-bold" class="w-10 h-10 text-white" />
-              </button>
-              <button
-                class="flex justify-center items-center w-[4.5rem] h-[4.5rem] text-xl font-bold text-white rounded-full transition-all active:scale-95"
-                :class="[
-                  activeMemberResults.submitted || sessionStore.session?.status !== 'ongoing' || isBusy
-                    ? 'pointer-events-none bg-slate-5 opacity-50 shadow-none'
-                    : 'bg-lime-5 hover:bg-lime-6 shadow-md'
-                ]"
-                :disabled="
-                  sessionStore.session?.status !== 'ongoing' || activeMemberResults.submitted || isBusy
-                "
-                @click="onRecordProbe(true)"
-              >
-                <Icon icon="ph:check-bold" class="w-10 h-10 text-white" />
-              </button>
-              <button
-                v-if="!activeMemberResults.submitted && answeredCountOfActive >= minTrialsOfActive"
-                class="flex justify-center items-center px-4 w-[4.5rem] h-[4.5rem] text-xs font-bold text-white rounded-full shadow-md transition-all bg-light-purple-5 hover:bg-light-purple-6 active:scale-95 disabled:opacity-40"
-                :disabled="sessionStore.session?.status !== 'ongoing' || isBusy"
-                @click="onSubmitProbing"
-              >
-                Submit
-              </button>
+            <div v-if="isCollapsed" class="w-full">
+              <!-- AppChip when submitted with decision -->
+              <div v-if="activeMemberResults.submitted && activeMemberResults.decision" class="flex justify-center my-1">
+                <AppChip :chip="activeMemberResults.decision" />
+              </div>
+              <div class="flex gap-3 justify-center items-center py-1">
+                <button
+                  class="flex justify-center items-center w-[4.5rem] h-[4.5rem] text-xl font-bold text-white rounded-full transition-all active:scale-95"
+                  :class="[
+                    activeMemberResults.submitted || sessionStore.session?.status !== 'ongoing' || isBusy
+                      ? 'pointer-events-none bg-slate-5 opacity-50 shadow-none'
+                      : 'bg-tomato-7 hover:bg-tomato-8 shadow-md'
+                  ]"
+                  :disabled="
+                    sessionStore.session?.status !== 'ongoing' || activeMemberResults.submitted || isBusy
+                  "
+                  @click="onRecordProbe(false)"
+                >
+                  <Icon icon="ph:x-bold" class="w-10 h-10 text-white" />
+                </button>
+                <button
+                  class="flex justify-center items-center w-[4.5rem] h-[4.5rem] text-xl font-bold text-white rounded-full transition-all active:scale-95"
+                  :class="[
+                    activeMemberResults.submitted || sessionStore.session?.status !== 'ongoing' || isBusy
+                      ? 'pointer-events-none bg-slate-5 opacity-50 shadow-none'
+                      : 'bg-lime-5 hover:bg-lime-6 shadow-md'
+                  ]"
+                  :disabled="
+                    sessionStore.session?.status !== 'ongoing' || activeMemberResults.submitted || isBusy
+                  "
+                  @click="onRecordProbe(true)"
+                >
+                  <Icon icon="ph:check-bold" class="w-10 h-10 text-white" />
+                </button>
+                <button
+                  v-if="!activeMemberResults.submitted && answeredCountOfActive >= minTrialsOfActive"
+                  class="flex justify-center items-center px-4 w-[4.5rem] h-[4.5rem] text-xs font-bold text-white rounded-full shadow-md transition-all bg-light-purple-5 hover:bg-light-purple-6 active:scale-95 disabled:opacity-40"
+                  :disabled="sessionStore.session?.status !== 'ongoing' || isBusy"
+                  @click="onSubmitProbing"
+                >
+                  Submit
+                </button>
+              </div>
             </div>
 
             <!-- Full Probing View (when isCollapsed = false) -->
@@ -1186,11 +1250,6 @@ onMounted(() => {
                   ]"
                   @click="onChangePage(pageIdx - 1)"
                 />
-              </div>
-
-              <!-- AppChip when submitted with decision -->
-              <div v-if="activeMemberResults.submitted && activeMemberResults.decision" class="flex justify-center my-1">
-                <AppChip :chip="activeMemberResults.decision" />
               </div>
 
               <!-- Buttons -->

@@ -457,7 +457,13 @@ onUnmounted(() => {
         v-else
         id="measurememt-body"
         class="flex flex-col gap-2 px-4 pb-3 h-full bg-white rounded-b"
-        :class="[isCollapsed ? 'pt-3' : 'no-scrollbar overflow-y-auto']"
+        :class="[
+          isCollapsed
+            ? 'pt-3'
+            : measurement.target?.is_group
+              ? 'no-scrollbar overflow-hidden'
+              : 'no-scrollbar overflow-y-auto'
+        ]"
       >
         <div v-if="!isCollapsed" id="card-title" class="pt-3">
           <div v-if="measurement.target?.is_group" class="flex gap-2 items-center">
@@ -581,6 +587,7 @@ onUnmounted(() => {
               :measurement-results="measurementResults"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
+              @toggle-collapsed="emit('toggle-collapsed', $event)"
               @fetch-session="emit('fetch-session')"
               @after-commit="emit('after-commit')"
             />
@@ -650,6 +657,7 @@ onUnmounted(() => {
               :measurement-results="measurementResults"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
+              @toggle-collapsed="emit('toggle-collapsed', $event)"
               @fetch-session="emit('fetch-session')"
               @after-commit="emit('after-commit')"
             />

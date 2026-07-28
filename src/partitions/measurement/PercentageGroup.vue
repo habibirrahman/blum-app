@@ -11,7 +11,14 @@ interface Props {
   isCollapsed?: boolean
 }
 
+interface Emits {
+  (e: 'toggle-updated', bool: boolean): void
+  (e: 'toggle-collapsed', bool: boolean): void
+  (e: 'fetch-session'): void
+}
+
 defineProps<Props>()
+const emit = defineEmits<Emits>()
 </script>
 
 <template>
@@ -20,5 +27,8 @@ defineProps<Props>()
     :measurement-results="measurementResults"
     :is-collapsed="isCollapsed"
     type="percentage"
+    @toggle-updated="emit('toggle-updated', $event)"
+    @toggle-collapsed="emit('toggle-collapsed', $event)"
+    @fetch-measurements="emit('fetch-session')"
   />
 </template>
