@@ -292,6 +292,9 @@ export interface UsedTargetMeasurement {
   goal: Target['goal']
   success_metric: Target['success_metric']
   description: Target['description']
+  number_of_trial: number
+  status?: string
+  probing_number_of_trial: number
 }
 
 // Duration or Latency

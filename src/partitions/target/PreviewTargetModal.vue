@@ -210,22 +210,22 @@ const onImportTarget = async (targetId: Target['id']) => {
 <template>
   <AppActionSheet :show="showDetails" @close="emit('close')">
     <div v-if="loading">
-      <div class="flex w-full flex-col gap-2">
-        <div class="h-4 w-32 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
-        <div class="h-6 w-3/4 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="flex flex-col gap-2 w-full">
+        <div class="w-32 h-4 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
+        <div class="w-3/4 h-6 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
       </div>
-      <div class="mt-4 flex flex-col">
-        <div v-for="n in 5" :key="n" class="flex flex-col gap-1 border-b border-slate-3 py-3">
-          <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
-          <div class="h-4 w-2/3 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="flex flex-col mt-4">
+        <div v-for="n in 5" :key="n" class="flex flex-col gap-1 py-3 border-b border-slate-3">
+          <div class="w-24 h-4 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
+          <div class="w-2/3 h-4 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
         </div>
       </div>
-      <div class="sticky bottom-0 flex w-full justify-center bg-white pt-4">
+      <div class="flex sticky bottom-0 justify-center pt-4 w-full bg-white">
         <div class="h-[38px] w-1/3 shrink-0 animate-pulse rounded bg-slate-3"></div>
       </div>
     </div>
     <div v-else>
-      <div class="sticky top-0 z-10 flex w-full flex-col gap-2 bg-white py-3">
+      <div class="flex sticky top-0 z-10 flex-col gap-2 py-3 w-full bg-white">
         <div class="flex">
           <AppChip :chip="target?.status" />
         </div>
@@ -233,19 +233,19 @@ const onImportTarget = async (targetId: Target['id']) => {
       </div>
 
       <div class="flex flex-col">
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+        <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
           <div class="text-xs text-slate-8">Curriculum:</div>
           <div class="text-sm">{{ target?.curriculum_name }}</div>
         </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+        <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
           <div class="text-xs text-slate-8">Clinical description:</div>
-          <div class="whitespace-pre-line text-sm">{{ target?.description || '-' }}</div>
+          <div class="text-sm whitespace-pre-line">{{ target?.description || '-' }}</div>
         </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+        <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
           <div class="text-xs text-slate-8">Simplified description:</div>
-          <div class="whitespace-pre-line text-sm">{{ target?.simplified_description || '-' }}</div>
+          <div class="text-sm whitespace-pre-line">{{ target?.simplified_description || '-' }}</div>
         </div>
-        <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+        <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
           <div class="text-xs text-slate-8">Data collection method:</div>
           <div class="text-sm">{{ getTargetType(target?.type) }}</div>
         </div>
@@ -253,27 +253,27 @@ const onImportTarget = async (targetId: Target['id']) => {
           v-if="(target?.type === 'Target::Duration' || target?.type === 'Target::Latency') && !target?.is_group"
           class="flex flex-col"
         >
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal time:</div>
             <div class="text-sm">{{ target?.goal_time }}</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ target?.success_metric }}</div>
           </div>
         </div>
         <div v-if="target?.type === 'Target::Percentage' && !target?.is_group" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
             <div class="text-sm">{{ target?.goal }}%</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Number of trials:</div>
             <div class="text-sm">{{ target?.number_of_trial }} trial(s)</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ target?.success_metric }}</div>
           </div>
         </div>
         <div
@@ -283,52 +283,52 @@ const onImportTarget = async (targetId: Target['id']) => {
           "
           class="flex flex-col"
         >
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-sm font-semibold text-slate-10">Probing</div>
-            <div class="flex flex-col border border-slate-3 bg-slate-1 px-4 py-3">
-              <div class="flex flex-col gap-1 border-b border-slate-3 pb-3">
+            <div class="flex flex-col px-4 py-3 border border-slate-3 bg-slate-1">
+              <div class="flex flex-col gap-1 pb-3 border-b border-slate-3">
                 <div class="text-xs text-slate-8">Minimum number of trials:</div>
                 <div class="text-sm">{{ target?.probing_number_of_trial }}</div>
               </div>
               <div class="flex flex-col gap-1 pt-3">
                 <div class="text-xs text-slate-8">Goal for probing</div>
-                <div class="capitalize-first text-sm">≥ {{ target?.probing_goal }}%</div>
+                <div class="text-sm capitalize-first">≥ {{ target?.probing_goal }}%</div>
               </div>
             </div>
           </div>
         </div>
         <div v-if="target?.type === 'Target::TrialByTrial' && !target?.is_group" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
             <div class="text-sm">{{ target?.goal }}%</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Number of minimum trial:</div>
             <div class="text-sm">{{ target?.number_of_trial }} trial(s)</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ target?.success_metric }}</div>
           </div>
         </div>
         <div v-if="target?.type === 'Target::Pir' && !target?.is_group" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
             <div class="text-sm">{{ target?.goal }}%</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Interval:</div>
             <div class="text-sm">{{ target?.interval }} minute(s)</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Duration:</div>
             <div class="text-sm">{{ target?.duration }} minute(s)</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ target?.success_metric }}</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Interval start timing:</div>
             <div class="text-sm">
               <span v-if="target?.interval_start_timing === 'start_with_session'">
@@ -337,7 +337,7 @@ const onImportTarget = async (targetId: Target['id']) => {
               <span v-if="target?.interval_start_timing === 'custom_start'">Custom start</span>
             </div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Overtime handling:</div>
             <div class="text-sm">
               <span v-if="target?.allow_overtime_recording"> Allow overtime recording </span>
@@ -346,30 +346,30 @@ const onImportTarget = async (targetId: Target['id']) => {
           </div>
         </div>
         <div v-if="target?.type === 'Target::Frequency' && !target?.is_group" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Goal:</div>
             <div class="text-sm">{{ target?.goal }} attempt(s) per session</div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ target?.success_metric }}</div>
           </div>
           <div
             v-if="target.frequency_format === 'custom'"
-            class="flex flex-col gap-1 border-b border-slate-3 py-3"
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
           >
             <div class="text-xs text-slate-8">Duration:</div>
-            <div class="capitalize-first text-sm">{{ target?.duration }} minute(s)</div>
+            <div class="text-sm capitalize-first">{{ target?.duration }} minute(s)</div>
           </div>
         </div>
         <div v-if="target?.type === 'Target::Prompting' && !target?.is_group" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Format:</div>
-            <div class="capitalize-first text-sm">
+            <div class="text-sm capitalize-first">
               {{ target?.prompting_format }}
             </div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Prompts:</div>
             <div class="text-sm">
               {{
@@ -386,7 +386,7 @@ const onImportTarget = async (targetId: Target['id']) => {
           </div>
           <div
             v-if="target?.prompting_format === 'classic'"
-            class="flex flex-col gap-1 border-b border-slate-3 py-3"
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
           >
             <div class="text-xs text-slate-8">Goal and success metric:</div>
             <div class="text-sm">
@@ -397,21 +397,21 @@ const onImportTarget = async (targetId: Target['id']) => {
           </div>
           <div
             v-if="target?.prompting_format === 'custom'"
-            class="flex flex-col gap-1 border-b border-slate-3 py-3"
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
           >
             <div class="text-xs text-slate-8">Goal:</div>
             <div class="text-sm">{{ target?.goal }}%</div>
           </div>
           <div
             v-if="target?.prompting_format === 'custom'"
-            class="flex flex-col gap-1 border-b border-slate-3 py-3"
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
           >
             <div class="text-xs text-slate-8">Success metric:</div>
-            <div class="capitalize-first text-sm">{{ target?.success_metric }}</div>
+            <div class="text-sm capitalize-first">{{ target?.success_metric }}</div>
           </div>
         </div>
         <div v-if="target?.is_group" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Targets within this group:</div>
             <div class="flex flex-col gap-2">
               <div
@@ -426,7 +426,13 @@ const onImportTarget = async (targetId: Target['id']) => {
               </div>
             </div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div
+            v-if="
+              target?.type !== 'Target::TrialByTrial' &&
+              target?.type !== 'Target::Percentage'
+            "
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
+          >
             <div class="text-xs text-slate-8">Problem behaviors:</div>
             <div class="flex flex-col gap-2">
               <div
@@ -445,13 +451,13 @@ const onImportTarget = async (targetId: Target['id']) => {
           </div>
         </div>
         <div v-if="target?.type === 'Target::Sbt'" class="flex flex-col">
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Prompts:</div>
             <div class="text-sm">
               {{ target?.prompts?.map((i) => i.name).join(', ') }}
             </div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Tasks:</div>
             <div class="flex flex-col gap-2">
               <div v-for="task in targetTasks" :key="task?.id" class="text-sm text-slate-10">
@@ -462,7 +468,7 @@ const onImportTarget = async (targetId: Target['id']) => {
               </div>
             </div>
           </div>
-          <div class="flex flex-col gap-1 border-b border-slate-3 py-3">
+          <div class="flex flex-col gap-1 py-3 border-b border-slate-3">
             <div class="text-xs text-slate-8">Problem behaviors:</div>
             <div class="flex flex-col gap-2">
               <div
@@ -481,9 +487,9 @@ const onImportTarget = async (targetId: Target['id']) => {
           </div>
         </div>
         <div v-if="!target?.type?.includes('Sbt') && !target?.is_group" class="flex flex-col">
-          <div class="space-y-4 py-3">
-            <div class="flex items-center gap-2">
-              <div class="bg-orange-3 p-1" :style="{ borderRadius: '4px' }">
+          <div class="py-3 space-y-4">
+            <div class="flex gap-2 items-center">
+              <div class="p-1 bg-orange-3" :style="{ borderRadius: '4px' }">
                 <Icon
                   icon="mynaui:info-waves-solid"
                   class="rotate-180 text-[20px] text-[#FD853A]"
@@ -493,11 +499,11 @@ const onImportTarget = async (targetId: Target['id']) => {
             </div>
 
             <!-- passing success metric -->
-            <div class="space-y-4 rounded border border-slate-4 bg-slate-1 px-4 py-3">
+            <div class="px-4 py-3 space-y-4 rounded border border-slate-4 bg-slate-1">
               <!-- header -->
               <div class="space-y-1">
                 <div class="text-sm font-semibold text-slate-10">Passing success metric</div>
-                <div class="flex items-center gap-2">
+                <div class="flex gap-2 items-center">
                   <AppChip chip="in_progress" />
                   <div class="text-sm text-slate-8">to</div>
                   <AppChip chip="mastered" />
@@ -534,7 +540,7 @@ const onImportTarget = async (targetId: Target['id']) => {
                     class="flex flex-col gap-1"
                   >
                     <div class="text-sm text-slate-8">Consecutive success:</div>
-                    <div class="flex flex-wrap items-center gap-1">
+                    <div class="flex flex-wrap gap-1 items-center">
                       <div class="text-sm text-slate-10">
                         Successful for {{ actionRecommendation.consecutive_success }} consecutive
                         sessions
@@ -551,14 +557,14 @@ const onImportTarget = async (targetId: Target['id']) => {
                     target?.progression?.next_target &&
                     nextTargetRecommendation.is_enabled
                   "
-                  class="space-y-1 border-t border-slate-4 pt-4"
+                  class="pt-4 space-y-1 border-t border-slate-4"
                 >
                   <div class="text-sm text-slate-8">Next target recommendation:</div>
                   <div class="text-sm text-slate-10">
                     Updating
                     <span class="font-semibold">{{ nextTargetDetails?.name + ' ' }}</span> from
                   </div>
-                  <div class="flex items-center gap-2">
+                  <div class="flex gap-2 items-center">
                     <AppChip chip="pending" />
                     <div class="text-sm text-slate-8">to</div>
                     <AppChip chip="in_progress" />
@@ -571,7 +577,7 @@ const onImportTarget = async (targetId: Target['id']) => {
                     The next target hasn't been imported yet. You can import it after this target is
                     mastered or
                     <span
-                      class="cursor-pointer font-semibold underline"
+                      class="font-semibold underline cursor-pointer"
                       @click="onImportTarget(nextTargetDetails.id)"
                     >
                       import now.
@@ -587,12 +593,12 @@ const onImportTarget = async (targetId: Target['id']) => {
             <!-- maintenance -->
             <div
               v-if="maintenanceRecommendation?.is_enabled"
-              class="space-y-4 rounded border border-slate-4 bg-slate-1 px-4 py-3"
+              class="px-4 py-3 space-y-4 rounded border border-slate-4 bg-slate-1"
             >
               <!-- header -->
               <div class="space-y-1">
                 <div class="text-sm font-semibold text-slate-10">Maintenance</div>
-                <div class="flex items-center gap-2">
+                <div class="flex gap-2 items-center">
                   <AppChip chip="mastered" />
                   <div class="text-sm text-slate-8">to</div>
                   <AppChip chip="in_progress" />
@@ -659,7 +665,7 @@ const onImportTarget = async (targetId: Target['id']) => {
                 </div>
 
                 <!-- last activity -->
-                <div class="space-y-2 border-t border-slate-4 pt-4">
+                <div class="pt-4 space-y-2 border-t border-slate-4">
                   <div class="text-sm text-slate-8">Last maintenance activity:</div>
                   <div class="text-sm text-slate-10" v-html="lastMaintenanceActivityText"></div>
                 </div>
@@ -671,7 +677,7 @@ const onImportTarget = async (targetId: Target['id']) => {
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 flex w-full items-center gap-2 bg-white py-3">
+      <div class="flex sticky bottom-0 z-10 gap-2 items-center py-3 w-full bg-white">
         <AppButton kind="plain" class="w-full" @click="emit('close')">Close</AppButton>
         <RouterLink
           v-if="editAble && !target?.has_ongoing_session"

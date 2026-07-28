@@ -67,9 +67,9 @@ export interface CreateSessionParams {
   client_id: Client['id']
 }
 export interface CreateMeasurementParams {
-  id: Measurement['id']
+  id: Session['id']
   target_id: Target['id']
-  measurement: Measurement
+  measurement: Partial<Measurement>
 }
 export interface AddMultipleTargetSessionParams {
   id: Session['id']
