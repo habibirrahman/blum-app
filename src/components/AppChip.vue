@@ -3,7 +3,7 @@ import type { ClientStatus, TargetStatus } from '@/lib/types'
 import { computed, ref } from 'vue'
 
 interface Props {
-  chip?: 'chip' | null | TargetStatus | ClientStatus
+  chip?: 'chip' | null | TargetStatus | ClientStatus | string
   label?: string
   class?: string
 }

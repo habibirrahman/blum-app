@@ -111,15 +111,21 @@ export const getErrorMessage = (value: any = '') => {
 export function debounce<T extends (...args: any[]) => void>(
   fn: T,
   delay: number
-): (...args: Parameters<T>) => void {
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
   let timer: ReturnType<typeof setTimeout>
 
-  return function (...args: Parameters<T>) {
+  const debounced = function (...args: Parameters<T>) {
     clearTimeout(timer)
     timer = setTimeout(() => {
       fn(...args)
     }, delay)
   }
+
+  debounced.cancel = () => {
+    clearTimeout(timer)
+  }
+
+  return debounced
 }
 
 /** TIME MANUPUTAION */

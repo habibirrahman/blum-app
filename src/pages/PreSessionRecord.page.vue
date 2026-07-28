@@ -178,10 +178,56 @@ const upcomingMaintenanceTargets = computed<Target[]>(() => {
 })
 
 const doLaunchSession = async () => {
+  // Capture active member probing states for group targets before starting the session
+  const probingGroupMeasurements = sessionStore.session_measurements.filter((m) => {
+    if (m.type !== 'Measurement::Percentage' && m.type !== 'Measurement::TrialByTrial') return false
+    if (!m.results) return false
+    const results = m.results as Record<
+      string,
+      { probing: Record<string, boolean | null> | null } | undefined
+    >
+    return Object.values(results).some((r) => r && r.probing !== null)
+  })
+
+  const probingMap = probingGroupMeasurements.map((m) => {
+    const activeMemberIds: number[] = []
+    const results = m.results as Record<
+      string,
+      { probing: Record<string, boolean | null> | null } | undefined
+    >
+    Object.entries(results).forEach(([memberId, r]) => {
+      if (r && r.probing !== null) {
+        activeMemberIds.push(Number(memberId))
+      }
+    })
+    return {
+      measurementId: m.id!,
+      activeMemberIds
+    }
+  })
+
   startSessionLoading.value = true
   const { success } = await sessionStore.startSession()
+
+  if (!success) {
+    startSessionLoading.value = false
+    return
+  }
+
+  // Restore probing states on the backend if they were set in the draft
+  if (probingMap.length > 0) {
+    for (const item of probingMap) {
+      for (const mId of item.activeMemberIds) {
+        await sessionStore.setMeasurementProbing({
+          id: item.measurementId,
+          probing: true,
+          member_id: mId
+        })
+      }
+    }
+  }
+
   startSessionLoading.value = false
-  if (!success) return
   showActionBeforeLunch.value = false
   router.push({ name: 'session-record', params: { slug: sessionStore.session?.slug } })
 }
@@ -489,13 +535,14 @@ const onUpdateSessionName = async () => {
                 <div>
                   Prompts used in this session:
                   {{
-                    Object.keys(measurement.results || {})
+                    Object.keys((measurement.results || {}) as Record<string, any>)
                       ?.map((key) => {
+                        const resObj = (measurement.results || {}) as Record<string, any>
                         const found = measurement?.target?.prompts?.find(
                           (i) => i.id === Number(key)
                         )
                         const percentage = found?.score || 0
-                        return { ...measurement.results[key], percentage }
+                        return { ...resObj[key], percentage }
                       })
                       ?.sort((a, b) => a.position - b.position)
                       ?.map((prompt) => {
@@ -642,13 +689,57 @@ const onUpdateSessionName = async () => {
                   <div class="text-sm font-semibold text-slate-8">
                     {{ member.target_code }} - {{ member.target_name }}
                   </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
+
+                  <!-- Percentage -->
+                  <div
+                    v-if="measurement.target?.type === 'Target::Percentage'"
+                    class="space-y-0.5 text-xs text-slate-600"
+                  >
+                    <div v-if="member.goal !== undefined">
+                      <span class="font-medium">Goal:</span> {{ member.goal }}%
+                    </div>
+                    <div v-if="member.number_of_trial !== undefined">
+                      <span class="font-medium">Number of trials:</span>
+                      {{ member.number_of_trial }} trial(s)
+                    </div>
+                    <div v-if="member.success_metric">
+                      <span class="font-medium">Success metric:</span> {{ member.success_metric }}
+                    </div>
+                  </div>
+
+                  <!-- Trial By Trial -->
+                  <div
+                    v-if="measurement.target?.type === 'Target::TrialByTrial'"
+                    class="space-y-0.5 text-xs text-slate-600"
+                  >
+                    <div v-if="member.goal !== undefined">
+                      <span class="font-medium">Goal:</span> {{ member.goal }}%
+                    </div>
+                    <div v-if="member.number_of_trial !== undefined">
+                      <span class="font-medium">Minimum number of trials:</span>
+                      {{ member.number_of_trial }} trial(s)
+                    </div>
+                    <div v-if="member.success_metric">
+                      <span class="font-medium">Success metric:</span> {{ member.success_metric }}
+                    </div>
+                  </div>
+
+                  <div v-if="!member.description" class="text-xs italic text-slate-400">
+                    No description
+                  </div>
+                  <div v-else class="text-xs whitespace-pre-line text-slate-600">
                     {{ member.description }}
                   </div>
                 </div>
               </div>
               <!-- group targets problem behavior -->
-              <div class="py-3 space-y-3 border-t-2 border-slate-3">
+              <div
+                v-if="
+                  measurement.target?.type !== 'Target::TrialByTrial' &&
+                  measurement.target?.type !== 'Target::Percentage'
+                "
+                class="py-3 space-y-3 border-t-2 border-slate-3"
+              >
                 <div
                   v-for="problemBehavior in measurement.target?.target_problem_behaviors"
                   :key="problemBehavior.id"

@@ -131,77 +131,94 @@ const fixedMeasurement = computed<Measurement | undefined>(() =>
 )
 
 const isAllMeasurementResultEmpty = computed<boolean>(() => {
-  const isAllEmpty = []
-  const recordMeasurments = sessionStore.session_measurements.filter((i) => !i.is_dropped)
+  const isAllEmpty: boolean[] = []
+  const recordMeasurements = sessionStore.session_measurements.filter((i) => !i.is_dropped)
 
-  recordMeasurments.forEach((i) => {
+  recordMeasurements.forEach((i) => {
     let isResultsEmpty = true
-    if (i.type === 'Measurement::Percentage') {
-      for (let key in i.results) {
-        if (i.results[key] !== null) isResultsEmpty = false
+    if (i.type === 'Measurement::Percentage' || i.type === 'Measurement::TrialByTrial') {
+      if (i.target?.is_group) {
+        if (i.results) {
+          const hasRecord = Object.values(i.results as Record<string, any>).some((memberRes: any) => {
+            if (!memberRes) return false
+            const hasProbing =
+              memberRes.probing && Object.values(memberRes.probing).some((v) => v !== null)
+            const hasTeaching =
+              memberRes.teaching && Object.values(memberRes.teaching).some((v) => v !== null)
+            return hasProbing || hasTeaching || memberRes.decision || memberRes.submitted
+          })
+          if (hasRecord) isResultsEmpty = false
+        }
+      } else {
+        if (i.results && Object.values(i.results as Record<string, any>).some((v) => v !== null)) {
+          isResultsEmpty = false
+        }
       }
     }
-    if (i.type === 'Measurement::TrialByTrial') {
-      for (let key in i.results) {
-        if (i.results[key] !== null) isResultsEmpty = false
-      }
+    const resMap = (i.results || {}) as Record<string, any>
+    if (i.type === 'Measurement::Probing' && i.results && Object.keys(resMap).length > 0) {
+      isResultsEmpty = false
     }
-    if (i.type === 'Measurement::Probing') {
-      const arr = Object.keys(i.results)
-      if (arr.length > 0) isResultsEmpty = false
-    }
-    if (i.type === 'Measurement::Duration') {
-      for (let key in i.results) {
-        const result = i.results[key]
-        if (result && result.seconds !== 0 && result.string !== '00:00:00') isResultsEmpty = false
-      }
-    }
-    if (i.type === 'Measurement::Latency') {
-      for (let key in i.results) {
-        const result = i.results[key]
-        if (result && result.seconds !== 0 && result.string !== '00:00:00') isResultsEmpty = false
+    if (i.type === 'Measurement::Duration' || i.type === 'Measurement::Latency') {
+      if (i.results) {
+        for (const key in resMap) {
+          const result = resMap[key]
+          if (result && result.seconds !== 0 && result.string !== '00:00:00') {
+            isResultsEmpty = false
+          }
+        }
       }
     }
     if (i.type === 'Measurement::Pir') {
-      for (let key in i.results) {
-        if (i.results[key] > 0) isResultsEmpty = false
+      if (i.results) {
+        for (const key in resMap) {
+          if (resMap[key] > 0) isResultsEmpty = false
+        }
       }
     }
     if (i.type === 'Measurement::Frequency') {
-      if (i.results['score'] > 0) isResultsEmpty = false
+      if (i.results && resMap['score'] > 0) isResultsEmpty = false
     }
     if (i.type === 'Measurement::Prompting') {
       if (i.target?.is_group) {
-        for (let key in i.results) {
-          if (i.results[key].prompt_id) isResultsEmpty = false
+        if (i.results) {
+          for (const key in resMap) {
+            if (resMap[key]?.prompt_id) isResultsEmpty = false
+          }
         }
       } else {
-        for (let key in i.results) {
-          if (i.results[key].score > 0) isResultsEmpty = false
+        if (i.results) {
+          for (const key in resMap) {
+            if (resMap[key]?.score > 0) isResultsEmpty = false
+          }
         }
       }
     }
     if (i.type === 'Measurement::Sbt') {
-      for (let key in i.results) {
-        if (i.results[key].prompt_id) isResultsEmpty = false
+      if (i.results) {
+        for (const key in resMap) {
+          if (resMap[key]?.prompt_id) isResultsEmpty = false
+        }
       }
     }
     if (i.type === 'Measurement::ColdProbe') {
       if (
         i.target?.cold_probe_format === 'classic' &&
         i.results &&
-        Object.keys(i.results).length > 0
-      )
+        Object.keys(resMap).length > 0
+      ) {
         isResultsEmpty = false
-      if (i.target?.cold_probe_format === 'custom') {
-        for (let key in i.results) {
-          if (i.results[key] !== null) isResultsEmpty = false
+      }
+      if (i.target?.cold_probe_format === 'custom' && i.results) {
+        for (const key in resMap) {
+          if (resMap[key] !== null) isResultsEmpty = false
         }
       }
     }
     isAllEmpty.push(isResultsEmpty)
   })
-  if (isAllEmpty.length === 0) isAllEmpty.push(false)
+
+  if (isAllEmpty.length === 0) return false
   return !isAllEmpty.includes(false)
 })
 
@@ -371,7 +388,12 @@ async function fetchSession(
   cycleLoading.value = true
   try {
     const slug = route.params?.slug as string
-    sessionLoading.value = true
+    // Only show skeleton loading on first load, not during swipe refresh.
+    // Setting sessionLoading=true during refresh destroys all MeasurementRecord
+    // components (v-if/v-else toggle), causing Vue scheduler flush errors.
+    if (first) {
+      sessionLoading.value = true
+    }
 
     const { success, data } = await sessionStore.getSession({ slug })
     const session = data as Session
@@ -746,12 +768,15 @@ const onBackToClientSessionDraft = async () => {
 
 const openEndSession = () => {
   const measurements = sessionStore.session_measurements || []
+  groupReasons.value = []
 
+  let isNotCompletedProbes = false
+  let isNotSavedProbing = false
+
+  // 1. Single Probing
   const unfinishedProbings: Measurement[] = measurements.filter(
     (i) => i?.type === 'Measurement::Probing' && !i.submitted_at && !i.is_dropped
   )
-  let isNotCompletedProbes = false
-  let isNotSavedProbing = false
   unfinishedProbings.forEach((i) => {
     const probes = Object.keys(i.results || {}).length
     const trials = i.target?.probing_number_of_trial || 0
@@ -759,7 +784,35 @@ const openEndSession = () => {
     else isNotSavedProbing = true
   })
 
-  groupReasons.value = []
+  // 2. Group Probing (Group TBT & Group Percentage)
+  const groupProbingMeasurements = measurements.filter(
+    (i) =>
+      (i?.type === 'Measurement::TrialByTrial' || i?.type === 'Measurement::Percentage') &&
+      i.target?.is_group &&
+      !i.submitted_at &&
+      !i.is_dropped
+  )
+  groupProbingMeasurements.forEach((m) => {
+    const usedTargets = m.used_targets || []
+    const results = (m.results || {}) as Record<string, any>
+
+    usedTargets.forEach((targetMember: any) => {
+      const memberRes = results[String(targetMember.target_id)]
+      if (memberRes && memberRes.probing !== null) {
+        // Active probing phase for this member
+        const minProbe = targetMember.probing_number_of_trial || 3
+        const probingMap = memberRes.probing || {}
+        const answeredCount = Object.values(probingMap).filter((v) => v !== null).length
+
+        if (answeredCount < minProbe) {
+          isNotCompletedProbes = true
+        } else if (!memberRes.submitted || !memberRes.decision) {
+          isNotSavedProbing = true
+        }
+      }
+    })
+  })
+
   runningDurationLatency.value = measurements.filter((i) => {
     const res = Object.values(i.results || {}) as MeasurementResultsDurationOrLatency[]
     return (
