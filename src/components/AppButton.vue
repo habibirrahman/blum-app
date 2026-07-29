@@ -43,7 +43,7 @@ const currentClass = computed<string>(() => {
       isDisabled || isLoading ? 'pointer-events-none' : '',
       currentClass
     ]"
-    :disabled="disabled"
+    :disabled="disabled || loading"
     @click="emit('click')"
     :type="type"
   >

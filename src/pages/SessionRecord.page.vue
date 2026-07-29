@@ -139,14 +139,16 @@ const isAllMeasurementResultEmpty = computed<boolean>(() => {
     if (i.type === 'Measurement::Percentage' || i.type === 'Measurement::TrialByTrial') {
       if (i.target?.is_group) {
         if (i.results) {
-          const hasRecord = Object.values(i.results as Record<string, any>).some((memberRes: any) => {
-            if (!memberRes) return false
-            const hasProbing =
-              memberRes.probing && Object.values(memberRes.probing).some((v) => v !== null)
-            const hasTeaching =
-              memberRes.teaching && Object.values(memberRes.teaching).some((v) => v !== null)
-            return hasProbing || hasTeaching || memberRes.decision || memberRes.submitted
-          })
+          const hasRecord = Object.values(i.results as Record<string, any>).some(
+            (memberRes: any) => {
+              if (!memberRes) return false
+              const hasProbing =
+                memberRes.probing && Object.values(memberRes.probing).some((v) => v !== null)
+              const hasTeaching =
+                memberRes.teaching && Object.values(memberRes.teaching).some((v) => v !== null)
+              return hasProbing || hasTeaching || memberRes.decision || memberRes.submitted
+            }
+          )
           if (hasRecord) isResultsEmpty = false
         }
       } else {
@@ -853,6 +855,7 @@ const openEndSession = () => {
 }
 
 const onEndSession = async () => {
+  if (!submitLoading.value) return
   submitLoading.value = true
 
   // ✅ Resolve semua pending dulu sebelum end session
@@ -1281,7 +1284,7 @@ onUnmounted(() => {
         class="flex grow"
         :class="{
           'max-h-[160px] justify-center': isMeasurementCollapsed,
-          'no-scrollbar h-[calc(100vh-56px)] flex-col items-center gap-4 overflow-y-auto py-4 touch-pan-y':
+          'no-scrollbar h-[calc(100vh-88px)] touch-pan-y flex-col items-center gap-4 overflow-y-auto py-4':
             !isMeasurementCollapsed
         }"
       >
