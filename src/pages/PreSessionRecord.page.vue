@@ -596,7 +596,11 @@ const onUpdateSessionName = async () => {
               class="w-full h-0.5 shrink-0 bg-slate-3"
             ></div>
             <div
-              v-if="measurement.target?.last_phase_line && !measurement.target?.in_maintenance"
+              v-if="
+                measurement.target?.last_phase_line &&
+                (!measurement.target?.in_maintenance ||
+                  !isMaintenanceDisplayable(measurement.target))
+              "
               class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               Data from this session will be added to the
@@ -635,7 +639,10 @@ const onUpdateSessionName = async () => {
               phase.
             </div>
             <div
-              v-if="!isMaintenanceDisplayable(measurement.target)"
+              v-if="
+                !measurement.target?.last_phase_line &&
+                !isMaintenanceDisplayable(measurement.target)
+              "
               class="space-y-0.5 text-sm text-wrap text-slate-8"
             >
               Data from this session will be added to the
