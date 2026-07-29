@@ -1284,7 +1284,7 @@ onUnmounted(() => {
         class="flex grow"
         :class="{
           'max-h-[160px] justify-center': isMeasurementCollapsed,
-          'no-scrollbar h-[calc(100vh-88px)] touch-pan-y flex-col items-center gap-4 overflow-y-auto py-4':
+          'no-scrollbar touch-pan-y flex-col items-center gap-4 overflow-y-auto py-4':
             !isMeasurementCollapsed
         }"
       >
