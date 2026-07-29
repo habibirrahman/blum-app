@@ -73,3 +73,27 @@ Tailwind CSS **v3** here (`tailwind.config.js` + `postcss.config.js`), unlike th
 - Stock Vite (not `rolldown-vite` like the desktop repo).
 - Linting is ESLint only (`.eslintrc.cjs`, legacy flat-config-less format) — no `oxlint` step here.
 - Path alias `@` → `src/`.
+
+## Known issue: SBT trial loss on measurement save (investigated 2026-07)
+
+Bug report: therapists recording `Target::SkillBasedTreatment` measurements would end a session and find fewer trials persisted than were actually recorded (e.g. `session_activities` shows 17 `sbt_select_prompt` events, final measurement only has 12 trials) — with **zero `api_failed`** activity entries, i.e. every individual save reported success.
+
+Root cause, confirmed against a real session's `session_activities` export: `updateMeasurementResults` (`session.store.ts`) always PATCHes the **entire** trial result set for a measurement (full replace, not incremental/append). `getSession()` (`session.store.ts` ~934-956), triggered by the pull-to-refresh gesture (`session_refresh` activity, "swipe up" — `SessionRecord.page.vue` `fetchSession`/`scrollListener`), does an **unconditional synchronous overwrite** of `session_measurements` from the local `this.sessions` cache (populated earlier, e.g. from the draft-sessions list — can be stale) *before* the network refetch resolves, and the subsequent offline-check branches in `getSession`/`getSessionMeasurements` are commented-out no-ops, so a failed/slow refetch leaves that stale overwrite in place uncorrected. The SBT component (`partitions/measurement/SkillBasedTreatment.vue`) reactively adopts this stale `resultsState` via its `props.measurementResults` watcher; any trial recorded after that point is saved on top of the regressed baseline, and since saves are full-replace, the next successful save permanently overwrites the server's more-complete trial set — with no error surfaced anywhere (matches the "zero `api_failed`" evidence).
+
+In the analyzed session (~3hr recording), `session_refresh` fired 14 times, repeatedly interleaved *mid-recording* across all three SBT measurements in that session — not just at session start, which is what makes the race practically likely rather than theoretical.
+
+Fix not yet implemented, in priority order:
+1. Remove/guard the synchronous stale-cache overwrite in `getSession()` (~line 935-938) — don't replace `session_measurements` from `this.sessions.find(...)` before a fresh fetch confirms it.
+2. Implement the offline checks in `getSession`/`getSessionMeasurements` (currently commented-out no-ops) so a failed/offline refetch doesn't leave a partial/stale overwrite in place.
+3. Longer-term: move SBT trial writes to incremental/append (or add optimistic-concurrency/version checks) instead of full-replace, so a stale client base can't silently clobber server-confirmed trials.
+
+(Ruled out: save failures/rollback in `onSaveCurrentTrial` — every individual save in the analyzed session succeeded; `api_success`/`api_failed` activity logging in `updateMeasurement`/`updateMeasurementResults` is already correctly tied to actual outcomes.)
+
+## Android target API level (updated 2026-07)
+
+Google Play requires targeting API 36 (Android 16) by 31 Aug 2026. Updated in `android/`:
+- `variables.gradle`: `minSdkVersion` 22→24, `compileSdkVersion`/`targetSdkVersion` 35→36.
+- `build.gradle`: AGP classpath `8.2.1`→`8.13.0`.
+- `gradle/wrapper/gradle-wrapper.properties`: Gradle wrapper `8.9`→`8.13` (required minimum for AGP 8.13).
+
+AGP 8.13 requires Android Studio Narwhal 3 Feature Drop (2025.1.3) or newer — if targeting an older Studio install without upgrading, use AGP 8.10.0 + Gradle 8.11.1 instead (AGP 8.10 is the lowest version supporting compileSdk/targetSdk 36; AGP 8.9 and below max out at API 35). `minSdkVersion` 24 drops support for Android 5.0/5.1 (API 22-23) devices.
