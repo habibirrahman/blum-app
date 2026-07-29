@@ -855,7 +855,7 @@ const openEndSession = () => {
 }
 
 const onEndSession = async () => {
-  if (!submitLoading.value) return
+  if (submitLoading.value) return
   submitLoading.value = true
 
   // ✅ Resolve semua pending dulu sebelum end session
