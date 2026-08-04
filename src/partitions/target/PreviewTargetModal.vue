@@ -385,6 +385,26 @@ const onImportTarget = async (targetId: Target['id']) => {
             </div>
           </div>
           <div
+            v-if="target?.target_problem_behaviors && target?.target_problem_behaviors?.length > 0"
+            class="flex flex-col gap-1 py-3 border-b border-slate-3"
+          >
+            <div class="text-xs text-slate-8">Problem behaviors:</div>
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="problemBehavior in target?.target_problem_behaviors"
+                :key="problemBehavior?.id"
+                class="text-sm text-slate-10"
+              >
+                <div class="font-semibold">
+                  {{ problemBehavior?.code }} - {{ problemBehavior?.code_definition }}
+                </div>
+                <div class="whitespace-pre-line">
+                  {{ problemBehavior?.description || '-' }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
             v-if="target?.prompting_format === 'classic'"
             class="flex flex-col gap-1 py-3 border-b border-slate-3"
           >

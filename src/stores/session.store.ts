@@ -1386,9 +1386,10 @@ export const useSessionStore = defineStore('session', {
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
+            const payloadResults = (measurement as any)?.results || measurement
             const { data: patchData } = await axios.patch(
-              `/api/v1/measurements/${id}`,
-              { measurement },
+              `/api/v1/measurements/${id}/update_results`,
+              { results: payloadResults },
               {
                 timeout: attempt === 0 ? 5000 : 8000,
                 headers: {
@@ -1402,9 +1403,9 @@ export const useSessionStore = defineStore('session', {
               action_label: 'api_success',
               recordable: 'Measurement',
               recordable_id: id,
-              api: `PATCH /api/v1/measurements/${id}`,
-              params: { measurement },
-              notes: `Success update measurement [attempt: ${attempt + 1}]`,
+              api: `PATCH /api/v1/measurements/${id}/update_results`,
+              params: { results: payloadResults },
+              notes: `Success update measurement results [attempt: ${attempt + 1}]`,
               timestamp: new Date().toISOString()
             })
 
