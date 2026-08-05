@@ -1073,7 +1073,7 @@ onMounted(() => {
                 class="ml-1 font-semibold underline text-light-purple-5 hover:text-light-purple-6"
                 @click="showMemberSelector = !showMemberSelector"
               >
-                Change
+                Move to
               </button>
             </div>
 
@@ -1120,9 +1120,8 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Member Selector Overlay when Change is clicked -->
+        <!-- Member Selector Overlay when Move to is clicked -->
         <div v-if="showMemberSelector" class="flex flex-col gap-2 justify-center items-center py-2 w-full grow">
-          <div class="text-xs font-medium text-slate-500">Select a target:</div>
           <div
             class="flex overflow-x-auto gap-2 px-4 py-1 mt-1 w-full scrollbar-hide"
             :class="[usedTargets.length > 5 ? 'justify-start flex-nowrap' : 'justify-center flex-wrap']"
@@ -1136,11 +1135,18 @@ onMounted(() => {
                   ? 'border-light-purple-5 text-light-purple-5 scale-105 bg-purple-50 shadow-sm'
                   : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
               ]"
-              @click="switchToMember(member.target_id); showMemberSelector = false;"
+              @click="moveSel = member.target_id"
             >
               {{ member.target_code }}
             </button>
           </div>
+          <button
+            class="bg-light-purple-5 hover:bg-light-purple-6 flex h-9 w-full items-center justify-center rounded-lg text-xs font-semibold text-white transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+            :disabled="!moveSel"
+            @click="() => { if (moveSel) { switchToMember(moveSel); showMemberSelector = false; } }"
+          >
+            Move to
+          </button>
         </div>
 
         <!-- Scrollable Trials Area (shown when member selector is closed) -->
