@@ -300,7 +300,7 @@ onUnmounted(() => {
     <div
       class="flex grow"
       :class="{
-        'max-h-[160px] justify-center': isMeasurementCollapsed,
+        'min-h-[160px] justify-center': isMeasurementCollapsed,
         'no-scrollbar h-[calc(100vh-56px)] flex-col items-center gap-4 overflow-y-auto py-32':
           !isMeasurementCollapsed
       }"

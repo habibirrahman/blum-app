@@ -1914,9 +1914,15 @@ export const useSessionStore = defineStore('session', {
      * Buffer ditulis ke storage secara batched (setiap 10 aktivitas ATAU setiap 15 detik),
      * bukan setiap kali aktivitas ditambahkan — menghindari O(n²) read-modify-write.
      */
-    async addSessionActivity(params: AddSessionActivity): Promise<void> {
+    async addSessionActivity(rawParams: AddSessionActivity): Promise<void> {
       if (!this.session?.id) return
-      if (this.session?.status !== 'ongoing') return
+      if (this.session?.status !== 'ongoing' && this.session?.status !== 'paused') return
+
+      const appStore = useAppStore()
+      const params = {
+        ...rawParams,
+        notes: `[${appStore.account?.email}] ${rawParams}`
+      }
 
       // Inisialisasi buffer jika belum ada
       if (!this._activitiesBuffer) this._activitiesBuffer = []

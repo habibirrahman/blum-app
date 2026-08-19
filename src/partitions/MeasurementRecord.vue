@@ -76,7 +76,9 @@ const commentInput = ref<string>('')
 const display = ref<'target' | 'description' | 'comment'>('target')
 const cardId = ref<string>('card-random-id')
 
-const measurementResults = ref<Record<string, any>>((props.measurement.results as Record<string, any>) || {})
+const measurementResults = ref<Record<string, any>>(
+  (props.measurement.results as Record<string, any>) || {}
+)
 
 /** === COMPUTEDS === */
 
@@ -186,9 +188,7 @@ const taskAnalysisPrompts = computed(() => {
 const isDecisionGateActive = computed(() => {
   if (!props.measurement.target?.is_group) return false
   const results = (props.measurement.results || {}) as Record<string, any>
-  return Object.values(results).some(
-    (res: any) => res && res.submitted && !res.decision
-  )
+  return Object.values(results).some((res: any) => res && res.submitted && !res.decision)
 })
 
 /** === WATCHERS === */
@@ -378,7 +378,7 @@ onUnmounted(() => {
     class="relative rounded shrink-0"
     :class="{
       'h-[600px] w-[320px]': !isCollapsed,
-      'h-[160px] w-full': isCollapsed,
+      'min-h-[160px] w-screen': isCollapsed,
       'border border-light-purple-5 shadow-[4px_4px_4px_4px_#D6C7E066]': isChecked
     }"
   >
@@ -456,13 +456,10 @@ onUnmounted(() => {
       <div
         v-else
         id="measurememt-body"
-        class="flex flex-col gap-2 px-4 pb-3 h-full bg-white rounded-b"
+        class="flex overflow-y-auto flex-col gap-2 px-4 pb-3 h-full bg-white rounded-b no-scrollbar"
         :class="[
-          isCollapsed
-            ? 'pt-3'
-            : measurement.target?.is_group
-              ? 'no-scrollbar overflow-hidden'
-              : 'no-scrollbar overflow-y-auto'
+          isCollapsed ? 'pt-3' : '',
+          measurement.is_fixed ? (isCollapsed ? 'max-h-[25vh]' : 'max-h-[75vh]') : ''
         ]"
       >
         <div v-if="!isCollapsed" id="card-title" class="pt-3">
