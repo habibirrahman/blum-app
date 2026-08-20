@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
@@ -7,8 +7,9 @@ import { useAppStore } from '@/stores/app.store'
 import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import type { ActiveDevice, DeviceDetailsInput, User } from '@/lib/types'
+import type { ActiveDevice, User } from '@/lib/types'
 import { displayDate } from '@/lib/func'
+import { buildDevicePayload } from '@/composables/use-device-payload'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -19,17 +20,6 @@ const hasAnotherDeviceSignedIn = ref<boolean>(false)
 
 const user = ref<User>()
 const activeDevices = ref<ActiveDevice[]>([])
-
-const APP_TYPE = 'mobile_app'
-const deviceType = ref<string>('')
-const deviceId = ref<string>('')
-const deviceDetails = ref<DeviceDetailsInput>({
-  device_name: '',
-  os_name: '',
-  os_version: 0,
-  browser_name: '',
-  browser_version: 0
-})
 
 const email = ref<string>('')
 const password = ref<string>('')
@@ -51,18 +41,18 @@ watch(
 
 async function onSignin() {
   signinLoading.value = true
+
+  const device = await buildDevicePayload()
+
   const input = {
     email: email.value,
     password: password.value,
-    device: {
-      app_type: APP_TYPE, // browser or mobile_app
-      device_type: deviceType.value, // mobile or desktop
-      device_id: `${email.value}#${deviceId.value}`,
-      device_details: deviceDetails.value
-    }
+    device
   }
+
   const { success, message, data } = await appStore.signin(input)
   signinLoading.value = false
+
   if (!success) {
     if (data?.active_devices) {
       user.value = data?.user
@@ -75,6 +65,7 @@ async function onSignin() {
     toast.error(message)
     return
   }
+
   router.push({ name: 'home' })
 }
 
@@ -106,10 +97,6 @@ const onSignoutDevice = async (device: ActiveDevice) => {
     console.error(error)
   }
 }
-
-onMounted(() => {
-  // generated deviceId and deviceDetails
-})
 </script>
 
 <template>
@@ -117,18 +104,18 @@ onMounted(() => {
     class="fixed left-1/2 z-[9] -translate-x-1/2 pt-safe"
     :class="{ 'top-5': signinLoading, '-top-10': !signinLoading }"
   >
-    <div class="flex justify-center items-center w-10 h-10 bg-white rounded-full shadow">
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
   </div>
 
   <!-- sign in form -->
   <div
     v-if="!hasAnotherDeviceSignedIn"
-    class="flex flex-col gap-6 justify-center items-center py-4 w-full h-full"
+    class="flex h-full w-full flex-col items-center justify-center gap-6 py-4"
   >
-    <div class="flex flex-col gap-10 p-4 w-full max-w-lg">
-      <div class="text-5xl font-bold text-center font-logo text-light-purple-5">Blüm</div>
+    <div class="flex w-full max-w-lg flex-col gap-10 p-4">
+      <div class="text-center font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
       <div class="flex flex-col gap-5">
         <AppTextInput
           label="Email"
@@ -152,7 +139,7 @@ onMounted(() => {
       </div>
     </div>
     <div class="absolute bottom-0 w-screen bg-white px-safe pb-safe">
-      <div class="py-1 w-full">
+      <div class="w-full py-1">
         <AppButton kind="plain" class="w-full" @click="showForgotPassword = true">
           Forgot password?
         </AppButton>
@@ -162,9 +149,9 @@ onMounted(() => {
   <!-- end signin form -->
 
   <!-- handle case when the account is signed in on another device -->
-  <div v-if="hasAnotherDeviceSignedIn" class="flex flex-col gap-6 items-center py-4 w-full h-full">
-    <div class="flex flex-col gap-10 p-4 w-full max-w-lg">
-      <div class="text-5xl font-bold text-center font-logo text-light-purple-5">Blüm</div>
+  <div v-if="hasAnotherDeviceSignedIn" class="flex h-full w-full flex-col items-center gap-6 py-4">
+    <div class="flex w-full max-w-lg flex-col gap-10 p-4">
+      <div class="text-center font-logo text-5xl font-bold text-light-purple-5">Blüm</div>
       <div class="flex flex-col gap-5">
         <div class="space-y-3">
           <div class="text-2xl font-bold text-light-purple-5">
@@ -182,12 +169,12 @@ onMounted(() => {
           <div
             v-for="(device, idx) in activeDevices"
             :key="device?.id + device?.updated_at + idx"
-            class="flex gap-3 justify-between items-center py-3 border-b border-slate-3"
+            class="flex items-center justify-between gap-3 border-b border-slate-3 py-3"
           >
-            <div class="flex gap-3 items-center">
+            <div class="flex items-center gap-3">
               <Icon
                 icon="ph:check-circle-fill"
-                class="w-6 h-6"
+                class="h-6 w-6"
                 :class="[device?.status === 'active' ? 'text-grass-6' : 'text-slate-6']"
               />
 
@@ -256,9 +243,9 @@ onMounted(() => {
   <!-- end handle case when the account is signed in on another device -->
 
   <AppActionSheet :show="showForgotPassword" @close="showForgotPassword = false">
-    <div class="flex flex-col gap-4 items-center py-3">
-      <div class="text-xl font-semibold text-center">Reset password</div>
-      <div class="text-sm text-center">
+    <div class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Reset password</div>
+      <div class="text-center text-sm">
         Password resets aren't available on mobile yet. Please log in to Blüm on a desktop and
         update it from your profile, or contact your admin for assistance.
       </div>

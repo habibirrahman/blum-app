@@ -854,6 +854,7 @@ export const useSessionStore = defineStore('session', {
     // ========================================
 
     // SETTER Session and Measurement
+
     setSession(data: Session | null) {
       this.session = data
       const idx = this.sessions.findIndex((i) => i.id === data?.id)
@@ -864,11 +865,13 @@ export const useSessionStore = defineStore('session', {
       }
       this.syncSessionStore()
     },
+
     addSession(data: Session) {
       this.session = data
       this.sessions = [data, ...this.sessions]
       this.syncSessionStore()
     },
+
     setSessionMeasurement(data: Measurement, is_comment?: boolean) {
       // by id, fallback use target.id
       const idx = this.session_measurements.findIndex(
@@ -893,6 +896,7 @@ export const useSessionStore = defineStore('session', {
     },
 
     // SETTER Session Comment
+
     addSessionComment(data: Comment, check: boolean = false) {
       let arr = [...this.session_comments, data]
       if (check) {
@@ -901,6 +905,7 @@ export const useSessionStore = defineStore('session', {
       this.session_comments = arr
       this.syncSessionStore()
     },
+
     setSessionComment(data: Comment) {
       const idx = this.session_comments.findIndex((i) => i.id === data.id)
       if (idx > -1) {
@@ -910,316 +915,322 @@ export const useSessionStore = defineStore('session', {
       }
       this.syncSessionStore()
     },
+
     removeSessionComment(id: Comment['id']) {
       this.session_comments = this.session_comments.filter((i) => i.id !== id)
       this.syncSessionStore()
     },
 
     // ACTION
+
     async getSessions({ params }: { params?: string }) {
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        // return {
-        //   success: true,
-        //   data: { sessions: this.sessions, total_count: this.sessions_count }
-        // }
-      }
+      try {
+        const res = await axios.get(`/api/v1/sessions/draft_sessions${params}&outcome=targets`)
 
-      return axios
-        .get(`/api/v1/sessions/draft_sessions${params}&outcome=targets`)
-        .then(async ({ data }) => {
-          this.sessions = data.sessions
-          this.sessions_count = data.total_count
-          this.syncSessionStore()
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
+        this.sessions = res?.data?.sessions
+        this.sessions_count = res?.data?.total_count
+        this.syncSessionStore()
+
+        return { success: true, data: res?.data }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          return { success: false, message: error?.response?.data }
+        }
+        return { success: false }
+      }
     },
+
     async getSession({ slug }: { slug: Session['slug'] }): Promise<ResponseSchema> {
-      const data = this.sessions.find((i) => i.slug === slug)
-      if (data) {
-        this.session_measurements = data?.measurements || []
-        this.setSession(data)
-      }
+      try {
+        const res = await axios.get(`/api/v1/sessions/${slug}`)
 
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        // return { success: true, data: this.session }
-      }
+        this.setSession(res?.data)
+        await this.getSessionMeasurements({ id: res?.data.id })
 
-      return axios
-        .get(`/api/v1/sessions/${slug}`)
-        .then(async ({ data }) => {
-          this.setSession(data)
-          await this.getSessionMeasurements({ id: data.id })
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
+        return { success: true, data: res?.data }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          return { success: false, message: error?.response?.data }
+        }
+        return { success: false }
+      }
     },
+
     async getSessionMeasurements({ id }: { id: Session['id'] }): Promise<ResponseSchema> {
       if (!id) return { success: false, data: null }
-      // this.session_measurements = this.session?.measurements || []
 
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        // return { success: true, data: this.session_measurements }
-      }
+      try {
+        const res = await axios.get(`/api/v1/sessions/${id}/measurements`)
 
-      return axios
-        .get(`/api/v1/sessions/${id}/measurements`)
-        .then(async ({ data }) => {
-          // Merge per-item berdasarkan `updated_at`, bukan full replace.
-          // GET list ini bisa butuh waktu lama (koneksi lapangan), dan selama itu
-          // updateMeasurementResults() bisa saja sudah menyimpan hasil yang lebih baru
-          // lewat request terpisah (lihat setSessionMeasurement). Kalau di sini kita
-          // langsung `this.session_measurements = data`, snapshot lama dari response ini
-          // akan menimpa balik hasil yang sudah benar tersimpan -> "missing results".
-          const incoming: Measurement[] = data || []
-          this.session_measurements = incoming.map((item: Measurement) => {
-            const local = this.session_measurements.find((i) => i.id === item.id)
-            if (local?.updated_at && item.updated_at && local.updated_at > item.updated_at) {
-              return local
-            }
-            return item
-          })
+        // Merge per-item berdasarkan `updated_at`, bukan full replace.
+        // GET list ini bisa butuh waktu lama (koneksi lapangan), dan selama itu
+        // updateMeasurementResults() bisa saja sudah menyimpan hasil yang lebih baru
+        // lewat request terpisah (lihat setSessionMeasurement). Kalau di sini kita
+        // langsung `this.session_measurements = data`, snapshot lama dari response ini
+        // akan menimpa balik hasil yang sudah benar tersimpan -> "missing results".
+        const incoming: Measurement[] = res?.data || []
 
-          const session: Session = {
-            ...this.session,
-            measurements: [...data, ...(this.session?.measurements || [])].filter(onlyUniqueId)
+        const latest = incoming.map((item: Measurement) => {
+          const local = this.session_measurements.find((i) => i.id === item.id)
+          if (local?.updated_at && item.updated_at && local.updated_at > item.updated_at) {
+            return local
           }
-          this.setSession(session)
-          return { success: true, data }
+          return item
         })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
+        this.session_measurements = latest
+
+        const session: Session = {
+          ...this.session,
+          measurements: [...latest, ...(this.session?.measurements || [])].filter(onlyUniqueId)
+        }
+        this.setSession(session)
+
+        return { success: true, data: res?.data }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          return { success: false, message: error?.response?.data }
+        }
+        return { success: false }
+      }
     },
+
     async getMeasurement({ id }: { id: Measurement['id'] }): Promise<ResponseSchema> {
       if (!id) return { success: false, data: null }
 
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        // return { success: true, data: this.session_measurements }
+      try {
+        const res = await axios.get(`/api/v1/measurements/${id}`)
+
+        this.setSessionMeasurement(res?.data)
+
+        return { success: true, data: res?.data }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          return { success: false, message: error?.response?.data }
+        }
+        return { success: false }
       }
-
-      return axios
-        .get(`/api/v1/measurements/${id}`)
-        .then(async ({ data }) => {
-          this.setSessionMeasurement(data)
-          // async
-          // sering race condition
-          /*
-          // lebih baik pakai ini
-          setState((prev) => {
-            return { ...prev, ...data }
-          })
-
-          // ini sering race condition jika dipanggil bersamaan
-          setState({...this.state, ...data})
-          **/
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
     },
 
     async getUpcomingSessions() {
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        // return {
-        //   success: true,
-        //   data: { sessions: this.upcoming_sessions, total_count: this.upcoming_sessions_count }
-        // }
-      }
-
-      return axios
-        .get(
+      try {
+        const res = await axios.get(
           '/api/v1/sessions/draft_sessions?upcoming=daily&sort=earliest_schedule&page=1&per_page=5&outcome=targets'
         )
-        .then(async ({ data }) => {
-          this.upcoming_sessions = data.sessions
-          this.upcoming_sessions_count = data.total_count
-          this.syncSessionStore()
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
+
+        this.upcoming_sessions = res?.data?.sessions
+        this.upcoming_sessions_count = res?.data?.total_count
+        this.syncSessionStore()
+
+        return { success: true, data: res?.data }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          return { success: false, message: error?.response?.data }
+        }
+        return { success: false }
+      }
     },
 
     async createSession({ client_id }: CreateSessionParams) {
-      return axios
-        .post(`/api/v1/clients/${client_id}/sessions`, {
+      try {
+        const res = await axios.post(`/api/v1/clients/${client_id}/sessions`, {
           session: { name: '', status: 'draft' }
         })
-        .then((response) => {
-          this.addSession(response.data)
-          return { success: true, data: response.data, message: '' }
-        })
-        .catch((error) => {
+
+        this.addSession(res?.data)
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
     async updateSession({ id, session }: { id: Session['id']; session: Partial<Session> }) {
-      return axios
-        .patch(`/api/v1/sessions/${id}`, { session })
-        .then((response) => {
-          this.setSession(response.data)
-          return { success: true, data: response.data, message: response.data.message }
-        })
-        .catch((error) => {
+      try {
+        const res = await axios.patch(`/api/v1/sessions/${id}`, { session })
+
+        this.setSession(res?.data)
+
+        return { success: true, data: res?.data, message: res?.data?.message || '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
     async deleteSession({ id }: { id: Session['id'] }) {
-      return axios
-        .delete(`/api/v1/sessions/${id}`)
-        .then((response) => {
-          return { success: true, data: response.data, message: response.data.message }
-        })
-        .catch((error) => {
+      try {
+        const res = await axios.delete(`/api/v1/sessions/${id}`)
+
+        return { success: true, data: res?.data, message: res?.data?.message || '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
     async startSession() {
-      return axios
-        .patch(`/api/v1/sessions/${this.session?.id}`, { session: { status: 'ongoing' } })
-        .then(async ({ data }) => {
-          this.session = data
+      try {
+        const res = await axios.patch(`/api/v1/sessions/${this.session?.id}`, {
+          session: { status: 'ongoing' }
+        })
 
-          // reset offline mode data
-          this.pending_progress = []
+        this.session = res?.data
+        // reset offline mode data
+        this.pending_progress = []
+        this.syncSessionStore()
 
-          this.syncSessionStore()
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
-    },
-    async resolveAllMeasurements({ params }: ResolveAllMeasurementsParams) {
-      return axios
-        .patch(`/api/v1/measurements/resolve_all`, params)
-        .then(async ({ data }) => {
-          this.syncSessionStore()
-          return { success: true, data, message: '' }
-        })
-        .catch((error) => {
+        return { success: true, data: res?.data, message: res?.data?.message || '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
-    },
-    async pauseSession() {
-      // Flush buffer aktivitas in-memory ke storage terlebih dahulu
-      if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
-        await flushSessionActivities(this.session.id, this._activitiesBuffer)
+          return { success: false, message }
+        }
+        return { success: false }
       }
+    },
 
-      // Baca activities dari buffer in-memory (lebih efisien, tidak perlu baca storage)
-      const activities: AddSessionActivity[] = [...(this._activitiesBuffer || [])]
+    async resolveAllMeasurements() {
+      try {
+        const measurements = this.session_measurements || []
+        const payload: ResolveAllMeasurementsParams = {
+          params: measurements?.map((i) => {
+            return { id: i.id, results: i.results }
+          })
+        }
 
-      activities.push({
-        action_label: `session_pause`,
-        recordable: 'Session',
-        recordable_id: this.session?.id,
-        api: `PATCH /api/v1/sessions/${this.session?.id}`,
-        params: { session: { status: 'paused', session_activities: 'SessionActivity[]' } }, // prevent infinite array
-        notes: `Pause session`,
-        timestamp: new Date().toISOString()
-      })
+        const res = await axios.patch(`/api/v1/measurements/resolve_all`, payload.params)
 
-      return axios
-        .patch(`/api/v1/sessions/${this.session?.id}`, {
+        this.syncSessionStore()
+
+        return { success: true, data: res?.data, message: res?.data?.message || '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, message }
+        }
+        return { success: false }
+      }
+    },
+
+    async pauseSession() {
+      try {
+        // Flush buffer aktivitas in-memory ke storage terlebih dahulu
+        if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
+          await flushSessionActivities(this.session.id, this._activitiesBuffer)
+        }
+
+        // Baca activities dari buffer in-memory (lebih efisien, tidak perlu baca storage)
+        const activities: AddSessionActivity[] = [...(this._activitiesBuffer || [])]
+
+        activities.push({
+          action_label: `session_pause`,
+          recordable: 'Session',
+          recordable_id: this.session?.id,
+          api: `PATCH /api/v1/sessions/${this.session?.id}`,
+          params: { session: { status: 'paused', session_activities: 'SessionActivity[]' } }, // prevent infinite array
+          notes: `Pause session`,
+          timestamp: new Date().toISOString()
+        })
+
+        const res = await axios.patch(`/api/v1/sessions/${this.session?.id}`, {
           session: { status: 'paused', session_activities: activities }
         })
-        .then(async ({ data }) => {
-          this.session = data
 
-          // ✅ Clear backups setelah session berhasil di-pause
-          const measurementIds = this.session_measurements.map((m) => Number(m.id)).filter((i) => i)
-          const result = await this.clearSessionMeasurementBackups(measurementIds)
+        this.session = res?.data
 
-          if (result.success) {
-            console.log(`[pauseSession] Cleared ${result.count} backup(s)`)
-          }
+        // ✅ Clear backups setelah session berhasil di-pause
+        const measurementIds = this.session_measurements.map((m) => Number(m.id)).filter((i) => i)
+        const result = await this.clearSessionMeasurementBackups(measurementIds)
 
-          // ✅ Clear activities buffer in-memory dan storage
-          this._activitiesBuffer = []
-          if (this._activitiesFlushTimeout !== undefined) {
-            clearTimeout(this._activitiesFlushTimeout)
-            this._activitiesFlushTimeout = undefined
-          }
-          await this.clearSessionActivities()
+        if (result.success) {
+          console.log(`[pauseSession] Cleared ${result.count} backup(s)`)
+        }
 
-          await this.syncSessionStoreNow()
-          return { success: true, data, message: '' }
-        })
-        .catch((error) => {
+        // ✅ Clear activities buffer in-memory dan storage
+        this._activitiesBuffer = []
+        if (this._activitiesFlushTimeout !== undefined) {
+          clearTimeout(this._activitiesFlushTimeout)
+          this._activitiesFlushTimeout = undefined
+        }
+        await this.clearSessionActivities()
+
+        await this.syncSessionStoreNow()
+
+        return { success: true, data: res?.data, message: res?.data?.message || '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
-    },
-    async endSession() {
-      // Flush buffer aktivitas in-memory ke storage terlebih dahulu
-      if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
-        await flushSessionActivities(this.session.id, this._activitiesBuffer)
+          return { success: false, message }
+        }
+        return { success: false }
       }
+    },
 
-      // Baca activities dari buffer in-memory (lebih efisien, tidak perlu baca storage)
-      const activities: AddSessionActivity[] = [...(this._activitiesBuffer || [])]
+    async endSession() {
+      try {
+        // Flush buffer aktivitas in-memory ke storage terlebih dahulu
+        if (this.session?.id && this._activitiesBuffer && this._activitiesBuffer.length > 0) {
+          await flushSessionActivities(this.session.id, this._activitiesBuffer)
+        }
 
-      activities.push({
-        action_label: `session_end`,
-        recordable: 'Session',
-        recordable_id: this.session?.id,
-        api: `PATCH /api/v1/sessions/${this.session?.id}`,
-        params: { session: { status: 'completed', session_activities: 'SessionActivity[]' } }, // prevent infinite array
-        notes: `End session`,
-        timestamp: new Date().toISOString()
-      })
+        // Baca activities dari buffer in-memory (lebih efisien, tidak perlu baca storage)
+        const activities: AddSessionActivity[] = [...(this._activitiesBuffer || [])]
 
-      return axios
-        .patch(`/api/v1/sessions/${this.session?.id}`, {
+        activities.push({
+          action_label: `session_end`,
+          recordable: 'Session',
+          recordable_id: this.session?.id,
+          api: `PATCH /api/v1/sessions/${this.session?.id}`,
+          params: { session: { status: 'completed', session_activities: 'SessionActivity[]' } }, // prevent infinite array
+          notes: `End session`,
+          timestamp: new Date().toISOString()
+        })
+
+        const res = await axios.patch(`/api/v1/sessions/${this.session?.id}`, {
           session: { status: 'completed', session_activities: activities }
         })
-        .then(async ({ data }) => {
-          this.session = data
 
-          // ✅ Clear backups setelah session berhasil di-end
-          const measurementIds = this.session_measurements.map((m) => Number(m.id)).filter((i) => i)
-          const result = await this.clearSessionMeasurementBackups(measurementIds)
+        this.session = res?.data
 
-          if (result.success) {
-            console.log(`[endSession] Cleared ${result.count} backup(s)`)
-          }
+        // ✅ Clear backups setelah session berhasil di-end
+        const measurementIds = this.session_measurements.map((m) => Number(m.id)).filter((i) => i)
+        const result = await this.clearSessionMeasurementBackups(measurementIds)
 
-          // ✅ Clear activities buffer in-memory dan storage
-          this._activitiesBuffer = []
-          if (this._activitiesFlushTimeout !== undefined) {
-            clearTimeout(this._activitiesFlushTimeout)
-            this._activitiesFlushTimeout = undefined
-          }
-          await this.clearSessionActivities()
+        if (result.success) {
+          console.log(`[endSession] Cleared ${result.count} backup(s)`)
+        }
 
-          await this.syncSessionStoreNow()
-          return { success: true, data, message: '' }
-        })
-        .catch((error) => {
+        // ✅ Clear activities buffer in-memory dan storage
+        this._activitiesBuffer = []
+        if (this._activitiesFlushTimeout !== undefined) {
+          clearTimeout(this._activitiesFlushTimeout)
+          this._activitiesFlushTimeout = undefined
+        }
+        await this.clearSessionActivities()
+
+        await this.syncSessionStoreNow()
+
+        return { success: true, data: res?.data, message: res?.data?.message || '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
+
+    // =================================== [need refactor to try catch]
 
     async getSessionRecommendations() {
       this.session_recommendations = []
@@ -1247,6 +1258,7 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message }
         })
     },
+
     async addMultipleTargetsSession({ id, target_ids }: AddMultipleTargetSessionParams) {
       return axios
         .post(`/api/v1/sessions/${id}/add_multiple_targets`, {
@@ -1261,6 +1273,7 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message }
         })
     },
+
     async advanceMaintenanceSession({ id, target_ids }: AdvanceMaintenanceSessionParams) {
       return axios
         .post(`/api/v1/sessions/${id}/advance_maintenance`, {
@@ -1316,6 +1329,7 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message }
         })
     },
+
     async deleteMeasurement({ id, params }: { id: Measurement['id']; params?: string }) {
       return axios
         .delete(`/api/v1/measurements/${id}${params || ''}`)
@@ -1628,6 +1642,7 @@ export const useSessionStore = defineStore('session', {
     // ========================================
     // COMMENT FUNCTIONS
     // ========================================
+
     async getSessionComments({
       id,
       filter
@@ -1659,6 +1674,7 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
+
     async createSessionComment({
       client_id,
       session_id,
@@ -1732,6 +1748,7 @@ export const useSessionStore = defineStore('session', {
 
       return { success: false, data: null }
     },
+
     async updateSessionComment({
       client_id,
       comment_id,
@@ -1814,6 +1831,7 @@ export const useSessionStore = defineStore('session', {
       }
       return { success: false, data: null }
     },
+
     async duplicateImagesToClientDocument({
       documents,
       client_id,
@@ -1845,6 +1863,7 @@ export const useSessionStore = defineStore('session', {
           return { success: false, data: null, message: response?.data?.error }
         })
     },
+
     async deleteSessionComment({ client_id, comment_id, type }: DeleteSessionCommentParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {
