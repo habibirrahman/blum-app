@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { useAppStore } from '@/stores/app.store'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Measurement, Prompt, Target, TargetProblemBehavior, TargetTask } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
@@ -71,6 +71,8 @@ const ratioScores = ref<any[]>([])
 const ratioScoresHalf = computed(() => Math.ceil(ratioScores.value.length / 2))
 const ratioScoresRowA = computed(() => ratioScores.value.slice(0, ratioScoresHalf.value))
 const ratioScoresRowB = computed(() => ratioScores.value.slice(ratioScoresHalf.value))
+
+const ratioScoreContainer = ref(null)
 
 const resultsState = ref<Measurement['results']>({})
 
@@ -186,6 +188,37 @@ watch(
     else isSaved.value = false
   }
 )
+
+watch(
+  () => [currentTrial.value?.target_task_id, props.isCollapsed, ratioScores.value?.length],
+  async ([id, collapsed]) => {
+    if (collapsed || !id) return
+    await nextTick()
+    scrollToActiveTrial()
+  },
+  { immediate: true }
+)
+
+function scrollToActiveTrial(smooth = true) {
+  const container = ratioScoreContainer.value as HTMLDivElement | null
+  if (!container) return // ke-collapse, ref-nya null
+
+  const el = document.getElementById(
+    `score-ratio-${props.measurement.id}-${currentTrial.value.target_task_id}`
+  )
+  if (!el) return
+
+  const cRect = container.getBoundingClientRect()
+  const eRect = el.getBoundingClientRect()
+
+  // posisi el relatif ke isi container, lalu digeser biar ke tengah
+  const left = eRect.left - cRect.left + container.scrollLeft - (cRect.width - eRect.width) / 2
+
+  container.scrollTo({
+    left: Math.max(0, left),
+    behavior: smooth ? 'smooth' : 'auto'
+  })
+}
 
 // 🔧 Tambahkan computed untuk monitoring
 const hasPendingSync = computed(() => {
@@ -897,13 +930,15 @@ const onSaveEditTrial = async () => {
     <!-- ratio boxes -->
     <div
       v-if="!isCollapsed"
-      :id="`sbt-ratio-${measurement.id}-${JSON.stringify(currentTrial)}`"
+      :id="`score-ratio-${measurement.id}`"
+      ref="ratioScoreContainer"
       class="scrollbar-hide flex w-full shrink-0 items-center gap-1 overflow-x-auto pb-2"
       :class="[ratioScores.length > 6 ? 'justify-start' : 'justify-center']"
     >
       <div
         v-for="taskCode in ratioScores"
         :key="taskCode.id"
+        :id="`score-ratio-${measurement.id}-${taskCode.id}`"
         class="relative flex h-10 w-10 shrink-0 flex-col-reverse items-center overflow-hidden rounded border transition-colors duration-300"
         :class="{
           'border-slate-2 bg-slate-2':
