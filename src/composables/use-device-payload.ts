@@ -13,15 +13,20 @@ export interface DevicePayload {
 export async function buildDevicePayload(): Promise<DevicePayload> {
   const [device_id, info] = await Promise.all([getDeviceId(), Device.getInfo()])
 
+  const OS: Record<string, string> = {
+    ios: 'iOS',
+    android: 'Android',
+    windows: 'Windows'
+  }
+
   return {
     app_type: 'mobile_app',
     device_type: 'mobile',
     device_id,
     device_details: {
-      // iOS mengirim "iPhone15,2" — server yang memetakan ke nama pasaran
       device_name: [info.manufacturer, info.model].filter(Boolean).join(' ').trim(),
-      os_name: info.operatingSystem, // 'ios' | 'android'
-      os_version: info.osVersion, // string, mis. "17.2"
+      os_name: OS[info.operatingSystem] || info.operatingSystem,
+      os_version: info.osVersion,
       browser_name: '',
       browser_version: ''
     }
