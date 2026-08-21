@@ -72,22 +72,22 @@ const maintenanceBadgeText = computed<string>(() => {
 <template>
   <div class="flex h-[154px] border-l-[6px]" :style="{ borderColor: target.curriculum_color }">
     <div
-      class="flex flex-1 cursor-pointer flex-col justify-center gap-1.5 truncate px-4"
+      class="flex flex-col flex-1 gap-1.5 justify-center px-4 truncate cursor-pointer"
       @click="handleOpenDetail"
     >
-      <div v-if="showStatus" class="flex items-center gap-2">
+      <div v-if="showStatus" class="flex gap-2 items-center">
         <AppChip :chip="target.status" />
-        <div v-if="showBadge && target.in_maintenance" class="rounded bg-orange-3 p-1">
+        <div v-if="showBadge && target.in_maintenance" class="p-1 rounded bg-orange-3">
           <Icon icon="mynaui:info-waves-solid" class="text-orange-6" />
         </div>
       </div>
-      <div class="truncate text-xs text-slate-8">
+      <div class="text-xs truncate text-slate-8">
         {{ target.curriculum_name }}
       </div>
-      <div class="truncate text-sm font-semibold">
+      <div class="text-sm font-semibold truncate">
         {{ target.name }}
       </div>
-      <div class="line-clamp-3 whitespace-pre-line text-xs text-slate-8">
+      <div class="text-xs whitespace-pre-line line-clamp-3 text-slate-8">
         {{ target.description }}
       </div>
       <div v-if="showType" class="text-xs font-medium text-slate-8">
@@ -95,8 +95,8 @@ const maintenanceBadgeText = computed<string>(() => {
       </div>
 
       <!-- added to client indicator -->
-      <div v-if="target.previously_added" class="flex items-center gap-1">
-        <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-tulip-2">
+      <div v-if="target.previously_added" class="flex gap-1 items-center">
+        <div class="flex justify-center items-center w-5 h-5 rounded-md shrink-0 bg-tulip-2">
           <Icon icon="tabler:copy-check" class="text-sm text-tulip-8" />
         </div>
         <div class="text-xs text-slate-7">Previously added</div>
@@ -105,7 +105,7 @@ const maintenanceBadgeText = computed<string>(() => {
 
       <div
         v-if="target.in_maintenance && target.maintenance_next_date"
-        class="pointer-events-none flex items-center gap-1"
+        class="flex gap-1 items-center pointer-events-none"
       >
         <Icon icon="circum:calendar" :class="maintenanceBadgeColor" />
         <div
@@ -118,7 +118,7 @@ const maintenanceBadgeText = computed<string>(() => {
 
     <div
       v-if="isChecked !== undefined && useAction"
-      class="flex shrink-0 items-center justify-end pr-4"
+      class="flex justify-end items-center pr-4 shrink-0"
     >
       <AppCheckInput
         :name="`check-${target.id}`"

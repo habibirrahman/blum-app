@@ -16,6 +16,7 @@ import { useToast } from 'vue-toastification'
 import CurriculumItemModal from '@/partitions/CurriculumItemModal.vue'
 import { useRouter } from 'vue-router'
 import ProgressionItemModal from '@/partitions/ProgressionItemModal.vue'
+import AppCheckInput from '@/components/AppCheckInput.vue'
 
 interface Curriculum {
   id: number
@@ -41,7 +42,9 @@ const showDetails = ref<boolean>(false)
 
 const targetDetails = ref<Target | null>(null)
 
-const targets = ref<number[]>([])
+const isOpenSubmitConfirmation = ref<boolean>(false)
+
+const addedTargets = ref<Target[]>([])
 
 const methods = ref<TargetType[]>([])
 const selectMethods = ref<TargetType[]>([])
@@ -163,28 +166,40 @@ const progressionParams = computed<string>(() => {
 const isAllChecked = computed(() => {
   if (!appStore.center_targets || appStore.center_targets.length === 0) return false
   return appStore.center_targets.every((target: Target) =>
-    targets.value.includes(target.id as number)
+    addedTargets.value.some((at: Target) => at.id === target.id)
   )
+})
+
+const previouslyAddedTargets = computed(() => {
+  return addedTargets.value.filter((t) => t.previously_added)
+})
+
+const hasPreviouslyAddedTargets = computed(() => {
+  return previouslyAddedTargets.value.length > 0
 })
 
 // Toggle check all
 const toggleCheckAll = () => {
   if (isAllChecked.value) {
-    const currentPageIds = appStore.center_targets.map((t: Target) => t.id)
-    targets.value = targets.value.filter((id) => !currentPageIds.includes(id))
+    const currentPageTargets = appStore.center_targets
+    addedTargets.value = addedTargets.value.filter(
+      (at: Target) => !currentPageTargets.some((t: Target) => t.id === at.id)
+    )
   } else {
-    const currentPageIds = appStore.center_targets.map((t: Target) => t.id)
-    const newIds = currentPageIds.filter((id) => !targets.value.includes(id as number))
-    targets.value = [...targets.value, ...newIds] as number[]
+    const currentPageTargets = appStore.center_targets
+    const newTargets = currentPageTargets.filter(
+      (t: Target) => !addedTargets.value.some((at: Target) => at.id === t.id)
+    )
+    addedTargets.value = [...addedTargets.value, ...newTargets]
   }
 }
 
 // Toggle individual target
-const toggleTarget = (targetId: number) => {
-  if (targets.value.includes(targetId)) {
-    targets.value = targets.value.filter((id) => id !== targetId)
+const toggleTarget = (target: Target) => {
+  if (addedTargets.value.some((t: Target) => t.id === target.id)) {
+    addedTargets.value = addedTargets.value.filter((t: Target) => t.id !== target.id)
   } else {
-    targets.value = [...targets.value, targetId]
+    addedTargets.value = [...addedTargets.value, target]
   }
 }
 
@@ -322,10 +337,17 @@ const onOpenTarget = async (target: Target) => {
 
 const addTargetTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 const onAddTarget = async () => {
+  // if hasPreviouslyAddedTargets, open modal
+  if (!isOpenSubmitConfirmation.value && hasPreviouslyAddedTargets.value) {
+    isOpenSubmitConfirmation.value = true
+    return
+  }
+
+  // if not hasPreviouslyAddedTargets, just submit
   submitLoading.value = true
   const data = {
     client_id: clientStore.client?.id as Client['id'],
-    target_ids: targets.value.join(',') as string
+    target_ids: addedTargets.value.map((t: Target) => t.id).join(',') as string
   }
   const { success, message } = await clientStore.createBulkTarget({ data })
   submitLoading.value = false
@@ -333,9 +355,12 @@ const onAddTarget = async () => {
     toast.error(message)
     return
   }
+
   toast.success(
-    `Success! ${targets.value.length} target(s) has been added from the databank. Please note that it may take some time to complete the process.`
+    `Success! ${addedTargets.value.length} target(s) has been added from the databank. Please note that it may take some time to complete the process.`
   )
+
+  isOpenSubmitConfirmation.value = false
 
   addTargetTimeout.value = setTimeout(() => {
     router.push({ name: 'client', params: { id: clientStore.client?.id, tab: 'targets' } })
@@ -349,17 +374,17 @@ const onAddTarget = async () => {
 
 <template>
   <div class="sticky top-0 z-10 bg-white">
-    <div class="flex h-14 items-center gap-3 px-4">
+    <div class="flex gap-3 items-center px-4 h-14">
       <RouterLink :to="{ name: 'client', params: { id: clientStore.client?.id, tab: 'targets' } }">
         <div
-          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-2"
+          class="flex justify-center items-center w-8 h-8 rounded-full cursor-pointer bg-slate-2"
         >
           <Icon icon="tabler:chevron-left" class="text-2xl text-slate-7" />
         </div>
       </RouterLink>
       <div class="text-[22px] font-bold text-slate-10">Add from databank</div>
     </div>
-    <div class="space-y-3 bg-white pt-3">
+    <div class="pt-3 space-y-3 bg-white">
       <div class="px-4">
         <AppTextInput
           name="query"
@@ -369,9 +394,9 @@ const onAddTarget = async () => {
         />
       </div>
       <div class="pl-4">
-        <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
+        <div class="flex overflow-x-auto gap-2 pr-4 pb-3 snap-x snap-mandatory scroll-smooth">
           <div
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-colors"
+            class="flex gap-1 items-center px-4 h-8 text-xs font-medium rounded-full border transition-colors cursor-pointer shrink-0 snap-start"
             :class="[
               curriculums.length
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -382,14 +407,14 @@ const onAddTarget = async () => {
             <span>Curriculum</span>
             <span
               v-if="curriculums.length > 0"
-              class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+              class="flex justify-center items-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
             >
               {{ curriculums.length }}
             </span>
             <Icon icon="ph:caret-down" class="text-base text-slate-8" />
           </div>
           <div
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-colors"
+            class="flex gap-1 items-center px-4 h-8 text-xs font-medium rounded-full border transition-colors cursor-pointer shrink-0 snap-start"
             :class="[
               methods.length
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -400,14 +425,14 @@ const onAddTarget = async () => {
             <span>Method</span>
             <span
               v-if="methods.length > 0"
-              class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+              class="flex justify-center items-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
             >
               {{ methods.length }}
             </span>
             <Icon icon="ph:caret-down" class="text-base text-slate-8" />
           </div>
           <div
-            class="flex h-8 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-4 text-xs font-medium transition-colors"
+            class="flex gap-1 items-center px-4 h-8 text-xs font-medium rounded-full border transition-colors cursor-pointer shrink-0 snap-start"
             :class="[
               progressions.length
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -418,7 +443,7 @@ const onAddTarget = async () => {
             <span>Progression</span>
             <span
               v-if="progressions.length > 0"
-              class="flex h-5 w-5 items-center justify-center rounded bg-light-purple-4 text-sm font-medium text-white"
+              class="flex justify-center items-center w-5 h-5 text-sm font-medium text-white rounded bg-light-purple-4"
             >
               {{ progressions.length }}
             </span>
@@ -428,16 +453,18 @@ const onAddTarget = async () => {
       </div>
     </div>
   </div>
+
   <div v-if="loading">
     <div class="px-4 pt-2">
-      <div class="h-4 w-24 shrink-0 animate-pulse rounded-full bg-slate-3"></div>
+      <div class="w-24 h-4 rounded-full animate-pulse shrink-0 bg-slate-3"></div>
     </div>
     <div class="px-4">
       <TargetItemLoader v-for="n in perPage" :key="n" />
     </div>
   </div>
+
   <div v-else class="mb-24">
-    <div class="flex items-center justify-between gap-3 px-4 pt-2 text-xs text-slate-7">
+    <div class="flex gap-3 justify-between items-center px-4 pt-2 text-xs text-slate-7">
       <div class="h-5">
         <span>Showing </span>
         <span>
@@ -453,7 +480,7 @@ const onAddTarget = async () => {
         type="checkbox"
         :checked="isAllChecked"
         @change="toggleCheckAll"
-        class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+        class="w-6 h-6 rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
       />
     </div>
     <div>
@@ -462,26 +489,25 @@ const onAddTarget = async () => {
           <div
             class="flex h-[154px] cursor-pointer flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-4"
           >
-            <div class="flex items-center justify-between">
-              <div @click="onOpenTarget(target)" class="truncate text-xs text-slate-8">
+            <div class="flex justify-between items-center">
+              <div @click="onOpenTarget(target)" class="text-xs truncate text-slate-8">
                 {{ target.curriculum_name }}
               </div>
-              <input
-                type="checkbox"
-                :checked="targets.includes(target.id as number)"
-                @change="toggleTarget(target.id as number)"
-                class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3"
+              <AppCheckInput
+                :name="`check-${target.id}`"
+                :checked="addedTargets.some((t: Target) => t.id === target.id)"
+                @change.stop="toggleTarget(target)"
               />
             </div>
-            <div @click="onOpenTarget(target)" class="flex items-center gap-2">
-              <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
+            <div @click="onOpenTarget(target)" class="flex gap-2 items-center">
+              <Icon icon="ph:copy" class="w-5 h-5 text-slate-6" />
               <div class="text-sm font-semibold text-slate-10">
                 {{ target.name }}
               </div>
             </div>
             <div
               @click="onOpenTarget(target)"
-              class="line-clamp-3 whitespace-pre-line text-xs text-slate-8"
+              class="text-xs whitespace-pre-line line-clamp-3 text-slate-8"
             >
               {{ target.description }}
             </div>
@@ -490,8 +516,8 @@ const onAddTarget = async () => {
             </div>
 
             <!-- added to client indicator -->
-            <div v-if="target.previously_added" class="flex items-center gap-1">
-              <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-tulip-2">
+            <div v-if="target.previously_added" class="flex gap-1 items-center">
+              <div class="flex justify-center items-center w-5 h-5 rounded-md shrink-0 bg-tulip-2">
                 <Icon icon="tabler:copy-check" class="text-sm text-tulip-8" />
               </div>
               <div class="text-xs text-slate-7">Previously added</div>
@@ -504,8 +530,8 @@ const onAddTarget = async () => {
           :target="target"
           show-type
           :show-status="false"
-          :is-checked="targets.includes(target.id as number)"
-          @toggle-check="toggleTarget(target.id as number)"
+          :is-checked="addedTargets.some((t: Target) => t.id === target.id)"
+          @toggle-check="toggleTarget(target)"
           :use-action="true"
           @open="onOpenTarget(target)"
         />
@@ -518,15 +544,15 @@ const onAddTarget = async () => {
     />
   </div>
 
-  <div class="fixed bottom-0 z-20 w-full bg-pure-white px-4 pb-safe">
-    <div class="flex h-16 w-full items-center">
+  <div class="fixed bottom-0 z-20 px-4 w-full bg-pure-white pb-safe">
+    <div class="flex items-center w-full h-16">
       <AppButton
         class="grow"
         :loading="submitLoading"
         @click="onAddTarget"
-        :disabled="targets.length === 0"
+        :disabled="addedTargets.length === 0"
       >
-        Add {{ targets.length }} target(s)
+        Add {{ addedTargets.length }} target(s)
       </AppButton>
     </div>
   </div>
@@ -562,7 +588,7 @@ const onAddTarget = async () => {
 
   <AppActionSheet :show="showMethods" @close="showMethods = false">
     <div>
-      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
         <div class="text-xl font-semibold">Data Collection Method</div>
         <div class="cursor-pointer" @click="showMethods = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -572,9 +598,9 @@ const onAddTarget = async () => {
         <div
           v-for="opt in methodOptions"
           :key="opt.value"
-          class="flex h-14 w-full items-center justify-between gap-4 border-b border-slate-3"
+          class="flex gap-4 justify-between items-center w-full h-14 border-b border-slate-3"
         >
-          <label :for="`method_filter_${opt.value}`" class="w-full truncate text-sm">
+          <label :for="`method_filter_${opt.value}`" class="w-full text-sm truncate">
             {{ opt.label }}
           </label>
           <input
@@ -583,14 +609,57 @@ const onAddTarget = async () => {
             :id="`method_filter_${opt.value}`"
             :checked="selectMethods.includes(opt.value)"
             :value="opt.value"
-            class="shrink-0 rounded border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
+            class="rounded shrink-0 border-slate-5 text-light-purple-5 focus:ring-light-purple-3 disabled:pointer-events-none disabled:opacity-50"
             @click="onCheckMethod(opt.value)"
           />
         </div>
       </div>
-      <div class="sticky bottom-0 z-10 grid w-full grid-cols-2 gap-2 bg-white py-3">
+      <div class="grid sticky bottom-0 z-10 grid-cols-2 gap-2 py-3 w-full bg-white">
         <AppButton kind="plain" @click="onResetMethod">Reset</AppButton>
         <AppButton @click="onApplyMethod">Apply</AppButton>
+      </div>
+    </div>
+  </AppActionSheet>
+
+  <AppActionSheet :show="isOpenSubmitConfirmation" @close="isOpenSubmitConfirmation = false">
+    <div>
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
+        <div class="flex gap-1 items-center">
+          <Icon icon="ph:warning-fill" class="text-2xl text-tulip-6" />
+          <div class="text-xl font-semibold">Confirm and add target(s)</div>
+        </div>
+        <div class="cursor-pointer" @click="isOpenSubmitConfirmation = false">
+          <Icon icon="ph:x" class="text-2xl" />
+        </div>
+      </div>
+      <div>
+        <div class="text-sm text-slate-8">
+          The following targets have already been added from the databank:
+        </div>
+        <div class="flex flex-col py-1 pl-2">
+          <div
+            v-for="target in previouslyAddedTargets"
+            :key="target.id"
+            class="flex gap-2 items-center"
+          >
+            <div class="w-0.5 h-0.5 rounded-full shrink-0 bg-slate-8"></div>
+            <div class="text-sm text-slate-8">
+              <span translate="no" class="notranslate">{{ target.name }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="text-sm text-slate-8">Are you sure you want to proceed?</div>
+      </div>
+
+      <div class="grid sticky bottom-0 z-10 grid-cols-2 gap-2 py-3 w-full bg-white">
+        <AppButton kind="plain" @click="isOpenSubmitConfirmation = false">Close</AppButton>
+        <AppButton
+          :loading="submitLoading"
+          @click="onAddTarget"
+          :disabled="addedTargets.length === 0"
+        >
+          Continue
+        </AppButton>
       </div>
     </div>
   </AppActionSheet>
