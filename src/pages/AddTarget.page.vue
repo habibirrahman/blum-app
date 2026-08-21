@@ -137,7 +137,9 @@ watch(progressionQuery, () => {
 })
 
 const params = computed<string>(() => {
-  let p = `?page=${page.value}&per_page=25&kind=group,single`
+  const clientId = clientStore.client?.id as Client['id']
+
+  let p = `?page=${page.value}&per_page=25&kind=group,single&for_client_id=${clientId}`
   if (query.value) p += `&query=${query.value}`
   if (methods.value.length) p += `&type=${methods.value.join(',')}`
   if (curriculums.value.length) p += `&curriculum_ids=${curriculums.value.join(',')}`
@@ -486,6 +488,15 @@ const onAddTarget = async () => {
             <div @click="onOpenTarget(target)" class="text-xs font-medium text-slate-8">
               {{ getTargetType(target.type) }}
             </div>
+
+            <!-- added to client indicator -->
+            <div v-if="target.previously_added" class="flex items-center gap-1">
+              <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-tulip-2">
+                <Icon icon="tabler:copy-check" class="text-sm text-tulip-8" />
+              </div>
+              <div class="text-xs text-slate-7">Previously added</div>
+            </div>
+            <!-- end added to client indicator -->
           </div>
         </div>
         <TargetItem

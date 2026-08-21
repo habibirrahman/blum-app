@@ -94,6 +94,15 @@ const maintenanceBadgeText = computed<string>(() => {
         {{ getTargetType(target.type) }}
       </div>
 
+      <!-- added to client indicator -->
+      <div v-if="target.previously_added" class="flex items-center gap-1">
+        <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-tulip-2">
+          <Icon icon="tabler:copy-check" class="text-sm text-tulip-8" />
+        </div>
+        <div class="text-xs text-slate-7">Previously added</div>
+      </div>
+      <!-- end added to client indicator -->
+
       <div
         v-if="target.in_maintenance && target.maintenance_next_date"
         class="pointer-events-none flex items-center gap-1"

@@ -458,6 +458,8 @@ export interface Target {
   allow_overtime_recording?: boolean
   in_maintenance?: boolean
   has_ongoing_session?: boolean
+  previously_added?: boolean
+
   last_maintenance_session_result?: any
 
   date_introduce?: string
