@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { useAppStore } from '@/stores/app.store'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type {
   Measurement,
   Prompt,
@@ -77,6 +77,12 @@ const nextTarget = ref<any>()
 const deleteTrialKey = ref<null | Trial['key']>(null)
 
 const ratioScores = ref<any[]>([])
+const ratioScoresHalf = computed(() => Math.ceil(ratioScores.value.length / 2))
+const ratioScoresRowA = computed(() => ratioScores.value.slice(0, ratioScoresHalf.value))
+const ratioScoresRowB = computed(() => ratioScores.value.slice(ratioScoresHalf.value))
+
+const ratioScoreContainer = ref(null)
+
 const resultsState = ref<Measurement['results']>({})
 
 const isOpenProblemBehavior = ref<boolean>(false)
@@ -191,6 +197,37 @@ watch(
     else isSaved.value = false
   }
 )
+
+watch(
+  () => [currentTrial.value?.target_id, props.isCollapsed, ratioScores.value?.length],
+  async ([id, collapsed]) => {
+    if (collapsed || !id) return
+    await nextTick()
+    scrollToActiveTrial()
+  },
+  { immediate: true }
+)
+
+function scrollToActiveTrial(smooth = true) {
+  const container = ratioScoreContainer.value as HTMLDivElement | null
+  if (!container) return // ke-collapse, ref-nya null
+
+  const el = document.getElementById(
+    `score-ratio-${props.measurement.id}-${currentTrial.value.target_id}`
+  )
+  if (!el) return
+
+  const cRect = container.getBoundingClientRect()
+  const eRect = el.getBoundingClientRect()
+
+  // posisi el relatif ke isi container, lalu digeser biar ke tengah
+  const left = eRect.left - cRect.left + container.scrollLeft - (cRect.width - eRect.width) / 2
+
+  container.scrollTo({
+    left: Math.max(0, left),
+    behavior: smooth ? 'smooth' : 'auto'
+  })
+}
 
 // 🔧 Tambahkan computed untuk monitoring
 const hasPendingSync = computed(() => {
@@ -926,17 +963,23 @@ const onSaveEditTrial = async () => {
 </script>
 
 <template>
-  <div class="flex min-h-full flex-grow flex-col gap-2 pb-16">
+  <div
+    class="flex min-h-full flex-grow flex-col gap-2"
+    :class="[measurement.is_fixed ? '' : 'pb-16']"
+  >
     <!-- ratio boxes -->
     <div
       v-if="!isCollapsed"
-      :id="`ta-ratio-${measurement.id}-${JSON.stringify(currentTrial)}`"
-      class="flex flex-wrap items-center justify-center gap-1 pb-2"
+      :id="`score-ratio-${measurement.id}`"
+      ref="ratioScoreContainer"
+      class="scrollbar-hide flex w-full shrink-0 items-center gap-1 overflow-x-auto pb-2"
+      :class="[ratioScores.length > 6 ? 'justify-start' : 'justify-center']"
     >
       <div
         v-for="target in ratioScores"
         :key="target.target_id"
-        class="relative flex h-10 w-10 flex-col-reverse items-center overflow-hidden rounded border transition-colors duration-300"
+        :id="`score-ratio-${measurement.id}-${target.target_id}`"
+        class="relative flex h-10 w-10 shrink-0 flex-col-reverse items-center overflow-hidden rounded border transition-colors duration-300"
         :class="{
           'border-slate-2 bg-slate-2':
             target.count <= 0 && target.target_id !== currentTrial.target_id,
@@ -1032,7 +1075,7 @@ const onSaveEditTrial = async () => {
         >
           <div
             :id="`ta-scroll-${measurement.id}`"
-            class="scrolling-touch flex w-full max-w-72 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+            class="scrolling-touch flex w-full max-w-72 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2"
             dir="ltr"
             @scroll="onScroll"
           >
@@ -1080,44 +1123,9 @@ const onSaveEditTrial = async () => {
           </div>
         </div>
 
-        <!-- reselect task -->
+        <!-- select a next task / reselect task -->
         <div
-          v-if="currentDisplay === 'reselect-task'"
-          class="flex flex-grow flex-col content-center items-center justify-center"
-          :class="{
-            'gap-4': !isCollapsed,
-            'gap-2': isCollapsed
-          }"
-        >
-          <div class="flex flex-col items-center gap-1 px-2">
-            <div v-if="!isCollapsed" class="text-center text-sm text-slate-8">Select a target</div>
-            <div
-              :class="{
-                'scrollbar-lg max-w-[calc(100vw-6rem)] overflow-x-auto pb-2': isCollapsed
-              }"
-            >
-              <div
-                class="flex items-center gap-2"
-                :class="{ 'flex-wrap justify-center': !isCollapsed }"
-              >
-                <AppButton
-                  v-for="target in ratioScores"
-                  :key="target.target_id"
-                  :kind="target.target_id === nextTarget?.target_id ? 'primary' : 'outline'"
-                  size="sm"
-                  class="shrink-0"
-                  @click="onChooseTarget(target)"
-                >
-                  {{ target.target_code }} | {{ target.count + 1 }}
-                </AppButton>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- select a next task -->
-        <div
-          v-if="currentDisplay === 'select-next-task'"
+          v-if="currentDisplay === 'select-next-task' || currentDisplay === 'reselect-task'"
           class="flex flex-grow flex-col content-center items-center justify-center"
           :class="{
             'gap-4': !isCollapsed,
@@ -1125,7 +1133,10 @@ const onSaveEditTrial = async () => {
           }"
         >
           <div
-            v-if="Object.keys(resultsState).length > 1 || currentTrial.prompt_id"
+            v-if="
+              currentDisplay === 'select-next-task' &&
+              (Object.keys(resultsState).length > 1 || currentTrial.prompt_id)
+            "
             class="flex items-center text-center"
             :class="{
               'flex-col gap-1': !isCollapsed,
@@ -1148,27 +1159,41 @@ const onSaveEditTrial = async () => {
               Change
             </AppButton>
           </div>
-          <div class="flex flex-col items-center gap-1 px-2">
-            <div v-if="!isCollapsed" class="text-center text-sm text-slate-8">Next</div>
+          <div class="flex w-full flex-col items-center gap-4 px-2">
+            <div v-if="!isCollapsed" class="text-center text-sm text-slate-8">
+              <span v-if="currentDisplay === 'select-next-task'"> Next </span>
+              <span v-if="currentDisplay === 'reselect-task'"> Select a target </span>
+            </div>
+
             <div
-              :class="{
-                'scrollbar-lg max-w-[calc(100vw-6rem)] overflow-x-auto pb-2': isCollapsed
-              }"
+              class="scrollbar-hide flex w-full shrink-0 items-center overflow-x-auto pb-2"
+              :class="[ratioScores.length > 3 ? 'justify-start' : 'justify-center']"
             >
-              <div
-                class="flex items-center gap-2"
-                :class="{ 'flex-wrap justify-center': !isCollapsed }"
-              >
-                <AppButton
-                  v-for="target in ratioScores"
-                  :key="target.target_id"
-                  :kind="target.target_id === nextTarget?.target_id ? 'primary' : 'outline'"
-                  size="sm"
-                  class="shrink-0"
-                  @click="onChooseTarget(target)"
-                >
-                  {{ target.target_code }} | {{ target.count + 1 }}
-                </AppButton>
+              <div class="flex w-max flex-col items-center gap-2">
+                <div class="flex gap-2">
+                  <AppButton
+                    v-for="target in ratioScoresRowA"
+                    :key="target.target_id"
+                    :kind="target.target_id === nextTarget?.target_id ? 'primary' : 'outline'"
+                    size="sm"
+                    class="shrink-0"
+                    @click="onChooseTarget(target)"
+                  >
+                    {{ target.target_code }} | {{ target.count + 1 }}
+                  </AppButton>
+                </div>
+                <div class="flex gap-2">
+                  <AppButton
+                    v-for="target in ratioScoresRowB"
+                    :key="target.target_id"
+                    :kind="target.target_id === nextTarget?.target_id ? 'primary' : 'outline'"
+                    size="sm"
+                    class="shrink-0"
+                    @click="onChooseTarget(target)"
+                  >
+                    {{ target.target_code }} | {{ target.count + 1 }}
+                  </AppButton>
+                </div>
               </div>
             </div>
           </div>
@@ -1217,7 +1242,7 @@ const onSaveEditTrial = async () => {
     </div>
 
     <!-- view trial history -->
-    <div v-if="isOpenTrialHistory && !isOpenEditTrial" class="flex flex-col">
+    <div v-if="isOpenTrialHistory && !isOpenEditTrial" class="flex grow flex-col">
       <div v-for="key in Object.keys(resultsState)" :key="key">
         <div
           v-if="resultsState[key].prompt_id"
@@ -1291,7 +1316,8 @@ const onSaveEditTrial = async () => {
       v-if="
         !isCollapsed || currentDisplay === 'select-next-task' || currentDisplay === 'reselect-task'
       "
-      class="absolute bottom-0 flex h-16 w-[calc(100%-2rem)] items-center bg-white"
+      class="bottom-0 flex h-16 items-center bg-white"
+      :class="[measurement.is_fixed ? 'relative w-[calc(100%)]' : 'absolute w-[calc(100%-2rem)]']"
     >
       <div v-if="isOpenProblemBehavior" class="flex-grow">
         <AppButton

@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import {
-  useSessionStore,
-  type ResolveAllMeasurementsParams,
-  type UpdateMeasurementParams
-} from '@/stores/session.store'
+import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
@@ -16,7 +12,7 @@ import AppActionSheet from '@/components/AppActionSheet.vue'
 import { useToast } from 'vue-toastification'
 import { TransitionRoot } from '@headlessui/vue'
 import AppChip from '@/components/AppChip.vue'
-import { useClock } from '@/composable/use-clock'
+import { useClock } from '@/composables/use-clock'
 import dayjs from 'dayjs'
 import { secondsToDuration } from '@/lib/func'
 import type { PluginListenerHandle } from '@capacitor/core'
@@ -78,10 +74,13 @@ const isEnded = computed(() =>
 )
 
 const recordingBy = computed(() => {
-  const names = (sessionStore.session?.recording_timeline || []).map((i) => i.recorded_by_name)
-  const userName = sessionStore.session?.user?.name
-  const recording = [userName, ...names].pop()
-  return recording
+  const recordeds = (sessionStore.session?.recording_timeline || []).map((i) => ({
+    id: i.recorded_by,
+    name: i.recorded_by_name
+  }))
+  const user = sessionStore.session?.user
+  const latest = [user, ...recordeds].pop()
+  return latest
 })
 
 const recordedBys = computed(() => {
@@ -863,14 +862,7 @@ const onEndSession = async () => {
     await sessionStore.resolvePendingProgress()
   }
 
-  const measurements = sessionStore.session_measurements || []
-  const payload: ResolveAllMeasurementsParams = {
-    params: measurements?.map((i) => {
-      return { id: i.id, results: i.results }
-    })
-  }
-
-  const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements(payload)
+  const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements()
   if (!s1) {
     submitLoading.value = false
     toast.error(m1)
@@ -1084,7 +1076,7 @@ onUnmounted(() => {
           <div
             class="flex h-6 items-center justify-center truncate rounded-full bg-grass-2 px-3 text-sm font-medium text-grass-7"
           >
-            <span class="truncate"> {{ recordingBy || 'No therapist assigned' }} </span>
+            <span class="truncate"> {{ recordingBy?.name || 'No therapist assigned' }} </span>
           </div>
         </div>
 
@@ -1283,7 +1275,7 @@ onUnmounted(() => {
       <div
         class="flex grow"
         :class="{
-          'max-h-[160px] justify-center': isMeasurementCollapsed,
+          'min-h-[160px] justify-center': isMeasurementCollapsed,
           'no-scrollbar h-screen touch-pan-y flex-col items-center gap-4 overflow-y-auto pb-4 pt-28':
             !isMeasurementCollapsed
         }"
@@ -1438,13 +1430,36 @@ onUnmounted(() => {
   <AppActionSheet :show="isOpenEndSession" @close="isOpenEndSession = false">
     <div v-if="endSessionStatus === 'normal'" class="flex flex-col items-center gap-4 py-3">
       <div class="text-center text-xl font-semibold">End this session?</div>
+
+      <div
+        v-if="
+          sessionStore.session?.status === 'ongoing' && appStore.account?.id !== recordingBy?.id
+        "
+        class="flex gap-2 rounded bg-tulip-1 p-4"
+      >
+        <Icon icon="ph:warning-fill" class="shrink-0 text-2xl text-tulip-8" />
+        <span class="text-sm text-tulip-8">
+          <b>{{ `${recordingBy?.name}` }}</b> is recording right now. Ending the session stops their
+          recording and any unsaved data may be lost.
+        </span>
+      </div>
+
       <div class="text-center text-sm">
         Are you sure you want to end this session? Make sure you've reviewed all data before
         finalizing.
       </div>
-      <div class="grid w-full grid-cols-2 gap-2">
+      <div class="grid w-full gap-2">
         <AppButton kind="plain" @click="isOpenEndSession = false">Cancel</AppButton>
-        <AppButton :loading="submitLoading" @click="onEndSession">End now</AppButton>
+        <AppButton :loading="submitLoading" @click="onEndSession">
+          <span
+            v-if="
+              sessionStore.session?.status === 'ongoing' && appStore.account?.id !== recordingBy?.id
+            "
+          >
+            {{ `Yes, end ${recordingBy?.name}'s session` }}
+          </span>
+          <span v-else> End now </span>
+        </AppButton>
       </div>
     </div>
     <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4 py-3">

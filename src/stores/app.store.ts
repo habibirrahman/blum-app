@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { getAppStorage, setAccessStorage, setAppStorage } from '@/plugins/preferences.plugin'
-import type { Branch, Center, Session, Target, User } from '@/lib/types'
+import type { Branch, Center, DeviceDetailsInput, Session, Target, User } from '@/lib/types'
 import axios from 'axios'
 import { useSessionStore } from './session.store'
 import { useClientStore } from './client.store'
@@ -27,11 +27,13 @@ export interface NetworkStatus {
 }
 
 interface SigninSchema {
-  email: User['email']
+  email: string
   password: string
   device: {
     device_type: string // mobile or desktop
     app_type: string // browser or mobile_app
+    device_id: string
+    device_details: DeviceDetailsInput
   }
 }
 
@@ -137,7 +139,11 @@ export const useAppStore = defineStore('app', {
           return { success: true, message: 'Successfully signed in' }
         })
         .catch(({ response }) => {
-          return { success: false, message: response?.data?.error }
+          return {
+            success: false,
+            message: response?.data?.error,
+            data: response?.data
+          }
         })
     },
     async signout(): Promise<ResponseSchema> {
@@ -145,6 +151,20 @@ export const useAppStore = defineStore('app', {
       if (status !== 200) return { success: false }
       this.resetAppStore()
       return { success: true }
+    },
+    async signoutByDevice(payload: { deviceId: number }): Promise<ResponseSchema> {
+      return axios
+        .delete(`/signout_by_device?device_id=${payload.deviceId}`)
+        .then(async ({ data }) => {
+          return { success: true, message: 'You have signed out', data }
+        })
+        .catch(({ response }) => {
+          return {
+            success: false,
+            message: response?.data?.error,
+            data: response?.data
+          }
+        })
     },
     async getRunningSessions(): Promise<ResponseSchema> {
       if (!this.network_status.connected) {

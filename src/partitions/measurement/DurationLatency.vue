@@ -6,7 +6,7 @@ import { Icon } from '@iconify/vue/dist/iconify.js'
 import { computed, onMounted, ref, watch } from 'vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppTimeInput from '@/components/AppTimeInput.vue'
-import { useClock } from '@/composable/use-clock'
+import { useClock } from '@/composables/use-clock'
 import dayjs from 'dayjs'
 import { durationToSeconds, secondsToDuration } from '@/lib/func'
 

@@ -51,6 +51,37 @@ export interface User {
   branch_accesses?: any[] // not
 }
 
+// handle multi logged in devices in SigninAppPage.vue
+export interface DeviceInfo {
+  name: string
+  value: string
+  version: string
+}
+
+export interface DeviceDetailsInput {
+  device_name?: string
+  os_name?: string
+  os_version?: string | number
+  browser_name?: string
+  browser_version?: string | number
+}
+
+export interface ActiveDevice {
+  id: number
+  status: 'active' | 'inactive'
+  device_type: 'desktop' | 'mobile'
+  app_type: 'browser' | 'mobile_app'
+
+  device_id: string
+  last_accessed_at: string
+  updated_at: string
+  created_at: string
+  jwt_access_tokens: string[]
+  user_id: User['id']
+
+  device_details: DeviceDetailsInput
+}
+
 export interface SessionRecordingTimeline {
   start?: string
   end?: string | null
@@ -427,6 +458,8 @@ export interface Target {
   allow_overtime_recording?: boolean
   in_maintenance?: boolean
   has_ongoing_session?: boolean
+  previously_added?: boolean
+
   last_maintenance_session_result?: any
 
   date_introduce?: string

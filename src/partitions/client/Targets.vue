@@ -190,7 +190,9 @@ const onToggleGroup = (id: Target['id']) => {
         v-model="query"
         suffix-icon="ph:magnifying-glass"
       />
-      <AppButton class="flex-shrink-0" @click="showAddMenu = true"><Icon icon="ph:plus-bold" /></AppButton>
+      <AppButton class="flex-shrink-0" @click="showAddMenu = true">
+        <Icon icon="ph:plus-bold" />
+      </AppButton>
     </div>
     <div class="pl-4">
       <div class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-3 pr-4">
@@ -394,14 +396,27 @@ const onToggleGroup = (id: Target['id']) => {
       <div class="pb-4">
         <div
           class="flex h-14 w-full cursor-pointer items-center gap-3 border-b border-slate-3"
-          @click="showAddMenu = false; router.push({ name: 'new-client-target', params: { id: clientStore.client?.id } })"
+          @click="
+            () => {
+              showAddMenu = false
+              router.push({ name: 'new-client-target', params: { id: clientStore.client?.id } })
+            }
+          "
         >
           <Icon icon="ph:plus" class="text-lg text-slate-8" />
           <span class="text-sm font-medium text-slate-10">New target</span>
         </div>
         <div
           class="flex h-14 w-full cursor-pointer items-center gap-3"
-          @click="showAddMenu = false; router.push({ name: 'databank-client-target', params: { id: clientStore.client?.id } })"
+          @click="
+            () => {
+              showAddMenu = false
+              router.push({
+                name: 'databank-client-target',
+                params: { id: clientStore.client?.id }
+              })
+            }
+          "
         >
           <Icon icon="ph:plus" class="text-lg text-slate-8" />
           <span class="text-sm font-medium text-slate-10">Targets from databank</span>
