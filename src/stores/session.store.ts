@@ -1230,89 +1230,103 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    // =================================== [need refactor to try catch]
+    // ===================================
 
     async getSessionRecommendations() {
-      this.session_recommendations = []
-      return axios
-        .get(
+      try {
+        this.session_recommendations = []
+
+        const res = await axios.get(
           `/api/v1/clients/${this.session?.client_id}/action_recommendations?page=1&per_page=999&session_id=${this.session?.id}`
         )
-        .then(async ({ data }) => {
-          this.session_recommendations = data.action_recommendations
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
+
+        this.session_recommendations = res?.data.action_recommendations
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
     async createMeasurement({ id, target_id, measurement }: CreateMeasurementParams) {
-      return axios
-        .post(`/api/v1/sessions/${id}/targets/${target_id}/measurements`, { measurement })
-        .then(async ({ data }) => {
-          return { success: true, data, message: '' }
+      try {
+        const res = await axios.post(`/api/v1/sessions/${id}/targets/${target_id}/measurements`, {
+          measurement
         })
-        .catch(async (error) => {
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
     async addMultipleTargetsSession({ id, target_ids }: AddMultipleTargetSessionParams) {
-      return axios
-        .post(`/api/v1/sessions/${id}/add_multiple_targets`, {
+      try {
+        const res = await axios.post(`/api/v1/sessions/${id}/add_multiple_targets`, {
           target_ids
         })
-        .then((response) => {
-          this.setSession(response.data)
-          return { success: true, data: response.data, message: '' }
-        })
-        .catch((error) => {
+
+        this.setSession(res.data)
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
     async advanceMaintenanceSession({ id, target_ids }: AdvanceMaintenanceSessionParams) {
-      return axios
-        .post(`/api/v1/sessions/${id}/advance_maintenance`, {
+      try {
+        const res = await axios.post(`/api/v1/sessions/${id}/advance_maintenance`, {
           target_ids
         })
-        .then((response) => {
-          return { success: true, data: response.data, message: '' }
-        })
-        .catch((error) => {
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
     async updateMeasurement({ id, measurement, data_result, is_comment }: UpdateMeasurementParams) {
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        console.log(data_result)
-      }
+      try {
+        const app = useAppStore()
+        if (!app.network_status.connected) {
+          console.log(data_result)
+        }
 
-      return axios
-        .patch(`/api/v1/measurements/${id}`, { measurement })
-        .then(async ({ data }) => {
-          this.setSessionMeasurement(data, is_comment)
+        const res = await axios.patch(`/api/v1/measurements/${id}`, { measurement })
 
-          // record session activities
-          this.addSessionActivity({
-            action_label: 'api_success',
-            recordable: 'Measurement',
-            recordable_id: id,
-            api: `PATCH /api/v1/measurements/${id}`,
-            params: { measurement },
-            notes: 'Success update measurement',
-            timestamp: new Date().toISOString()
-          })
+        this.setSessionMeasurement(res?.data, is_comment)
 
-          return { success: true, data, message: '' }
+        // record session activities
+        this.addSessionActivity({
+          action_label: 'api_success',
+          recordable: 'Measurement',
+          recordable_id: id,
+          api: `PATCH /api/v1/measurements/${id}`,
+          params: { measurement },
+          notes: 'Success update measurement',
+          timestamp: new Date().toISOString()
         })
-        .catch(async (error) => {
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
@@ -1326,21 +1340,27 @@ export const useSessionStore = defineStore('session', {
             timestamp: new Date().toISOString()
           })
 
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
     async deleteMeasurement({ id, params }: { id: Measurement['id']; params?: string }) {
-      return axios
-        .delete(`/api/v1/measurements/${id}${params || ''}`)
-        .then((response) => {
-          return { success: true, data: response.data, message: '' }
-        })
-        .catch((error) => {
+      try {
+        const res = await axios.delete(`/api/v1/measurements/${id}${params || ''}`)
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
+
+    // AYAM sampe sini
 
     // updateMeasurementResults dengan semua fix
     async updateMeasurementResults({
@@ -1937,16 +1957,16 @@ export const useSessionStore = defineStore('session', {
       if (!this.session?.id) return
       if (this.session?.status !== 'ongoing' && this.session?.status !== 'paused') return
 
-      const appStore = useAppStore()
-      const params = {
-        ...rawParams,
-        notes: `[${appStore.account?.email}] ${rawParams}`
-      }
+      // const appStore = useAppStore()
+      // const params = {
+      //   ...rawParams,
+      //   notes: `[${appStore.account?.email}] ${rawParams}`
+      // }
 
       // Inisialisasi buffer jika belum ada
       if (!this._activitiesBuffer) this._activitiesBuffer = []
 
-      this._activitiesBuffer.push(params)
+      this._activitiesBuffer.push(rawParams)
 
       // Flush segera kalau buffer sudah cukup besar (setiap 10 aktivitas)
       if (this._activitiesBuffer.length >= 10) {
