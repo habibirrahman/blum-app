@@ -1957,16 +1957,16 @@ export const useSessionStore = defineStore('session', {
       if (!this.session?.id) return
       if (this.session?.status !== 'ongoing' && this.session?.status !== 'paused') return
 
-      // const appStore = useAppStore()
-      // const params = {
-      //   ...rawParams,
-      //   notes: `[${appStore.account?.email}] ${rawParams}`
-      // }
+      const appStore = useAppStore()
+      const params = {
+        ...rawParams,
+        notes: `[${appStore.account?.email}] ${rawParams?.notes}`
+      }
 
       // Inisialisasi buffer jika belum ada
       if (!this._activitiesBuffer) this._activitiesBuffer = []
 
-      this._activitiesBuffer.push(rawParams)
+      this._activitiesBuffer.push(params)
 
       // Flush segera kalau buffer sudah cukup besar (setiap 10 aktivitas)
       if (this._activitiesBuffer.length >= 10) {
