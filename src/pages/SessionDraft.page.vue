@@ -91,12 +91,12 @@ const onChangeLockedCard = async (measurement: Measurement, fixed: boolean) => {
 
   const payload = {
     id: measurement.id,
-    measurement: { is_fixed: fixed } as any,
-    data_result: measurement
+    params: { measurement: { is_fixed: fixed } as any },
+    dataResult: measurement
   }
 
   if (fixed) {
-    payload.measurement = { is_fixed: fixed, position: 1 }
+    payload.params.measurement = { is_fixed: fixed, position: 1 }
   }
 
   updateLoading.value = true
@@ -191,17 +191,17 @@ onUnmounted(() => {
 
 <template>
   <div class="sticky top-0 z-10 bg-white">
-    <div class="flex gap-4 justify-between items-center px-4 h-14">
-      <div class="flex gap-3 items-center truncate">
-        <RouterLink :to="redirect" class="flex justify-center items-center w-8 h-8 shrink-0">
+    <div class="flex h-14 items-center justify-between gap-4 px-4">
+      <div class="flex items-center gap-3 truncate">
+        <RouterLink :to="redirect" class="flex h-8 w-8 shrink-0 items-center justify-center">
           <Icon icon="ph:caret-left" class="text-slate-7" />
         </RouterLink>
         <div class="space-y-1">
-          <div class="font-bold truncate">
+          <div class="truncate font-bold">
             {{ sessionStore.session?.client?.name }}
           </div>
-          <div class="flex gap-1 items-center">
-            <div class="text-xs shrink-0 text-slate-8">
+          <div class="flex items-center gap-1">
+            <div class="shrink-0 text-xs text-slate-8">
               <span v-if="!sessionStore.session?.name">Session ID </span>
               <span>{{ sessionStore.session?.id }}</span>
               <span v-if="sessionStore.session?.name"> - {{ sessionStore.session?.name }}</span>
@@ -215,7 +215,7 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
-      <div class="flex gap-4 items-center">
+      <div class="flex items-center gap-4">
         <AppButton kind="plain" @click="showReviewMode = !showReviewMode"> Preview </AppButton>
         <AppCheckInput
           name="select-all-measurements"
@@ -237,18 +237,18 @@ onUnmounted(() => {
     class="fixed left-1/2 z-[9] -translate-x-1/2 pt-safe"
     :class="{ 'top-[60px]': isLoading, '-top-[60px]': !isLoading }"
   >
-    <div class="flex justify-center items-center w-10 h-10 bg-white rounded-full shadow">
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
   </div>
 
   <div
-    class="flex flex-col items-center pt-4 w-full min-h-screen bg-prim-3"
+    class="flex min-h-screen w-full flex-col items-center bg-prim-3 pt-4"
     :style="{ height: containerHeight }"
   >
     <div
       id="container-record-measurement"
-      class="flex flex-wrap gap-4 justify-center px-4 py-4 w-full transition-all duration-500"
+      class="flex w-full flex-wrap justify-center gap-4 px-4 py-4 transition-all duration-500"
       :class="{
         'origin-top scale-50 object-top': showReviewMode,
         'min-w-[calc((320px*2)+(16px*3))]': showReviewMode,
@@ -259,7 +259,7 @@ onUnmounted(() => {
         '2xl:min-w-[calc((320px*9)+(16px*10))]': showReviewMode
       }"
     >
-      <div v-if="sessionLoading" class="flex flex-wrap gap-4 justify-center w-full">
+      <div v-if="sessionLoading" class="flex w-full flex-wrap justify-center gap-4">
         <div
           v-for="n in 8"
           :key="n"
@@ -305,7 +305,7 @@ onUnmounted(() => {
           !isMeasurementCollapsed
       }"
     >
-      <div v-if="!isMeasurementCollapsed" class="flex flex-col gap-1 items-center">
+      <div v-if="!isMeasurementCollapsed" class="flex flex-col items-center gap-1">
         <AppButton
           kind="outline"
           size="lg"
@@ -339,10 +339,10 @@ onUnmounted(() => {
     class="fixed z-[9] w-screen bg-prim-3 transition-all duration-500 px-safe pb-safe"
     :class="[!isMeasurementCollapsed ? '-bottom-36' : 'bottom-0']"
   >
-    <div class="flex gap-6 items-center px-4 w-full h-16">
+    <div class="flex h-16 w-full items-center gap-6 px-4">
       <div class="relative" @click="showReviewMode = !showReviewMode">
         <div
-          class="flex justify-center items-center w-8 h-10 text-xs font-semibold bg-white rounded text-dark-purple-1"
+          class="flex h-10 w-8 items-center justify-center rounded bg-white text-xs font-semibold text-dark-purple-1"
         >
           {{ sessionStore.session_measurements.length }}
         </div>

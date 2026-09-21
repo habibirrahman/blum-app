@@ -272,8 +272,8 @@ const onDrop = async (bool: boolean) => {
 
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
-    measurement: { is_dropped: !bool },
-    data_result: { ...props.measurement, is_dropped: !bool }
+    params: { measurement: { is_dropped: !bool } },
+    dataResult: { ...props.measurement, is_dropped: !bool }
   }
 
   dropLoading.value = true
@@ -284,7 +284,7 @@ const onDrop = async (bool: boolean) => {
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: { measurement: params.measurement },
+    params: params.params,
     notes: `Target: ${props.measurement.target?.name}`,
     timestamp: new Date().toISOString()
   })
@@ -319,9 +319,9 @@ const onSaveComment = async () => {
 
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
-    measurement: { comment: commentInput.value },
-    data_result: { ...props.measurement, comment: commentInput.value },
-    is_comment: true
+    params: { measurement: { comment: commentInput.value } },
+    dataResult: { ...props.measurement, comment: commentInput.value },
+    isComment: true
   }
 
   commentLoading.value = true
@@ -332,7 +332,7 @@ const onSaveComment = async () => {
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: { measurement: params.measurement },
+    params: params.params,
     notes: `Target: ${props.measurement.target?.name}`,
     timestamp: new Date().toISOString()
   })

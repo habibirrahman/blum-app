@@ -67,7 +67,7 @@ const onSubmit = async () => {
   }
   const { success } = await sessionStore.advanceMaintenanceSession({
     id: Number(props.sessionId),
-    target_ids: selectedIds.value
+    params: { target_ids: selectedIds.value }
   })
   loading.value = false
   if (success) {

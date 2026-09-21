@@ -84,15 +84,15 @@ watch(
 const onSaveScore = debounce(async function (score: number) {
   const finalScore = props.measurementResults.score + score
 
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: { results: { score: finalScore } },
-    data_result: { ...props.measurement, results: { score: finalScore } },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: { score: finalScore } } },
+    dataResult: { ...props.measurement, results: { score: finalScore } },
+    lastData: { ...props.measurement }
   }
 
   scoreLoading.value = true
-  const { success, data, message } = await sessionStore.updateMeasurementResults(params)
+  const { success, data, message } = await sessionStore.updateMeasurementResults(payload)
   scoreLoading.value = false
 
   currentScore.value = data?.results?.score || 0

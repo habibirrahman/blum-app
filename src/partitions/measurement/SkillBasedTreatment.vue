@@ -7,6 +7,7 @@ import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import AppButton from '@/components/AppButton.vue'
 import { getTargetTasks } from '@/lib/func'
+import type { MeasurementResultsSbt } from '../../lib/types'
 
 const sessionStore = useSessionStore()
 const appStore = useAppStore()
@@ -74,7 +75,7 @@ const ratioScoresRowB = computed(() => ratioScores.value.slice(ratioScoresHalf.v
 
 const ratioScoreContainer = ref(null)
 
-const resultsState = ref<Measurement['results']>({})
+const resultsState = ref<Record<string, MeasurementResultsSbt>>({})
 
 const isOpenProblemBehavior = ref<boolean>(false)
 const isOpenTrialHistory = ref<boolean>(false)
@@ -176,7 +177,7 @@ watch(
 watch(
   () => props.measurementResults,
   (val) => {
-    resultsState.value = val
+    resultsState.value = val as Record<string, MeasurementResultsSbt>
     generateRatioScores()
   }
 )
@@ -273,7 +274,7 @@ onMounted(async () => {
   SBTTaskCodes.value = tasks.sort((a, b) => (a?.position || 0) - (b?.position || 0))
   SBTProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
 
-  const currentResults = props.measurementResults || {}
+  const currentResults = (props.measurementResults || {}) as Record<string, MeasurementResultsSbt>
 
   const results = Object.keys(currentResults).map((key) => ({
     ...currentResults[key],
@@ -302,9 +303,9 @@ onMounted(async () => {
       }
       currentResults[newTrial.key] = {
         key: newTrial.key,
-        target_task_id: newTrial.target_task_id,
-        prompt_id: newTrial.prompt_id,
-        target_problem_behavior_id: newTrial.target_problem_behavior_id
+        target_task_id: newTrial.target_task_id || 0,
+        prompt_id: newTrial.prompt_id || 0,
+        target_problem_behavior_id: newTrial.target_problem_behavior_id || null
       }
       currentTrial.value = newTrial
     }
@@ -320,9 +321,9 @@ onMounted(async () => {
     }
     currentResults[newTrial.key] = {
       key: newTrial.key,
-      target_task_id: newTrial.target_task_id,
-      prompt_id: newTrial.prompt_id,
-      target_problem_behavior_id: newTrial.target_problem_behavior_id
+      target_task_id: newTrial.target_task_id || 0,
+      prompt_id: newTrial.prompt_id || 0,
+      target_problem_behavior_id: newTrial.target_problem_behavior_id || null
     }
     currentTrial.value = newTrial
   }
@@ -501,7 +502,7 @@ const onSaveCurrentTrial = async () => {
   const previousIsSaved = isSaved.value
 
   let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key }
+    return { ...resultsState.value[key], key } as Trial
   })
 
   const index = results.findIndex((i) => Number(i.key) === Number(currentTrial.value.key))
@@ -525,17 +526,17 @@ const onSaveCurrentTrial = async () => {
     finalResults[idx + 1] = results[idx]
   }
 
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: { results: finalResults },
-    data_result: { ...props.measurement, results: finalResults },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: finalResults } },
+    dataResult: { ...props.measurement, results: finalResults },
+    lastData: { ...props.measurement }
   }
 
   submitLoading.value = true
 
   try {
-    const { success, message, data } = await sessionStore.updateMeasurementResults(params)
+    const { success, message, data } = await sessionStore.updateMeasurementResults(payload)
 
     // ✅ CEK success SEBELUM update state!
     if (!success) {
@@ -745,9 +746,9 @@ const onTakeNextTrial = async (payload: { isNew: boolean }) => {
   }
   resultsState.value[newTrial.key] = {
     key: newTrial.key,
-    target_task_id: newTrial.target_task_id,
-    prompt_id: newTrial.prompt_id,
-    target_problem_behavior_id: newTrial.target_problem_behavior_id
+    target_task_id: newTrial.target_task_id || 0,
+    prompt_id: newTrial.prompt_id || 0,
+    target_problem_behavior_id: newTrial.target_problem_behavior_id || null
   }
   currentDisplay.value = 'select-prompt'
   currentTrial.value = newTrial
@@ -836,7 +837,7 @@ const onDeleteTrial = async () => {
 
   const key = deleteTrialKey.value
   let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key }
+    return { ...resultsState.value[key], key } as Trial
   })
 
   results = results
@@ -854,11 +855,11 @@ const onDeleteTrial = async () => {
     finalResults[idx + 1] = results[idx]
   }
 
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: { results: finalResults },
-    data_result: { ...props.measurement, results: finalResults },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: finalResults } },
+    dataResult: { ...props.measurement, results: finalResults },
+    lastData: { ...props.measurement }
   }
 
   submitLoading.value = true
@@ -875,7 +876,7 @@ const onDeleteTrial = async () => {
   })
 
   try {
-    const { success, message, data } = await sessionStore.updateMeasurementResults(params)
+    const { success, message, data } = await sessionStore.updateMeasurementResults(payload)
 
     if (!success) {
       resultsState.value = previousResults

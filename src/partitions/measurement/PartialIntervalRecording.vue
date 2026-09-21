@@ -384,8 +384,8 @@ const onStartRecording = async () => {
   const datetimeNow = new Date().toISOString()
   const payload: UpdateMeasurementParams = {
     id: props.measurement.id,
-    measurement: { recording_started_at: datetimeNow },
-    data_result: { ...props.measurement, recording_started_at: datetimeNow }
+    params: { measurement: { recording_started_at: datetimeNow } },
+    dataResult: { ...props.measurement, recording_started_at: datetimeNow }
   }
 
   submitLoading.value = true
@@ -396,7 +396,7 @@ const onStartRecording = async () => {
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: { measurement: payload.measurement },
+    params: payload.params,
     notes: `Target: ${props.measurement.target?.name}`,
     timestamp: new Date().toISOString()
   })
@@ -431,11 +431,13 @@ const onStartOvertime = async () => {
 
   const payload: UpdateMeasurementParams = {
     id: props.measurement.id,
-    measurement: {
-      overtime_started_at: datetimeNow,
-      results: newResults
+    params: {
+      measurement: {
+        overtime_started_at: datetimeNow,
+        results: newResults
+      }
     },
-    data_result: {
+    dataResult: {
       ...props.measurement,
       overtime_started_at: datetimeNow,
       results: newResults
@@ -450,7 +452,7 @@ const onStartOvertime = async () => {
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: { measurement: payload.measurement },
+    params: payload.params,
     notes: `Target: ${props.measurement.target?.name}`,
     timestamp: new Date().toISOString()
   })
@@ -499,11 +501,13 @@ const onStopOvertime = async () => {
 
   const params: UpdateMeasurementParams = {
     id: props.measurement.id,
-    measurement: {
-      overtime_ended_at: overtimeEndedAt,
-      overtime_duration: [roundedOvertimeSeconds, roundedOvertimeString]
+    params: {
+      measurement: {
+        overtime_ended_at: overtimeEndedAt,
+        overtime_duration: [roundedOvertimeSeconds, roundedOvertimeString]
+      }
     },
-    data_result: {
+    dataResult: {
       ...props.measurement,
       overtime_ended_at: overtimeEndedAt,
       overtime_duration: [roundedOvertimeSeconds, roundedOvertimeString]
@@ -518,7 +522,7 @@ const onStopOvertime = async () => {
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
     api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: { measurement: params.measurement },
+    params: params.params,
     notes: `Target: ${props.measurement.target?.name}`,
     timestamp: new Date().toISOString()
   })
@@ -541,8 +545,8 @@ const initializeIntervalIfNeeded = async (intervalIndex: number) => {
 
     const params: UpdateMeasurementParams = {
       id: props.measurement.id,
-      measurement: { results: newResults },
-      data_result: { ...props.measurement, results: newResults }
+      params: { measurement: { results: newResults } },
+      dataResult: { ...props.measurement, results: newResults }
     }
 
     // record session activities
@@ -551,7 +555,7 @@ const initializeIntervalIfNeeded = async (intervalIndex: number) => {
       recordable: 'Measurement',
       recordable_id: props.measurement.id,
       api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-      params: { measurement: params.measurement },
+      params: params.params,
       notes: `Target: ${props.measurement.target?.name}`,
       timestamp: new Date().toISOString()
     })
@@ -583,11 +587,11 @@ const onAddScore = async () => {
     finalResults[intervalKey] = finalResults[intervalKey] + 1
   }
 
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: { results: finalResults },
-    data_result: { ...props.measurement, results: finalResults },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: finalResults } },
+    dataResult: { ...props.measurement, results: finalResults },
+    lastData: { ...props.measurement }
   }
 
   submitLoading.value = true
@@ -603,7 +607,7 @@ const onAddScore = async () => {
     timestamp: new Date().toISOString()
   })
 
-  const { success, message } = await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(payload)
   submitLoading.value = false
   if (!success) {
     toast.error(message)
