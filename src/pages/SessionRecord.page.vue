@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
+import {
+  useSessionStore,
+  type DuplicateImagesToClientDocumentParams,
+  type UpdateMeasurementParams
+} from '@/stores/session.store'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
@@ -352,7 +356,7 @@ interface FetchSessionProps {
   isSwipe?: boolean
 }
 // Improved syncSession dengan proper feedback
-async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) {
+async function syncSession(payload: FetchSessionProps = { isSwipe: false }) {
   if (!appStore.network_status.connected) {
     console.log('[syncSession] Skipped - offline')
     return
@@ -369,7 +373,7 @@ async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) 
 
   if (!success) return
 
-  if (isSwipe && appStore.network_status.connected) {
+  if (payload.isSwipe && appStore.network_status.connected) {
     if (data && data.succeeded > 0) {
       toast.success(`${data.succeeded} item(s) synced`)
     } else {
@@ -378,21 +382,11 @@ async function syncSession({ isSwipe }: FetchSessionProps = { isSwipe: false }) 
   }
 }
 
-async function fetchSession(
-  { first, isSwipe }: FetchSessionProps = { first: false, isSwipe: false }
-) {
-  // Loading lock: dikunci di sini (bukan cuma di pemanggil) supaya SEMUA jalur yang
-  // memicu fetchSession (swipe refresh, event @fetch-session dari komponen measurement,
-  // dst) ikut memblokir input skor selama request masih berjalan. Ini menutup celah
-  // race saat terapis sempat input skor di tengah-tengah refresh session yang lama
-  // (koneksi lapangan) - lihat getSessionMeasurements() di session.store.ts.
+async function fetchSession(payload?: FetchSessionProps) {
   cycleLoading.value = true
   try {
     const slug = route.params?.slug as string
-    // Only show skeleton loading on first load, not during swipe refresh.
-    // Setting sessionLoading=true during refresh destroys all MeasurementRecord
-    // components (v-if/v-else toggle), causing Vue scheduler flush errors.
-    if (first) {
+    if (payload?.first) {
       sessionLoading.value = true
     }
 
@@ -406,11 +400,11 @@ async function fetchSession(
     const app = document.getElementById('app')
 
     if (session.status === 'ongoing' || session.status === 'paused') {
-      if (isSwipe && appStore.network_status.connected) {
+      if (payload?.isSwipe && appStore.network_status.connected) {
         toast.success('Results are now up-to-date!')
       }
 
-      if (first) {
+      if (payload?.first) {
         syncSession()
         app?.scroll({ top: heightReload, behavior: 'smooth' })
         app?.addEventListener('scroll', scrollListener)
@@ -418,8 +412,6 @@ async function fetchSession(
     }
 
     if (session.status === 'completed' || session.status === 'cancelled') {
-      // await appStore.getRunningSessions()
-
       app?.removeEventListener('scroll', scrollListener)
     }
 
@@ -648,8 +640,8 @@ const onTrunOffAllAndEndSession = async () => {
 
       const params: UpdateMeasurementParams = {
         id: measurement.id,
-        measurement: { is_dropped: true },
-        data_result: { ...measurement, is_dropped: true }
+        params: { measurement: { is_dropped: true } },
+        dataResult: { ...measurement, is_dropped: true }
       }
       const { success, message } = await sessionStore.updateMeasurement(params)
       if (!success) {
@@ -721,7 +713,7 @@ async function onTogglePauseSession() {
 
     const payload = {
       id: sessionStore.session?.id,
-      session: { status: 'ongoing' as Session['status'] }
+      params: { session: { status: 'ongoing' as Session['status'] } }
     }
 
     const { success, message } = await sessionStore.updateSession(payload)
@@ -912,11 +904,13 @@ const duplicateImageCommentsToClientDocument = async () => {
     }
     const documents = Array.from(uniqueBlobIds).map((blobId) => ({ blob_id: blobId }))
 
-    const payload = {
-      client_id: sessionStore?.session?.client_id,
-      documents,
-      session_id: sessionStore?.session?.id,
-      session_slug: sessionStore?.session?.slug
+    const payload: DuplicateImagesToClientDocumentParams = {
+      clientId: sessionStore?.session?.client_id,
+      params: {
+        session_id: sessionStore?.session?.id,
+        session_slug: sessionStore?.session?.slug,
+        documents
+      }
     }
 
     await sessionStore.duplicateImagesToClientDocument(payload)
@@ -925,9 +919,19 @@ const duplicateImageCommentsToClientDocument = async () => {
   }
 }
 
+let visibilityChangeListener: PluginListenerHandle | undefined = undefined
 let backButtonListener: PluginListenerHandle | undefined = undefined
 
 onMounted(async () => {
+  visibilityChangeListener = await App.addListener('appStateChange', ({ isActive }) => {
+    const isLoading =
+      sessionLoading.value || cycleLoading.value || submitLoading.value || isScrolling.value
+
+    if (isActive && !isLoading) {
+      fetchSession({ first: true })
+    }
+  })
+
   backButtonListener = await App.addListener('backButton', () => {
     if (isOpenLeaveSession.value) {
       // modal udah kebuka, back kedua = tutup modal aja (opsional)
@@ -991,6 +995,7 @@ onMounted(async () => {
 
 // Cleanup saat unmount
 onUnmounted(() => {
+  visibilityChangeListener?.remove()
   backButtonListener?.remove()
 
   const app = document.getElementById('app')

@@ -540,22 +540,34 @@ const resetCommentForm = () => {
 }
 
 const onCreate = async () => {
+  const images = selectedImages.value.map((img) => ({
+    base64: img.base64,
+    file_name: img.file_name,
+    size: img.size,
+    width: img.width,
+    height: img.height
+  }))
+
   const params: CreateSessionCommentParams = {
-    client_id: sessionStore.session?.client_id,
-    session_id: sessionStore.session?.id,
+    clientId: sessionStore.session?.client_id,
+    sessionId: sessionStore.session?.id,
     type: typeInput.value,
-    session_comment: {
-      user_id: appStore.account?.id,
-      body: bodyInput.value
+    params: {
+      session_comment: {
+        user_id: appStore.account?.id,
+        body: bodyInput.value,
+        images
+      },
+      assessment: {
+        session_id: sessionStore.session?.id,
+        antecedent: antecedentInput.value,
+        behavior: behaviorInput.value,
+        consequence: consequenceInput.value,
+        type: 'Assessment::InSession',
+        images
+      }
     },
-    assessment: {
-      session_id: sessionStore.session?.id,
-      antecedent: antecedentInput.value,
-      behavior: behaviorInput.value,
-      consequence: consequenceInput.value,
-      type: 'Assessment::InSession'
-    },
-    data_result: {
+    dataResult: {
       id: getRandomString(),
       body: bodyInput.value,
       is_edited: false,
@@ -569,14 +581,7 @@ const onCreate = async () => {
       session_id: sessionStore.session?.id,
       created_at: dayjs().format(),
       updated_at: dayjs().format()
-    },
-    images: selectedImages.value.map((img) => ({
-      base64: img.base64,
-      file_name: img.file_name,
-      size: img.size,
-      width: img.width,
-      height: img.height
-    }))
+    }
   }
 
   createLoading.value = true

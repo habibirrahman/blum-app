@@ -64,22 +64,24 @@ const isDisabledUpdate = computed<boolean>(() => {
   return false
 })
 const onUpdate = async () => {
-  const params: UpdateSessionCommentParams = {
-    client_id: sessionStore.session?.client_id,
-    comment_id: props.comment.id,
+  const payload: UpdateSessionCommentParams = {
+    clientId: sessionStore.session?.client_id,
+    commentId: props.comment.id,
     type: typeInput.value,
-    session_comment: {
-      user_id: appStore.account?.id,
-      body: bodyInput.value
+    params: {
+      session_comment: {
+        user_id: appStore.account?.id,
+        body: bodyInput.value
+      },
+      assessment: {
+        session_id: sessionStore.session?.id,
+        antecedent: antecedentInput.value,
+        behavior: behaviorInput.value,
+        consequence: consequenceInput.value,
+        type: 'Assessment::InSession'
+      }
     },
-    assessment: {
-      session_id: sessionStore.session?.id,
-      antecedent: antecedentInput.value,
-      behavior: behaviorInput.value,
-      consequence: consequenceInput.value,
-      type: 'Assessment::InSession'
-    },
-    data_result: {
+    dataResult: {
       ...props.comment,
       body: bodyInput.value,
       antecedent: antecedentInput.value,
@@ -88,7 +90,7 @@ const onUpdate = async () => {
     }
   }
   updateLoading.value = true
-  const { success } = await sessionStore.updateSessionComment(params)
+  const { success } = await sessionStore.updateSessionComment(payload)
   updateLoading.value = false
   if (!success) return
   showEdit.value = false
@@ -98,13 +100,13 @@ const onUpdate = async () => {
 const showRemove = ref<boolean>(false)
 const deleteLoading = ref<boolean>(false)
 const onDelete = async () => {
-  const params: DeleteSessionCommentParams = {
-    client_id: sessionStore.session?.client_id,
-    comment_id: props.comment.id,
+  const payload: DeleteSessionCommentParams = {
+    clientId: sessionStore.session?.client_id,
+    commentId: props.comment.id,
     type: props.comment.type === 'Assessment::InSession' ? 'assessment' : 'general'
   }
   deleteLoading.value = true
-  const { success } = await sessionStore.deleteSessionComment(params)
+  const { success } = await sessionStore.deleteSessionComment(payload)
   deleteLoading.value = false
   if (!success) return
   toast.success('The comment has been deleted.')

@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import type { Measurement, Target } from '@/lib/types'
+import type { Measurement, MeasurementResultsPrompting, Target } from '@/lib/types'
 import { promptColors } from '@/lib/data'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
@@ -27,12 +27,12 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
-const results = ref<Measurement['results']>({})
+const results = ref<Record<string, MeasurementResultsPrompting>>({})
 
 watch(
   () => props.measurementResults,
   (val) => {
-    results.value = { ...val }
+    results.value = val as Record<string, MeasurementResultsPrompting>
   }
 )
 
@@ -155,16 +155,16 @@ const onSaveScore = debounce(async function (key: number | string, prompt: any, 
   const finalResults = results.value
   finalResults[key] = { ...prompt, score: prompt.score + score }
 
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: { results: finalResults },
-    data_result: { ...props.measurement, results: finalResults },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: finalResults } },
+    dataResult: { ...props.measurement, results: finalResults },
+    lastData: { ...props.measurement }
   }
 
   scoreLoadingBox.value = key
   typeLoadingBox.value = prompt.score
-  const { success, data, message } = await sessionStore.updateMeasurementResults(params)
+  const { success, data, message } = await sessionStore.updateMeasurementResults(payload)
   scoreLoadingBox.value = null
   typeLoadingBox.value = null
 
@@ -192,7 +192,8 @@ const onChangeScore = async (prompt: any, score: number) => {
   }
 
   // save state
-  const gapScore = newScore - props.measurementResults[prompt.key].score
+  const res = (props.measurementResults || {}) as Record<string, MeasurementResultsPrompting>
+  const gapScore = newScore - res[prompt.key].score
   scoreLoadingBox.value = prompt.key
   typeLoadingBox.value = score
 
@@ -207,7 +208,7 @@ const onChangeScore = async (prompt: any, score: number) => {
     timestamp: new Date().toISOString()
   })
 
-  onSaveScore(prompt.key, props.measurementResults[prompt.key], gapScore)
+  onSaveScore(prompt.key, res[prompt.key], gapScore)
 }
 
 interface Prompt {
@@ -237,11 +238,13 @@ watch(
   (val) => {
     if (!val) return
 
-    const results = props.measurementResults
-    const keys = Object.keys(results)
+    const res = (props.measurementResults || {}) as Record<string, MeasurementResultsPrompting>
+    const keys = Object.keys(res)
     if (keys && keys.length) {
-      const n = keys.map((i) => ({ ...results[i], key: i })).sort((a, b) => a.position - b.position)
-      defaultPrompts.value = n
+      const n = keys
+        .map((i) => ({ ...res[i], key: i }))
+        .sort((a, b) => (a?.position || 0) - (b?.position || 0))
+      defaultPrompts.value = n as Prompt[]
     }
   }
 )
@@ -256,11 +259,11 @@ const onToggleEnabledPrompt = (prompt: Prompt) => {
 const onSavePrompts = async () => {
   const payload = {
     id: props.measurement.id,
-    measurement: { results: {} as Record<string, Prompt> },
-    data_result: props.measurement
+    params: { measurement: { results: {} as Record<string, Prompt> } },
+    dataResult: props.measurement
   }
   defaultPrompts.value.forEach((i) => {
-    payload.measurement.results[i.key] = i
+    payload.params.measurement.results[i.key] = i
   })
 
   saveLoading.value = true
@@ -271,7 +274,9 @@ const onSavePrompts = async () => {
 }
 
 onMounted(() => {
-  results.value = { ...props.measurementResults }
+  results.value = {
+    ...((props.measurementResults || {}) as Record<string, MeasurementResultsPrompting>)
+  }
 })
 
 onUnmounted(() => {

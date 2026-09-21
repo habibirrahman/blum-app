@@ -220,8 +220,7 @@ const doLaunchSession = async () => {
       for (const mId of item.activeMemberIds) {
         await sessionStore.setMeasurementProbing({
           id: item.measurementId,
-          probing: true,
-          member_id: mId
+          params: { probing: true, member_id: mId }
         })
       }
     }
@@ -283,9 +282,7 @@ watch(
 const onUpdateSessionName = async () => {
   const payload = {
     id: sessionStore.session?.id,
-    session: {
-      name: sessionName.value || ''
-    }
+    params: { session: { name: sessionName.value || '' } }
   }
 
   editSessionNameLoading.value = true
