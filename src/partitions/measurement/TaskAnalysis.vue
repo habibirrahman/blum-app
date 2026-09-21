@@ -4,6 +4,7 @@ import { useAppStore } from '@/stores/app.store'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type {
   Measurement,
+  MeasurementResultsTaskAnalysis,
   Prompt,
   Target,
   TargetProblemBehavior,
@@ -83,7 +84,7 @@ const ratioScoresRowB = computed(() => ratioScores.value.slice(ratioScoresHalf.v
 
 const ratioScoreContainer = ref(null)
 
-const resultsState = ref<Measurement['results']>({})
+const resultsState = ref<Record<string, MeasurementResultsTaskAnalysis>>({})
 
 const isOpenProblemBehavior = ref<boolean>(false)
 const isOpenTrialHistory = ref<boolean>(false)
@@ -185,7 +186,7 @@ watch(
 watch(
   () => props.measurementResults,
   (val) => {
-    resultsState.value = val
+    resultsState.value = val as Record<string, MeasurementResultsTaskAnalysis>
     generateRatioScores()
   }
 )
@@ -299,7 +300,10 @@ onMounted(async () => {
   TAUsedTargets.value = usedTargets || []
   TAProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
 
-  const currentResults = props.measurementResults || {}
+  const currentResults = (props.measurementResults || {}) as Record<
+    string,
+    MeasurementResultsTaskAnalysis
+  >
   const results = Object.keys(currentResults).map((key) => ({
     ...currentResults[key],
     key
@@ -328,10 +332,10 @@ onMounted(async () => {
       }
       currentResults[newTrial.key] = {
         key: newTrial.key,
-        target_id: newTrial.target_id,
-        prompt_id: newTrial.prompt_id,
-        prompt_parent_id: newTrial.prompt_parent_id,
-        target_problem_behavior_id: newTrial.target_problem_behavior_id
+        target_id: newTrial.target_id || 0,
+        prompt_id: newTrial.prompt_id || 0,
+        prompt_parent_id: newTrial.prompt_parent_id || null,
+        target_problem_behavior_id: newTrial.target_problem_behavior_id || null
       }
       currentTrial.value = newTrial
     }
@@ -348,10 +352,10 @@ onMounted(async () => {
     }
     currentResults[newTrial.key] = {
       key: newTrial.key,
-      target_id: newTrial.target_id,
-      prompt_id: newTrial.prompt_id,
-      prompt_parent_id: newTrial.prompt_parent_id,
-      target_problem_behavior_id: newTrial.target_problem_behavior_id
+      target_id: newTrial.target_id || 0,
+      prompt_id: newTrial.prompt_id || 0,
+      prompt_parent_id: newTrial.prompt_parent_id || null,
+      target_problem_behavior_id: newTrial.target_problem_behavior_id || null
     }
     currentTrial.value = newTrial
   }
@@ -534,7 +538,7 @@ const onSaveCurrentTrial = async () => {
   const previousIsSaved = isSaved.value
 
   let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key }
+    return { ...resultsState.value[key], key } as Trial
   })
 
   const index = results.findIndex((i) => Number(i.key) === Number(currentTrial.value.key))
@@ -559,17 +563,17 @@ const onSaveCurrentTrial = async () => {
     finalResults[idx + 1] = results[idx]
   }
 
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: { results: finalResults },
-    data_result: { ...props.measurement, results: finalResults },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: finalResults } },
+    dataResult: { ...props.measurement, results: finalResults },
+    lastData: { ...props.measurement }
   }
 
   submitLoading.value = true
 
   try {
-    const { success, message, data } = await sessionStore.updateMeasurementResults(params)
+    const { success, message, data } = await sessionStore.updateMeasurementResults(payload)
 
     // ✅ CEK success SEBELUM update state!
     if (!success) {
@@ -782,10 +786,10 @@ const onTakeNextTrial = async (payload: { isNew: boolean }) => {
   }
   resultsState.value[newTrial.key] = {
     key: newTrial.key,
-    target_id: newTrial.target_id,
-    prompt_id: newTrial.prompt_id,
-    prompt_parent_id: newTrial.prompt_parent_id,
-    target_problem_behavior_id: newTrial.target_problem_behavior_id
+    target_id: newTrial.target_id || 0,
+    prompt_id: newTrial.prompt_id || 0,
+    prompt_parent_id: newTrial.prompt_parent_id || null,
+    target_problem_behavior_id: newTrial.target_problem_behavior_id || null
   }
   currentDisplay.value = 'select-prompt'
   currentTrial.value = newTrial
@@ -874,7 +878,7 @@ const onDeleteTrial = async () => {
 
   const key = deleteTrialKey.value
   let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key }
+    return { ...resultsState.value[key], key } as Trial
   })
 
   results = results
@@ -894,11 +898,11 @@ const onDeleteTrial = async () => {
     finalResults[idx + 1] = results[idx]
   }
 
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: { results: finalResults },
-    data_result: { ...props.measurement, results: finalResults },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: finalResults } },
+    dataResult: { ...props.measurement, results: finalResults },
+    lastData: { ...props.measurement }
   }
 
   submitLoading.value = true
@@ -915,7 +919,7 @@ const onDeleteTrial = async () => {
   })
 
   try {
-    const { success, message, data } = await sessionStore.updateMeasurementResults(params)
+    const { success, message, data } = await sessionStore.updateMeasurementResults(payload)
 
     if (!success) {
       resultsState.value = previousResults

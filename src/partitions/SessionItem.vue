@@ -62,9 +62,7 @@ watch(
 const onUpdateSessionName = async () => {
   const payload = {
     id: props.session.id,
-    session: {
-      name: sessionName.value + ''
-    }
+    params: { session: { name: sessionName.value + '' } }
   }
 
   editSessionNameLoading.value = true
@@ -142,7 +140,7 @@ const onDeleteSession = async () => {
         <span>{{ session.id }}</span>
         <span v-if="session.name"> - {{ session.name }}</span>
       </div>
-      <div class="text-sm font-semibold truncate">{{ title }}</div>
+      <div class="truncate text-sm font-semibold">{{ title }}</div>
       <div
         v-if="!session.appointment_id && session.status === 'draft'"
         class="text-xs text-slate-7"
@@ -151,29 +149,29 @@ const onDeleteSession = async () => {
       </div>
       <div
         v-else-if="session.appointment_id && session.status === 'draft'"
-        class="flex gap-1.5 items-center text-xs truncate"
+        class="flex items-center gap-1.5 truncate text-xs"
       >
         <div class="text-slate-7">Scheduled on</div>
         <div class="font-bold text-slate-8">
           {{ displayDate({ date: session.appointment?.date }) }}
         </div>
-        <div class="w-1 h-1 rounded shrink-0 bg-slate-6"></div>
+        <div class="h-1 w-1 shrink-0 rounded bg-slate-6"></div>
         <div class="font-medium text-slate-8">
           {{
             `${session.appointment?.start_time_string} - ${session.appointment?.end_time_string}`
           }}
         </div>
       </div>
-      <div v-else-if="session.status === 'ongoing'" class="flex gap-1.5 items-center text-xs">
-        <div class="font-medium truncate text-slate-8">
+      <div v-else-if="session.status === 'ongoing'" class="flex items-center gap-1.5 text-xs">
+        <div class="truncate font-medium text-slate-8">
           <span>In progress</span>
           <span v-if="session.user?.name">
             with <b>{{ session.user?.name }}</b>
           </span>
         </div>
       </div>
-      <div v-else-if="session.status === 'paused'" class="flex gap-1.5 items-center text-xs">
-        <div class="font-medium truncate text-slate-8">
+      <div v-else-if="session.status === 'paused'" class="flex items-center gap-1.5 text-xs">
+        <div class="truncate font-medium text-slate-8">
           <span>Paused</span>
           <span v-if="session.user?.name">
             with <b>{{ lastRecordedBy }}</b>
@@ -182,13 +180,13 @@ const onDeleteSession = async () => {
       </div>
       <div
         v-else-if="session.status === 'completed'"
-        class="flex gap-1.5 items-center text-xs truncate"
+        class="flex items-center gap-1.5 truncate text-xs"
       >
         <div class="text-slate-7">Completed on</div>
         <div class="font-medium text-slate-8">
           {{ displayDate({ date: session.end_time }) }}
         </div>
-        <div class="w-1 h-1 rounded shrink-0 bg-slate-6"></div>
+        <div class="h-1 w-1 shrink-0 rounded bg-slate-6"></div>
         <div class="font-medium text-slate-8">
           {{ displayDate({ date: session.end_time, format: 'HH:mm' }) }}
         </div>
@@ -212,9 +210,9 @@ const onDeleteSession = async () => {
   </div>
 
   <AppActionSheet :show="showMenu" @close="showMenu = false">
-    <div class="py-3 space-y-4">
-      <div class="flex justify-between items-center w-full">
-        <div class="text-xl font-semibold text-center">
+    <div class="space-y-4 py-3">
+      <div class="flex w-full items-center justify-between">
+        <div class="text-center text-xl font-semibold">
           <span v-if="!session.name">Session ID </span>
           <span>{{ session.id }}</span>
           <span v-if="session.name"> - {{ session.name }}</span>
@@ -230,13 +228,13 @@ const onDeleteSession = async () => {
             params: { slug: session?.slug },
             query: { redirect: `/clients/${route.params.id}/${route.params.tab}` }
           }"
-          class="flex gap-3 items-center w-full h-14 border-b border-slate-3"
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
         >
           <icon icon="ph:eye" />
           <div class="text-sm text-slate-8">Preview</div>
         </RouterLink>
         <div
-          class="flex gap-3 items-center w-full h-14 border-b border-slate-3"
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
           @click="showEditSessionName = true"
         >
           <icon icon="ph:pencil-simple" />
@@ -248,14 +246,14 @@ const onDeleteSession = async () => {
             params: { slug: session?.slug },
             query: { redirect: `/pre-session-record/${session?.slug}` }
           }"
-          class="flex gap-3 items-center w-full h-14 border-b border-slate-3"
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
         >
           <icon icon="ph:pencil-simple" />
           <div class="text-sm text-slate-8">Edit session target(s)</div>
         </RouterLink>
         <div
           v-if="!session.appointment_id"
-          class="flex gap-3 items-center w-full h-14 border-b border-slate-3"
+          class="flex h-14 w-full items-center gap-3 border-b border-slate-3"
           @click="showDelete = true"
         >
           <icon icon="ph:trash" />
@@ -271,7 +269,7 @@ const onDeleteSession = async () => {
 
       <AppTextInput name="session_name" placeholder="Session Name" v-model="sessionName" />
 
-      <div class="grid grid-cols-2 gap-2 w-full">
+      <div class="grid w-full grid-cols-2 gap-2">
         <AppButton kind="plain" @click="showEditSessionName = false">Cancel</AppButton>
         <AppButton :loading="editSessionNameLoading" @click="onUpdateSessionName">Update</AppButton>
       </div>
@@ -279,13 +277,13 @@ const onDeleteSession = async () => {
   </AppActionSheet>
 
   <AppActionSheet :show="showDelete" @close="showDelete = false">
-    <div class="flex flex-col gap-4 items-center py-3">
-      <div class="text-xl font-semibold text-center">Delete the draft</div>
-      <div class="text-sm text-center">
+    <div class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Delete the draft</div>
+      <div class="text-center text-sm">
         You are about to delete the session draft. Are you sure you want to proceed? This action is
         irreversible.
       </div>
-      <div class="grid grid-cols-2 gap-2 w-full">
+      <div class="grid w-full grid-cols-2 gap-2">
         <AppButton kind="plain" @click="showDelete = false">Cancel</AppButton>
         <AppButton :loading="deleteLoading" @click="onDeleteSession">Delete</AppButton>
       </div>

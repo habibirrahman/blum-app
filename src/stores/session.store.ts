@@ -64,27 +64,34 @@ export interface SessionStateSchema {
 
 export type SessionCommentFilter = '' | 'general' | 'assessment' | 'target' | 'mine'
 export interface CreateSessionParams {
-  client_id: Client['id']
+  clientId: Client['id']
 }
 export interface CreateMeasurementParams {
   id: Session['id']
-  target_id: Target['id']
-  measurement: Partial<Measurement>
+  targetId: Target['id']
+  params: {
+    measurement: Partial<Measurement>
+  }
 }
 export interface AddMultipleTargetSessionParams {
   id: Session['id']
-  target_ids: Target['id'][]
+  params: {
+    target_ids: Target['id'][]
+  }
 }
 export interface AdvanceMaintenanceSessionParams {
   id: Session['id']
-  target_ids: Target['id'][]
+  params: {
+    target_ids: Target['id'][]
+  }
 }
 export interface UpdateMeasurementParams {
   id: Measurement['id']
-  measurement: Partial<Measurement>
-  data_result: Partial<Measurement>
-  //
-  is_comment?: boolean
+  params: {
+    measurement: Partial<Measurement>
+  }
+  dataResult: Partial<Measurement>
+  isComment?: boolean
 }
 export interface ResolveAllMeasurementsParams {
   params: {
@@ -94,61 +101,69 @@ export interface ResolveAllMeasurementsParams {
 }
 export interface UpdateMeasurementResultsParams {
   id: Measurement['id']
-  measurement: Measurement
-  data_result: Measurement
-  last_data: Measurement
+  params: { measurement: Measurement }
+  dataResult: Measurement
+  lastData: Measurement
 }
 export interface UpdateMeasurementMarkProbingParams {
   id: Measurement['id']
-  visible: Measurement['visible']
-  marked_as: Measurement['marked_as']
+  params: {
+    visible: Measurement['visible']
+    marked_as: Measurement['marked_as']
+  }
 }
 export interface CreateSessionCommentParams {
-  session_id?: Session['id']
-  client_id?: Client['id']
+  sessionId?: Session['id']
+  clientId?: Client['id']
   type: 'general' | 'assessment'
-  session_comment?: {
-    user_id: User['id']
-    body: Comment['body']
+  params: {
+    session_comment?: {
+      user_id: User['id']
+      body: Comment['body']
+      images?: Comment['images']
+    }
+    assessment?: {
+      session_id: Session['id']
+      antecedent: Comment['antecedent']
+      behavior: Comment['behavior']
+      consequence: Comment['consequence']
+      type: Comment['type']
+      images?: Comment['images']
+    }
   }
-  assessment?: {
-    session_id: Session['id']
-    antecedent: Comment['antecedent']
-    behavior: Comment['behavior']
-    consequence: Comment['consequence']
-    type: Comment['type']
-  }
-  images?: Comment['images']
-
-  data_result: Comment
+  dataResult: Comment
 }
 export interface UpdateSessionCommentParams {
-  client_id?: Client['id']
-  comment_id: Comment['id']
+  clientId?: Client['id']
+  commentId: Comment['id']
   type: 'general' | 'assessment'
-  session_comment?: {
-    user_id: User['id']
-    body: Comment['body']
+  params: {
+    session_comment?: {
+      user_id: User['id']
+      body: Comment['body']
+    }
+    assessment?: {
+      session_id: Session['id']
+      antecedent: Comment['antecedent']
+      behavior: Comment['behavior']
+      consequence: Comment['consequence']
+      type: Comment['type']
+    }
   }
-  assessment?: {
-    session_id: Session['id']
-    antecedent: Comment['antecedent']
-    behavior: Comment['behavior']
-    consequence: Comment['consequence']
-    type: Comment['type']
-  }
-  data_result: Comment
+  dataResult: Comment
 }
 export interface DeleteSessionCommentParams {
-  client_id?: Client['id']
-  comment_id: Comment['id']
+  clientId?: Client['id']
+  commentId: Comment['id']
   type: 'general' | 'assessment'
 }
 export interface DuplicateImagesToClientDocumentParams {
-  client_id: Client['id']
-  documents: any[]
-  session_id: Session['id']
-  session_slug: Session['slug']
+  clientId: Client['id']
+  params: {
+    session_id: Session['id']
+    session_slug: Session['slug']
+    documents: any[]
+  }
 }
 
 export interface AddSessionActivity {
@@ -923,9 +938,11 @@ export const useSessionStore = defineStore('session', {
 
     // ACTION
 
-    async getSessions({ params }: { params?: string }) {
+    async getSessions(payload?: { params?: string }) {
       try {
-        const res = await axios.get(`/api/v1/sessions/draft_sessions${params}&outcome=targets`)
+        const res = await axios.get(
+          `/api/v1/sessions/draft_sessions${payload?.params}&outcome=targets`
+        )
 
         this.sessions = res?.data?.sessions
         this.sessions_count = res?.data?.total_count
@@ -940,9 +957,9 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async getSession({ slug }: { slug: Session['slug'] }): Promise<ResponseSchema> {
+    async getSession(payload: { slug: Session['slug'] }): Promise<ResponseSchema> {
       try {
-        const res = await axios.get(`/api/v1/sessions/${slug}`)
+        const res = await axios.get(`/api/v1/sessions/${payload.slug}`)
 
         this.setSession(res?.data)
         await this.getSessionMeasurements({ id: res?.data.id })
@@ -956,18 +973,11 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async getSessionMeasurements({ id }: { id: Session['id'] }): Promise<ResponseSchema> {
-      if (!id) return { success: false, data: null }
+    async getSessionMeasurements(payload: { id: Session['id'] }): Promise<ResponseSchema> {
+      if (!payload.id) return { success: false, data: null }
 
       try {
-        const res = await axios.get(`/api/v1/sessions/${id}/measurements`)
-
-        // Merge per-item berdasarkan `updated_at`, bukan full replace.
-        // GET list ini bisa butuh waktu lama (koneksi lapangan), dan selama itu
-        // updateMeasurementResults() bisa saja sudah menyimpan hasil yang lebih baru
-        // lewat request terpisah (lihat setSessionMeasurement). Kalau di sini kita
-        // langsung `this.session_measurements = data`, snapshot lama dari response ini
-        // akan menimpa balik hasil yang sudah benar tersimpan -> "missing results".
+        const res = await axios.get(`/api/v1/sessions/${payload.id}/measurements`)
         const incoming: Measurement[] = res?.data || []
 
         const latest = incoming.map((item: Measurement) => {
@@ -994,11 +1004,11 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async getMeasurement({ id }: { id: Measurement['id'] }): Promise<ResponseSchema> {
-      if (!id) return { success: false, data: null }
+    async getMeasurement(payload: { id: Measurement['id'] }): Promise<ResponseSchema> {
+      if (!payload.id) return { success: false, data: null }
 
       try {
-        const res = await axios.get(`/api/v1/measurements/${id}`)
+        const res = await axios.get(`/api/v1/measurements/${payload.id}`)
 
         this.setSessionMeasurement(res?.data)
 
@@ -1030,9 +1040,9 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async createSession({ client_id }: CreateSessionParams) {
+    async createSession(payload: CreateSessionParams) {
       try {
-        const res = await axios.post(`/api/v1/clients/${client_id}/sessions`, {
+        const res = await axios.post(`/api/v1/clients/${payload.clientId}/sessions`, {
           session: { name: '', status: 'draft' }
         })
 
@@ -1048,9 +1058,9 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async updateSession({ id, session }: { id: Session['id']; session: Partial<Session> }) {
+    async updateSession(payload: { id: Session['id']; params: { session: Partial<Session> } }) {
       try {
-        const res = await axios.patch(`/api/v1/sessions/${id}`, { session })
+        const res = await axios.patch(`/api/v1/sessions/${payload.id}`, payload.params)
 
         this.setSession(res?.data)
 
@@ -1064,9 +1074,9 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async deleteSession({ id }: { id: Session['id'] }) {
+    async deleteSession(payload: { id: Session['id'] }) {
       try {
-        const res = await axios.delete(`/api/v1/sessions/${id}`)
+        const res = await axios.delete(`/api/v1/sessions/${payload.id}`)
 
         return { success: true, data: res?.data, message: res?.data?.message || '' }
       } catch (error) {
@@ -1132,13 +1142,14 @@ export const useSessionStore = defineStore('session', {
         // Baca activities dari buffer in-memory (lebih efisien, tidak perlu baca storage)
         const activities: AddSessionActivity[] = [...(this._activitiesBuffer || [])]
 
+        const appStore = useAppStore()
         activities.push({
           action_label: `session_pause`,
           recordable: 'Session',
           recordable_id: this.session?.id,
           api: `PATCH /api/v1/sessions/${this.session?.id}`,
           params: { session: { status: 'paused', session_activities: 'SessionActivity[]' } }, // prevent infinite array
-          notes: `Pause session`,
+          notes: `[${appStore.account?.email}] Pause session`,
           timestamp: new Date().toISOString()
         })
 
@@ -1186,13 +1197,14 @@ export const useSessionStore = defineStore('session', {
         // Baca activities dari buffer in-memory (lebih efisien, tidak perlu baca storage)
         const activities: AddSessionActivity[] = [...(this._activitiesBuffer || [])]
 
+        const appStore = useAppStore()
         activities.push({
           action_label: `session_end`,
           recordable: 'Session',
           recordable_id: this.session?.id,
           api: `PATCH /api/v1/sessions/${this.session?.id}`,
           params: { session: { status: 'completed', session_activities: 'SessionActivity[]' } }, // prevent infinite array
-          notes: `End session`,
+          notes: `[${appStore.account?.email}] End session`,
           timestamp: new Date().toISOString()
         })
 
@@ -1230,144 +1242,162 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    // =================================== [need refactor to try catch]
+    // ===================================
 
     async getSessionRecommendations() {
-      this.session_recommendations = []
-      return axios
-        .get(
+      try {
+        this.session_recommendations = []
+
+        const res = await axios.get(
           `/api/v1/clients/${this.session?.client_id}/action_recommendations?page=1&per_page=999&session_id=${this.session?.id}`
         )
-        .then(async ({ data }) => {
-          this.session_recommendations = data.action_recommendations
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
-    },
 
-    async createMeasurement({ id, target_id, measurement }: CreateMeasurementParams) {
-      return axios
-        .post(`/api/v1/sessions/${id}/targets/${target_id}/measurements`, { measurement })
-        .then(async ({ data }) => {
-          return { success: true, data, message: '' }
-        })
-        .catch(async (error) => {
+        this.session_recommendations = res?.data.action_recommendations
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
-    },
-
-    async addMultipleTargetsSession({ id, target_ids }: AddMultipleTargetSessionParams) {
-      return axios
-        .post(`/api/v1/sessions/${id}/add_multiple_targets`, {
-          target_ids
-        })
-        .then((response) => {
-          this.setSession(response.data)
-          return { success: true, data: response.data, message: '' }
-        })
-        .catch((error) => {
-          const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
-    },
-
-    async advanceMaintenanceSession({ id, target_ids }: AdvanceMaintenanceSessionParams) {
-      return axios
-        .post(`/api/v1/sessions/${id}/advance_maintenance`, {
-          target_ids
-        })
-        .then((response) => {
-          return { success: true, data: response.data, message: '' }
-        })
-        .catch((error) => {
-          const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
-    },
-
-    async updateMeasurement({ id, measurement, data_result, is_comment }: UpdateMeasurementParams) {
-      const app = useAppStore()
-      if (!app.network_status.connected) {
-        console.log(data_result)
+          return { success: false, message }
+        }
+        return { success: false }
       }
+    },
 
-      return axios
-        .patch(`/api/v1/measurements/${id}`, { measurement })
-        .then(async ({ data }) => {
-          this.setSessionMeasurement(data, is_comment)
+    async createMeasurement(payload: CreateMeasurementParams) {
+      try {
+        const res = await axios.post(
+          `/api/v1/sessions/${payload.id}/targets/${payload.targetId}/measurements`,
+          payload.params
+        )
 
-          // record session activities
-          this.addSessionActivity({
-            action_label: 'api_success',
-            recordable: 'Measurement',
-            recordable_id: id,
-            api: `PATCH /api/v1/measurements/${id}`,
-            params: { measurement },
-            notes: 'Success update measurement',
-            timestamp: new Date().toISOString()
-          })
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, message }
+        }
+        return { success: false }
+      }
+    },
 
-          return { success: true, data, message: '' }
+    async addMultipleTargetsSession(payload: AddMultipleTargetSessionParams) {
+      try {
+        const res = await axios.post(
+          `/api/v1/sessions/${payload.id}/add_multiple_targets`,
+          payload.params
+        )
+
+        this.setSession(res.data)
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, message }
+        }
+        return { success: false }
+      }
+    },
+
+    async advanceMaintenanceSession(payload: AdvanceMaintenanceSessionParams) {
+      try {
+        const res = await axios.post(
+          `/api/v1/sessions/${payload.id}/advance_maintenance`,
+          payload.params
+        )
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, message }
+        }
+        return { success: false }
+      }
+    },
+
+    async updateMeasurement(payload: UpdateMeasurementParams) {
+      try {
+        const app = useAppStore()
+        if (!app.network_status.connected) {
+          console.log(payload.dataResult)
+        }
+
+        const res = await axios.patch(`/api/v1/measurements/${payload.id}`, payload.params)
+
+        this.setSessionMeasurement(res?.data, payload.isComment)
+
+        // record session activities
+        const appStore = useAppStore()
+        this.addSessionActivity({
+          action_label: 'api_success',
+          recordable: 'Measurement',
+          recordable_id: payload.id,
+          api: `PATCH /api/v1/measurements/${payload.id}`,
+          params: payload.params,
+          notes: `[${appStore.account?.email}] Success update measurement`,
+          timestamp: new Date().toISOString()
         })
-        .catch(async (error) => {
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
+          const appStore = useAppStore()
           this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
-            recordable_id: id,
-            api: `PATCH /api/v1/measurements/${id}`,
-            params: { measurement },
-            notes: message as string,
+            recordable_id: payload.id,
+            api: `PATCH /api/v1/measurements/${payload.id}`,
+            params: payload.params,
+            notes: `[${appStore.account?.email}] ${message}`,
             timestamp: new Date().toISOString()
           })
 
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
-    async deleteMeasurement({ id, params }: { id: Measurement['id']; params?: string }) {
-      return axios
-        .delete(`/api/v1/measurements/${id}${params || ''}`)
-        .then((response) => {
-          return { success: true, data: response.data, message: '' }
-        })
-        .catch((error) => {
+    async deleteMeasurement(payload: { id: Measurement['id']; params?: string }) {
+      try {
+        const res = await axios.delete(`/api/v1/measurements/${payload.id}${payload.params || ''}`)
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
-    // updateMeasurementResults dengan semua fix
-    async updateMeasurementResults({
-      id,
-      measurement,
-      data_result,
-      last_data
-    }: UpdateMeasurementResultsParams): Promise<ResponseSchema> {
+    async updateMeasurementResults(
+      payload: UpdateMeasurementResultsParams
+    ): Promise<ResponseSchema> {
       // Simpan state sebelumnya untuk rollback
-      const previousMeasurement = this.session_measurements?.find((m) => m.id === id)
+      const previousMeasurement = this.session_measurements?.find((m) => m.id === payload.id)
       try {
         const app = useAppStore()
 
         // handling for offline mode
         if (!app.network_status.connected) {
-          const key = `update_measurement_${id}`
-          const newParams = { id, measurement, data_result, last_data }
+          const key = `update_measurement_${payload.id}`
 
           const index = this.pending_progress.findIndex((i) => i.key === key)
           if (index > -1) {
-            this.pending_progress[index].params = newParams
+            this.pending_progress[index].params = payload
             this.pending_progress[index].timestamp = Date.now()
           } else {
             this.pending_progress.push({
               key,
               name: 'update_measurement_result', // ⚠️ Sesuaikan dengan resolvePendingProgress
-              params: newParams,
+              params: payload,
               timestamp: Date.now(),
               retryCount: 0
             })
@@ -1375,14 +1405,14 @@ export const useSessionStore = defineStore('session', {
 
           // Tandai sebagai pending sync
           const measurementWithPending = {
-            ...data_result,
+            ...payload.dataResult,
             _pendingSync: true,
             _lastSyncAttempt: Date.now()
           }
           this.setSessionMeasurement(measurementWithPending)
 
           // Simpan ke local storage
-          await this.saveLocalBackup(Number(id), data_result, 'pending')
+          await this.saveLocalBackup(Number(payload.id), payload.dataResult, 'pending')
 
           // Sync session store
           this.syncSessionStore()
@@ -1397,18 +1427,16 @@ export const useSessionStore = defineStore('session', {
         // Tambahkan retry logic dengan exponential backoff
         let lastError: any
         const maxRetries = 2
+        const appStore = useAppStore()
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
-            const payloadResults = (measurement as any)?.results || measurement
             const { data: patchData } = await axios.patch(
-              `/api/v1/measurements/${id}/update_results`,
-              { results: payloadResults },
+              `/api/v1/measurements/${payload.id}/update_results`,
+              payload.params,
               {
                 timeout: attempt === 0 ? 5000 : 8000,
-                headers: {
-                  'X-Request-Attempt': attempt + 1
-                }
+                headers: { 'X-Request-Attempt': attempt + 1 }
               }
             )
 
@@ -1416,10 +1444,10 @@ export const useSessionStore = defineStore('session', {
             this.addSessionActivity({
               action_label: 'api_success',
               recordable: 'Measurement',
-              recordable_id: id,
-              api: `PATCH /api/v1/measurements/${id}/update_results`,
-              params: { results: payloadResults },
-              notes: `Success update measurement results [attempt: ${attempt + 1}]`,
+              recordable_id: payload.id,
+              api: `PATCH /api/v1/measurements/${payload.id}`,
+              params: payload.params,
+              notes: `[${appStore.account?.email}] Success update measurement [attempt: ${attempt + 1}]`,
               timestamp: new Date().toISOString()
             })
 
@@ -1433,7 +1461,7 @@ export const useSessionStore = defineStore('session', {
 
             // Hapus dari pending queue jika ada
             const queueIndex = this.pending_progress.findIndex(
-              (i) => i.key === `update_measurement_${id}`
+              (i) => i.key === `update_measurement_${payload.id}`
             )
             if (queueIndex > -1) {
               this.pending_progress.splice(queueIndex, 1)
@@ -1441,7 +1469,7 @@ export const useSessionStore = defineStore('session', {
             }
 
             // Update local backup dengan status synced
-            await this.saveLocalBackup(Number(id), newData, 'synced')
+            await this.saveLocalBackup(Number(payload.id), newData, 'synced')
 
             return { success: true, data: newData, message: '' }
           } catch (err) {
@@ -1453,10 +1481,10 @@ export const useSessionStore = defineStore('session', {
               this.addSessionActivity({
                 action_label: 'api_failed',
                 recordable: 'Measurement',
-                recordable_id: id,
-                api: `PATCH /api/v1/measurements/${id}`,
-                params: { measurement },
-                notes: `Failed, timeout [attempt: ${attempt + 1}]`,
+                recordable_id: payload.id,
+                api: `PATCH /api/v1/measurements/${payload.id}`,
+                params: payload.params,
+                notes: `[${appStore.account?.email}] Failed, timeout [attempt: ${attempt + 1}]`,
                 timestamp: new Date().toISOString()
               })
               console.log(`[updateMeasurementResults] Retry ${attempt + 1}/${maxRetries}`)
@@ -1476,12 +1504,11 @@ export const useSessionStore = defineStore('session', {
         }
 
         // Tambahkan ke pending queue untuk auto-retry
-        const key = `update_measurement_${id}`
-        const newParams = { id, measurement, data_result, last_data }
+        const key = `update_measurement_${payload.id}`
 
         const index = this.pending_progress.findIndex((i) => i.key === key)
         if (index > -1) {
-          this.pending_progress[index].params = newParams
+          this.pending_progress[index].params = payload
           this.pending_progress[index].retryCount =
             (this.pending_progress[index].retryCount || 0) + 1
           this.pending_progress[index].lastError = isAxiosError(error)
@@ -1491,7 +1518,7 @@ export const useSessionStore = defineStore('session', {
           this.pending_progress.push({
             key,
             name: 'update_measurement_result',
-            params: newParams,
+            params: payload,
             timestamp: Date.now(),
             retryCount: 1,
             lastError: isAxiosError(error)
@@ -1504,85 +1531,86 @@ export const useSessionStore = defineStore('session', {
         this.syncSessionStore()
 
         // Simpan ke local backup dengan status pending
-        await this.saveLocalBackup(Number(id), data_result, 'pending')
+        await this.saveLocalBackup(Number(payload.id), payload.dataResult, 'pending')
 
         if (isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
             // record session activities
+            const appStore = useAppStore()
             this.addSessionActivity({
               action_label: 'api_failed',
               recordable: 'Measurement',
-              recordable_id: id,
-              api: `PATCH /api/v1/measurements/${id}`,
-              params: { measurement },
-              notes: `Slow connection. Data will be saved automatically.`,
+              recordable_id: payload.id,
+              api: `PATCH /api/v1/measurements/${payload.id}`,
+              params: payload.params,
+              notes: `[${appStore.account?.email}] Slow connection. Data will be saved automatically.`,
               timestamp: new Date().toISOString()
             })
 
             return {
               success: false,
               message: 'Slow connection. Data will be saved automatically.',
-              data: previousMeasurement || last_data
+              data: previousMeasurement || payload.lastData
             }
           }
 
           // Handle conflict (409)
           if (error.response?.status === 409) {
             // record session activities
+            const appStore = useAppStore()
             this.addSessionActivity({
               action_label: 'api_failed',
               recordable: 'Measurement',
-              recordable_id: id,
-              api: `PATCH /api/v1/measurements/${id}`,
-              params: { measurement },
-              notes: `Data was changed by another user. Please refresh.`,
+              recordable_id: payload.id,
+              api: `PATCH /api/v1/measurements/${payload.id}`,
+              params: payload.params,
+              notes: `[${appStore.account?.email}] Data was changed by another user. Please refresh.`,
               timestamp: new Date().toISOString()
             })
 
             return {
               success: false,
               message: 'Data was changed by another user. Please refresh.',
-              data: error.response.data || last_data
+              data: error.response.data || payload.lastData
             }
           }
 
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
+          const appStore = useAppStore()
           this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
-            recordable_id: id,
-            api: `PATCH /api/v1/measurements/${id}`,
-            params: { measurement },
-            notes: message as string,
+            recordable_id: payload.id,
+            api: `PATCH /api/v1/measurements/${payload.id}`,
+            params: payload.params,
+            notes: `[${appStore.account?.email}] ${message}`,
             timestamp: new Date().toISOString()
           })
 
-          return { success: false, message, data: previousMeasurement || last_data }
+          return { success: false, message, data: previousMeasurement || payload.lastData }
         }
 
         return {
           success: false,
           message: 'Failed to save. Will retry automatically.',
-          data: previousMeasurement || last_data
+          data: previousMeasurement || payload.lastData
         }
       }
     },
 
     async setMeasurementProbing(payload: {
       id: number
-      probing: boolean
-      member_id?: number
+      params: {
+        probing: boolean
+        member_id?: number
+      }
     }): Promise<ResponseSchema> {
       try {
-        const reqData: Record<string, any> = { probing: payload.probing }
-        if (payload.member_id !== undefined) {
-          reqData.member_id = payload.member_id
-        }
         const { data } = await axios.patch(
           `/api/v1/measurements/${payload.id}/set_probing`,
-          reqData
+          payload.params
         )
         this.setSessionMeasurement(data)
         return { success: true, data, message: '' }
@@ -1598,60 +1626,36 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async updateMeasurementMarkProbing({
-      id,
-      visible,
-      marked_as
-    }: UpdateMeasurementMarkProbingParams): Promise<ResponseSchema> {
-      return axios
-        .patch(`/api/v1/measurements/${id}/mark_probing`, { visible, marked_as })
-        .then(async ({ data }) => {
-          this.setSessionMeasurement(data)
+    async updateMeasurementMarkProbing(
+      payload: UpdateMeasurementMarkProbingParams
+    ): Promise<ResponseSchema> {
+      try {
+        const res = await axios.patch(
+          `/api/v1/measurements/${payload.id}/mark_probing`,
+          payload.params
+        )
 
-          // record session activities
-          this.addSessionActivity({
-            action_label: 'api_success',
-            recordable: 'Measurement',
-            recordable_id: id,
-            api: `PATCH /api/v1/measurements/${id}/mark_probing`,
-            params: { visible, marked_as },
-            notes: `Success update measurement mark probing`,
-            timestamp: new Date().toISOString()
-          })
+        this.setSessionMeasurement(res?.data)
 
-          return { success: true, data, message: '' }
-        })
-        .catch(async (error) => {
-          console.log(error)
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
-
-          // record session activities
-          this.addSessionActivity({
-            action_label: 'api_failed',
-            recordable: 'Measurement',
-            recordable_id: id,
-            api: `PATCH /api/v1/measurements/${id}/mark_probing`,
-            params: { visible, marked_as },
-            notes: message as string,
-            timestamp: new Date().toISOString()
-          })
-
-          return { success: false, data: null, message }
-        })
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
     // ========================================
     // COMMENT FUNCTIONS
     // ========================================
 
-    async getSessionComments({
-      id,
-      filter
-    }: {
+    async getSessionComments(payload: {
       id: Session['id']
       filter?: SessionCommentFilter
     }): Promise<ResponseSchema> {
-      if (!id) return { success: false, data: null }
+      if (!payload.id) return { success: false, data: null }
       this.session_comments = this.session?.comments || []
 
       const app = useAppStore()
@@ -1659,127 +1663,101 @@ export const useSessionStore = defineStore('session', {
         // return { success: true, data: this.session_comments }
       }
 
-      const params = filter ? `?filter_by=${filter}` : ''
-      return axios
-        .get(`/api/v1/sessions/${id}/comments${params}`)
-        .then(async ({ data }) => {
-          this.session_comments = data
-          const session: Session = {
-            ...this.session,
-            comments: [...data, ...(this.session?.comments || [])].filter(onlyUniqueId)
-          }
-          this.setSession(session)
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
-    },
+      try {
+        const params = payload.filter ? `?filter_by=${payload.filter}` : ''
+        const res = await axios.get(`/api/v1/sessions/${payload.id}/comments${params}`)
 
-    async createSessionComment({
-      client_id,
-      session_id,
-      type,
-      session_comment,
-      assessment,
-      data_result,
-      images = []
-    }: CreateSessionCommentParams) {
+        this.session_comments = res?.data
+        const session: Session = {
+          ...this.session,
+          comments: [...(res?.data || []), ...(this.session?.comments || [])].filter(onlyUniqueId)
+        }
+        this.setSession(session)
+
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, message }
+        }
+        return { success: false }
+      }
+    },
+    // ayam
+
+    async createSessionComment(payload: CreateSessionCommentParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {
         this.pending_progress.push({
           key: getRandomString('create_comment'),
           name: 'create_comment',
-          params: { client_id, session_id, type, session_comment, assessment, data_result, images },
+          params: payload,
           timestamp: Date.now(),
           retryCount: 0
         })
-        this.addSessionComment(data_result, false)
-        return { success: true, data: data_result }
+        this.addSessionComment(payload.dataResult, false)
+        return { success: true, data: payload.dataResult }
       }
 
-      if (type === 'general') {
-        const payload = {
-          session_comment: {
-            user_id: session_comment?.user_id,
-            body: session_comment?.body,
-            images: images
-          }
-        }
-
-        return axios
-          .post(`/api/v1/sessions/${session_id}/session_comments`, payload, {
-            headers: {
-              'X-Platform': 'mobile'
-            }
-          })
-          .then(async ({ data }) => {
-            this.addSessionComment(data, true)
-            return { success: true, data }
-          })
-          .catch(({ response }) => {
-            return { success: false, data: null, message: response?.data?.error }
-          })
-      }
-
-      if (type === 'assessment') {
-        return axios
-          .post(
-            `/api/v1/clients/${client_id}/assessments`,
-            {
-              assessment: {
-                ...assessment,
-                images: images
-              }
-            },
-            {
-              headers: {
-                'X-Platform': 'mobile'
-              }
-            }
+      if (payload.type === 'general') {
+        try {
+          const params = { session_comment: payload.params.session_comment }
+          const res = await axios.post(
+            `/api/v1/sessions/${payload.sessionId}/session_comments`,
+            params,
+            { headers: { 'X-Platform': 'mobile' } }
           )
-          .then(async ({ data }) => {
-            this.addSessionComment(data, true)
-            return { success: true, data }
+
+          this.addSessionComment(res?.data, true)
+
+          return { success: true, data: res?.data, message: '' }
+        } catch (error) {
+          if (isAxiosError(error)) {
+            const message = getErrorMessage(error.response?.data?.error || error?.message)
+            return { success: false, message }
+          }
+          return { success: false }
+        }
+      }
+
+      if (payload.type === 'assessment') {
+        try {
+          const params = { assessment: payload.params.assessment }
+
+          const res = await axios.post(`/api/v1/clients/${payload.clientId}/assessments`, params, {
+            headers: { 'X-Platform': 'mobile' }
           })
-          .catch(({ response }) => {
-            return { success: false, data: null, message: response?.data?.error }
-          })
+
+          this.addSessionComment(res?.data, true)
+
+          return { success: true, data: res?.data, message: '' }
+        } catch (error) {
+          if (isAxiosError(error)) {
+            const message = getErrorMessage(error.response?.data?.error || error?.message)
+            return { success: false, message }
+          }
+          return { success: false }
+        }
       }
 
       return { success: false, data: null }
     },
 
-    async updateSessionComment({
-      client_id,
-      comment_id,
-      type,
-      session_comment,
-      assessment,
-      data_result
-    }: UpdateSessionCommentParams) {
+    async updateSessionComment(payload: UpdateSessionCommentParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {
-        if (typeof comment_id === 'number') {
-          const key = `update_comment_${data_result.id}`
-          const newParams = {
-            client_id,
-            comment_id,
-            type,
-            session_comment,
-            assessment,
-            data_result
-          }
+        if (typeof payload.commentId === 'number') {
+          const key = `update_comment_${payload.dataResult.id}`
 
           const index = this.pending_progress.findIndex((i) => i.key === key)
           if (index > -1) {
-            this.pending_progress[index].params = newParams
+            this.pending_progress[index].params = payload
             this.pending_progress[index].timestamp = Date.now()
           } else {
             this.pending_progress.push({
               key,
               name: 'update_comment',
-              params: newParams,
+              params: payload,
               timestamp: Date.now(),
               retryCount: 0
             })
@@ -1787,141 +1765,161 @@ export const useSessionStore = defineStore('session', {
         } else {
           type CreateParams = CreateSessionCommentParams
           const idx = this.pending_progress.findIndex((i) => {
-            return (i.params as CreateParams).data_result.id === comment_id
+            return (i.params as CreateParams).dataResult.id === payload.commentId
           })
           if (idx > -1) {
             const newParams = { ...(this.pending_progress[idx].params as CreateParams) }
-            newParams.session_comment = session_comment as CreateParams['session_comment']
-            newParams.assessment = assessment as CreateParams['assessment']
-            newParams.data_result = data_result as CreateParams['data_result']
+            newParams.params.session_comment = payload.params.session_comment
+            newParams.params.assessment = payload.params.assessment
+            newParams.dataResult = payload.dataResult
 
             this.pending_progress[idx].params = newParams
             this.pending_progress[idx].timestamp = Date.now()
           }
         }
-        this.setSessionComment(data_result)
-        return { success: true, data: data_result }
+        this.setSessionComment(payload.dataResult)
+        return { success: true, data: payload.dataResult }
       }
 
-      if (typeof comment_id === 'string') {
-        this.setSessionComment(data_result)
+      if (typeof payload.commentId === 'string') {
+        this.setSessionComment(payload.dataResult)
         return { success: true, data: null }
       }
 
-      if (type === 'general') {
-        return axios
-          .patch(`/api/v1/session_comments/${comment_id}`, { session_comment })
-          .then(async ({ data }) => {
-            this.setSessionComment(data)
-            return { success: true, data }
-          })
-          .catch(({ response }) => {
-            return { success: false, data: null, message: response?.data?.error }
-          })
+      if (payload.type === 'general') {
+        try {
+          const params = { session_comment: payload.params.session_comment }
+          const res = await axios.patch(`/api/v1/session_comments/${payload.commentId}`, params)
+
+          this.setSessionComment(res?.data)
+
+          return { success: true, data: res?.data, message: '' }
+        } catch (error) {
+          if (isAxiosError(error)) {
+            const message = getErrorMessage(error.response?.data?.error || error?.message)
+            return { success: false, message }
+          }
+          return { success: false }
+        }
       }
-      if (type === 'assessment') {
-        return axios
-          .patch(`/api/v1/clients/${client_id}/assessments/${comment_id}`, { assessment })
-          .then(async ({ data }) => {
-            this.setSessionComment(data)
-            return { success: true, data }
-          })
-          .catch(({ response }) => {
-            return { success: false, data: null, message: response?.data?.error }
-          })
+
+      if (payload.type === 'assessment') {
+        try {
+          const params = { assessment: payload.params.assessment }
+          const res = await axios.patch(
+            `/api/v1/clients/${payload.clientId}/assessments/${payload.commentId}`,
+            params
+          )
+
+          this.setSessionComment(res?.data)
+
+          return { success: true, data: res?.data, message: '' }
+        } catch (error) {
+          if (isAxiosError(error)) {
+            const message = getErrorMessage(error.response?.data?.error || error?.message)
+            return { success: false, message }
+          }
+          return { success: false }
+        }
       }
+
       return { success: false, data: null }
     },
 
-    async duplicateImagesToClientDocument({
-      documents,
-      client_id,
-      session_id,
-      session_slug
-    }: DuplicateImagesToClientDocumentParams) {
+    async duplicateImagesToClientDocument(payload: DuplicateImagesToClientDocumentParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {
         this.pending_progress.push({
-          key: `duplicate_images_${session_id}`,
+          key: `duplicate_images_${payload.params.session_id}`,
           name: 'duplicate_images',
-          params: { documents, client_id, session_id, session_slug },
+          params: payload,
           timestamp: Date.now(),
           retryCount: 0
         })
         return { success: true, data: null }
       }
 
-      return axios
-        .post(`/api/v1/clients/${client_id}/duplicate_documents`, {
-          documents,
-          session_id,
-          session_slug
-        })
-        .then(async ({ data }) => {
-          return { success: true, data }
-        })
-        .catch(({ response }) => {
-          return { success: false, data: null, message: response?.data?.error }
-        })
+      try {
+        const res = await axios.post(
+          `/api/v1/clients/${payload.clientId}/duplicate_documents`,
+          payload.params
+        )
+        return { success: true, data: res?.data, message: '' }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          const message = getErrorMessage(error.response?.data?.error || error?.message)
+          return { success: false, message }
+        }
+        return { success: false }
+      }
     },
 
-    async deleteSessionComment({ client_id, comment_id, type }: DeleteSessionCommentParams) {
+    async deleteSessionComment(payload: DeleteSessionCommentParams) {
       const app = useAppStore()
       if (!app.network_status.connected) {
-        if (typeof comment_id === 'number') {
-          const key = `delete_comment_${comment_id}`
-          const newParams = { client_id, comment_id, type }
+        if (typeof payload.commentId === 'number') {
+          const key = `delete_comment_${payload.commentId}`
 
           const index = this.pending_progress.findIndex((i) => i.key === key)
           if (index > -1) {
-            this.pending_progress[index].params = newParams
+            this.pending_progress[index].params = payload
             this.pending_progress[index].timestamp = Date.now()
           } else {
             this.pending_progress.push({
               key,
               name: 'delete_comment',
-              params: newParams,
+              params: payload,
               timestamp: Date.now(),
               retryCount: 0
             })
           }
         } else {
           const arr = this.pending_progress.filter((i) => {
-            return (i.params as CreateSessionCommentParams).data_result.id !== comment_id
+            return (i.params as CreateSessionCommentParams).dataResult.id !== payload.commentId
           })
           this.pending_progress = arr
         }
-        this.removeSessionComment(comment_id)
+        this.removeSessionComment(payload.commentId)
         return { success: true }
       }
 
-      if (typeof comment_id === 'string') {
-        this.removeSessionComment(comment_id)
+      if (typeof payload.commentId === 'string') {
+        this.removeSessionComment(payload.commentId)
         return { success: true }
       }
 
-      if (type === 'general') {
-        return axios
-          .delete(`/api/v1/session_comments/${comment_id}`)
-          .then(async () => {
-            this.removeSessionComment(comment_id)
-            return { success: true }
-          })
-          .catch(({ response }) => {
-            return { success: false, data: null, message: response?.data?.error }
-          })
+      if (payload.type === 'general') {
+        try {
+          await axios.delete(`/api/v1/session_comments/${payload.commentId}`)
+
+          this.removeSessionComment(payload.commentId)
+
+          return { success: true, message: '' }
+        } catch (error) {
+          if (isAxiosError(error)) {
+            const message = getErrorMessage(error.response?.data?.error || error?.message)
+            return { success: false, message }
+          }
+          return { success: false }
+        }
       }
-      if (type === 'assessment') {
-        return axios
-          .delete(`/api/v1/clients/${client_id}/assessments/${comment_id}`)
-          .then(async () => {
-            this.removeSessionComment(comment_id)
-            return { success: true }
-          })
-          .catch(({ response }) => {
-            return { success: false, message: response?.data?.error }
-          })
+
+      if (payload.type === 'assessment') {
+        try {
+          await axios.delete(`/api/v1/clients/${payload.clientId}/assessments/${payload.commentId}`)
+
+          this.removeSessionComment(payload.commentId)
+
+          return { success: true, message: '' }
+        } catch (error) {
+          if (isAxiosError(error)) {
+            const message = getErrorMessage(error.response?.data?.error || error?.message)
+            return { success: false, message }
+          }
+          return { success: false }
+        }
       }
+
       return { success: false }
     },
 
@@ -1941,7 +1939,7 @@ export const useSessionStore = defineStore('session', {
       const appStore = useAppStore()
       const params = {
         ...rawParams,
-        notes: `[${appStore.account?.email}] ${rawParams}`
+        notes: `[${appStore.account?.email}] ${rawParams?.notes}`
       }
 
       // Inisialisasi buffer jika belum ada

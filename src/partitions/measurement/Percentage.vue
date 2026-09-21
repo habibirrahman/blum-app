@@ -24,7 +24,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
-const results = ref<Measurement['results']>({})
+const results = ref<Record<string, boolean | null>>({})
 
 const page = ref<number>(1)
 
@@ -77,7 +77,7 @@ const percentageBoxesPages = computed<PercentageBox[][]>(() => {
   return res
 })
 const percentageScore = computed<number>(() => {
-  const trials = Object.values(results.value).length
+  const trials = Object.keys(results.value).length
   const totalSuccess = Object.values(results.value).filter((i) => i).length
   return (totalSuccess / trials) * 100 || 0
 })
@@ -107,16 +107,16 @@ const onSavePercentage = debounce(async function (box: PercentageBox) {
   const finalResults = results.value
   finalResults[box.key] = val
 
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: { results: finalResults },
-    data_result: { ...props.measurement, results: finalResults },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: finalResults } },
+    dataResult: { ...props.measurement, results: finalResults },
+    lastData: { ...props.measurement }
   }
 
   percentageLoadingBox.value = box.key
   console.log('[onSavePercentage] start')
-  const { success, data, message } = await sessionStore.updateMeasurementResults(params)
+  const { success, data, message } = await sessionStore.updateMeasurementResults(payload)
   percentageLoadingBox.value = null
 
   results.value = { ...data.results }
@@ -177,8 +177,8 @@ const onChangeProbing = async () => {
   if (!checked) {
     const updateParams = {
       id: temp.measurement_id,
-      measurement: { visible: false },
-      data_result: props.measurement
+      params: { measurement: { visible: false } },
+      dataResult: props.measurement
     }
 
     switchLoading.value = true
@@ -190,11 +190,13 @@ const onChangeProbing = async () => {
 
     const createParams = {
       id: temp.session_id,
-      target_id: temp.target_id,
-      measurement: {
-        type: 'Measurement::Probing' as Measurement['type'],
-        position: temp.position,
-        is_fixed: temp.is_fixed
+      targetId: temp.target_id,
+      params: {
+        measurement: {
+          type: 'Measurement::Probing' as Measurement['type'],
+          position: temp.position,
+          is_fixed: temp.is_fixed
+        }
       }
     }
     const { success: succesCreate } = await sessionStore.createMeasurement(createParams)
@@ -228,7 +230,7 @@ const onChangeProbing = async () => {
 }
 
 onMounted(() => {
-  results.value = { ...props.measurementResults }
+  results.value = { ...(props.measurementResults as Record<string, boolean | null>) }
 })
 
 onUnmounted(() => {

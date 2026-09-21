@@ -27,8 +27,25 @@ const emit = defineEmits<Emits>()
 const loading = ref<{ yes: boolean; no: boolean }>({ yes: false, no: false })
 const loadingMultiple = ref<Record<string, boolean>>({})
 
+/**
+ * CLASSIC: SINGLE
+ * results: {}
+ * results: { score: "0" }
+ * results: { score: "100" }
+ *
+ * CUSTOM: MULTIPLE
+ * results: {}
+ * results: {
+ *  "1": { target_variable_id: 1, score: 0 }
+ * }
+ * results: {
+ *  "1": { target_variable_id: 1, score: 0 },
+ *  "2": { target_variable_id: 2, score: 100 }
+ * }
+ */
+
 const singleVariableResult = ref<{ yes: boolean; no: boolean }>({ yes: false, no: false })
-const multipleVariableResult = ref<Record<string, string>>({})
+const multipleVariableResult = ref<Record<string, 'yes' | 'no'>>({})
 const allResults = ref<Record<string, { target_variable_id: number; score: number }>>({})
 
 const isCompletedColdProbe = computed<boolean>(() => {
@@ -41,17 +58,23 @@ const isCompletedColdProbe = computed<boolean>(() => {
 
 onMounted(() => {
   if (props.target.cold_probe_format === 'classic') {
-    if (props.measurementResults) {
-      singleVariableResult.value = {
-        yes: props.measurementResults.score === '100',
-        no: props.measurementResults.score === '0'
-      }
+    const res = (props.measurementResults || {}) as { score: string }
+    singleVariableResult.value = {
+      yes: res?.score === '100',
+      no: res?.score === '0'
     }
-  } else if (props.target.cold_probe_format === 'custom') {
-    if (props.measurementResults && Object.keys(props.measurementResults).length > 0) {
-      allResults.value = { ...props.measurementResults }
-      for (const id in props.measurementResults) {
-        const result = props.measurementResults[id]
+  }
+
+  if (props.target.cold_probe_format === 'custom') {
+    const res = (props.measurementResults || {}) as Record<
+      string,
+      { target_variable_id: number; score: number }
+    >
+
+    if (res && Object.keys(res).length > 0) {
+      allResults.value = { ...res }
+      for (const id in res) {
+        const result = res[id]
         multipleVariableResult.value[id] = result.score === 100 ? 'yes' : 'no'
       }
     }
@@ -61,12 +84,14 @@ onMounted(() => {
 
 const onClickSingleVariable = async (value: 'yes' | 'no') => {
   if (sessionStore.session?.status !== 'ongoing') return
+
   emit('toggle-updated', true)
-  singleVariableResult.value = {
+
+  loading.value = {
     yes: value === 'yes',
     no: value === 'no'
   }
-  loading.value = {
+  singleVariableResult.value = {
     yes: value === 'yes',
     no: value === 'no'
   }
@@ -84,16 +109,11 @@ const onClickSingleVariable = async (value: 'yes' | 'no') => {
 }
 
 const onSaveColdProbe = async (value: 'yes' | 'no') => {
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: {
-      results: { score: value === 'yes' ? '100' : '0' }
-    },
-    data_result: {
-      ...props.measurement,
-      results: { score: value === 'yes' ? '100' : '0' }
-    },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: { score: value === 'yes' ? '100' : '0' } } },
+    dataResult: { ...props.measurement, results: { score: value === 'yes' ? '100' : '0' } },
+    lastData: { ...props.measurement }
   }
 
   // record session activities
@@ -107,7 +127,7 @@ const onSaveColdProbe = async (value: 'yes' | 'no') => {
     timestamp: new Date().toISOString()
   })
 
-  const { success, message } = await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(payload)
 
   if (!success) {
     toast.error(message)
@@ -139,11 +159,11 @@ const saveMultipleVariableResult = async (id: number, value: 'yes' | 'no') => {
     score
   }
 
-  const params: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
-    measurement: { results: allResults.value },
-    data_result: { ...props.measurement, results: allResults.value },
-    last_data: { ...props.measurement }
+    params: { measurement: { results: allResults.value } },
+    dataResult: { ...props.measurement, results: allResults.value },
+    lastData: { ...props.measurement }
   }
 
   // record session activities
@@ -157,7 +177,7 @@ const saveMultipleVariableResult = async (id: number, value: 'yes' | 'no') => {
     timestamp: new Date().toISOString()
   })
 
-  const { success, message } = await sessionStore.updateMeasurementResults(params)
+  const { success, message } = await sessionStore.updateMeasurementResults(payload)
 
   if (!success) {
     toast.error(message)
@@ -215,13 +235,13 @@ const isLoading = computed(() => {
                 <Icon
                   icon="mingcute:check-fill"
                   class="w-20"
-                  :class="
+                  :class="[
                     loading.yes
                       ? 'text-white'
                       : singleVariableResult.yes
                         ? 'text-white'
                         : 'text-slate-5'
-                  "
+                  ]"
                 />
               </div>
             </div>
@@ -240,13 +260,13 @@ const isLoading = computed(() => {
                 <Icon
                   icon="mingcute:close-fill"
                   class="w-12"
-                  :class="
+                  :class="[
                     loading.no
                       ? 'text-white'
                       : singleVariableResult.no
                         ? 'text-white'
                         : 'text-slate-5'
-                  "
+                  ]"
                 />
               </div>
             </div>
@@ -292,14 +312,14 @@ const isLoading = computed(() => {
                     <Icon
                       icon="mingcute:check-fill"
                       class="w-20"
-                      :class="
+                      :class="[
                         loadingMultiple[variable?.id ?? ''] &&
                         multipleVariableResult[variable?.id ?? ''] === 'yes'
                           ? 'text-white'
                           : multipleVariableResult[variable?.id ?? ''] === 'yes'
                             ? 'text-white'
                             : 'text-slate-5'
-                      "
+                      ]"
                     />
                   </div>
                 </div>
@@ -326,14 +346,14 @@ const isLoading = computed(() => {
                     <Icon
                       icon="mingcute:close-fill"
                       class="w-12"
-                      :class="
+                      :class="[
                         loadingMultiple[variable?.id ?? ''] &&
                         multipleVariableResult[variable?.id ?? ''] === 'no'
                           ? 'text-white'
                           : multipleVariableResult[variable?.id ?? ''] === 'no'
                             ? 'text-white'
                             : 'text-slate-5'
-                      "
+                      ]"
                     />
                   </div>
                 </div>
