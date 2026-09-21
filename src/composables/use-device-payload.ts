@@ -22,7 +22,7 @@ export async function buildDevicePayload(): Promise<DevicePayload> {
   return {
     app_type: 'mobile_app',
     device_type: 'mobile',
-    device_id,
+    device_id: `uuid#${device_id}`,
     device_details: {
       device_name: [info.manufacturer, info.model].filter(Boolean).join(' ').trim(),
       os_name: OS[info.operatingSystem] || info.operatingSystem,
