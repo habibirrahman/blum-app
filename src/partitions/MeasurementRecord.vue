@@ -3,7 +3,6 @@ import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import AppButton from '@/components/AppButton.vue'
-import AppTextInput from '@/components/AppTextInput.vue'
 import {
   type MeasurementType,
   type Measurement,
@@ -33,6 +32,7 @@ import TaskAnalysis from './measurement/TaskAnalysis.vue'
 import { useAppStore } from '@/stores/app.store'
 import AppCheckInput from '@/components/AppCheckInput.vue'
 import dayjs from 'dayjs'
+import MeasurementComment from './measurement/MeasurementComment.vue'
 
 interface Props {
   measurement: Measurement
@@ -67,11 +67,8 @@ const sessionStore = useSessionStore()
 
 const dropLoading = ref<boolean>(false)
 const cardLoading = ref<boolean>(true)
-const commentLoading = ref<boolean>(false)
 
 const isDropped = ref<boolean>(false)
-
-const commentInput = ref<string>('')
 
 const display = ref<'target' | 'description' | 'comment'>('target')
 const cardId = ref<string>('card-random-id')
@@ -109,10 +106,6 @@ const syncStatusText = computed(() => {
 
   return 'Syncing...'
 })
-
-const isDisabledSaveComment = computed<boolean>(
-  () => commentInput.value === (props.measurement.comment || '')
-)
 
 // maintenance property
 const isMaintenanceDisplayable = computed<boolean>(() => {
@@ -220,13 +213,6 @@ watch(
   }
 )
 
-watch(
-  () => display.value,
-  (val) => {
-    if (val === 'comment') commentInput.value = props.measurement.comment || ''
-  }
-)
-
 /** === METHODS === */
 
 const generateResults = async (res: Measurement['results']) => {
@@ -314,38 +300,6 @@ const handleCompletedColdProbe = (isCompleted: boolean) => {
   emit('check-completed-cold-probe', { id: props.measurement.id, isCompleted })
 }
 
-const onSaveComment = async () => {
-  if (sessionStore.session?.status !== 'ongoing') return
-
-  const params: UpdateMeasurementParams = {
-    id: props.measurement.id,
-    params: { measurement: { comment: commentInput.value } },
-    dataResult: { ...props.measurement, comment: commentInput.value },
-    isComment: true
-  }
-
-  commentLoading.value = true
-
-  // record session activities
-  await sessionStore.addSessionActivity({
-    action_label: `comment_save`,
-    recordable: 'Measurement',
-    recordable_id: props.measurement.id,
-    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: params.params,
-    notes: `Target: ${props.measurement.target?.name}`,
-    timestamp: new Date().toISOString()
-  })
-
-  const { success, message } = await sessionStore.updateMeasurement(params)
-  commentLoading.value = false
-  if (!success) {
-    toast.error(message)
-    return
-  }
-  display.value = 'target'
-}
-
 onMounted(async () => {
   if (sessionStore.session?.status === 'ongoing') {
     // Setup auto-sync (hanya sekali)
@@ -382,21 +336,27 @@ onUnmounted(() => {
       'border border-light-purple-5 shadow-[4px_4px_4px_4px_#D6C7E066]': isChecked
     }"
   >
+    <!-- Lock icon -->
     <div
       v-if="reviewMode && measurement.is_fixed"
       class="absolute -top-6 left-0 flex h-16 w-16 items-center justify-center rounded-full bg-white"
     >
       <Icon icon="ph:lock-fill" class="text-[40px] text-prim-5" />
     </div>
+
     <div
       class="flex h-full flex-col"
       :class="{ 'pointer-events-none': reviewMode && sessionStore.session?.status !== 'draft' }"
     >
+      <!-- Curriculum color bar -->
       <div
         class="h-[6px] w-full shrink-0 rounded-t"
         :style="{ backgroundColor: measurement.target?.curriculum_color }"
       ></div>
+
+      <!-- Header -->
       <div v-if="!isCollapsed" id="measurememt-header">
+        <!-- Header for draft status -->
         <div
           v-if="sessionStore.session?.status === 'draft'"
           class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-2"
@@ -419,6 +379,7 @@ onUnmounted(() => {
             />
           </div>
         </div>
+        <!-- Header for ongoing/completed status -->
         <div v-else class="flex h-9 w-full shrink-0 items-center justify-between bg-prim-2 px-4">
           <div
             class="flex h-6 w-6 items-center justify-center rounded transition-colors"
@@ -450,6 +411,7 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Body -->
       <div v-if="cardLoading" class="flex h-full flex-col items-center justify-center bg-white">
         <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
       </div>
@@ -462,6 +424,7 @@ onUnmounted(() => {
           measurement.is_fixed ? (isCollapsed ? 'max-h-[25vh]' : 'max-h-[75vh]') : ''
         ]"
       >
+        <!-- Card title -->
         <div v-if="!isCollapsed" id="card-title" class="pt-3">
           <div v-if="measurement.target?.is_group" class="flex items-center gap-2">
             <Icon icon="ph:copy" class="h-5 w-5 text-slate-6" />
@@ -510,6 +473,8 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+
+        <!-- Display: target (Data Collection Method) -->
         <div v-if="display === 'target'" class="flex gap-3" :class="[isCollapsed ? '' : 'h-full']">
           <div
             v-if="isDropped"
@@ -678,6 +643,8 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+
+        <!-- Display: description -->
         <div v-if="display === 'description'" class="pb-16">
           <div class="flex flex-col gap-3">
             <!-- target information -->
@@ -911,13 +878,21 @@ onUnmounted(() => {
             </AppButton>
           </div>
         </div>
-        <div
+
+        <!-- Display: comment -->
+        <MeasurementComment
+          v-if="display === 'comment'"
+          :measurement-id="measurement.id"
+          :disabled="sessionStore.session?.status !== 'ongoing'"
+          @close="onChangeDisplay('comment')"
+        />
+        <!-- <div
           v-if="display === 'comment'"
           class="flex h-[calc(100%-44px)] flex-col justify-between gap-3"
         >
           <div
             v-if="sessionStore.session?.status !== 'ongoing'"
-            class="text-wrap pt-3 text-sm text-slate-8"
+            class="pt-3 text-sm text-wrap text-slate-8"
           >
             {{ measurement.comment || '-' }}
           </div>
@@ -930,7 +905,7 @@ onUnmounted(() => {
             :disabled="sessionStore.session?.status !== 'ongoing'"
             class="mt-2 h-full"
           />
-          <div class="z-1 sticky -bottom-3 w-full bg-white py-3">
+          <div class="sticky -bottom-3 py-3 w-full bg-white z-1">
             <AppButton
               v-if="sessionStore.session?.status !== 'ongoing'"
               kind="outline"
@@ -953,7 +928,7 @@ onUnmounted(() => {
               </AppButton>
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
