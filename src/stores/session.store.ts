@@ -887,22 +887,23 @@ export const useSessionStore = defineStore('session', {
       this.syncSessionStore()
     },
 
-    setSessionMeasurement(data: Measurement, is_comment?: boolean) {
-      // by id, fallback use target.id
+    setSessionMeasurement(payload: Measurement, isComment?: boolean) {
+      if (!payload) return
       const idx = this.session_measurements.findIndex(
-        (i) => i.id === data.id || i.target?.id === data.target?.id
+        (i) =>
+          Number(i.id) === Number(payload.id) || Number(i.target_id) === Number(payload.target_id)
       )
       if (idx > -1) {
-        if (is_comment) {
-          this.session_measurements[idx].comment = data.comment
+        if (isComment) {
+          this.session_measurements[idx].comment = payload.comment
         } else {
-          const local = this.session_measurements.find((i) => i.id === data.id)
-          if (local?.updated_at && data.updated_at && local.updated_at > data.updated_at) {
+          const local = this.session_measurements.find((i) => i.id === payload.id)
+          if (local?.updated_at && payload.updated_at && local.updated_at > payload.updated_at) {
             // use local: do nothing
           } else {
-            // use data
+            // use payload
             const arr = [...this.session_measurements]
-            arr[idx] = data
+            arr[idx] = payload
             this.session_measurements = arr
           }
         }
@@ -1011,6 +1012,25 @@ export const useSessionStore = defineStore('session', {
         const res = await axios.get(`/api/v1/measurements/${payload.id}`)
 
         this.setSessionMeasurement(res?.data)
+
+        return { success: true, data: res?.data }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          return { success: false, message: error?.response?.data }
+        }
+        return { success: false }
+      }
+    },
+
+    async getMeasurementComment(payload: {
+      measurement_id: Measurement['id']
+    }): Promise<ResponseSchema> {
+      if (!payload.measurement_id) return { success: false, data: null }
+
+      try {
+        const res = await axios.get(`/api/v1/measurements/${payload.measurement_id}`)
+
+        this.setSessionMeasurement(res?.data, true)
 
         return { success: true, data: res?.data }
       } catch (error) {
@@ -1683,7 +1703,6 @@ export const useSessionStore = defineStore('session', {
         return { success: false }
       }
     },
-    // ayam
 
     async createSessionComment(payload: CreateSessionCommentParams) {
       const app = useAppStore()
