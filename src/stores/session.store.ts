@@ -1703,7 +1703,6 @@ export const useSessionStore = defineStore('session', {
         return { success: false }
       }
     },
-    // ayam
 
     async createSessionComment(payload: CreateSessionCommentParams) {
       const app = useAppStore()
