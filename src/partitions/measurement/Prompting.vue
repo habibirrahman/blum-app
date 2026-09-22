@@ -528,8 +528,10 @@ onUnmounted(() => {
               class="rounded p-1 text-slate-5 hover:text-slate-8"
               title="Edit"
               @click="
-                isOpenTrialHistory = false
-                isOpenProblemBehavior = true
+                () => {
+                  isOpenTrialHistory = false
+                  isOpenProblemBehavior = true
+                }
               "
             >
               <Icon icon="ph:pencil-simple" class="h-4 w-4" />
