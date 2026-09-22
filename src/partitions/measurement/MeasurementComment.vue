@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementParams } from '@/stores/session.store'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import { type Measurement } from '@/lib/types'
@@ -43,6 +43,11 @@ const acceptType = ref<'current' | 'incoming' | 'both'>('current')
 
 /** === COMPUTEDS === */
 
+const isOnline = computed<boolean>(() => appStore.network_status.connected)
+const originalMeasurement = computed<Measurement | null>(
+  () => sessionStore.session_measurements.find((i) => i.id === props.measurementId) || null
+)
+
 // const isDisabledSaveComment = computed<boolean>(
 //   () => commentInput.value === (props.measurement.comment || '')
 // )
@@ -72,12 +77,17 @@ watch(
 
 const fetchComment = async () => {
   fetchLoading.value = true
-  const { success, data } = await sessionStore.getMeasurementComment({
+  const { success, data: res } = await sessionStore.getMeasurementComment({
     measurement_id: props.measurementId
   })
   fetchLoading.value = false
 
-  if (!success) return
+  let data = res
+  if (!isOnline.value) {
+    data = originalMeasurement.value
+  }
+
+  if (!success && isOnline.value) return
 
   measurement.value = data
   commentOrigin.value = data.comment || ''
@@ -89,9 +99,14 @@ const checkIsServerVsClientDifference = async () => {
     url: `/api/v1/measurements/${props.measurementId}`
   }
 
-  const { success, data } = await appStore.actionGet(payload)
+  const { success, data: res } = await appStore.actionGet(payload)
 
-  if (!success) return true
+  let data = res
+  if (!isOnline.value) {
+    data = originalMeasurement.value
+  }
+
+  if (!success && isOnline.value) return
 
   measurement.value = data
   commentIncomingChange.value = data.comment || ''
@@ -175,18 +190,18 @@ onUnmounted(() => {
 <template>
   <div class="flex h-[calc(100%-44px)] flex-col justify-between gap-3">
     <!-- Loading -->
-    <div v-if="fetchLoading" class="flex min-h-40 w-full grow items-center justify-center">
-      <Icon icon="mingcute:loading-fill" class="text-light-purple animate-spin text-6xl" />
+    <div v-if="fetchLoading" class="flex justify-center items-center w-full min-h-40 grow">
+      <Icon icon="mingcute:loading-fill" class="text-6xl animate-spin text-light-purple" />
     </div>
 
     <!-- Content -->
-    <div v-else class="flex w-full grow flex-col gap-2">
+    <div v-else class="flex flex-col gap-2 w-full grow">
       <template v-if="isCommentConflicted">
         <div class="text-sm text-slate-8">
           We have detected conflicts for this comment. Please resolve it before saving.
         </div>
 
-        <div class="mt-2 flex items-center justify-between border-slate-4">
+        <div class="flex justify-between items-center mt-2 border-slate-4">
           <div class="text-sm text-slate-10">Accept:</div>
           <div class="flex shrink-0">
             <AppButton
@@ -216,11 +231,11 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="grid w-full grow grid-cols-2 gap-2">
-          <div class="flex w-full grow flex-col gap-1">
+        <div class="grid grid-cols-2 gap-2 w-full grow">
+          <div class="flex flex-col gap-1 w-full grow">
             <div class="text-xs text-slate-8">Your comment:</div>
             <div
-              class="w-full grow whitespace-pre-line rounded border p-3 text-sm"
+              class="p-3 w-full text-sm whitespace-pre-line rounded border grow"
               :class="[
                 acceptType === 'current' || acceptType === 'both'
                   ? 'border-light-purple-5'
@@ -232,10 +247,10 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="flex w-full grow flex-col gap-1">
+          <div class="flex flex-col gap-1 w-full grow">
             <div class="text-xs text-slate-8">Others comment:</div>
             <div
-              class="w-full grow whitespace-pre-line rounded border p-3 text-sm"
+              class="p-3 w-full text-sm whitespace-pre-line rounded border grow"
               :class="[
                 acceptType === 'incoming' || acceptType === 'both'
                   ? 'border-light-purple-5'
@@ -261,14 +276,20 @@ onUnmounted(() => {
       />
     </div>
 
+    <div v-if="!isOnline" class="p-2 rounded bg-tomato-7">
+      <div class="text-xs text-white">
+        You are currently offline. You can't save this comment until your connection is back.
+      </div>
+    </div>
+
     <!-- Button -->
-    <div class="mt-3 grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-2 gap-3 mt-3">
       <AppButton kind="plain" size="sm" @click="emit('close')">Cancel</AppButton>
       <AppButton
         kind="primary"
         size="sm"
         :loading="saveLoading"
-        :disabled="disabled || fetchLoading"
+        :disabled="disabled || fetchLoading || !isOnline"
         @click="onSaveComment"
       >
         <template v-if="!isCommentConflicted">Save</template>
