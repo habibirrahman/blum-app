@@ -313,6 +313,7 @@ interface MeasurementBase {
   comment_user?: Comment
 
   used_targets?: UsedTargetMeasurement[]
+  prompt_histories: MeasurementPromptHistory[]
 
   results: Record<string, unknown> | unknown
 }
@@ -369,6 +370,18 @@ export interface MeasurementResultsPrompting {
   shape: Prompt['shape']
   enabled: boolean
   score: number
+  problem_behaviors: Array<number | null>
+}
+
+export interface MeasurementPromptHistory {
+  id: number
+  measurement_id: MeasurementBase['id']
+  prompt_id: Prompt['id']
+  entry_id: number | null
+  target_problem_behavior_id: TargetProblemBehavior['id'] | null
+  operation: string | 'addition'
+  created_at: string
+  updated_at: string
 }
 
 // Task Analysis
@@ -511,24 +524,39 @@ export interface Target {
 }
 
 export interface Prompt {
-  id?: number
-  prompt_parent_id?: number
-  name?: string
-  abbreviation?: string
-  position?: number
-  color?: string
-  shape?: string
-  score?: number
-  is_used?: boolean
-  is_default?: boolean
-  prompting_format?: TargetPromptingFormat
-  promptable_id?: number
-  promptable_type?: 'Target' | 'Center'
-  target_id?: Target['id'] // will be removed
-  center_id?: number // will be removed
-  created_at?: string
-  updated_at?: string
-  deleted_at?: string
+  id: number
+  name: string
+  abbreviation: string
+  shape: 'square' | 'circle' | 'triangle' | 'diamond'
+  color:
+    | 'cherry'
+    | 'blush'
+    | 'gold'
+    | 'daffodil'
+    | 'lake'
+    | 'mint'
+    | 'sky'
+    | 'hydrangeas'
+    | 'grey'
+    | 'primary'
+
+  type: 'Prompt::Prompting' | 'Prompt::Sbt'
+  prompting_format: TargetPromptingFormat
+
+  score: number
+  position: number
+  is_used: boolean
+  is_default: boolean
+
+  prompt_parent_id: number
+  promptable_id: number
+  promptable_type: 'Target' | 'Center'
+  created_at: string
+  updated_at: string
+  deleted_at: string
+
+  target_id: Target['id'] // will be removed
+  center_id: number // will be removed
 }
 
 export interface TargetTask {

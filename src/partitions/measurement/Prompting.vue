@@ -2,7 +2,13 @@
 <script setup lang="ts">
 import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import type { Measurement, MeasurementResultsPrompting, Target } from '@/lib/types'
+import type {
+  Measurement,
+  MeasurementResultsPrompting,
+  Prompt,
+  Target,
+  TargetProblemBehavior
+} from '@/lib/types'
 import { promptColors } from '@/lib/data'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
@@ -23,186 +29,107 @@ interface Emits {
   (e: 'toggle-updated', bool: boolean): void
   (e: 'fetch-session'): void
 }
+
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
-const results = ref<Record<string, MeasurementResultsPrompting>>({})
+/** === DATA === */
 
-watch(
-  () => props.measurementResults,
-  (val) => {
-    results.value = val as Record<string, MeasurementResultsPrompting>
-  }
-)
+interface PromptBox extends MeasurementResultsPrompting {
+  key: string
+  centerPrompt?: Prompt
+}
+
+interface RecordedTrialModel {
+  key: number
+  promptId: number
+  prompt?: Prompt
+  problemBehaviorId: number | null
+  problemBehaviorIndex: number | null
+  problemBehavior?: TargetProblemBehavior
+}
 
 const page = ref<number>(1)
-
-const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-watch(
-  () => props.isCollapsed,
-  () => {
-    collapseTimeout.value = setTimeout(() => {
-      const el = `${props.measurement.id}-prompt-boxes-${1}`
-      const boxes = document.getElementById(el)
-      boxes?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-    }, 300)
-
-    return () => {
-      if (collapseTimeout.value) {
-        clearTimeout(collapseTimeout.value)
-        collapseTimeout.value = undefined
-      }
-    }
-  }
-)
-const onScroll = (e: any) => {
-  const left = e.currentTarget.scrollLeft
-  const current = Math.floor(left / (320 - 32)) + 1
-  if (page.value !== current) page.value = current
-}
-
-const perPage = computed<number>(() => (props.isCollapsed ? 3 : 9))
-const pageCount = computed<number>(() => {
-  const res = Object.keys(results.value) || []
-  const boxes = res.filter((i) => results.value[i].enabled).length
-  return Math.ceil(boxes / perPage.value)
-})
-
-type PromptColors =
-  | 'cherry'
-  | 'blush'
-  | 'gold'
-  | 'daffodil'
-  | 'lake'
-  | 'mint'
-  | 'sky'
-  | 'hydrangeas'
-  | 'grey'
-  | 'primary'
-type PromptShapes = 'square' | 'circle' | 'triangle' | 'diamond'
-interface PromptBox {
-  key: number | string
-  id: number | string
-  name: string
-  color: PromptColors
-  score: number
-  shape: PromptShapes
-  enabled: boolean
-  position: number
-  abbreviation: string
-}
-const promptBoxesPages = computed<PromptBox[][]>(() => {
-  if (!results.value) return []
-  const keys = Object.keys(results.value)
-  if (!keys || !keys.length) return []
-
-  const prompts: PromptBox[] = keys
-    .map((key) => ({ ...results.value[key], key }) as PromptBox)
-    .filter((i) => i.enabled)
-    .sort((a, b) => a.position - b.position)
-  const res: PromptBox[][] = []
-  for (let idx = 1; idx <= pageCount.value; idx++) {
-    const start = (idx - 1) * perPage.value
-    const end = idx * perPage.value
-    const arr = [...prompts.slice(start, end)]
-    res.push(arr)
-  }
-  return res
-})
-
-const getPromptScore = (id: number | string) => {
-  const found = props.target?.prompts?.find((i) => i.id === Number(id))
-  return found ? Number(found.score || 0) : 0
-}
-
-const currentScore = computed<number>(() => {
-  if (!results.value) return 0
-  const keys = Object.keys(results.value)
-  if (!keys || !keys.length) return 0
-  let count = 0
-  let total = 0
-
-  for (let idx = 0; idx < keys.length; idx++) {
-    const key = keys[idx]
-    if (results.value[key].enabled) {
-      const promptScore = getPromptScore(key)
-      const attempt = Number(results.value[key].score || 0)
-
-      count += attempt
-      total += attempt * promptScore
-    }
-  }
-  const final = total / (count || 0)
-  return Math.round(final || 0)
-})
-
+const resultsState = ref<Record<string, MeasurementResultsPrompting>>({})
 const scoreLoadingBox = ref<PromptBox['key'] | null>(null)
 const typeLoadingBox = ref<number | null>(null)
 
-watch(
-  () => scoreLoadingBox.value,
-  (val) => {
-    if (val === null) {
-      emit('toggle-updated', true)
-    } else {
-      emit('toggle-updated', false)
-    }
-  }
-)
+const indexUpdatePbLoading = ref(0)
+const indexDeleteTrialLoading = ref(0)
 
-const isOpenProblemBehavior = ref<boolean>(false)
-const isOpenTrialHistory = ref<boolean>(false)
-const selectedProblemBehaviorId = ref<number | null>(null)
+const isOpenProblemBehavior = ref(false)
+const isOpenTrialHistory = ref(false)
+
+const lastPbIdInput = ref<number | null>(null)
+const editTrial = ref<RecordedTrialModel | null>(null)
+
+const isOpenCustomize = ref<boolean>(false)
+const customizeSaveLoading = ref<boolean>(false)
+
+const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+const defaultPrompts = ref<Partial<Prompt>[]>([])
+
+const shapes: Record<string, string> = {
+  square: 'ph:square-fill',
+  circle: 'ph:circle-fill',
+  triangle: 'ph:triangle-fill',
+  diamond: 'ph:diamond-fill'
+}
+
+/** === COMPUTEDS === */
+
+// === use as props ===
+// const measurementResults = computed(
+//   () => props.measurement.results as Record<string, MeasurementResultsPrompting>
+// )
 
 const problemBehaviors = computed(() => {
   const pbs = props.target?.target_problem_behaviors || []
   return [...pbs].sort((a, b) => (a.position || 0) - (b.position || 0))
 })
 
-const selectedPbCode = computed(() => {
-  if (!selectedProblemBehaviorId.value) return 'R'
-  const pb = problemBehaviors.value.find((i) => i.id === selectedProblemBehaviorId.value)
-  return pb ? pb.code : 'R'
+const enableProblemBehavior = computed(() => {
+  return props.target?.enable_problem_behavior && problemBehaviors.value.length
 })
 
-const selectedProblemBehaviorDef = computed(() => {
-  if (!selectedProblemBehaviorId.value) return ''
-  const pb = problemBehaviors.value.find((i) => i.id === selectedProblemBehaviorId.value)
-  return pb ? `${pb.code} - ${pb.code_definition}` : ''
-})
-
-interface RecordedTrialItem {
-  key: number
-  prompt_id: number
-  target_problem_behavior_id?: number | null
-  prompt?: any
-  problem_behavior?: any
-}
-
-const recordedTrials = computed((): RecordedTrialItem[] => {
-  if (!results.value) return []
-  const trials: RecordedTrialItem[] = []
+const recordedTrials = computed((): RecordedTrialModel[] => {
+  if (!resultsState.value) return []
+  const trials: RecordedTrialModel[] = []
   let keyCounter = 1
 
-  const keys = Object.keys(results.value)
-  const prompts = keys
-    .map((key) => ({ ...results.value[key], key }))
-    .filter((i) => i.enabled && i.score > 0)
-    .sort((a, b) => (a.position || 0) - (b.position || 0))
+  const sortedKeys = Object.keys(resultsState.value).sort((a, b) => {
+    const posA = resultsState.value[a]?.position || 0
+    const posB = resultsState.value[b]?.position || 0
+    return posA - posB
+  })
 
-  prompts.forEach((item) => {
-    const prompt = props.target?.prompts?.find((p) => p.id === Number(item.key))
-    const pbs = item.problem_behaviors || []
-    for (let i = 0; i < item.score; i++) {
-      const pbId = pbs[i] ? Number(pbs[i]) : null
-      const pb = problemBehaviors.value.find((p) => p.id === pbId)
-      trials.push({
-        key: keyCounter++,
-        prompt_id: Number(item.key),
-        target_problem_behavior_id: pbId,
-        prompt,
-        problem_behavior: pb
-      })
+  sortedKeys.forEach((key) => {
+    const item = resultsState.value[key]
+    if (item && item.enabled && item.score > 0) {
+      // get prompt
+      const promptId = Number(key)
+      const prompt = props.target?.prompts?.find((p) => p.id === promptId)
+
+      const problemBehaviorIds = item.problem_behaviors || []
+      for (let i = 0; i < item.score; i++) {
+        // get problem behavior
+        const problemBehaviorId = problemBehaviorIds[i]
+          ? Number(problemBehaviorIds[i]) || null
+          : null
+        const problemBehavior = problemBehaviors.value.find((p) => p.id === problemBehaviorId)
+
+        const trial: RecordedTrialModel = {
+          key: keyCounter++,
+          promptId,
+          prompt,
+          problemBehaviorId,
+          problemBehaviorIndex: i,
+          problemBehavior
+        }
+
+        trials.push(trial)
+      }
     }
   })
 
@@ -219,6 +146,175 @@ const lastPromptName = computed(() => {
   return lastTrial.value.prompt?.name || ''
 })
 
+const lastPb = computed(() => {
+  if (!lastTrial.value) return null
+  return lastTrial.value.problemBehavior
+})
+
+const selectedPbDefinition = computed(() => {
+  if (!lastPb.value) return ''
+  return `${lastPb.value.code} - ${lastPb.value.code_definition}`
+})
+
+const selectedPbCode = computed(() => {
+  if (!lastPb.value) return 'R'
+  return lastPb.value.code
+})
+
+const perPage = computed<number>(() => (props.isCollapsed ? 3 : 9))
+
+const pageCount = computed<number>(() => {
+  const res = Object.keys(resultsState.value) || []
+  const boxes = res.filter((i) => resultsState.value[i].enabled).length
+  return Math.ceil(boxes / perPage.value)
+})
+
+const promptBoxesPages = computed<PromptBox[][]>(() => {
+  if (!resultsState.value) return []
+  const keys = Object.keys(resultsState.value)
+  if (!keys || !keys.length) return []
+
+  const prompts: PromptBox[] = keys
+    .map((key) => ({ ...resultsState.value[key], key }) as PromptBox)
+    .filter((i) => i.enabled)
+    .sort((a, b) => a.position - b.position)
+  const res: PromptBox[][] = []
+  for (let idx = 1; idx <= pageCount.value; idx++) {
+    const start = (idx - 1) * perPage.value
+    const end = idx * perPage.value
+    const arr = [...prompts.slice(start, end)]
+    res.push(arr)
+  }
+  return res
+})
+
+const currentScore = computed<number>(() => {
+  if (!resultsState.value) return 0
+  const keys = Object.keys(resultsState.value)
+  if (!keys || !keys.length) return 0
+  let count = 0
+  let total = 0
+
+  for (let idx = 0; idx < keys.length; idx++) {
+    const key = keys[idx]
+    if (resultsState.value[key].enabled) {
+      const promptScore = getPromptScore(key)
+      const attempt = Number(resultsState.value[key].score || 0)
+
+      count += attempt
+      total += attempt * promptScore
+    }
+  }
+  const final = total / (count || 0)
+  return Math.round(final || 0)
+})
+
+/** === WATCHERS === */
+
+watch(
+  () => scoreLoadingBox.value,
+  (val) => {
+    emit('toggle-updated', val === null)
+  }
+)
+
+watch(
+  () => props.measurementResults,
+  (val) => {
+    resultsState.value = val as Record<string, MeasurementResultsPrompting>
+  },
+  { deep: true }
+)
+
+watch(
+  () => lastPb.value,
+  (val) => {
+    lastPbIdInput.value = val?.id || null
+  }
+)
+
+watch(
+  () => props.isCollapsed,
+  () => {
+    collapseTimeout.value = setTimeout(() => {
+      const el = `${props.measurement.id}-prompt-boxes-${1}`
+      const boxes = document.getElementById(el)
+      if (!boxes) return
+      boxes.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+    }, 300)
+
+    return () => {
+      if (collapseTimeout.value) {
+        clearTimeout(collapseTimeout.value)
+        collapseTimeout.value = undefined
+      }
+    }
+  }
+)
+
+watch(
+  () => isOpenCustomize.value,
+  (val) => {
+    if (!val) return
+
+    const res = (props.measurementResults || {}) as Record<string, MeasurementResultsPrompting>
+    const keys = Object.keys(res)
+    if (keys && keys.length) {
+      const n = keys
+        .map((i) => ({ ...res[i], key: i }))
+        .sort((a, b) => (a?.position || 0) - (b?.position || 0))
+      defaultPrompts.value = n as Partial<Prompt>[]
+    }
+  }
+)
+
+/** === METHODS === */
+
+const onScroll = (e: Event) => {
+  const target = e.currentTarget as HTMLElement
+  const current = Math.floor(target.scrollLeft / target.offsetWidth) + 1
+  page.value = current
+}
+
+// no need 'onChangePage'
+
+const _onSaveScore = async (prompt: any, gapScore: number) => {
+  const params: UpdateMeasurementResultsParams = {
+    id: props.measurement.id,
+    params: {
+      results: { [prompt.key]: gapScore }
+    },
+    dataResult: { ...props.measurement, results: resultsState.value },
+    lastData: { ...props.measurement }
+  }
+
+  scoreLoadingBox.value = prompt.key
+  typeLoadingBox.value = gapScore
+  const { success, data, message } = await sessionStore.updateMeasurementResults(params)
+  scoreLoadingBox.value = null
+  typeLoadingBox.value = null
+
+  if (!success) {
+    resultsState.value = { ...(props.measurementResults || {}) } as Record<
+      string,
+      MeasurementResultsPrompting
+    >
+    toast.error(message)
+    return
+  }
+
+  if (data?.results) {
+    resultsState.value = { ...data.results }
+  }
+}
+
+//
+
+const getPromptScore = (id: number | string) => {
+  const found = props.target?.prompts?.find((i) => i.id === Number(id))
+  return found ? Number(found.score || 0) : 0
+}
+
 const onSelectProblemBehavior = async (pb: any) => {
   const currentPbId = selectedProblemBehaviorId.value
   const newPbId = currentPbId === pb.id ? null : pb.id
@@ -231,16 +327,13 @@ const onSelectProblemBehavior = async (pb: any) => {
         results: { target_problem_behavior_id: newPbId }
       }
     },
-    dataResult: { ...props.measurement, results: results.value },
+    dataResult: { ...props.measurement, results: resultsState.value },
     lastData: { ...props.measurement }
   }
   await sessionStore.updateMeasurementResults(params)
 }
 
-const showTrialPbSheet = ref<boolean>(false)
-const selectedTrialForPb = ref<RecordedTrialItem | null>(null)
-
-const onOpenTrialPbSheet = (trial: RecordedTrialItem) => {
+const onOpenTrialPbSheet = (trial: RecordedTrialModel) => {
   selectedTrialForPb.value = trial
   showTrialPbSheet.value = true
 }
@@ -253,19 +346,17 @@ const onSelectTrialPb = async (pbId: number | null) => {
   const payload: UpdateMeasurementResultsParams = {
     id: props.measurement.id,
     params: {
-      measurement: {
-        results: {
-          trial_key: trialKey,
-          target_problem_behavior_id: pbId
-        }
+      results: {
+        trial_key: trialKey,
+        target_problem_behavior_id: pbId
       }
     },
-    dataResult: { ...props.measurement, results: results.value },
+    dataResult: { ...props.measurement, results: resultsState.value },
     lastData: { ...props.measurement }
   }
   const { success, data } = await sessionStore.updateMeasurementResults(payload)
   if (success && data?.results) {
-    results.value = { ...data.results }
+    resultsState.value = { ...data.results }
   }
 }
 
@@ -280,49 +371,17 @@ const onDeleteTrialEntry = (trialKey: number) => {
   }
 }
 
-const _onSaveScore = async (prompt: any, gapScore: number) => {
-  const params: UpdateMeasurementResultsParams = {
-    id: props.measurement.id,
-    params: {
-      measurement: {
-        results: { [prompt.key]: gapScore }
-      }
-    },
-    dataResult: { ...props.measurement, results: results.value },
-    lastData: { ...props.measurement }
-  }
-
-  scoreLoadingBox.value = prompt.key
-  typeLoadingBox.value = gapScore
-  const { success, data, message } = await sessionStore.updateMeasurementResults(params)
-  scoreLoadingBox.value = null
-  typeLoadingBox.value = null
-
-  if (!success) {
-    results.value = { ...(props.measurementResults || {}) } as Record<
-      string,
-      MeasurementResultsPrompting
-    >
-    toast.error(message)
-    return
-  }
-
-  if (data?.results) {
-    results.value = { ...data.results }
-  }
-}
-
 const onChangeScore = async (prompt: any, score: number) => {
   if (sessionStore.session?.status !== 'ongoing') return
   if (scoreLoadingBox.value !== null) return
-  if (!results.value[prompt.key]) return
+  if (!resultsState.value[prompt.key]) return
 
-  const currentPromptScore = results.value[prompt.key].score || 0
+  const currentPromptScore = resultsState.value[prompt.key].score || 0
   const newScore = Math.max(0, currentPromptScore + score)
   if (newScore === currentPromptScore) return
 
-  results.value[prompt.key] = {
-    ...results.value[prompt.key],
+  resultsState.value[prompt.key] = {
+    ...resultsState.value[prompt.key],
     score: newScore
   }
 
@@ -347,44 +406,6 @@ const onChangeScore = async (prompt: any, score: number) => {
   _onSaveScore(prompt, gapScore)
 }
 
-interface Prompt {
-  key: string | number
-  abbreviation: string
-  color: string
-  enabled: boolean
-  name: string
-  position: number
-  score: number
-  shape: string
-}
-
-const shapes: Record<string, string> = {
-  square: 'ph:square-fill',
-  circle: 'ph:circle-fill',
-  triangle: 'ph:triangle-fill',
-  diamond: 'ph:diamond-fill'
-}
-
-const defaultPrompts = ref<Prompt[]>([])
-const saveLoading = ref<boolean>(false)
-const showCustomize = ref<boolean>(false)
-
-watch(
-  () => showCustomize.value,
-  (val) => {
-    if (!val) return
-
-    const res = (props.measurementResults || {}) as Record<string, MeasurementResultsPrompting>
-    const keys = Object.keys(res)
-    if (keys && keys.length) {
-      const n = keys
-        .map((i) => ({ ...res[i], key: i }))
-        .sort((a, b) => (a?.position || 0) - (b?.position || 0))
-      defaultPrompts.value = n as Prompt[]
-    }
-  }
-)
-
 const onToggleEnabledPrompt = (prompt: Prompt) => {
   const index = defaultPrompts.value.findIndex((i) => Number(i.key) === Number(prompt.key))
   if (index > -1) {
@@ -402,15 +423,15 @@ const onSavePrompts = async () => {
     payload.params.measurement.results[i.key] = i
   })
 
-  saveLoading.value = true
+  customizeSaveLoading.value = true
   await sessionStore.updateMeasurement(payload)
-  saveLoading.value = false
+  customizeSaveLoading.value = false
 
-  showCustomize.value = false
+  isOpenCustomize.value = false
 }
 
 onMounted(() => {
-  results.value = {
+  resultsState.value = {
     ...((props.measurementResults || {}) as Record<string, MeasurementResultsPrompting>)
   }
 })
@@ -425,19 +446,19 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
     <div
       v-if="scoreLoadingBox !== null"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <!-- 1. Inline Problem Behaviors View -->
     <div
       v-if="isOpenProblemBehavior"
-      class="flex h-full flex-col items-center justify-between pb-2 pt-2"
+      class="flex flex-col justify-between items-center pt-2 pb-2 h-full"
     >
       <div class="text-xs font-medium text-slate-6">
         Problem behavior
@@ -458,7 +479,7 @@ onUnmounted(() => {
           v-for="pb in problemBehaviors"
           :key="pb.id"
           type="button"
-          class="flex h-16 w-16 shrink-0 cursor-pointer flex-col items-center justify-center rounded-2xl border transition-all hover:brightness-95"
+          class="flex flex-col justify-center items-center w-16 h-16 rounded-2xl border transition-all cursor-pointer shrink-0 hover:brightness-95"
           :class="[
             lastTrial?.target_problem_behavior_id === pb.id || selectedProblemBehaviorId === pb.id
               ? 'border-[#FF4447] bg-[#FF4447] font-bold text-white'
@@ -470,8 +491,8 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div v-if="!isCollapsed" class="px-4 text-center text-xs font-medium text-slate-8">
-        {{ selectedProblemBehaviorDef || 'Select a problem behavior to record' }}
+      <div v-if="!isCollapsed" class="px-4 text-xs font-medium text-center text-slate-8">
+        {{ selectedPbDefinition || 'Select a problem behavior to record' }}
       </div>
 
       <AppButton kind="outline" class="mt-2 w-full" @click="isOpenProblemBehavior = false">
@@ -480,18 +501,18 @@ onUnmounted(() => {
     </div>
 
     <!-- 2. Inline Trial History View -->
-    <div v-else-if="isOpenTrialHistory" class="flex h-full flex-col justify-between pb-2 pt-1">
-      <div class="border-b border-slate-3 px-2 pb-1 text-sm font-semibold text-slate-8">
+    <div v-else-if="isOpenTrialHistory" class="flex flex-col justify-between pt-1 pb-2 h-full">
+      <div class="px-2 pb-1 text-sm font-semibold border-b border-slate-3 text-slate-8">
         {{ target?.name }}
       </div>
 
-      <div class="flex flex-grow flex-col overflow-y-auto">
+      <div class="flex overflow-y-auto flex-col flex-grow">
         <div
           v-for="trial in recordedTrials"
           :key="trial.key"
-          class="flex items-center justify-between border-b border-slate-2 px-2 py-2"
+          class="flex justify-between items-center px-2 py-2 border-b border-slate-2"
         >
-          <div class="flex items-center gap-2">
+          <div class="flex gap-2 items-center">
             <span class="w-4 text-xs font-medium text-slate-6">{{ trial.key }}.</span>
             <div
               class="flex h-6 min-w-[28px] items-center justify-center rounded px-1.5 text-xs font-bold"
@@ -508,7 +529,7 @@ onUnmounted(() => {
             <div v-if="problemBehaviors.length" class="relative">
               <button
                 type="button"
-                class="flex h-6 cursor-pointer items-center justify-center gap-1 rounded border px-2 text-xs font-bold transition-colors"
+                class="flex gap-1 justify-center items-center px-2 h-6 text-xs font-bold rounded border transition-colors cursor-pointer"
                 :class="[
                   trial.target_problem_behavior_id
                     ? 'border-[#FF4447] bg-[#FF4447] text-white'
@@ -522,10 +543,10 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="flex items-center gap-1.5">
+          <div class="flex gap-1.5 items-center">
             <button
               type="button"
-              class="rounded p-1 text-slate-5 hover:text-slate-8"
+              class="p-1 rounded text-slate-5 hover:text-slate-8"
               title="Edit"
               @click="
                 () => {
@@ -534,20 +555,20 @@ onUnmounted(() => {
                 }
               "
             >
-              <Icon icon="ph:pencil-simple" class="h-4 w-4" />
+              <Icon icon="ph:pencil-simple" class="w-4 h-4" />
             </button>
             <button
               type="button"
-              class="rounded p-1 text-tulip-6 hover:text-tulip-8"
+              class="p-1 rounded text-tulip-6 hover:text-tulip-8"
               title="Delete"
               @click="onDeleteTrialEntry(trial.key)"
             >
-              <Icon icon="ph:trash" class="h-4 w-4 shrink-0" />
+              <Icon icon="ph:trash" class="w-4 h-4 shrink-0" />
             </button>
           </div>
         </div>
 
-        <div v-if="!recordedTrials.length" class="py-6 text-center text-xs text-slate-5">
+        <div v-if="!recordedTrials.length" class="py-6 text-xs text-center text-slate-5">
           No recorded trials yet
         </div>
       </div>
@@ -558,8 +579,8 @@ onUnmounted(() => {
     </div>
 
     <!-- 3. Default Prompts Grid View -->
-    <div v-else class="flex h-full flex-grow flex-col justify-between gap-2">
-      <div class="flex h-full flex-grow content-center items-center justify-center">
+    <div v-else class="flex flex-col flex-grow gap-2 justify-between h-full">
+      <div class="flex flex-grow justify-center content-center items-center h-full">
         <div
           class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
           @scroll="onScroll"
@@ -595,7 +616,7 @@ onUnmounted(() => {
                   <Icon v-else icon="stash:plus-solid" class="text-5xl" />
                 </div>
                 <div
-                  class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white px-5"
+                  class="flex justify-center items-center px-5 h-5 rounded border border-slate-5 bg-pure-white"
                   :class="{
                     'cursor-wait':
                       (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
@@ -606,7 +627,7 @@ onUnmounted(() => {
                   @click="onChangeScore(prompt, -1)"
                 >
                   <div
-                    class="h-1 w-6 shrink-0 rounded transition-colors"
+                    class="w-6 h-1 rounded transition-colors shrink-0"
                     :class="{ 'bg-slate-5': !prompt.score, 'bg-slate-6': prompt.score }"
                   ></div>
                 </div>
@@ -618,7 +639,7 @@ onUnmounted(() => {
         <!-- Fixed PB toggle button OUTSIDE scrollable container when collapsed (Right side, matching desktop) -->
         <div
           v-if="isCollapsed && problemBehaviors.length > 0"
-          class="ml-2 flex shrink-0 -translate-y-1 scale-75 items-center justify-center pb-4 transition-transform"
+          class="flex justify-center items-center pb-4 ml-2 transition-transform scale-75 -translate-y-1 shrink-0"
         >
           <button
             type="button"
@@ -637,39 +658,39 @@ onUnmounted(() => {
       </div>
 
       <!-- Bottom Bar -->
-      <div class="shrink-0 space-y-2 pb-3" :class="{ '-translate-y-4': isCollapsed }">
-        <div class="flex h-2 items-center justify-center gap-2">
+      <div class="pb-3 space-y-2 shrink-0" :class="{ '-translate-y-4': isCollapsed }">
+        <div class="flex gap-2 justify-center items-center h-2">
           <div
             v-for="n in pageCount"
             :key="n"
             :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-            class="h-2 w-2 rounded-full transition-colors"
+            class="w-2 h-2 rounded-full transition-colors"
           ></div>
         </div>
 
-        <div v-if="!isCollapsed" class="mt-1 flex w-full items-center justify-between gap-2 px-2">
+        <div v-if="!isCollapsed" class="flex gap-2 justify-between items-center px-2 mt-1 w-full">
           <!-- ≡ Trial History List Button (Left) -->
           <button
             type="button"
-            class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded border border-slate-4 bg-white text-slate-7 transition-colors hover:bg-slate-2"
+            class="flex justify-center items-center w-8 h-8 bg-white rounded border transition-colors cursor-pointer shrink-0 border-slate-4 text-slate-7 hover:bg-slate-2"
             title="Trial history"
             @click="isOpenTrialHistory = true"
           >
-            <Icon icon="ph:list" class="h-5 w-5" />
+            <Icon icon="ph:list" class="w-5 h-5" />
           </button>
 
           <!-- Goal / Score Text (Center) -->
-          <div class="flex grow items-center justify-center text-center">
+          <div class="flex justify-center items-center text-center grow">
             <div
               v-if="measurement?.target?.prompting_format === 'classic'"
-              class="text-center text-xs font-medium text-slate-7"
+              class="text-xs font-medium text-center text-slate-7"
             >
               Goal: {{ measurement.target?.goal }} attempt(s)
               {{ measurement.target?.success_metric }} prompt
             </div>
             <div
               v-if="measurement?.target?.prompting_format === 'custom'"
-              class="text-center text-xs font-medium text-slate-7"
+              class="text-xs font-medium text-center text-slate-7"
             >
               <span v-if="measurement?.target?.success_metric === 'equal to or greater than goal'">
                 Goal: ≥ {{ `${measurement?.target?.goal}%` }}
@@ -686,7 +707,7 @@ onUnmounted(() => {
           <button
             v-if="problemBehaviors.length > 0"
             type="button"
-            class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded border transition-colors"
+            class="flex justify-center items-center w-8 h-8 rounded border transition-colors cursor-pointer shrink-0"
             :class="[
               selectedProblemBehaviorId
                 ? 'border-[#FF4447] bg-[#FF4447] font-bold text-white'
@@ -704,18 +725,22 @@ onUnmounted(() => {
         v-if="sessionStore.session?.status === 'draft'"
         kind="outline"
         class="pointer-events-auto"
-        @click="showCustomize = !showCustomize"
+        @click="isOpenCustomize = !isOpenCustomize"
       >
         Customize prompt visibility
       </AppButton>
     </div>
   </div>
 
-  <AppActionSheet :show="showCustomize" @close="showCustomize = false" class="pointer-events-auto">
+  <AppActionSheet
+    :show="isOpenCustomize"
+    @close="isOpenCustomize = false"
+    class="pointer-events-auto"
+  >
     <div>
-      <div class="sticky top-0 z-10 flex items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 bg-white">
         <div class="text-xl font-semibold">Customize prompt visibility</div>
-        <div class="cursor-pointer" @click="showCustomize = false">
+        <div class="cursor-pointer" @click="isOpenCustomize = false">
           <Icon icon="ph:x" class="text-2xl" />
         </div>
       </div>
@@ -724,7 +749,7 @@ onUnmounted(() => {
         <div
           v-for="prompt in defaultPrompts"
           :key="prompt.key"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex justify-between items-center w-full h-14 border-b border-slate-3"
           :class="[
             prompt.name === measurement.target?.success_metric
               ? 'cursor-not-allowed'
@@ -732,7 +757,7 @@ onUnmounted(() => {
           ]"
         >
           <div
-            class="flex h-10 items-center gap-3 truncate"
+            class="flex gap-3 items-center h-10 truncate"
             :class="{ 'pointer-events-none': prompt.name === measurement.target?.success_metric }"
             @click="onToggleEnabledPrompt(prompt)"
           >
@@ -741,12 +766,12 @@ onUnmounted(() => {
               class="text-2xl"
               :style="{ color: promptColors[prompt.color].primaryColor }"
             />
-            <div class="truncate text-sm text-slate-8">
+            <div class="text-sm truncate text-slate-8">
               {{ prompt.name }}
             </div>
             <div
               v-if="prompt.name === measurement.target?.success_metric"
-              class="truncate text-xs italic text-slate-6"
+              class="text-xs italic truncate text-slate-6"
             >
               as success metric
             </div>
@@ -761,8 +786,10 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 flex items-center justify-between bg-white py-3">
-        <AppButton class="w-full" :loading="saveLoading" @click="onSavePrompts"> Apply </AppButton>
+      <div class="flex sticky bottom-0 z-10 justify-between items-center py-3 bg-white">
+        <AppButton class="w-full" :loading="customizeSaveLoading" @click="onSavePrompts">
+          Apply
+        </AppButton>
       </div>
     </div>
   </AppActionSheet>
@@ -775,7 +802,7 @@ onUnmounted(() => {
   >
     <div>
       <div
-        class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-3 bg-white px-1 py-3"
+        class="flex sticky top-0 z-10 justify-between items-center px-1 py-3 bg-white border-b border-slate-3"
       >
         <div class="text-lg font-semibold text-slate-9">Select Problem Behavior</div>
         <div class="cursor-pointer" @click="showTrialPbSheet = false">
@@ -785,7 +812,7 @@ onUnmounted(() => {
 
       <div class="max-h-[60vh] overflow-y-auto py-2">
         <div
-          class="flex h-14 w-full cursor-pointer items-center justify-between border-b border-slate-3 px-3 transition-colors hover:bg-slate-1"
+          class="flex justify-between items-center px-3 w-full h-14 border-b transition-colors cursor-pointer border-slate-3 hover:bg-slate-1"
           :class="{ 'bg-slate-2 font-semibold': !selectedTrialForPb?.target_problem_behavior_id }"
           @click="onSelectTrialPb(null)"
         >
@@ -800,14 +827,14 @@ onUnmounted(() => {
         <div
           v-for="pb in problemBehaviors"
           :key="pb.id"
-          class="flex h-14 w-full cursor-pointer items-center justify-between border-b border-slate-3 px-3 transition-colors hover:bg-slate-1"
+          class="flex justify-between items-center px-3 w-full h-14 border-b transition-colors cursor-pointer border-slate-3 hover:bg-slate-1"
           :class="{
             'bg-slate-2 font-semibold': selectedTrialForPb?.target_problem_behavior_id === pb.id
           }"
           @click="onSelectTrialPb(pb.id || null)"
         >
-          <div class="flex items-center gap-3">
-            <div class="h-4 w-4 shrink-0 rounded-full" :style="{ backgroundColor: pb.color }"></div>
+          <div class="flex gap-3 items-center">
+            <div class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: pb.color }"></div>
             <div class="text-sm text-slate-8">{{ pb.code }} - {{ pb.code_definition }}</div>
           </div>
           <Icon
