@@ -1071,7 +1071,7 @@ onMounted(() => {
                 :key="'move-' + member.target_id"
                 class="flex justify-center items-center w-10 h-10 text-xs font-bold rounded-lg border transition-all duration-200 shrink-0"
                 :class="[
-                  moveSel === member.target_id
+                  (moveSel || activeMemberId) === member.target_id
                     ? 'scale-105 border-light-purple-5 bg-purple-50 text-light-purple-5 shadow-sm'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 ]"
