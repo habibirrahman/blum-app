@@ -456,6 +456,7 @@ const onUpdateSessionName = async () => {
               </div>
               <div class="text-sm font-semibold truncate">{{ measurement.target?.name }}</div>
             </div>
+
             <!-- target information -->
             <div
               v-if="measurement.target?.is_group"
@@ -465,6 +466,8 @@ const onUpdateSessionName = async () => {
             </div>
             <div v-else class="space-y-0.5 text-sm text-wrap text-slate-8">
               <div>{{ getTargetType(measurement?.target?.type) }}</div>
+
+              <!-- Duration or Latency -->
               <div
                 v-if="
                   measurement.target?.type === 'Target::Duration' ||
@@ -475,11 +478,15 @@ const onUpdateSessionName = async () => {
                 <div>Goal time: {{ measurement.target.goal_time }}</div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
               </div>
+
+              <!-- Percentage -->
               <div v-if="measurement.target?.type === 'Target::Percentage'" class="space-y-0.5">
                 <div>Goal: {{ measurement.target.goal }}%</div>
                 <div>Number of trials: {{ measurement.target.number_of_trial }} trial(s)</div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
               </div>
+
+              <!-- Trial by Trial -->
               <div v-if="measurement.target?.type === 'Target::TrialByTrial'" class="space-y-0.5">
                 <div>Goal: {{ measurement.target.goal }}%</div>
                 <div>
@@ -487,6 +494,8 @@ const onUpdateSessionName = async () => {
                 </div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
               </div>
+
+              <!-- PIR -->
               <div v-if="measurement.target?.type === 'Target::Pir'" class="space-y-0.5">
                 <div>Goal: {{ measurement.target.goal }}%</div>
                 <div>Interval: {{ measurement.target.interval }} minute(s)</div>
@@ -509,6 +518,8 @@ const onUpdateSessionName = async () => {
                   <span v-else>planned duration</span>
                 </div>
               </div>
+
+              <!-- Frequency -->
               <div v-if="measurement.target?.type === 'Target::Frequency'" class="space-y-0.5">
                 <div>Goal: {{ measurement.target.goal }} attempt(s) per session</div>
                 <div>Success metric: {{ measurement.target?.success_metric }}</div>
@@ -516,6 +527,8 @@ const onUpdateSessionName = async () => {
                   Duration: {{ measurement.duration }} minute(s)
                 </div>
               </div>
+
+              <!-- Prompting -->
               <div v-if="measurement.target?.type === 'Target::Prompting'" class="space-y-0.5">
                 <div class="capitalize">Format: {{ measurement.target?.prompting_format }}</div>
                 <div v-if="measurement.target?.prompting_format === 'classic'">
@@ -552,6 +565,8 @@ const onUpdateSessionName = async () => {
                   }}
                 </div>
               </div>
+
+              <!-- SBT -->
               <div v-if="measurement.target?.type === 'Target::Sbt'" class="space-y-0.5">
                 <div>
                   Prompts used in this session:
@@ -560,6 +575,123 @@ const onUpdateSessionName = async () => {
               </div>
             </div>
             <!-- end target information -->
+
+             <!-- sbt -->
+            <div v-if="measurement.target?.type === 'Target::Sbt'">
+              <!-- sbt taks -->
+              <div class="py-3 space-y-3 border-t-2 border-slate-3">
+                <div
+                  v-for="taskCode in getTargetTasks(measurement.target)"
+                  :key="taskCode.id"
+                  class="space-y-1"
+                >
+                  <div class="text-sm font-semibold text-slate-8">
+                    {{ taskCode.code }} - {{ taskCode.title }}
+                  </div>
+                  <div class="text-sm whitespace-pre-line text-slate-8">
+                    {{ taskCode.description }}
+                  </div>
+                </div>
+              </div>
+              <!-- sbt problem behavior -->
+              <div class="py-3 space-y-3 border-t-2 border-slate-3">
+                <div
+                  v-for="problemBehavior in measurement.target?.target_problem_behaviors"
+                  :key="problemBehavior.id"
+                  class="space-y-1"
+                >
+                  <div class="text-sm font-semibold text-slate-8">
+                    {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
+                  </div>
+                  <div class="text-sm whitespace-pre-line text-slate-8">
+                    {{ problemBehavior.description }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- end sbt -->
+
+            <!-- group targets -->
+            <div v-if="measurement.target?.is_group">
+              <!-- group targets members -->
+              <div class="py-3 space-y-3 border-t-2 border-slate-3">
+                <div
+                  v-for="member in measurement.used_targets"
+                  :key="member.target_id"
+                  class="space-y-1"
+                >
+                  <div class="text-sm font-semibold text-slate-8">
+                    {{ member.target_code }} - {{ member.target_name }}
+                  </div>
+
+                  <!-- Percentage -->
+                  <div
+                    v-if="measurement.target?.type === 'Target::Percentage'"
+                    class="space-y-0.5 text-xs text-slate-600"
+                  >
+                    <div v-if="member.goal !== undefined">
+                      <span class="font-medium">Goal:</span> {{ member.goal }}%
+                    </div>
+                    <div v-if="member.number_of_trial !== undefined">
+                      <span class="font-medium">Number of trials:</span>
+                      {{ member.number_of_trial }} trial(s)
+                    </div>
+                    <div v-if="member.success_metric">
+                      <span class="font-medium">Success metric:</span> {{ member.success_metric }}
+                    </div>
+                  </div>
+
+                  <!-- Trial By Trial -->
+                  <div
+                    v-if="measurement.target?.type === 'Target::TrialByTrial'"
+                    class="space-y-0.5 text-xs text-slate-600"
+                  >
+                    <div v-if="member.goal !== undefined">
+                      <span class="font-medium">Goal:</span> {{ member.goal }}%
+                    </div>
+                    <div v-if="member.number_of_trial !== undefined">
+                      <span class="font-medium">Minimum number of trials:</span>
+                      {{ member.number_of_trial }} trial(s)
+                    </div>
+                    <div v-if="member.success_metric">
+                      <span class="font-medium">Success metric:</span> {{ member.success_metric }}
+                    </div>
+                  </div>
+
+                  <div v-if="!member.description" class="text-xs italic text-slate-400">
+                    No description
+                  </div>
+                  <div v-else class="text-xs whitespace-pre-line text-slate-600">
+                    {{ member.description }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- end group targets -->
+            
+            <!-- problem behavior: prompting (includes single, member, group) -->
+            <div
+              v-if="
+                measurement.target?.type === 'Target::Prompting' && 
+                measurement.target?.target_problem_behaviors?.length
+              "
+              class="py-3 space-y-3 border-t-2 border-slate-3"
+            >
+              <div
+                v-for="problemBehavior in measurement.target?.target_problem_behaviors"
+                :key="problemBehavior.id"
+                class="space-y-1"
+              >
+                <div class="text-sm font-semibold text-slate-8">
+                  {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
+                </div>
+                <div class="text-sm whitespace-pre-line text-slate-8">
+                  {{ problemBehavior.description }}
+                </div>
+              </div>
+            </div>
+            <!-- end problem behavior -->
+             
             <!-- probing -->
             <div
               v-if="measurement.type === 'Measurement::Probing'"
@@ -580,6 +712,7 @@ const onUpdateSessionName = async () => {
               </div>
             </div>
             <!-- end probing -->
+
             <!-- target description -->
             <div class="w-full h-0.5 shrink-0 bg-slate-3"></div>
             <div class="space-y-0.5 text-sm text-wrap text-slate-8">
@@ -587,6 +720,7 @@ const onUpdateSessionName = async () => {
               <div v-else class="whitespace-pre-line">{{ measurement.target?.description }}</div>
             </div>
             <!-- end target description -->
+            
             <!-- last phase line -->
             <div
               v-if="measurement.target?.last_phase_line"
@@ -647,118 +781,6 @@ const onUpdateSessionName = async () => {
               phase.
             </div>
             <!-- end last phase line -->
-            <!-- sbt -->
-            <div v-if="measurement.target?.type === 'Target::Sbt'">
-              <!-- sbt taks -->
-              <div class="py-3 space-y-3 border-t-2 border-slate-3">
-                <div
-                  v-for="taskCode in getTargetTasks(measurement.target)"
-                  :key="taskCode.id"
-                  class="space-y-1"
-                >
-                  <div class="text-sm font-semibold text-slate-8">
-                    {{ taskCode.code }} - {{ taskCode.title }}
-                  </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
-                    {{ taskCode.description }}
-                  </div>
-                </div>
-              </div>
-              <!-- sbt problem behavior -->
-              <div class="py-3 space-y-3 border-t-2 border-slate-3">
-                <div
-                  v-for="problemBehavior in measurement.target?.target_problem_behaviors"
-                  :key="problemBehavior.id"
-                  class="space-y-1"
-                >
-                  <div class="text-sm font-semibold text-slate-8">
-                    {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
-                  </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
-                    {{ problemBehavior.description }}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- end sbt -->
-            <!-- group targets -->
-            <div v-if="measurement.target?.is_group">
-              <!-- group targets members -->
-              <div class="py-3 space-y-3 border-t-2 border-slate-3">
-                <div
-                  v-for="member in measurement.used_targets"
-                  :key="member.target_id"
-                  class="space-y-1"
-                >
-                  <div class="text-sm font-semibold text-slate-8">
-                    {{ member.target_code }} - {{ member.target_name }}
-                  </div>
-
-                  <!-- Percentage -->
-                  <div
-                    v-if="measurement.target?.type === 'Target::Percentage'"
-                    class="space-y-0.5 text-xs text-slate-600"
-                  >
-                    <div v-if="member.goal !== undefined">
-                      <span class="font-medium">Goal:</span> {{ member.goal }}%
-                    </div>
-                    <div v-if="member.number_of_trial !== undefined">
-                      <span class="font-medium">Number of trials:</span>
-                      {{ member.number_of_trial }} trial(s)
-                    </div>
-                    <div v-if="member.success_metric">
-                      <span class="font-medium">Success metric:</span> {{ member.success_metric }}
-                    </div>
-                  </div>
-
-                  <!-- Trial By Trial -->
-                  <div
-                    v-if="measurement.target?.type === 'Target::TrialByTrial'"
-                    class="space-y-0.5 text-xs text-slate-600"
-                  >
-                    <div v-if="member.goal !== undefined">
-                      <span class="font-medium">Goal:</span> {{ member.goal }}%
-                    </div>
-                    <div v-if="member.number_of_trial !== undefined">
-                      <span class="font-medium">Minimum number of trials:</span>
-                      {{ member.number_of_trial }} trial(s)
-                    </div>
-                    <div v-if="member.success_metric">
-                      <span class="font-medium">Success metric:</span> {{ member.success_metric }}
-                    </div>
-                  </div>
-
-                  <div v-if="!member.description" class="text-xs italic text-slate-400">
-                    No description
-                  </div>
-                  <div v-else class="text-xs whitespace-pre-line text-slate-600">
-                    {{ member.description }}
-                  </div>
-                </div>
-              </div>
-              <!-- group targets problem behavior -->
-              <div
-                v-if="
-                  measurement.target?.type !== 'Target::TrialByTrial' &&
-                  measurement.target?.type !== 'Target::Percentage'
-                "
-                class="py-3 space-y-3 border-t-2 border-slate-3"
-              >
-                <div
-                  v-for="problemBehavior in measurement.target?.target_problem_behaviors"
-                  :key="problemBehavior.id"
-                  class="space-y-1"
-                >
-                  <div class="text-sm font-semibold text-slate-8">
-                    {{ problemBehavior.code }} - {{ problemBehavior.code_definition }}
-                  </div>
-                  <div class="text-sm whitespace-pre-line text-slate-8">
-                    {{ problemBehavior.description }}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- end group targets -->
           </div>
         </div>
       </div>
