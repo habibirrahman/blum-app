@@ -877,21 +877,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full grow flex-col justify-between overflow-hidden">
-    <div v-if="saving || saveLoading" class="absolute right-16 top-4">
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+  <div class="flex overflow-hidden flex-col justify-between h-full grow">
+    <div v-if="saving || saveLoading" class="absolute top-4 right-16">
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <!-- 1. Tabs Row (Ratios) - shown only when expanded -->
     <div
       v-if="!isCollapsed"
-      class="scrollbar-hide flex w-full shrink-0 items-center gap-1.5 overflow-x-auto px-2 py-2"
+      class="flex overflow-x-auto gap-1.5 items-center px-2 py-2 w-full scrollbar-hide shrink-0"
       :class="[usedTargets.length > 6 ? 'justify-start' : 'justify-center']"
     >
       <button
         v-for="member in usedTargets"
         :key="member.target_id"
-        class="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border text-xs font-semibold transition-all duration-200"
+        class="flex overflow-hidden relative justify-center items-center w-10 h-10 text-xs font-semibold rounded-lg border transition-all duration-200 shrink-0"
         :class="[
           activeMemberId === member.target_id
             ? getMemberPhase(member.target_id) === 'probe'
@@ -903,7 +903,7 @@ onMounted(() => {
       >
         <!-- fill overlay percentage -->
         <div
-          class="pointer-events-none absolute bottom-0 left-0 right-0 transition-all duration-300"
+          class="absolute right-0 bottom-0 left-0 transition-all duration-300 pointer-events-none"
           :style="{
             height: getMemberFillPct(member.target_id) + '%',
             backgroundColor:
@@ -912,19 +912,19 @@ onMounted(() => {
                 : 'rgba(139, 92, 246, 0.1)'
           }"
         />
-        <span class="pointer-events-none relative">{{ member.target_code }}</span>
+        <span class="relative pointer-events-none">{{ member.target_code }}</span>
       </button>
     </div>
 
     <!-- Floating Probing Circles Popup when Collapsed -->
     <div
       v-if="isCollapsed && isProbingPhase && (showPopup || saveLoading)"
-      class="absolute bottom-full left-1/2 z-50 mb-2 flex w-64 -translate-x-1/2 flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white p-3 shadow-lg transition-all"
+      class="flex absolute bottom-full left-1/2 z-50 flex-col gap-1.5 justify-center items-center p-3 mb-2 w-64 bg-white rounded-xl border shadow-lg transition-all -translate-x-1/2 border-slate-200"
     >
-      <div class="flex max-w-full items-center gap-2 overflow-x-auto">
-        <div v-for="(t, idx) in currentTrials" :key="t.key" class="group relative shrink-0">
+      <div class="flex overflow-x-auto gap-2 items-center max-w-full">
+        <div v-for="(t, idx) in currentTrials" :key="t.key" class="relative group shrink-0">
           <div
-            class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all duration-200"
+            class="flex justify-center items-center w-9 h-9 text-xs font-bold rounded-full transition-all duration-200"
             :class="[
               t.value === true
                 ? 'cursor-pointer bg-lime-5 text-white'
@@ -946,24 +946,24 @@ onMounted(() => {
 
     <!-- MAIN DISPLAY CONTAINER -->
     <div
-      class="relative flex grow flex-col justify-between overflow-hidden bg-white"
+      class="flex overflow-hidden relative flex-col justify-between bg-white grow"
       :class="{ 'p-3': !isCollapsed, 'px-2 py-1': isCollapsed }"
     >
       <!-- Descriptions view overlay -->
       <div
         v-if="view === 'desc' && !isCollapsed"
-        class="flex h-full grow flex-col justify-between overflow-y-auto bg-white p-1"
+        class="flex overflow-y-auto flex-col justify-between p-1 h-full bg-white grow"
       >
         <div class="space-y-3">
-          <div class="border-b border-slate-100 pb-2">
-            <div class="flex items-center gap-1.5 text-sm font-bold text-slate-800">
+          <div class="pb-2 border-b border-slate-100">
+            <div class="flex gap-1.5 items-center text-sm font-bold text-slate-800">
               <Icon icon="ph:copy" class="text-lg text-slate-400" />
               {{ titleLabel }}
             </div>
             <div class="mt-0.5 text-xs text-slate-500">{{ subtitleLabel }}</div>
           </div>
 
-          <div class="space-y-4 pt-1">
+          <div class="pt-1 space-y-4">
             <div v-for="member in usedTargets" :key="member.target_id" class="space-y-1">
               <div class="text-xs font-bold text-slate-800">
                 {{ member.target_code }} - {{ member.target_name }}
@@ -986,16 +986,16 @@ onMounted(() => {
               <div v-if="!member.description" class="text-xs italic text-slate-400">
                 No description
               </div>
-              <div v-else class="whitespace-pre-line text-xs text-slate-500">
+              <div v-else class="text-xs whitespace-pre-line text-slate-500">
                 {{ member.description }}
               </div>
             </div>
           </div>
         </div>
 
-        <div class="mt-4 border-t border-slate-100 pt-3">
+        <div class="pt-3 mt-4 border-t border-slate-100">
           <button
-            class="h-9 w-full rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 active:scale-95"
+            class="w-full h-9 text-xs font-semibold bg-white rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-95"
             @click="view = 'entry'"
           >
             Close
@@ -1006,24 +1006,24 @@ onMounted(() => {
       <!-- 1. MEMBER LIST VIEW (hidden when collapsed) -->
       <div
         v-else-if="view === 'list' && !isCollapsed"
-        class="flex grow flex-col overflow-y-auto pb-4"
+        class="flex overflow-y-auto flex-col pb-4 grow"
       >
         <div class="mb-2 text-xs font-bold text-slate-800">Target Members List</div>
-        <div class="divide-y divide-slate-100 border-t border-slate-100">
+        <div class="border-t divide-y divide-slate-100 border-slate-100">
           <div
             v-for="e in listEntries"
             :key="e.id + '-' + e.probing"
-            class="flex cursor-pointer items-center justify-between py-2.5 transition-colors hover:bg-slate-50"
+            class="flex justify-between items-center py-2.5 transition-colors cursor-pointer hover:bg-slate-50"
             @click="switchToMember(e.id)"
           >
-            <div class="flex items-center gap-2">
+            <div class="flex gap-2 items-center">
               <span class="text-sm font-bold text-slate-800">{{ e.target_code }}</span>
-              <span class="max-w-40 truncate text-xs text-slate-500">{{ e.target_name }}</span>
+              <span class="text-xs truncate max-w-40 text-slate-500">{{ e.target_name }}</span>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex gap-2 items-center">
               <span
-                class="rounded-full px-2 py-0.5 text-xs font-bold"
+                class="px-2 py-0.5 text-xs font-bold rounded-full"
                 :class="[e.probing ? 'bg-lime-100 text-lime-700' : 'bg-slate-100 text-slate-700']"
               >
                 {{ e.score }}%
@@ -1043,9 +1043,9 @@ onMounted(() => {
       <!-- 2. SWITCH MEMBER OVERLAY (hidden when collapsed) -->
       <div
         v-else-if="view === 'move' && !isCollapsed"
-        class="flex grow flex-col justify-between overflow-hidden"
+        class="flex overflow-hidden flex-col justify-between grow"
       >
-        <div class="flex grow flex-col items-center justify-center gap-4 py-6">
+        <div class="flex flex-col gap-4 justify-center items-center py-6 grow">
           <div class="flex flex-col items-center">
             <div class="text-3xl font-extrabold text-slate-800">{{ scoreOfActive }}%</div>
             <div class="mt-1 text-xs font-medium text-slate-400">Score</div>
@@ -1058,10 +1058,10 @@ onMounted(() => {
             </button>
           </div>
           <div class="my-2 w-full max-w-[200px] border-t border-slate-100" />
-          <div class="flex w-full flex-col items-center gap-2">
+          <div class="flex flex-col gap-2 items-center w-full">
             <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Next</div>
             <div
-              class="scrollbar-hide mt-1 flex w-full gap-2 overflow-x-auto px-4 py-1"
+              class="flex overflow-x-auto gap-2 px-4 py-1 mt-1 w-full scrollbar-hide"
               :class="[
                 usedTargets.length > 5 ? 'flex-nowrap justify-start' : 'flex-wrap justify-center'
               ]"
@@ -1069,7 +1069,7 @@ onMounted(() => {
               <button
                 v-for="member in usedTargets"
                 :key="'move-' + member.target_id"
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-xs font-bold transition-all duration-200"
+                class="flex justify-center items-center w-10 h-10 text-xs font-bold rounded-lg border transition-all duration-200 shrink-0"
                 :class="[
                   moveSel === member.target_id
                     ? 'scale-105 border-light-purple-5 bg-purple-50 text-light-purple-5 shadow-sm'
@@ -1085,21 +1085,21 @@ onMounted(() => {
       </div>
 
       <!-- 4. MEMBER ENTRY VIEW -->
-      <div v-else class="flex grow flex-col justify-between overflow-hidden">
+      <div v-else class="flex overflow-hidden flex-col justify-between grow">
         <div
-          class="flex shrink-0 px-1"
+          class="flex px-1 shrink-0"
           :class="{
             'mb-2 flex-col gap-2 pb-2': !isCollapsed,
             'mb-1 flex-row items-center justify-between pb-1': isCollapsed
           }"
         >
-          <div class="flex w-full items-center justify-between">
-            <div class="flex items-center gap-1.5 text-xs">
+          <div class="flex justify-between items-center w-full">
+            <div class="flex gap-1.5 items-center text-xs">
               <span class="text-slate-500">Current</span>
               <span class="font-bold text-light-purple-5">{{ activeMember?.target_code }}</span>
               <button
                 v-if="isCollapsed"
-                class="hover:text-light-purple-6 ml-1 font-semibold text-light-purple-5 underline"
+                class="ml-1 font-semibold underline hover:text-light-purple-6 text-light-purple-5"
                 @click="showMemberSelector = !showMemberSelector"
               >
                 Move to
@@ -1107,7 +1107,7 @@ onMounted(() => {
             </div>
 
             <div
-              class="flex items-center gap-3 text-xs"
+              class="flex gap-3 items-center text-xs"
               :class="{ 'cursor-pointer': isCollapsed }"
               @click="onDisplayPopup"
             >
@@ -1128,16 +1128,16 @@ onMounted(() => {
           </div>
 
           <!-- Sub-header badge row (shown when expanded) -->
-          <div v-if="!isCollapsed" class="flex shrink-0 items-center justify-between pt-1">
+          <div v-if="!isCollapsed" class="flex justify-between items-center pt-1 shrink-0">
             <span
               v-if="isProbingPhase"
-              class="rounded-full bg-lime-100 px-2 py-0.5 text-xs font-bold text-lime-700"
+              class="px-2 py-0.5 text-xs font-bold text-lime-700 bg-lime-100 rounded-full"
             >
               Probing
             </span>
             <span
               v-if="activeMemberResults.decision"
-              class="rounded-full px-2 py-0.5 text-xs font-bold"
+              class="px-2 py-0.5 text-xs font-bold rounded-full"
               :class="[
                 activeMemberResults.decision === 'mastered'
                   ? 'bg-lime-100 text-lime-700'
@@ -1152,11 +1152,11 @@ onMounted(() => {
         <!-- Member Selector Overlay when Change is clicked -->
         <div
           v-if="showMemberSelector"
-          class="flex w-full grow flex-col items-center justify-center gap-2 py-2"
+          class="flex flex-col gap-2 justify-center items-center py-2 w-full grow"
         >
           <div class="text-xs font-medium text-slate-500">Select a target:</div>
           <div
-            class="scrollbar-hide mt-1 flex w-full gap-2 overflow-x-auto px-4 py-1"
+            class="flex overflow-x-auto gap-2 px-4 py-1 mt-1 w-full scrollbar-hide"
             :class="[
               usedTargets.length > 5 ? 'flex-nowrap justify-start' : 'flex-wrap justify-center'
             ]"
@@ -1164,9 +1164,9 @@ onMounted(() => {
             <button
               v-for="member in usedTargets"
               :key="'move-' + member.target_id"
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-xs font-bold transition-all duration-200"
+              class="flex justify-center items-center w-10 h-10 text-xs font-bold rounded-lg border transition-all duration-200 shrink-0"
               :class="[
-                moveSel === member.target_id
+                (moveSel || activeMemberId) === member.target_id
                   ? 'scale-105 border-light-purple-5 bg-purple-50 text-light-purple-5 shadow-sm'
                   : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
               ]"
@@ -1180,26 +1180,12 @@ onMounted(() => {
               {{ member.target_code }}
             </button>
           </div>
-          <button
-            class="hover:bg-light-purple-6 flex h-9 w-full items-center justify-center rounded-lg bg-light-purple-5 text-xs font-semibold text-white transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-40"
-            :disabled="!moveSel"
-            @click="
-              () => {
-                if (moveSel) {
-                  switchToMember(moveSel)
-                  showMemberSelector = false
-                }
-              }
-            "
-          >
-            Move to
-          </button>
         </div>
 
         <!-- Scrollable Trials Area (shown when member selector is closed) -->
         <div
           v-else
-          class="flex w-full grow flex-col items-center justify-center"
+          class="flex flex-col justify-center items-center w-full grow"
           :class="{ 'overflow-y-auto py-2': !isCollapsed, 'py-0': isCollapsed }"
         >
           <!-- Probing view -->
@@ -1209,11 +1195,11 @@ onMounted(() => {
               <!-- AppChip when submitted with decision -->
               <div
                 v-if="activeMemberResults.submitted && activeMemberResults.decision"
-                class="my-1 flex justify-center"
+                class="flex justify-center my-1"
               >
                 <AppChip :chip="activeMemberResults.decision" />
               </div>
-              <div class="flex items-center justify-center gap-3 py-1">
+              <div class="flex gap-3 justify-center items-center py-1">
                 <button
                   class="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full text-xl font-bold text-white transition-all active:scale-95"
                   :class="[
@@ -1230,7 +1216,7 @@ onMounted(() => {
                   "
                   @click="onRecordProbe(false)"
                 >
-                  <Icon icon="ph:x-bold" class="h-10 w-10 text-white" />
+                  <Icon icon="ph:x-bold" class="w-10 h-10 text-white" />
                 </button>
                 <button
                   class="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full text-xl font-bold text-white transition-all active:scale-95"
@@ -1248,7 +1234,7 @@ onMounted(() => {
                   "
                   @click="onRecordProbe(true)"
                 >
-                  <Icon icon="ph:check-bold" class="h-10 w-10 text-white" />
+                  <Icon icon="ph:check-bold" class="w-10 h-10 text-white" />
                 </button>
                 <button
                   v-if="
@@ -1264,7 +1250,7 @@ onMounted(() => {
             </div>
 
             <!-- Full Probing View (when isCollapsed = false) -->
-            <div v-else class="flex w-full flex-col items-center gap-4">
+            <div v-else class="flex flex-col gap-4 items-center w-full">
               <div
                 :id="`probing-scroll-${measurement.id}`"
                 class="scrollbar-hide flex w-full max-w-[280px] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3"
@@ -1274,12 +1260,12 @@ onMounted(() => {
                   v-for="(pageTrials, pageIdx) in probingPages"
                   :key="'probing-page-' + pageIdx"
                   :id="`tbt-group-probing-${measurement.id}-page-${pageIdx + 1}`"
-                  class="flex w-full shrink-0 snap-center justify-center"
+                  class="flex justify-center w-full shrink-0 snap-center"
                 >
                   <div class="flex max-w-[280px] flex-wrap items-center justify-center gap-3">
-                    <div v-for="(t, idx) in pageTrials" :key="t.key" class="group relative">
+                    <div v-for="(t, idx) in pageTrials" :key="t.key" class="relative group">
                       <div
-                        class="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-all duration-200"
+                        class="flex justify-center items-center w-9 h-9 text-sm font-bold rounded-full transition-all duration-200"
                         :class="[
                           t.value === true
                             ? 'bg-lime-5 text-white'
@@ -1297,7 +1283,7 @@ onMounted(() => {
                         <Icon
                           v-if="t.value !== null && !activeMemberResults.submitted"
                           icon="ph:trash-bold"
-                          class="h-4 w-4 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                          class="w-4 h-4 text-white opacity-0 transition-opacity group-hover:opacity-100"
                         />
                       </div>
                     </div>
@@ -1306,11 +1292,11 @@ onMounted(() => {
               </div>
 
               <!-- Page indicators -->
-              <div v-if="totalPages > 1" class="-mt-2 flex items-center justify-center gap-1.5">
+              <div v-if="totalPages > 1" class="flex gap-1.5 justify-center items-center -mt-2">
                 <button
                   v-for="pageIdx in totalPages"
                   :key="pageIdx"
-                  class="h-1.5 w-1.5 rounded-full transition-all duration-200"
+                  class="w-1.5 h-1.5 rounded-full transition-all duration-200"
                   :class="[
                     currentPage === pageIdx - 1
                       ? 'scale-110 bg-slate-800'
@@ -1321,7 +1307,7 @@ onMounted(() => {
               </div>
 
               <!-- Buttons -->
-              <div class="mt-2 flex items-center gap-4">
+              <div class="flex gap-4 items-center mt-2">
                 <button
                   class="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full text-2xl font-bold text-white transition-all active:scale-95"
                   :class="[
@@ -1338,7 +1324,7 @@ onMounted(() => {
                   "
                   @click="onRecordProbe(false)"
                 >
-                  <Icon icon="ph:x-bold" class="h-10 w-10 text-white" />
+                  <Icon icon="ph:x-bold" class="w-10 h-10 text-white" />
                 </button>
                 <button
                   class="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full text-2xl font-bold text-white transition-all active:scale-95"
@@ -1356,7 +1342,7 @@ onMounted(() => {
                   "
                   @click="onRecordProbe(true)"
                 >
-                  <Icon icon="ph:check-bold" class="h-10 w-10 text-white" />
+                  <Icon icon="ph:check-bold" class="w-10 h-10 text-white" />
                 </button>
 
                 <!-- Submit probing -->
@@ -1377,12 +1363,12 @@ onMounted(() => {
           <!-- Teaching view (Square cells click cycle) -->
           <div
             v-else
-            class="flex w-full flex-col items-center"
+            class="flex flex-col items-center w-full"
             :class="{ 'gap-4': !isCollapsed, 'gap-1': isCollapsed }"
           >
             <div
               :id="`teaching-scroll-${measurement.id}`"
-              class="scrollbar-hide flex snap-x snap-mandatory overflow-x-auto scroll-smooth"
+              class="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth"
               :class="{
                 'w-full max-w-[280px] gap-4 pb-3 pt-2': !isCollapsed,
                 'max-w-[calc(100vw-6rem)] gap-2 pb-1 pt-2': isCollapsed
@@ -1393,15 +1379,15 @@ onMounted(() => {
                 v-for="(pageTrials, pageIdx) in teachingPages"
                 :key="'teaching-page-' + pageIdx"
                 :id="`tbt-group-teaching-${measurement.id}-page-${pageIdx}`"
-                class="flex w-full shrink-0 snap-center justify-center"
+                class="flex justify-center w-full shrink-0 snap-center"
               >
                 <div
-                  class="flex items-center justify-center"
+                  class="flex justify-center items-center"
                   :class="{ 'max-w-[280px] flex-wrap gap-2.5': !isCollapsed, 'gap-2': isCollapsed }"
                 >
-                  <div v-for="t in pageTrials" :key="t.key" class="group relative">
+                  <div v-for="t in pageTrials" :key="t.key" class="relative group">
                     <button
-                      class="flex items-center justify-center rounded-lg border-2 transition-all duration-150"
+                      class="flex justify-center items-center rounded-lg border-2 transition-all duration-150"
                       :class="[
                         isCollapsed ? 'h-7 w-7' : 'h-9 w-9',
                         t.value === true
@@ -1426,10 +1412,10 @@ onMounted(() => {
                         Number(t.key) >= minTrialsOfActive &&
                         !isBusy
                       "
-                      class="absolute -right-1.5 -top-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-tomato-7 text-white shadow"
+                      class="flex absolute -top-1.5 -right-1.5 z-10 justify-center items-center w-4 h-4 text-white rounded-full shadow bg-tomato-7"
                       @click="onRemoveTeachingTrial(t.key)"
                     >
-                      <Icon icon="ph:x-bold" class="h-2.5 w-2.5 text-white" />
+                      <Icon icon="ph:x-bold" class="w-2.5 h-2.5 text-white" />
                     </button>
                   </div>
 
@@ -1441,7 +1427,7 @@ onMounted(() => {
                       pageIdx === teachingPages.length - 1 &&
                       currentTrials.slice(0, minTrialsOfActive).every((t) => t.value !== null)
                     "
-                    class="flex items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-slate-400 transition-colors hover:border-slate-400 hover:bg-slate-100"
+                    class="flex justify-center items-center rounded-lg border-2 border-dashed transition-colors border-slate-300 bg-slate-50 text-slate-400 hover:border-slate-400 hover:bg-slate-100"
                     :class="{ 'h-9 w-9 text-lg': !isCollapsed, 'h-7 w-7 text-sm': isCollapsed }"
                     @click="onAddTeachingTrial"
                   >
@@ -1452,11 +1438,11 @@ onMounted(() => {
             </div>
 
             <!-- Page indicators -->
-            <div v-if="totalPages > 1" class="-mt-2 flex items-center justify-center gap-1.5">
+            <div v-if="totalPages > 1" class="flex gap-1.5 justify-center items-center -mt-2">
               <button
                 v-for="pageIdx in totalPages"
                 :key="pageIdx"
-                class="h-1.5 w-1.5 rounded-full transition-all duration-200"
+                class="w-1.5 h-1.5 rounded-full transition-all duration-200"
                 :class="[
                   currentPage === pageIdx - 1
                     ? 'scale-110 bg-slate-800'
@@ -1471,17 +1457,17 @@ onMounted(() => {
     </div>
 
     <!-- 5. CARD FOOTER BUTTONS (shown only when expanded and not in decision gate) -->
-    <div v-if="!isCollapsed && view !== 'decision-gate'" class="flex shrink-0 gap-2 p-2">
+    <div v-if="!isCollapsed && view !== 'decision-gate'" class="flex gap-2 p-2 shrink-0">
       <!-- Move view footer -->
       <template v-if="view === 'move'">
         <button
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 active:scale-95"
+          class="flex justify-center items-center w-9 h-9 bg-white rounded-lg border shrink-0 border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95"
           @click="view = 'entry'"
         >
           <Icon icon="ph:caret-left-bold" />
         </button>
         <button
-          class="hover:bg-light-purple-6 flex h-9 grow items-center justify-center rounded-lg bg-light-purple-5 text-xs font-semibold text-white transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+          class="flex justify-center items-center h-9 text-xs font-semibold text-white rounded-lg transition-all hover:bg-light-purple-6 grow bg-light-purple-5 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
           :disabled="!moveSel || isBusy"
           @click="onConfirmMove"
         >
@@ -1492,7 +1478,7 @@ onMounted(() => {
       <!-- Description view footer -->
       <template v-else-if="view === 'desc'">
         <button
-          class="flex h-9 grow items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
+          class="flex justify-center items-center h-9 text-xs font-semibold bg-white rounded-lg border transition-all grow border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-95"
           @click="view = 'entry'"
         >
           Back to result
@@ -1502,7 +1488,7 @@ onMounted(() => {
       <!-- List view footer -->
       <template v-else-if="view === 'list'">
         <button
-          class="flex h-9 grow items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
+          class="flex justify-center items-center h-9 text-xs font-semibold bg-white rounded-lg border transition-all grow border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-95"
           @click="view = 'entry'"
         >
           Back to result
@@ -1513,7 +1499,7 @@ onMounted(() => {
       <template v-else>
         <!-- Menu list button -->
         <button
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800 active:scale-95"
+          class="flex justify-center items-center w-9 h-9 bg-white rounded-lg border shrink-0 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 active:scale-95"
           title="Targets list"
           @click="view = 'list'"
         >
@@ -1522,7 +1508,7 @@ onMounted(() => {
 
         <!-- Move to button -->
         <button
-          class="flex h-9 grow items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 active:scale-95"
+          class="flex justify-center items-center h-9 text-xs font-semibold bg-white rounded-lg border grow border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-95"
           @click="view = 'move'"
         >
           Move to
@@ -1533,19 +1519,19 @@ onMounted(() => {
     <!-- 6. DECISION GATE OVERLAY (desktop blubridge-vue design) -->
     <div
       v-if="view === 'decision-gate' && !isCollapsed"
-      class="absolute inset-0 flex flex-col overflow-y-auto bg-black p-3.5"
+      class="flex overflow-y-auto absolute inset-0 flex-col p-3.5 bg-black"
       :style="{ background: 'linear-gradient(180deg, #F2F8CF 0%, #FFFFFF 100%)' }"
     >
-      <div class="relative flex w-full grow flex-col gap-3 px-4 py-4">
+      <div class="flex relative flex-col gap-3 px-4 py-4 w-full grow">
         <img
           v-if="scoreOfActive >= targetGoal"
           src="@/assets/probing_confetti.svg"
-          class="pointer-events-none absolute bottom-0 left-0 z-0 w-full object-cover"
+          class="object-cover absolute bottom-0 left-0 z-0 w-full pointer-events-none"
         />
         <img
           v-if="scoreOfActive < targetGoal"
           src="@/assets/probing_failed.svg"
-          class="pointer-events-none mx-auto w-20"
+          class="mx-auto w-20 pointer-events-none"
           :class="{
             'absolute right-2 top-2 z-0 opacity-50': activeMember?.status === 'mastered'
           }"
@@ -1567,17 +1553,17 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="relative flex flex-col gap-2">
+        <div class="flex relative flex-col gap-2">
           <div
             v-for="opt in gateOptions"
             :key="opt.id"
-            class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border bg-white p-3 text-center shadow-sm transition-all duration-300"
+            class="flex flex-col gap-2 justify-center items-center p-3 text-center bg-white rounded-lg border shadow-sm transition-all duration-300 cursor-pointer"
             :class="[
               gateSel?.id === opt.id ? 'border-lime-600 bg-lime-50/50' : 'border-slate-200 bg-white'
             ]"
             @click="gateSel = opt"
           >
-            <div class="flex items-center gap-2">
+            <div class="flex gap-2 items-center">
               <span class="text-xs font-medium text-slate-800">{{ opt.title }}</span>
               <AppChip v-if="opt.status" :chip="opt.status" />
             </div>

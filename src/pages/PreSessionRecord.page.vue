@@ -218,7 +218,7 @@ const doLaunchSession = async () => {
   if (probingMap.length > 0) {
     for (const item of probingMap) {
       for (const mId of item.activeMemberIds) {
-        await sessionStore.setMeasurementProbing({
+        await sessionStore.updateMeasurementSetProbing({
           id: item.measurementId,
           params: { probing: true, member_id: mId }
         })

@@ -312,12 +312,15 @@ interface MeasurementBase {
   comment_user_id?: User['id']
   comment_user?: Comment
 
-  used_targets?: UsedTargetMeasurement[]
+  used_targets?: MeasurementUsedTargetMeasurement[]
   prompt_histories: MeasurementPromptHistory[]
 
   results: Record<string, unknown> | unknown
+  trials?: MeasurementTrial[]
+
+  set_all_as_probing?: boolean
 }
-export interface UsedTargetMeasurement {
+export interface MeasurementUsedTargetMeasurement {
   target_id: Target['id']
   target_code: Target['code_definition']
   target_name: Target['name']
@@ -327,6 +330,13 @@ export interface UsedTargetMeasurement {
   number_of_trial: number
   status?: string
   probing_number_of_trial: number
+}
+
+export interface MeasurementTrial {
+  id: number
+  prompt_id: Prompt['id'] | null
+  target_problem_behavior_id: TargetProblemBehavior['id'] | null
+  recorded_at: string
 }
 
 // Duration or Latency
@@ -578,14 +588,14 @@ export interface TargetTask {
 }
 
 export interface TargetProblemBehavior {
-  id?: number
-  description?: string
-  code?: string
-  code_definition?: string
-  color?: string
-  position?: number
-  problem_behavior_id?: number
-  target_id?: Target['id']
+  id: number
+  description: string
+  code: string
+  code_definition: string
+  color: string
+  position: number
+  problem_behavior_id: number
+  target_id: Target['id']
 }
 
 export interface TargetVariable {
