@@ -34,6 +34,7 @@ const { now } = useClock()
 const sessionLoading = ref<boolean>(true)
 const cycleLoading = ref<boolean>(false)
 const submitLoading = ref<boolean>(false)
+const resolveLoading = ref<boolean>(false)
 
 const isRefreshing = ref<boolean>(false)
 const isScrolling = ref<boolean>(false)
@@ -105,7 +106,13 @@ const hasPendingSync = computed(() => {
 const pendingSyncStats = computed(() => sessionStore.pendingSyncStats)
 
 const isDisabledAction = computed(() => {
-  return sessionLoading.value || cycleLoading.value || submitLoading.value || isScrolling.value
+  return (
+    sessionLoading.value ||
+    cycleLoading.value ||
+    submitLoading.value ||
+    isScrolling.value ||
+    resolveLoading.value
+  )
 })
 
 const _currentRecordingTime = computed(() => {
@@ -368,7 +375,10 @@ async function syncSession(payload: FetchSessionProps = { isSwipe: false }) {
     console.log(`[syncSession] Syncing ${pendingCount} pending items...`)
   }
 
+  resolveLoading.value = true
   const { success, data } = await sessionStore.resolvePendingProgress()
+  resolveLoading.value = false
+
   sessionLoading.value = false
 
   if (!success) return
@@ -851,7 +861,9 @@ const onEndSession = async () => {
 
   // ✅ Resolve semua pending dulu sebelum end session
   if (sessionStore.pending_progress.length > 0) {
+    resolveLoading.value = true
     await sessionStore.resolvePendingProgress()
+    resolveLoading.value = false
   }
 
   const { success: s1, message: m1 } = await sessionStore.resolveAllMeasurements()
@@ -925,7 +937,11 @@ let backButtonListener: PluginListenerHandle | undefined = undefined
 onMounted(async () => {
   visibilityChangeListener = await App.addListener('appStateChange', ({ isActive }) => {
     const isLoading =
-      sessionLoading.value || cycleLoading.value || submitLoading.value || isScrolling.value
+      sessionLoading.value ||
+      cycleLoading.value ||
+      submitLoading.value ||
+      isScrolling.value ||
+      resolveLoading.value
 
     if (isActive && !isLoading) {
       fetchSession({ first: true })
@@ -964,7 +980,9 @@ onMounted(async () => {
   // Restore & sync pending items
   if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
     console.log('[Session Page] Processing pending items on mount')
+    resolveLoading.value = true
     await sessionStore.resolvePendingProgress()
+    resolveLoading.value = false
   }
 
   await fetchSession({ first: true })
@@ -1051,17 +1069,6 @@ onUnmounted(() => {
           {{ sessionStore.session_measurements.length }}
         </div>
 
-        <!-- Pending sync indicator -->
-        <div v-if="hasPendingSync && !sessionLoading" class="flex">
-          <div
-            class="flex h-6 items-center gap-1 rounded-full bg-tulip-1 px-2 text-xs text-tulip-7"
-            :title="`${pendingSyncStats.total} item(s) pending sync`"
-          >
-            <Icon icon="ph:cloud-arrow-up" class="animate-pulse text-sm" />
-            <span class="font-medium">{{ pendingSyncStats.total }}</span>
-          </div>
-        </div>
-
         <!-- Session Comment Indicator -->
         <div
           class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded"
@@ -1073,7 +1080,29 @@ onUnmounted(() => {
             :class="[sessionStore.session_comments?.length ? 'opacity-100' : 'opacity-0']"
           ></div>
         </div>
+
+        <!-- Pending sync indicator -->
+        <div v-if="hasPendingSync && !sessionLoading" class="flex">
+          <div
+            class="flex h-6 items-center gap-1 rounded-full bg-tulip-1 px-2 text-xs text-tulip-7"
+          >
+            <span class="font-medium">{{ pendingSyncStats.total }}</span>
+          </div>
+        </div>
+
+        <!-- Resolving state -->
+        <div v-if="resolveLoading" class="flex">
+          <div
+            class="flex h-6 items-center gap-1 rounded-full bg-grass-1 px-2 text-xs text-grass-7"
+          >
+            <Icon icon="ph:arrows-clockwise" class="animate-spin text-sm" />
+            <span class="font-medium">
+              Remaining {{ pendingSyncStats.total }} item(s) to sync with server ...
+            </span>
+          </div>
+        </div>
       </div>
+
       <!-- Bottom row -->
       <div class="flex h-10 items-center gap-2">
         <!-- Therapist name -->
@@ -1100,6 +1129,7 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+    <!-- End left side -->
 
     <!-- Right side -->
     <div class="ml-auto">
@@ -1113,7 +1143,8 @@ onUnmounted(() => {
             !appStore.network_status.connected ||
             updatingMeasurementIds.length > 0 ||
             sessionLoading ||
-            cycleLoading
+            cycleLoading ||
+            resolveLoading
           "
           @click="openPauseSession"
         >
@@ -1129,7 +1160,8 @@ onUnmounted(() => {
             !appStore.network_status.connected ||
             updatingMeasurementIds.length > 0 ||
             sessionLoading ||
-            cycleLoading
+            cycleLoading ||
+            resolveLoading
           "
           @click="onTogglePauseSession"
         >
@@ -1152,13 +1184,15 @@ onUnmounted(() => {
             !appStore.network_status.connected ||
             updatingMeasurementIds.length > 0 ||
             sessionLoading ||
-            cycleLoading
+            cycleLoading ||
+            resolveLoading
           "
           @click="openEndSession"
         >
           {{ appStore.network_status.connected ? 'End' : 'Offline' }}
         </AppButton>
       </div>
+      <!-- end top row -->
 
       <!-- Button row -->
       <div class="flex h-10 items-center justify-end gap-2">
@@ -1189,12 +1223,14 @@ onUnmounted(() => {
           <div class="flex justify-center">{{ recordingTime.split(':')[2] }}</div>
         </div>
       </div>
+      <!-- End button row -->
     </div>
+    <!-- End right side -->
   </div>
 
   <div
     class="fixed left-1/2 z-[9] -translate-x-1/2 pt-safe"
-    :class="[cycleLoading || submitLoading ? 'top-[120px]' : '-top-[120px]']"
+    :class="[cycleLoading || resolveLoading || submitLoading ? 'top-[120px]' : '-top-[120px]']"
   >
     <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
       <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
