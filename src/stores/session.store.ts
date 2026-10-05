@@ -25,8 +25,8 @@ interface SessionPendingProgress {
   key: string
   name:
     | 'update_measurement'
-    | 'update_measurement_result'
-    | 'update_measurement_result_v2'
+    | 'update_measurement_results'
+    | 'update_measurement_results_v2'
     | 'create_comment'
     | 'update_comment'
     | 'delete_comment'
@@ -453,12 +453,12 @@ export const useSessionStore = defineStore('session', {
           if (p.name === 'update_measurement') {
             const result = await this.updateMeasurement(p.params as UpdateMeasurementParams)
             success = result.success
-          } else if (p.name === 'update_measurement_result') {
+          } else if (p.name === 'update_measurement_results') {
             const result = await this.updateMeasurementResults(
               p.params as UpdateMeasurementResultsParams
             )
             success = result.success
-          } else if (p.name === 'update_measurement_result_v2') {
+          } else if (p.name === 'update_measurement_results_v2') {
             const result = await this.updateMeasurementResultsV2(
               p.params as UpdateMeasurementResultsV2Params
             )
@@ -1549,7 +1549,7 @@ export const useSessionStore = defineStore('session', {
         } else {
           this.pending_progress.push({
             key,
-            name: 'update_measurement_result',
+            name: 'update_measurement_results',
             params: payload,
             timestamp: Date.now(),
             retryCount: 1,
@@ -1643,26 +1643,14 @@ export const useSessionStore = defineStore('session', {
 
         // handling for offline mode
         if (!app.network_status.connected) {
-          const key = `update_measurement_${payload.id}`
-          const payloadV2 = {
-            ...payload,
-            // only take results in measurement
-            params: { measurement: { results: payload.dataResult.results } }
-          }
-
-          const index = this.pending_progress.findIndex((i) => i.key === key)
-          if (index > -1) {
-            this.pending_progress[index].params = payloadV2
-            this.pending_progress[index].timestamp = Date.now()
-          } else {
-            this.pending_progress.push({
-              key,
-              name: 'update_measurement', // ⚠️ Sesuaikan dengan resolvePendingProgress
-              params: payloadV2,
-              timestamp: Date.now(),
-              retryCount: 0
-            })
-          }
+          const key = `update_measurement_results_v2_${payload.id}`
+          this.pending_progress.push({
+            key,
+            name: 'update_measurement_results_v2',
+            params: payload,
+            timestamp: Date.now(),
+            retryCount: 0
+          })
 
           // Tandai sebagai pending sync
           const measurementWithPending = {
@@ -1685,6 +1673,8 @@ export const useSessionStore = defineStore('session', {
           }
         }
 
+        // Tambahkan retry logic dengan exponential backoff
+        let lastError: any
         const maxRetries = 2
         const appStore = useAppStore()
 
@@ -1711,16 +1701,11 @@ export const useSessionStore = defineStore('session', {
             })
 
             // ✅ Update state SETELAH API berhasil!
-            // this.setSessionMeasurement(data)
-            const { data: getData } = await this.getMeasurement({ id: patchData.id })
-
-            // Handle new Data
-            let newData = patchData
-            if (getData) newData = getData
+            this.setSessionMeasurement(patchData)
 
             // Hapus dari pending queue jika ada
             const queueIndex = this.pending_progress.findIndex(
-              (i) => i.key === `update_measurement_${payload.id}`
+              (i) => i.key === `update_measurement_results_v2_${payload.id}`
             )
             if (queueIndex > -1) {
               this.pending_progress.splice(queueIndex, 1)
@@ -1728,9 +1713,9 @@ export const useSessionStore = defineStore('session', {
             }
 
             // Update local backup dengan status synced
-            await this.saveLocalBackup(Number(payload.id), newData, 'synced')
+            await this.saveLocalBackup(Number(payload.id), patchData, 'synced')
 
-            return { success: true, data: newData, message: '' }
+            return { success: true, data: patchData, message: '' }
           } catch (err) {
             lastError = err
 
@@ -1763,7 +1748,7 @@ export const useSessionStore = defineStore('session', {
         }
 
         // Tambahkan ke pending queue untuk auto-retry
-        const key = `update_measurement_${payload.id}`
+        const key = `update_measurement_results_v2_${payload.id}`
 
         const index = this.pending_progress.findIndex((i) => i.key === key)
         if (index > -1) {
@@ -1776,7 +1761,7 @@ export const useSessionStore = defineStore('session', {
         } else {
           this.pending_progress.push({
             key,
-            name: 'update_measurement_result_v2',
+            name: 'update_measurement_results_v2',
             params: payload,
             timestamp: Date.now(),
             retryCount: 1,
