@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
-import type { Measurement, MeasurementResultsDurationOrLatency } from '@/lib/types'
+import {
+  useSessionStore,
+  type ResultsDurationOrLatency,
+  type UpdateMeasurementResultsV2Params
+} from '@/stores/session.store'
+import type {
+  Measurement,
+  MeasurementDurationOrLatency,
+  MeasurementResultsDurationOrLatency
+} from '@/lib/types'
 import AppButton from '@/components/AppButton.vue'
 import { Icon } from '@iconify/vue/dist/iconify.js'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -9,10 +17,11 @@ import AppTimeInput from '@/components/AppTimeInput.vue'
 import { useClock } from '@/composables/use-clock'
 import dayjs from 'dayjs'
 import { durationToSeconds, secondsToDuration } from '@/lib/func'
+import AppChip from '@/components/AppChip.vue'
+import AppTextInput from '@/components/AppTextInput.vue'
 
 interface Props {
   measurement: Measurement
-  measurementResults: Record<string, MeasurementResultsDurationOrLatency>
   isCollapsed?: boolean
   //
   isDisabledAction?: boolean
@@ -22,17 +31,12 @@ interface Lap extends MeasurementResultsDurationOrLatency {
   lapIndex: number
 }
 
-// interface FinalResult {
-//   recording_time: string
+// interface FinalResult { // OLD
+//   seconds: number
+//   string: string
 //   started_at?: string | null
 //   ended_at?: string | null
 // }
-interface FinalResult {
-  seconds: number
-  string: string
-  started_at?: string | null
-  ended_at?: string | null
-}
 
 interface Emits {
   (e: 'toggle-updated', payload: boolean): void
@@ -64,6 +68,7 @@ const latestTime = ref<string>('')
 /** === COMPUTEDS === */
 
 const lapLength = computed(() => laps.value?.length || 0)
+
 const runningLapIndex = computed(() => lapLength.value - 1)
 
 const displayTimer = computed(() => {
@@ -78,11 +83,7 @@ const displayTimer = computed(() => {
 watch(
   () => submitLoading.value,
   (val) => {
-    if (!val) {
-      emit('toggle-updated', true)
-    } else {
-      emit('toggle-updated', false)
-    }
+    emit('toggle-updated', !val)
   }
 )
 
@@ -126,7 +127,8 @@ const onToggleRunning = async () => {
           string: '00:00:00',
           seconds: 0,
           started_at: dayjs().format(),
-          ended_at: null
+          ended_at: null,
+          label: null
         }
       ]
 
@@ -163,19 +165,23 @@ const onToggleRunning = async () => {
   if (incomingState === 'idle') return
 
   // call PATCH API only for start, resume, adn stop
-  const finalResults: Record<string, FinalResult> = {}
+  const finalResults: Record<string, ResultsDurationOrLatency> = {}
   laps.value.forEach((lap, index) => {
     finalResults[index] = {
-      seconds: lap.seconds,
-      string: lap.string,
+      recording_time: lap.string,
       started_at: lap.started_at,
-      ended_at: lap.ended_at
+      ended_at: lap.ended_at,
+      label: lap.label
+      // seconds: lap.seconds,
+      // string: lap.string,
+      // started_at: lap.started_at,
+      // ended_at: lap.ended_at
     }
   })
 
-  const payload: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsV2Params = {
     id: props.measurement.id,
-    params: { measurement: { results: finalResults } },
+    params: { results: finalResults },
     dataResult: { ...props.measurement, results: finalResults },
     lastData: { ...props.measurement }
   }
@@ -190,7 +196,7 @@ const onToggleRunning = async () => {
     notes: `Target: ${props.measurement.target?.name}`,
     timestamp: new Date().toISOString()
   })
-  const { success } = await sessionStore.updateMeasurementResults(payload)
+  const { success } = await sessionStore.updateMeasurementResultsV2(payload)
   submitLoading.value = false
 
   if (!success) return
@@ -205,16 +211,20 @@ const onToggleRunning = async () => {
 
 // ── Record a lap (while timer keeps running) ──
 const onAddLap = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return
   if ((!isStarted.value && !laps.value.length) || submitLoading.value) return
 
   // Complete latest lap
   if (laps.value.length > 0) {
-    const start = laps.value[runningLapIndex.value].started_at
-    const end = dayjs().format()
-    const diffInSeconds = dayjs(end).diff(dayjs(start), 'second')
-    laps.value[runningLapIndex.value].ended_at = end
-    laps.value[runningLapIndex.value].string = secondsToDuration(diffInSeconds)
-    laps.value[runningLapIndex.value].seconds = diffInSeconds
+    // when latest lap is running -> complete it
+    if (!laps.value[runningLapIndex.value].ended_at) {
+      const start = laps.value[runningLapIndex.value].started_at
+      const end = dayjs().format()
+      const diffInSeconds = dayjs(end).diff(dayjs(start), 'second')
+      laps.value[runningLapIndex.value].ended_at = end
+      laps.value[runningLapIndex.value].string = secondsToDuration(diffInSeconds)
+      laps.value[runningLapIndex.value].seconds = diffInSeconds
+    }
   }
 
   // Add incoming lap
@@ -223,24 +233,29 @@ const onAddLap = async () => {
     string: '00:00:00',
     seconds: 0,
     started_at: dayjs().format(),
-    ended_at: null
+    ended_at: null,
+    label: null
   })
 
   setupTimer()
 
-  const finalResults: Record<string, FinalResult> = {}
+  const finalResults: Record<string, ResultsDurationOrLatency> = {}
   laps.value.forEach((lap, index) => {
     finalResults[index] = {
-      seconds: lap.seconds,
-      string: lap.string,
+      recording_time: lap.string,
       started_at: lap.started_at,
-      ended_at: lap.ended_at
+      ended_at: lap.ended_at,
+      label: lap.label
+      // seconds: lap.seconds,
+      // string: lap.string,
+      // started_at: lap.started_at,
+      // ended_at: lap.ended_at
     }
   })
 
-  const payload: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsV2Params = {
     id: props.measurement.id,
-    params: { measurement: { results: finalResults } },
+    params: { results: finalResults },
     dataResult: { ...props.measurement, results: finalResults },
     lastData: { ...props.measurement }
   }
@@ -255,7 +270,7 @@ const onAddLap = async () => {
     notes: `Target: ${props.measurement.target?.name}`,
     timestamp: new Date().toISOString()
   })
-  const { success } = await sessionStore.updateMeasurementResults(payload)
+  const { success } = await sessionStore.updateMeasurementResultsV2(payload)
   submitLoading.value = false
 
   if (!success) return
@@ -265,12 +280,14 @@ const onAddLap = async () => {
 
 // ── Reset laps ──
 const onResetLaps = async () => {
-  laps.value = []
-  const finalResults: Record<string, FinalResult> = {}
+  if (sessionStore.session?.status !== 'ongoing') return
 
-  const payload: UpdateMeasurementResultsParams = {
+  laps.value = []
+  const finalResults: Record<string, ResultsDurationOrLatency> = {}
+
+  const payload: UpdateMeasurementResultsV2Params = {
     id: props.measurement.id,
-    params: { measurement: { results: finalResults } },
+    params: { results: finalResults },
     dataResult: { ...props.measurement, results: finalResults },
     lastData: { ...props.measurement }
   }
@@ -285,7 +302,7 @@ const onResetLaps = async () => {
     notes: `Target: ${props.measurement.target?.name}`,
     timestamp: new Date().toISOString()
   })
-  const { success } = await sessionStore.updateMeasurementResults(payload)
+  const { success } = await sessionStore.updateMeasurementResultsV2(payload)
   submitLoading.value = false
   if (!success) return
 
@@ -294,11 +311,14 @@ const onResetLaps = async () => {
 }
 
 const onOpenEdit = (lap: Lap) => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
   editLapInput.value = { ...lap }
   isOpenEdit.value = true
 }
 
 const onUpdateLap = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return
   if (submitLoading.value) return
   if (!editLapInput.value) return
 
@@ -311,26 +331,31 @@ const onUpdateLap = async () => {
     string: editLapInput.value.string,
     seconds: totalSeconds,
     started_at: start,
-    ended_at: end
+    ended_at: end,
+    label: editLapInput.value.label
   }
 
   laps.value[editLapInput.value.lapIndex] = { ...updatedLap }
 
   setupTimer()
 
-  const finalResults: Record<string, FinalResult> = {}
+  const finalResults: Record<string, ResultsDurationOrLatency> = {}
   laps.value.forEach((lap, index) => {
     finalResults[index] = {
-      seconds: lap.seconds,
-      string: lap.string,
+      recording_time: lap.string,
       started_at: lap.started_at,
-      ended_at: lap.ended_at
+      ended_at: lap.ended_at,
+      label: lap.label
+      // seconds: lap.seconds,
+      // string: lap.string,
+      // started_at: lap.started_at,
+      // ended_at: lap.ended_at
     }
   })
 
-  const payload: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsV2Params = {
     id: props.measurement.id,
-    params: { measurement: { results: finalResults } },
+    params: { results: finalResults },
     dataResult: { ...props.measurement, results: finalResults },
     lastData: { ...props.measurement }
   }
@@ -345,7 +370,11 @@ const onUpdateLap = async () => {
     notes: `Target: ${props.measurement.target?.name}`,
     timestamp: new Date().toISOString()
   })
-  await sessionStore.updateMeasurementResults(payload)
+  try {
+    await sessionStore.updateMeasurementResultsV2(payload)
+  } catch (e) {
+    console.error(e)
+  }
   submitLoading.value = false
 
   isOpenEdit.value = false
@@ -373,7 +402,7 @@ const getTextColorClass = (lap: Lap) => {
 }
 
 onMounted(() => {
-  const results = props.measurement.results as Record<string, MeasurementResultsDurationOrLatency>
+  const results = props.measurement.results as MeasurementDurationOrLatency['results']
 
   const res: MeasurementResultsDurationOrLatency[] = Object.values(results)
 
@@ -403,21 +432,24 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- duration latency -->
-  <div v-if="!isOpenResetConfirmation" class="flex h-full flex-grow flex-col justify-between gap-2">
+  <!-- Duration latency -->
+  <div v-if="!isOpenResetConfirmation" class="flex flex-col flex-grow gap-2 justify-between h-full">
     <div
       v-if="submitLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <div
-      class="flex h-full flex-grow flex-col content-center items-center justify-center gap-x-3"
+      class="flex flex-col flex-grow gap-x-3 justify-center content-center items-center h-full"
       :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 px-3': isCollapsed }"
     >
+      <!-- Lap info -->
       <div v-if="isCollapsed" class="font-semibold text-slate-7">Lap {{ lapLength }}</div>
+
+      <!-- Timer -->
       <div
         class="grid grid-cols-5 items-center text-3xl text-[32px] font-bold transition-colors"
         :class="{ 'text-slate-6': !isStarted, 'text-slate-8': isStarted }"
@@ -429,7 +461,8 @@ onMounted(() => {
         <div class="flex justify-center">{{ displayTimer.split(':')[2] }}</div>
       </div>
 
-      <div class="flex w-full items-center gap-3">
+      <!-- Controls -->
+      <div class="flex gap-3 items-center w-full">
         <AppButton
           kind="plain"
           class="grow rounded-full !bg-prim-2"
@@ -448,7 +481,7 @@ onMounted(() => {
         <AppButton
           kind="plain"
           :color="isStarted ? 'tomato' : 'grass'"
-          class="grow rounded-full"
+          class="rounded-full grow"
           :class="[isStarted ? '!bg-tomato-2' : '!bg-grass-2']"
           :loading="submitLoading"
           :disabled="isDisabledAction || sessionStore.session?.status !== 'ongoing'"
@@ -464,13 +497,14 @@ onMounted(() => {
           :disabled="isDisabledAction || sessionStore.session?.status !== 'ongoing'"
           @click="isOpenResetConfirmation = true"
         >
-          <Icon icon="ph:arrow-clockwise-bold" class="text-lg" />
+          <Icon icon="ph:arrow-counter-clockwise-bold" class="text-lg" />
         </AppButton>
       </div>
 
+      <!-- Laps List -->
       <div
         v-if="lapLength > 0 && !isCollapsed"
-        class="mt-2 w-full overflow-scroll"
+        class="overflow-scroll mt-2 w-full"
         :style="{
           maxHeight: 'calc(100vh - 10rem)',
           scrollbarWidth: 'none'
@@ -479,67 +513,97 @@ onMounted(() => {
         <div
           v-for="lap in [...laps].reverse()"
           :key="lap.lapIndex"
-          class="flex items-center justify-between gap-2 border-b border-slate-4"
+          class="flex gap-2 justify-between items-center w-full h-8 border-b border-slate-4"
         >
-          <div class="flex w-full justify-between gap-2 py-2" :class="getTextColorClass(lap)">
-            <div>{{ `Lap ${lap.lapIndex + 1}` }}</div>
-            <div class="font-semibold">{{ getLapDisplayTime(lap) }}</div>
+          <div class="flex gap-2 items-center">
+            <div class="text-sm shrink-0" :class="getTextColorClass(lap)">
+              Lap {{ lap.lapIndex + 1 }}
+            </div>
+            <AppChip
+              v-if="lap.label"
+              :label="lap.label"
+              class="truncate max-w-24 bg-light-purple-1 text-dark-purple-1"
+            />
           </div>
 
-          <AppButton
-            v-if="!isStarted && sessionStore.session?.status === 'ongoing'"
-            kind="plain"
-            size="sm"
-            class="h-6! w-6!"
-            title="Edit lap"
-            @click="onOpenEdit(lap)"
-          >
-            <Icon icon="ph:pencil-simple-bold" />
-          </AppButton>
+          <div class="flex gap-2 items-center shrink-0">
+            <div class="font-semibold" :class="getTextColorClass(lap)">
+              {{ getLapDisplayTime(lap) }}
+            </div>
+            <AppButton
+              v-if="!isStarted && sessionStore.session?.status === 'ongoing'"
+              kind="plain"
+              size="sm"
+              class="h-6! w-6!"
+              title="Edit lap"
+              @click="onOpenEdit(lap)"
+            >
+              <Icon icon="ph:pencil-simple-bold" />
+            </AppButton>
+          </div>
         </div>
       </div>
     </div>
 
     <div
       v-if="!isCollapsed && !isOpenResetConfirmation"
-      class="shrink-0 pb-3 text-center text-xs font-medium text-slate-7"
+      class="pb-3 text-sm text-center shrink-0 text-slate-8"
     >
-      Goal:
-      {{ measurement.target?.success_metric === 'equal to or greater than goal' ? '≥' : '' }}
-      {{ measurement.target?.success_metric === 'less than goal' ? '<' : '' }}
-      {{ measurement.target?.goal_time }}
+      <span> Goal: </span>
+      <span>
+        {{ measurement.target?.success_metric === 'equal to or greater than goal' ? '≥' : '' }}
+        {{ measurement.target?.success_metric === 'less than goal' ? '<' : '' }}
+        {{ measurement.target?.goal_time }}
+      </span>
     </div>
   </div>
-  <!-- end duration latency -->
+  <!-- End duration latency -->
 
-  <!-- confirm reset laps -->
+  <!-- Confirm reset laps -->
   <div
     v-if="isOpenResetConfirmation"
-    class="flex h-full flex-grow flex-col items-center justify-center gap-2"
+    class="flex flex-col flex-grow gap-2 justify-center items-center h-full"
   >
-    <div class="font-semibold text-slate-8">Reset all recorded laps?</div>
-    <div class="text-center text-slate-8">
-      This will clear all existing lap records and begin again from Lap 1. You won't be able to
-      recover previous data.
+    <div class="text-lg font-semibold text-center text-slate-8">Reset all recorded laps?</div>
+    <div class="px-4 text-sm text-center text-slate-6">
+      This will clear all existing lap records and begin again from Lap 1.
+      <br />
+      You won't be able to recover previous data.
     </div>
     <div class="grid grid-cols-2 gap-4 px-4">
       <AppButton kind="plain" @click="isOpenResetConfirmation = false">Cancel</AppButton>
       <AppButton color="tomato" :loading="submitLoading" @click="onResetLaps">Reset</AppButton>
     </div>
   </div>
-  <!-- end confirm reset laps -->
+  <!-- End confirm reset laps -->
 
-  <!-- edit lap modal -->
-  <AppActionSheet v-if="editLapInput" :show="isOpenEdit" @close="isOpenEdit = false">
-    <div class="flex w-full flex-col gap-4 py-3">
-      <div class="text-left text-xl font-semibold">Edit lap {{ measurement.target?.name }}</div>
+  <!-- Edit lap modal -->
+  <AppActionSheet :show="isOpenEdit" @close="isOpenEdit = false">
+    <div v-if="editLapInput" class="flex flex-col gap-4 py-3 w-full">
+      <div class="text-xl font-semibold text-left">Edit lap {{ measurement.target?.name }}</div>
+
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1">
-          <div class="text-sm font-semibold text-slate-8">
+          <div class="text-sm font-medium text-slate-7">
             {{ measurement.target?.curriculum_name }}
           </div>
-          <div class="text-base font-semibold text-slate-10">{{ measurement.target?.name }}</div>
+          <div class="text-base font-semibold text-slate-8">{{ measurement.target?.name }}</div>
+          <div class="text-sm text-slate-6">
+            {{ measurement.target?.type === 'Target::Duration' ? 'Duration' : '' }}
+            {{ measurement.target?.type === 'Target::Latency' ? 'Latency' : '' }}
+          </div>
         </div>
+
+        <AppTextInput
+          :name="`lap-${editLapInput.lapIndex}-label`"
+          label="Label"
+          optional
+          v-model="editLapInput.label"
+          placeholder="e.g. Puzzle"
+          :max-length="32"
+          :disabled="submitLoading"
+          caption="This label applies to the current session only and resets next session."
+        />
 
         <AppTimeInput
           :label="`Lap ${editLapInput.lapIndex + 1}`"
@@ -548,7 +612,7 @@ onMounted(() => {
           :disabled="submitLoading"
         />
       </div>
-      <div class="grid grid-cols-2 items-center gap-4">
+      <div class="grid grid-cols-2 gap-4 items-center">
         <AppButton kind="plain" @click="isOpenEdit = false">Cancel</AppButton>
         <AppButton :loading="submitLoading" @click="onUpdateLap">Save</AppButton>
       </div>

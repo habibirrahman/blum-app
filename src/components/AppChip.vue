@@ -88,8 +88,8 @@ const current = computed<ChipAsset>(() => {
 
 <template>
   <div
-    class="flex items-center h-5 px-2 text-xs font-semibold rounded-full shrink-0"
-    :class="current.class"
+    class="flex items-center px-2 h-5 text-xs font-semibold rounded-full shrink-0"
+    :class="[current.class]"
   >
     {{ current.label }}
   </div>

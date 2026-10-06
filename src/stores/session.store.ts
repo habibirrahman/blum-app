@@ -124,19 +124,26 @@ export interface UpdateMeasurementResultsParams {
  */
 
 /**
+ * === DURATION  LANTENCY ===
+ */
+export type ResultsDurationOrLatency = {
+  recording_time: string
+  started_at?: string | null
+  ended_at?: string | null
+  label?: string | null
+}
+
+/**
  * === PROMPTING ===
  * results: {
  *   [prompt.id]: gapScore,
- * }
- * results: {
- *   target_problem_behavior_id: problemBehavior.id,
  * }
  */
 export type ResultsPromptingScore = Record<string, number>
 
 export interface UpdateMeasurementResultsV2Params {
   id: Measurement['id']
-  params: { results: ResultsPromptingScore }
+  params: { results: Record<string, ResultsDurationOrLatency> | ResultsPromptingScore }
   dataResult: Measurement
   lastData: Measurement
 }
