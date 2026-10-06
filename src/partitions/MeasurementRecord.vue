@@ -497,6 +497,7 @@ onUnmounted(() => {
             :key="`measurement-card-${cardId}`"
             class="w-full h-full"
             :class="[
+              isCollapsed ? 'max-w-[calc(100%-2.75rem)]' : '',
               isDisabledAction ? 'pointer-events-none' : '',
               isDisabledAction && !isDecisionGateActive ? 'opacity-50' : ''
             ]"
@@ -626,7 +627,7 @@ onUnmounted(() => {
             />
           </div>
 
-          <div v-if="isCollapsed" class="flex flex-col grow">
+          <div v-if="isCollapsed" class="flex flex-col shrink-0 grow">
             <div
               class="sticky top-0 flex max-h-[calc(25vh-1.5rem)] w-8 shrink-0 grow items-center justify-center rounded-full bg-slate-4"
               @click="emit('toggle-collapsed', false)"
