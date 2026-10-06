@@ -619,7 +619,12 @@ onUnmounted(() => {
         <!-- Scrollable Prompts Container -->
         <div
           :id="`prompting-scroll-${measurement.id}`"
-          class="flex w-[calc(320px-32px)] snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+          class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scroll-smooth"
+          :class="[
+            isCollapsed && enableProblemBehavior
+              ? 'w-[calc(320px-32px-60px)]'
+              : 'w-[calc(320px-32px)]'
+          ]"
           dir="ltr"
           @scroll="onScroll"
         >
@@ -627,7 +632,12 @@ onUnmounted(() => {
             v-for="(promptBoxes, idx) in promptBoxesPages"
             :key="`${measurement.id}-prompt-boxes-${idx + 1}`"
             :id="`${measurement.id}-prompt-boxes-${idx + 1}`"
-            class="flex w-[calc(320px-32px)] shrink-0 snap-center justify-center"
+            class="flex justify-center shrink-0 snap-center"
+            :class="[
+              isCollapsed && enableProblemBehavior
+                ? 'w-[calc(320px-32px-60px)]'
+                : 'w-[calc(320px-32px)]'
+            ]"
           >
             <div
               class="flex w-[calc(240px+24px)] content-center justify-center gap-3"

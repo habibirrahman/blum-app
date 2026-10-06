@@ -313,7 +313,7 @@ interface MeasurementBase {
   comment_user?: Comment
 
   used_targets?: MeasurementUsedTargetMeasurement[]
-  prompt_histories: MeasurementPromptHistory[]
+  prompt_histories?: MeasurementPromptHistory[]
 
   results: Record<string, unknown> | unknown
   trials?: MeasurementTrial[]
