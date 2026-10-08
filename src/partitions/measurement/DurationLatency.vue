@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {
   useSessionStore,
-  type ResultsDurationOrLatency,
+  type ResultsDurationOrLatencyParams,
   type UpdateMeasurementResultsV2Params
 } from '@/stores/session.store'
 import type {
@@ -165,7 +165,7 @@ const onToggleRunning = async () => {
   if (incomingState === 'idle') return
 
   // call PATCH API only for start, resume, adn stop
-  const finalResults: Record<string, ResultsDurationOrLatency> = {}
+  const finalResults: Record<string, ResultsDurationOrLatencyParams> = {}
   laps.value.forEach((lap, index) => {
     finalResults[index] = {
       recording_time: lap.string,
@@ -239,7 +239,7 @@ const onAddLap = async () => {
 
   setupTimer()
 
-  const finalResults: Record<string, ResultsDurationOrLatency> = {}
+  const finalResults: Record<string, ResultsDurationOrLatencyParams> = {}
   laps.value.forEach((lap, index) => {
     finalResults[index] = {
       recording_time: lap.string,
@@ -283,7 +283,7 @@ const onResetLaps = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
 
   laps.value = []
-  const finalResults: Record<string, ResultsDurationOrLatency> = {}
+  const finalResults: Record<string, ResultsDurationOrLatencyParams> = {}
 
   const payload: UpdateMeasurementResultsV2Params = {
     id: props.measurement.id,
@@ -339,7 +339,7 @@ const onUpdateLap = async () => {
 
   setupTimer()
 
-  const finalResults: Record<string, ResultsDurationOrLatency> = {}
+  const finalResults: Record<string, ResultsDurationOrLatencyParams> = {}
   laps.value.forEach((lap, index) => {
     finalResults[index] = {
       recording_time: lap.string,
@@ -464,8 +464,7 @@ onMounted(() => {
       <!-- Controls -->
       <div class="flex gap-3 items-center w-full">
         <AppButton
-          kind="plain"
-          class="grow rounded-full !bg-prim-2"
+          class="grow rounded-full !border-transparent !bg-prim-2 !text-light-purple-5 hover:!bg-prim-3"
           :loading="submitLoading"
           :disabled="
             (!isStarted && !lapLength) ||
@@ -479,10 +478,13 @@ onMounted(() => {
         </AppButton>
 
         <AppButton
-          kind="plain"
           :color="isStarted ? 'tomato' : 'grass'"
-          class="rounded-full grow"
-          :class="[isStarted ? '!bg-tomato-2' : '!bg-grass-2']"
+          class="grow rounded-full !border-transparent"
+          :class="[
+            isStarted
+              ? '!bg-tomato-2 !text-tomato-7 hover:!bg-tomato-3'
+              : '!bg-grass-2 !text-grass-7 hover:!bg-grass-3'
+          ]"
           :loading="submitLoading"
           :disabled="isDisabledAction || sessionStore.session?.status !== 'ongoing'"
           @click="onToggleRunning"
@@ -492,8 +494,8 @@ onMounted(() => {
 
         <AppButton
           v-if="!isStarted && lapLength > 0"
-          class="rounded-full !bg-prim-2"
-          kind="plain"
+          class="rounded-full !border-transparent !bg-prim-2 !text-light-purple-5 hover:!bg-prim-3"
+          :loading="submitLoading"
           :disabled="isDisabledAction || sessionStore.session?.status !== 'ongoing'"
           @click="isOpenResetConfirmation = true"
         >

@@ -1,17 +1,19 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
-import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
-import { computed, onMounted, ref, watch } from 'vue'
-import type { Measurement, MeasurementResultsFrequency } from '@/lib/types'
+import { useSessionStore, type UpdateMeasurementResultsV2Params } from '@/stores/session.store'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import type { Measurement, MeasurementFrequency } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import { debounce } from '@/lib/func'
 import { useClock } from '@/composables/use-clock'
 import dayjs from 'dayjs'
+import AppButton from '@/components/AppButton.vue'
+import AppTextInput from '@/components/AppTextInput.vue'
+import AppActionSheet from '@/components/AppActionSheet.vue'
 
 interface Props {
   measurement: Measurement
-  measurementResults: MeasurementResultsFrequency
   isCollapsed: boolean
 }
 interface Emits {
@@ -28,8 +30,11 @@ const { now } = useClock()
 
 /** DATA */
 
+const submitLoading = ref<boolean>(false)
+const isOpenEdit = ref<boolean>(false)
+
 const currentScore = ref<number>(0)
-const scoreLoading = ref<boolean>(false)
+const scoreInput = ref<number>(0)
 
 /** COMPUTED */
 
@@ -73,7 +78,7 @@ const isDisabled = computed(() => {
 /** WATHCER */
 
 watch(
-  () => scoreLoading.value,
+  () => submitLoading.value,
   (val) => {
     emit('toggle-updated', !val)
   }
@@ -81,44 +86,54 @@ watch(
 
 /** METHODS */
 
-const onSaveScore = debounce(async function (score: number) {
-  const finalScore = props.measurementResults.score + score
+const _onSaveScore = async (scoreDelta: number) => {
+  const results = props.measurement.results as MeasurementFrequency['results']
+  const baseScore = results.score
+  const finalScore = baseScore + scoreDelta
 
-  const payload: UpdateMeasurementResultsParams = {
+  const payload: UpdateMeasurementResultsV2Params = {
     id: props.measurement.id,
-    params: { measurement: { results: { score: finalScore } } },
+    params: { results: scoreDelta },
     dataResult: { ...props.measurement, results: { score: finalScore } },
     lastData: { ...props.measurement }
   }
 
-  scoreLoading.value = true
-  const { success, data, message } = await sessionStore.updateMeasurementResults(payload)
-  scoreLoading.value = false
-
-  currentScore.value = data?.results?.score || 0
+  submitLoading.value = true
+  const { success, data, message } = await sessionStore.updateMeasurementResultsV2(payload)
+  submitLoading.value = false
 
   if (!success) {
+    const results = props.measurement.results as MeasurementFrequency['results']
+    currentScore.value = results.score
     toast.error(message)
     return
   }
-}, 1000)
+
+  if (data?.results) {
+    currentScore.value = data.results.score
+  }
+
+  isOpenEdit.value = false
+}
+
+const onSaveScore = debounce(_onSaveScore, 1000)
 
 const onChangeScore = async (score: number) => {
-  const session = sessionStore.session
-  if (session?.status !== 'ongoing' || isDisabled.value) return
+  if (sessionStore.session?.status !== 'ongoing' || isDisabled.value) return
 
   // change state
   currentScore.value += score
 
-  // save state
-  const gapScore = currentScore.value - (props.measurementResults?.score || 0)
+  // Calculate difference from original to send delta API
+  const results = props.measurement.results as MeasurementFrequency['results']
+  const baseScore = results.score
+  const gapScore = currentScore.value - baseScore
 
   // record session activities
   await sessionStore.addSessionActivity({
     action_label: score === 1 ? `frequency_add` : `frequency_subtract`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
-    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
     params: { measurement: { results: { score: currentScore.value } } },
     notes: `Target: ${props.measurement.target?.name} [${currentScore.value}]`,
     timestamp: new Date().toISOString()
@@ -127,23 +142,72 @@ const onChangeScore = async (score: number) => {
   onSaveScore(gapScore)
 }
 
+// modal edit score with number input
+
+const openEdit = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
+  isOpenEdit.value = true
+  scoreInput.value = currentScore.value
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `frequency_open_edit`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Opened edit score modal`,
+    timestamp: new Date().toISOString()
+  })
+
+  const id = `frequency-score-${props.measurement.id}`
+  const input = document.getElementById(id) as HTMLInputElement
+  input?.focus()
+}
+
+const onUpdateScore = async () => {
+  if (sessionStore.session?.status !== 'ongoing') return
+
+  // Calculate difference from original to send delta API
+  const results = props.measurement.results as MeasurementFrequency['results']
+  const baseScore = results.score
+  const gapScore = scoreInput.value - baseScore
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `frequency_update_score`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    params: { measurement: { results: { score: currentScore.value } } },
+    notes: `Updated score from ${baseScore} to ${scoreInput.value}`,
+    timestamp: new Date().toISOString()
+  })
+
+  _onSaveScore(gapScore)
+}
+
 onMounted(() => {
-  currentScore.value = props.measurementResults?.score || 0
+  const results = props.measurement.results as MeasurementFrequency['results']
+  currentScore.value = results.score || 0
+})
+
+onBeforeUnmount(() => {
+  onSaveScore.cancel()
 })
 </script>
 
 <template>
-  <div class="flex h-full flex-grow flex-col justify-between gap-2">
+  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
+    <!-- Loading stste -->
     <div
-      v-if="scoreLoading"
+      v-if="submitLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-20 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <div
-      class="flex h-full flex-grow flex-wrap content-center items-center justify-center gap-x-3 gap-y-4"
+      class="flex flex-wrap flex-grow gap-x-3 gap-y-4 justify-center content-center items-center h-full"
       :class="{ 'scale-90': isCollapsed }"
     >
       <div
@@ -153,55 +217,107 @@ onMounted(() => {
         "
       >
         <div
-          class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] text-4xl font-bold transition-colors"
+          class="relative flex h-20 min-w-20 shrink-0 items-center justify-center rounded-[20px] px-2 font-bold transition-colors"
           :class="[
-            scoreLoading || sessionStore.session?.status !== 'ongoing' || isDisabled
-              ? 'pointer-events-none'
-              : '',
+            sessionStore.session?.status !== 'ongoing' || isDisabled ? 'pointer-events-none' : '',
             isDisabled ? 'bg-slate-4 text-slate-6' : 'bg-light-purple-5 text-white'
           ]"
           @click="onChangeScore(1)"
         >
-          <div v-if="currentScore">{{ currentScore }}</div>
+          <div v-if="currentScore" class="text-4xl">{{ currentScore }}</div>
           <Icon v-else icon="stash:plus-solid" class="text-5xl" />
         </div>
         <div
-          class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"
+          class="flex justify-center items-center h-5 rounded border border-slate-5 bg-pure-white"
           :class="{
             'pointer-events-none':
-              scoreLoading ||
-              !currentScore ||
-              sessionStore.session?.status !== 'ongoing' ||
-              isDisabled
+              !currentScore || sessionStore.session?.status !== 'ongoing' || isDisabled
           }"
           @click="onChangeScore(-1)"
         >
           <div
-            class="h-1 w-6 shrink-0 rounded"
+            class="w-6 h-1 rounded shrink-0"
             :class="{
               'bg-slate-5': !currentScore,
-              'bg-slate-6': currentScore
+              'bg-slate-7': currentScore
             }"
           ></div>
         </div>
       </div>
     </div>
 
-    <div
-      v-if="!isCollapsed"
-      class="shrink-0 space-y-2 pb-3 text-center text-xs font-medium text-slate-7"
-    >
-      <div class="flex items-center justify-between">
-        <div>Goal</div>
-        <div>{{ measurement.target?.goal }} attempt(s)</div>
+    <div v-if="!isCollapsed" class="pb-3 shrink-0">
+      <div class="flex justify-center mb-4">
+        <AppButton
+          class="rounded-full !border-transparent !bg-prim-2 !text-light-purple-5 hover:!bg-prim-3"
+          :disabled="sessionStore.session?.status !== 'ongoing'"
+          @click="openEdit"
+        >
+          <Icon icon="ph:pencil-simple" />
+          <span>Edit number</span>
+        </AppButton>
       </div>
+
+      <div class="flex justify-between items-center">
+        <div class="=text-slate-7 text-xs">Goal</div>
+        <div class="=text-slate-7 text-xs font-semibold">
+          {{ measurement.target?.goal }} attempt(s)
+        </div>
+      </div>
+
       <div
         v-if="measurement.target?.frequency_format === 'custom'"
-        class="flex items-center justify-between"
+        class="flex justify-between items-center"
       >
-        <div>Duration</div>
-        <div>{{ measurement.duration }} minute(s)</div>
+        <div class="=text-slate-7 text-xs">Duration</div>
+        <div class="=text-slate-7 text-xs font-semibold">{{ measurement.duration }} minute(s)</div>
       </div>
     </div>
+
+    <!-- Edit score modal -->
+    <AppActionSheet :show="isOpenEdit" @close="isOpenEdit = false">
+      <div class="flex flex-col gap-4 py-3 w-full">
+        <div class="text-xl font-semibold text-left">Edit number</div>
+
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-1">
+            <div class="text-sm font-medium text-slate-7">
+              {{ measurement.target?.curriculum_name }}
+            </div>
+            <div class="text-base font-semibold text-slate-8">{{ measurement.target?.name }}</div>
+          </div>
+
+          <AppTextInput
+            name="frequency-score"
+            :id="`frequency-score-${props.measurement.id}`"
+            label="Count"
+            type="number"
+            min="0"
+            v-model="scoreInput"
+            :disabled="submitLoading"
+          />
+
+          <div
+            class="flex gap-4 justify-center items-center mt-4 w-full h-14 rounded bg-cornflower-2"
+          >
+            <div class="text-sm font-bold text-slate-10">
+              {{ currentScore }}
+            </div>
+            <Icon icon="ph:arrow-right" class="text-lg text-cornflower-8" />
+            <div class="text-sm font-bold text-cornflower-8">
+              {{ scoreInput }}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 items-center">
+          <AppButton kind="plain" @click="isOpenEdit = false">Cancel</AppButton>
+
+          <AppButton v-if="currentScore === scoreInput" @click="isOpenEdit = false">Done</AppButton>
+          <AppButton v-else :loading="submitLoading" @click="onUpdateScore">Save</AppButton>
+        </div>
+      </div>
+    </AppActionSheet>
+    <!-- end edit lap modal -->
   </div>
 </template>

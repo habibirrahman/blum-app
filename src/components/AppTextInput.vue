@@ -60,7 +60,7 @@ const errorState = computed(() => {
 
     <textarea
       v-if="type === 'textarea'"
-      :id="name"
+      :id="id || name"
       :name="name"
       :rows="rows"
       :placeholder="placeholder"
@@ -80,7 +80,7 @@ const errorState = computed(() => {
 
     <input
       v-else
-      :id="name"
+      :id="id || name"
       :name="name"
       :type="type === 'password' ? (isShowPassword ? 'text' : 'password') : type"
       :placeholder="placeholder"
