@@ -1002,7 +1002,7 @@ const onSaveEditTrial = async () => {
           >
             <div
               v-if="ratio.target_problem_behavior_id"
-              class="absolute top-0 right-0 z-10 h-full bg-tomato-6"
+              class="absolute top-0 right-0 h-full z-1 bg-tomato-6"
               :style="{ width: '0.3125rem' }"
             ></div>
           </div>
@@ -1171,7 +1171,7 @@ const onSaveEditTrial = async () => {
 
             <div
               class="flex overflow-x-auto items-center pb-2 w-full scrollbar-hide shrink-0"
-              :class="[ratioScores.length > 3 ? 'justify-start' : 'justify-center']"
+              :class="[ratioScores.length > 6 ? 'justify-start' : 'justify-center']"
             >
               <div class="flex flex-col gap-2 items-center w-max">
                 <div class="flex gap-2">
