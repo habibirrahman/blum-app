@@ -164,8 +164,8 @@ const progressionParams = computed<string>(() => {
 
 // Computed untuk check all
 const isAllChecked = computed(() => {
-  if (!appStore.center_targets || appStore.center_targets.length === 0) return false
-  return appStore.center_targets.every((target: Target) =>
+  if (!appStore.centerTargets || appStore.centerTargets.length === 0) return false
+  return appStore.centerTargets.every((target: Target) =>
     addedTargets.value.some((at: Target) => at.id === target.id)
   )
 })
@@ -181,12 +181,12 @@ const hasPreviouslyAddedTargets = computed(() => {
 // Toggle check all
 const toggleCheckAll = () => {
   if (isAllChecked.value) {
-    const currentPageTargets = appStore.center_targets
+    const currentPageTargets = appStore.centerTargets
     addedTargets.value = addedTargets.value.filter(
       (at: Target) => !currentPageTargets.some((t: Target) => t.id === at.id)
     )
   } else {
-    const currentPageTargets = appStore.center_targets
+    const currentPageTargets = appStore.centerTargets
     const newTargets = currentPageTargets.filter(
       (t: Target) => !addedTargets.value.some((at: Target) => at.id === t.id)
     )
@@ -469,12 +469,12 @@ const onAddTarget = async () => {
         <span>Showing </span>
         <span>
           {{ (page - 1) * perPage + 1 }}-{{
-            page * perPage > appStore.total_center_targets
-              ? appStore.total_center_targets
+            page * perPage > appStore.totalCenterTargets
+              ? appStore.totalCenterTargets
               : page * perPage
           }}
         </span>
-        <span> of {{ appStore.total_center_targets }}</span>
+        <span> of {{ appStore.totalCenterTargets }}</span>
       </div>
       <input
         type="checkbox"
@@ -484,7 +484,7 @@ const onAddTarget = async () => {
       />
     </div>
     <div>
-      <div v-for="target in appStore.center_targets" :key="target.id">
+      <div v-for="target in appStore.centerTargets" :key="target.id">
         <div v-if="target.is_group">
           <div
             class="flex h-[154px] cursor-pointer flex-col justify-center gap-1.5 border-l-[6px] border-prim-2 px-4"
@@ -539,7 +539,7 @@ const onAddTarget = async () => {
     </div>
     <AppPagination
       :page="page"
-      :total-count="appStore.total_center_targets"
+      :total-count="appStore.totalCenterTargets"
       @change="page = $event"
     />
   </div>
