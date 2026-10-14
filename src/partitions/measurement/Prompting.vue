@@ -522,7 +522,7 @@ onUnmounted(() => {
       class="flex overflow-y-auto flex-col justify-between h-full grow"
     >
       <div
-        v-if="!appStore.network_status?.connected"
+        v-if="!appStore.networkStatus?.connected"
         class="flex gap-1 justify-center items-center px-2 py-1.5 text-xs text-center text-white rounded bg-tomato-7"
       >
         <span>Please reconnect to view trial history</span>
@@ -530,7 +530,7 @@ onUnmounted(() => {
 
       <div
         class="flex flex-col py-2"
-        :class="[appStore.network_status?.connected ? '' : ' blur-sm']"
+        :class="[appStore.networkStatus?.connected ? '' : ' blur-sm']"
       >
         <!-- offline indicator -->
 

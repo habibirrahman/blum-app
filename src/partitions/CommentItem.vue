@@ -70,7 +70,7 @@ const onUpdate = async () => {
     type: typeInput.value,
     params: {
       session_comment: {
-        user_id: appStore.account?.id,
+        user_id: appStore.currentUser?.id,
         body: bodyInput.value
       },
       assessment: {
@@ -121,39 +121,39 @@ const showImage = (index: number) => {
 
 <template>
   <div
-    class="w-full transform transition duration-300 ease-in-out"
+    class="w-full transition duration-300 ease-in-out transform"
     :class="{
       'fixed top-1/3 z-[1000] -translate-x-4 -translate-y-1/2 px-4': showAction
     }"
   >
     <div
-      class="w-full space-y-2 rounded border border-prim-4 bg-white px-4 py-3"
+      class="px-4 py-3 space-y-2 w-full bg-white rounded border border-prim-4"
       :class="{ 'pointer-events-none': !actionable }"
       :style="{ boxShadow: !showAction ? '4px 4px 0px 0px #D6C7E066' : '' }"
       @click.self="showAction = !showAction"
     >
-      <div @click="showAction = !showAction" class="flex items-center justify-between gap-4">
+      <div @click="showAction = !showAction" class="flex gap-4 justify-between items-center">
         <div
           v-if="comment.user_name"
-          class="flex h-5 items-center truncate rounded-full bg-lime-4 p-2"
+          class="flex items-center p-2 h-5 truncate rounded-full bg-lime-4"
         >
-          <div class="truncate text-xs font-medium text-lime-9">{{ comment.user_name }}</div>
+          <div class="text-xs font-medium truncate text-lime-9">{{ comment.user_name }}</div>
         </div>
         <div
           v-if="comment.target_name"
-          class="flex h-5 items-center truncate rounded-full bg-slate-3 p-2"
+          class="flex items-center p-2 h-5 truncate rounded-full bg-slate-3"
         >
-          <div class="truncate text-xs font-medium text-slate-8">{{ comment.target_name }}</div>
+          <div class="text-xs font-medium truncate text-slate-8">{{ comment.target_name }}</div>
         </div>
         <div class="text-xs text-slate-8">{{ displayDate({ date: comment.updated_at }) }}</div>
       </div>
-      <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
+      <div class="w-full h-0.5 shrink-0 bg-slate-3"></div>
       <div v-if="comment.type === 'Assessment::InSession'" class="space-y-2">
         <div @click="showAction = !showAction" class="space-y-2">
           <div class="space-y-1">
             <div class="text-sm text-slate-7">Antecedent</div>
             <div
-              class="whitespace-pre-line text-sm text-slate-8"
+              class="text-sm whitespace-pre-line text-slate-8"
               :class="{
                 'line-clamp-3': showAction && !comment.images,
                 'line-clamp-1': showAction && comment.images
@@ -161,11 +161,11 @@ const showImage = (index: number) => {
               v-html="comment.antecedent || '-'"
             ></div>
           </div>
-          <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
+          <div class="w-full h-0.5 shrink-0 bg-slate-3"></div>
           <div class="space-y-1">
             <div class="text-sm text-slate-7">Behavior</div>
             <div
-              class="whitespace-pre-line text-sm text-slate-8"
+              class="text-sm whitespace-pre-line text-slate-8"
               :class="{
                 'line-clamp-3': showAction && !comment.images,
                 'line-clamp-1': showAction && comment.images
@@ -173,11 +173,11 @@ const showImage = (index: number) => {
               v-html="comment.behavior || '-'"
             ></div>
           </div>
-          <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
+          <div class="w-full h-0.5 shrink-0 bg-slate-3"></div>
           <div class="space-y-1">
             <div class="text-sm text-slate-7">Consequence</div>
             <div
-              class="whitespace-pre-line text-sm text-slate-8"
+              class="text-sm whitespace-pre-line text-slate-8"
               :class="{
                 'line-clamp-3': showAction && !comment.images,
                 'line-clamp-1': showAction && comment.images
@@ -186,13 +186,13 @@ const showImage = (index: number) => {
             ></div>
           </div>
         </div>
-        <div v-if="comment.images" class="mt-2 flex gap-2">
+        <div v-if="comment.images" class="flex gap-2 mt-2">
           <div v-for="(image, index) in comment.images" :key="image.id">
             <img
               :src="image.file_url"
               :alt="image.file_name"
               @click.stop="showImage(index)"
-              class="pointer-events-auto mb-2 cursor-pointer rounded-lg"
+              class="mb-2 rounded-lg cursor-pointer pointer-events-auto"
               :class="{
                 'h-16 w-16 object-cover': comment.images.length > 0,
                 'h-20 w-20 object-cover': comment.images.length === 1 && showAction
@@ -204,13 +204,13 @@ const showImage = (index: number) => {
       <div v-else class="flex flex-col">
         <div
           @click="showAction = !showAction"
-          class="whitespace-pre-line text-sm text-slate-8"
+          class="text-sm whitespace-pre-line text-slate-8"
           :class="{ ' line-clamp-[6]': showAction }"
           v-html="comment.body || ''"
         ></div>
         <div
           v-if="comment.images"
-          class="mt-2 flex gap-2"
+          class="flex gap-2 mt-2"
           :class="{
             'items-center justify-center': comment.images.length === 1 && !showAction
           }"
@@ -220,7 +220,7 @@ const showImage = (index: number) => {
               :src="image.file_url"
               :alt="image.file_name"
               @click.stop="showImage(index)"
-              class="pointer-events-auto mb-2 cursor-pointer rounded-lg"
+              class="mb-2 rounded-lg cursor-pointer pointer-events-auto"
               :class="{
                 'h-16 w-16 object-cover': comment.images.length > 1,
                 'h-76 w-76 object-cover': comment.images.length === 1 && !showAction,
@@ -234,7 +234,7 @@ const showImage = (index: number) => {
   </div>
 
   <AppActionSheet :show="showAction" @close="showAction = false">
-    <div class="space-y-4 py-3">
+    <div class="py-3 space-y-4">
       <div class="flex justify-end" @click="showAction = false">
         <Icon icon="ph:x" class="text-2xl" />
       </div>
@@ -243,7 +243,7 @@ const showImage = (index: number) => {
           <Icon icon="ph:pencil-simple" class="text-xl text-slate-7" />
           <div class="text-sm">Edit</div>
         </div>
-        <div class="h-px w-full bg-slate-3"></div>
+        <div class="w-full h-px bg-slate-3"></div>
         <div class="flex h-[52px] w-full items-center gap-2" @click="showRemove = true">
           <Icon icon="ph:trash" class="text-xl text-slate-7" />
           <div class="text-sm">Delete</div>
@@ -252,12 +252,12 @@ const showImage = (index: number) => {
     </div>
 
     <AppActionSheet :show="showRemove" @close="showRemove = false">
-      <div class="flex flex-col items-center gap-4 py-3">
-        <div class="text-center text-xl font-semibold">Delete this comment?</div>
-        <div class="text-center text-sm">
+      <div class="flex flex-col gap-4 items-center py-3">
+        <div class="text-xl font-semibold text-center">Delete this comment?</div>
+        <div class="text-sm text-center">
           Are you sure you want to delete this comment? This action cannot be undone.
         </div>
-        <div class="grid w-full grid-cols-2 gap-2">
+        <div class="grid grid-cols-2 gap-2 w-full">
           <AppButton kind="plain" @click="showRemove = false">Cancel</AppButton>
           <AppButton :loading="deleteLoading" @click="onDelete">Delete</AppButton>
         </div>
@@ -280,7 +280,7 @@ const showImage = (index: number) => {
 
     <div class="sticky top-0 z-[10] flex h-[52px] shrink-0 items-center gap-3 bg-white px-4">
       <div
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-2"
+        class="flex justify-center items-center w-8 h-8 rounded-full shrink-0 bg-slate-2"
         @click="showEdit = false"
       >
         <Icon icon="ph:caret-left" class="text-slate-7" />
@@ -295,9 +295,9 @@ const showImage = (index: number) => {
         placeholder="Type your comment here..."
         v-model="bodyInput"
         borderless
-        class="h-full px-4"
+        class="px-4 h-full"
       />
-      <div v-if="typeInput === 'assessment'" class="h-full space-y-2">
+      <div v-if="typeInput === 'assessment'" class="space-y-2 h-full">
         <div class="px-4 text-sm font-medium text-slate-7">Antecedent</div>
         <AppTextInput
           name="new-comment-antecedent"
@@ -307,7 +307,7 @@ const showImage = (index: number) => {
           borderless
           class="h-[20vh] px-4"
         />
-        <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
+        <div class="w-full h-0.5 shrink-0 bg-slate-3"></div>
         <div class="px-4 text-sm font-medium text-slate-7">Behavior</div>
         <AppTextInput
           name="new-comment-behavior"
@@ -317,7 +317,7 @@ const showImage = (index: number) => {
           borderless
           class="h-[20vh] px-4"
         />
-        <div class="h-0.5 w-full shrink-0 bg-slate-3"></div>
+        <div class="w-full h-0.5 shrink-0 bg-slate-3"></div>
         <div class="px-4 text-sm font-medium text-slate-7">Consequence</div>
         <AppTextInput
           name="new-comment-consequence"
@@ -330,7 +330,7 @@ const showImage = (index: number) => {
       </div>
     </div>
     <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
-      <div class="flex h-16 grow items-center px-4">
+      <div class="flex items-center px-4 h-16 grow">
         <AppButton
           class="w-full"
           :loading="updateLoading"
@@ -353,22 +353,22 @@ const showImage = (index: number) => {
       leave-to="opacity-0 scale-95"
       class="fixed left-0 top-0 z-[99999] h-screen w-screen bg-[#1d2939]"
     >
-      <div class="relative h-full w-full">
+      <div class="relative w-full h-full">
         <div
-          class="absolute top-4 z-20 flex w-full items-center justify-between gap-3 px-3 pt-safe"
+          class="flex absolute top-4 z-20 gap-3 justify-between items-center px-3 w-full pt-safe"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex gap-3 items-center">
             <div
-              class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+              class="flex justify-center items-center w-10 h-10 rounded-full backdrop-blur-sm cursor-pointer bg-pure-white"
               @click="imagePreviewOpened = false"
             >
               <Icon icon="ph:x" class="text-xl text-slate-7" />
             </div>
             <div
               v-if="comment.user_name"
-              class="flex h-5 items-center truncate rounded-full bg-lime-4 p-2"
+              class="flex items-center p-2 h-5 truncate rounded-full bg-lime-4"
             >
-              <div class="truncate text-xs font-medium text-lime-9">{{ comment.user_name }}</div>
+              <div class="text-xs font-medium truncate text-lime-9">{{ comment.user_name }}</div>
             </div>
           </div>
           <div class="text-pure-white">
@@ -377,7 +377,7 @@ const showImage = (index: number) => {
         </div>
 
         <!-- Image -->
-        <div class="flex h-full items-center justify-center">
+        <div class="flex justify-center items-center h-full">
           <img
             :src="comment?.images?.[currentImageIndex]?.file_url"
             :alt="comment?.images?.[currentImageIndex]?.file_name"
@@ -388,11 +388,11 @@ const showImage = (index: number) => {
         <!-- Navigation arrows -->
         <div
           v-if="(comment?.images ?? []).length > 1"
-          class="absolute inset-y-0 left-0 right-0 flex items-center justify-between"
+          class="flex absolute inset-y-0 right-0 left-0 justify-between items-center"
         >
           <!-- Left arrow -->
           <div
-            class="ml-4 flex h-12 w-12 items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+            class="flex justify-center items-center ml-4 w-12 h-12 rounded-full backdrop-blur-sm bg-pure-white"
             :class="{
               'cursor-pointer': currentImageIndex > 0,
               'opacity-50': currentImageIndex === 0
@@ -404,7 +404,7 @@ const showImage = (index: number) => {
 
           <!-- Right arrow -->
           <div
-            class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-pure-white backdrop-blur-sm"
+            class="flex justify-center items-center mr-4 w-12 h-12 rounded-full backdrop-blur-sm bg-pure-white"
             :class="{
               'cursor-pointer': currentImageIndex < (comment?.images?.length ?? 0) - 1,
               'opacity-50': currentImageIndex === (comment?.images?.length ?? 0) - 1

@@ -372,7 +372,7 @@ onUnmounted(() => {
               <div
                 v-if="box.removeable"
                 class="absolute -right-1.5 -top-1.5 z-10 flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-tomato-7 text-white hover:bg-tomato-9"
-                :class="{ 'pointer-events-none opacity-50': !app.network_status.connected }"
+                :class="{ 'pointer-events-none opacity-50': !app.networkStatus.connected }"
                 @click="onRemoveBox(box)"
               >
                 <Icon icon="ph:x" class="h-2 w-2 text-white" />
