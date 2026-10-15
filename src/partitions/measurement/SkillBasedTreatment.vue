@@ -423,7 +423,8 @@ const generateRatioScores = () => {
       })
       .filter((r) => r !== -1)
     const sum = listOfScore.reduce((sum, i) => (sum += i), 0)
-    const average = Math.round(sum / listOfScore.length || 0)
+    const avg = sum / listOfScore.length || 0
+    const average = avg % 1 === 0 ? avg : avg.toFixed(1)
 
     if (listOfScore.length > maxRatio) maxRatio = listOfScore.length
     return { ...i, sum, average, count: listOfScore.length, ratios }
