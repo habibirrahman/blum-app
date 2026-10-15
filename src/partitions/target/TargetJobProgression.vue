@@ -20,7 +20,7 @@ const wasCompletedButHasFailed = computed(() => {
 })
 
 watch(
-  () => appStore.network_status.connected,
+  () => appStore.networkStatus.connected,
   (val) => {
     if (val && clientStore.client_target_job) {
       if (
@@ -104,10 +104,10 @@ onUnmounted(() => {
     >
       <div
         v-if="clientStore.client_target_job"
-        class="h-15 flex items-center justify-between gap-2 rounded-b px-2 py-1"
+        class="flex gap-2 justify-between items-center px-2 py-1 rounded-b h-15"
         :class="[wasCompletedButHasFailed ? 'bg-[#FAEFCC]' : 'bg-[#F2FFE3]']"
       >
-        <div class="flex items-center gap-2">
+        <div class="flex gap-2 items-center">
           <div
             class="grid h-[24px] w-[24px] flex-shrink-0 place-items-center"
             :style="{
@@ -150,7 +150,7 @@ onUnmounted(() => {
                 clientStore.client_target_job.status === 'completed' ||
                 clientStore.client_target_job.status === 'cancelled'
               "
-              class="flex items-center gap-2"
+              class="flex gap-2 items-center"
             >
               <span
                 class="text-xs font-semibold"
@@ -160,7 +160,7 @@ onUnmounted(() => {
               </span>
               <div
                 :class="[wasCompletedButHasFailed ? 'bg-[#9B7600]' : 'bg-[#4b810e]']"
-                class="h-1 w-1 rounded-full opacity-50"
+                class="w-1 h-1 rounded-full opacity-50"
               />
               <span
                 class="text-xs font-semibold"
@@ -181,7 +181,7 @@ onUnmounted(() => {
           "
         >
           <button
-            class="flex h-7 items-center justify-center rounded border border-lime-500 px-2 outline-none"
+            class="flex justify-center items-center px-2 h-7 rounded border border-lime-500 outline-none"
             :class="
               cancelLoading
                 ? 'bg-grey-100 cursor-wait'

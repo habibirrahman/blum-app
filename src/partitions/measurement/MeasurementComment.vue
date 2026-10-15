@@ -43,7 +43,7 @@ const acceptType = ref<'current' | 'incoming' | 'both'>('current')
 
 /** === COMPUTEDS === */
 
-const isOnline = computed<boolean>(() => appStore.network_status.connected)
+const isOnline = computed<boolean>(() => appStore.networkStatus.connected)
 const originalMeasurement = computed<Measurement | null>(
   () => sessionStore.session_measurements.find((i) => i.id === props.measurementId) || null
 )

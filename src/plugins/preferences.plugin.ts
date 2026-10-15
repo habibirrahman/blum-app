@@ -31,6 +31,7 @@ export const setAccessStorage = async ({ access, csrf }: SetAccessStorageProps) 
     return { success: false }
   }
 }
+
 export const getAccessStorage = async () => {
   // Native read hanya terjadi sekali (cold start), selanjutnya pakai cache di memory.
   if (accessCacheInitialized) {
@@ -66,6 +67,7 @@ export const getAccessStorage = async () => {
     return { success: false, data: null }
   }
 }
+
 export const removeAccessStorage = async () => {
   try {
     await Preferences.remove({ key: 'access' })
@@ -80,7 +82,7 @@ export const removeAccessStorage = async () => {
   }
 }
 
-export const setAppStorage = async (data: AppStateSchema) => {
+export const setAppStorage = async (data: Partial<AppStateSchema>) => {
   try {
     await Preferences.set({ key: 'app.storage', value: JSON.stringify(data) })
     return { success: true }
@@ -89,6 +91,7 @@ export const setAppStorage = async (data: AppStateSchema) => {
     return { success: false }
   }
 }
+
 export const getAppStorage = async () => {
   try {
     const storage = await Preferences.get({ key: 'app.storage' })
@@ -103,6 +106,7 @@ export const getAppStorage = async () => {
     return { success: false, data: null }
   }
 }
+
 export const removeAppStorage = async () => {
   try {
     await Preferences.remove({ key: 'app.storage' })
@@ -122,6 +126,7 @@ export const setStorage = async (data: { key: string; value: string }) => {
     return { success: false }
   }
 }
+
 export const getStorage = async (key: string) => {
   try {
     const storage = await Preferences.get({ key })
@@ -136,6 +141,7 @@ export const getStorage = async (key: string) => {
     return { success: false, data: null }
   }
 }
+
 export const removeStorage = async (key: string) => {
   try {
     await Preferences.remove({ key })
@@ -147,6 +153,7 @@ export const removeStorage = async (key: string) => {
 }
 
 // end session storage
+
 export const setSessionStorage = async (data: SessionStateSchema) => {
   try {
     await Preferences.set({ key: 'session.store', value: JSON.stringify(data) })
@@ -156,6 +163,7 @@ export const setSessionStorage = async (data: SessionStateSchema) => {
     return { success: false }
   }
 }
+
 export const getSessionStorage = async () => {
   try {
     const storage = await Preferences.get({ key: 'session.store' })
@@ -170,6 +178,7 @@ export const getSessionStorage = async () => {
     return { success: false, data: null }
   }
 }
+
 export const removeSessionStorage = async () => {
   try {
     await Preferences.remove({ key: 'session.store' })
@@ -179,6 +188,7 @@ export const removeSessionStorage = async () => {
     return { success: false }
   }
 }
+
 // end session storage
 
 // ========================================
@@ -210,7 +220,10 @@ export const setSessionFullStore = async (data: SessionFullStore) => {
   }
 }
 
-export const getSessionFullStore = async (): Promise<{ success: boolean; data: SessionFullStore | null }> => {
+export const getSessionFullStore = async (): Promise<{
+  success: boolean
+  data: SessionFullStore | null
+}> => {
   try {
     const storage = await Preferences.get({ key: SESSION_STORE_KEY })
     if (!storage.value || storage.value === 'undefined') {
@@ -271,6 +284,7 @@ export const getSessionActivities = async (sessionId: number) => {
 }
 
 // client storage
+
 export const setClientStorage = async (data: ClientStateSchema) => {
   try {
     await Preferences.set({ key: 'client.store', value: JSON.stringify(data) })
@@ -280,6 +294,7 @@ export const setClientStorage = async (data: ClientStateSchema) => {
     return { success: false }
   }
 }
+
 export const getClientStorage = async () => {
   try {
     const storage = await Preferences.get({ key: 'client.store' })
@@ -294,6 +309,7 @@ export const getClientStorage = async () => {
     return { success: false, data: null }
   }
 }
+
 export const removeClientStorage = async () => {
   try {
     await Preferences.remove({ key: 'client.store' })
@@ -303,4 +319,5 @@ export const removeClientStorage = async () => {
     return { success: false }
   }
 }
+
 // end client storage

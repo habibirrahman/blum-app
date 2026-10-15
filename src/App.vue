@@ -43,7 +43,7 @@ watch(
 const fetchCurrentUserTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
 async function fetchCurrentUser() {
   fetchCurrentUserTimeout.value = setTimeout(async () => {
-    const { success } = await appStore.getAccount()
+    const { success } = await appStore.getCurrentUser()
     loadingApp.value = false
     if (!success) {
       if (route.name !== 'signin') {
@@ -215,19 +215,19 @@ const isHeightFull = computed<boolean>(
   <div class="fixed top-0 z-[999999] w-screen bg-white pt-safe"></div>
   <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
-  <div v-if="loadingApp" class="grid h-full w-full place-items-center font-blum tracking-wide">
-    <div class="flex animate-pulse items-center font-logo text-4xl font-bold text-light-purple-5">
+  <div v-if="loadingApp" class="grid place-items-center w-full h-full tracking-wide font-blum">
+    <div class="flex items-center text-4xl font-bold animate-pulse font-logo text-light-purple-5">
       Blüm
     </div>
   </div>
   <div
     v-else
-    class="font-blum tracking-wide"
+    class="tracking-wide font-blum"
     :class="{ 'pb-14': isUseNav, 'h-full': isHeightFull }"
   >
     <div v-if="routeName !== 'session-record'" class="sticky left-0 top-0 z-[999]">
       <div
-        class="flex w-full items-center justify-center bg-rose-3 text-sm font-medium text-rose-7"
+        class="flex justify-center items-center w-full text-sm font-medium bg-rose-3 text-rose-7"
         :class="{ 'h-8': !networkStatus.connected, 'h-0': networkStatus.connected }"
       >
         <div v-if="!networkStatus.connected">You're offline. Connect to sync your data.</div>
@@ -242,20 +242,20 @@ const isHeightFull = computed<boolean>(
     class="fixed bottom-0 z-[100] flex w-screen bg-white font-blum tracking-wide px-safe pb-safe"
   >
     <nav
-      class="grid h-14 w-full items-center"
+      class="grid items-center w-full h-14"
       :style="{ gridTemplateColumns: `repeat(${navigations.length}, minmax(0, 1fr))` }"
     >
       <RouterLink
         v-for="nav in navigations"
         :key="nav.route_name"
         :to="{ name: nav.route_name }"
-        class="flex h-full w-full flex-col items-center justify-center gap-1 transition-colors"
+        class="flex flex-col gap-1 justify-center items-center w-full h-full transition-colors"
         :class="{ 'bg-prim-1': nav.is_active }"
       >
         <Icon v-if="nav.is_active" :icon="nav.active_icon" class="text-xl text-light-purple-5" />
         <Icon v-else :icon="nav.icon" class="text-xl text-slate-7" />
         <div
-          class="w-full truncate px-3 text-center text-xs transition-colors"
+          class="px-3 w-full text-xs text-center truncate transition-colors"
           :class="{ 'text-light-purple-5': nav.is_active, 'text-slate-7': !nav.is_active }"
         >
           {{ nav.label }}
@@ -266,9 +266,9 @@ const isHeightFull = computed<boolean>(
 
   <!-- Update Required Modal -->
   <AppActionSheet :show="updateRequired">
-    <div class="space-y-5 py-3 font-blum tracking-wide">
-      <div class="text-center text-2xl font-semibold text-slate-10">Update required</div>
-      <div class="text-center text-sm text-slate-8">
+    <div class="py-3 space-y-5 tracking-wide font-blum">
+      <div class="text-2xl font-semibold text-center text-slate-10">Update required</div>
+      <div class="text-sm text-center text-slate-8">
         To continue using Blüm, please update to the latest version. We've made important
         improvements to ensure everything runs smoothly.
       </div>
