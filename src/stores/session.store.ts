@@ -123,15 +123,16 @@ export interface UpdateMeasurementResultsParams {
  * need to generate every data collection method params
  */
 
-/**
- * === DURATION  LANTENCY ===
- */
-export type ResultsDurationOrLatency = {
+/** === DURATION  LANTENCY === */
+export interface ResultsDurationOrLatencyParams {
   recording_time: string
   started_at?: string | null
   ended_at?: string | null
   label?: string | null
 }
+
+/** === FREQUENCY === */
+export type ResultsFrequencyParams = number
 
 /**
  * === PROMPTING ===
@@ -139,11 +140,16 @@ export type ResultsDurationOrLatency = {
  *   [prompt.id]: gapScore,
  * }
  */
-export type ResultsPromptingScore = Record<string, number>
+export type ResultsPromptingParams = Record<string, number>
 
 export interface UpdateMeasurementResultsV2Params {
   id: Measurement['id']
-  params: { results: Record<string, ResultsDurationOrLatency> | ResultsPromptingScore }
+  params: {
+    results:
+      | ResultsFrequencyParams
+      | ResultsPromptingParams
+      | Record<string, ResultsDurationOrLatencyParams>
+  }
   dataResult: Measurement
   lastData: Measurement
 }
