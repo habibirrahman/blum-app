@@ -10,7 +10,6 @@ import type {
   MeasurementResultsDurationOrLatency
 } from '@/lib/types'
 import AppButton from '@/components/AppButton.vue'
-import { Icon } from '@iconify/vue/dist/iconify.js'
 import { computed, onMounted, ref, watch } from 'vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
 import AppTimeInput from '@/components/AppTimeInput.vue'
@@ -19,6 +18,7 @@ import dayjs from 'dayjs'
 import { durationToSeconds, secondsToDuration } from '@/lib/func'
 import AppChip from '@/components/AppChip.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
+import Icon from '@/components/Icon.vue'
 
 interface Props {
   measurement: Measurement
@@ -433,17 +433,17 @@ onMounted(() => {
 
 <template>
   <!-- Duration latency -->
-  <div v-if="!isOpenResetConfirmation" class="flex flex-col flex-grow gap-2 justify-between h-full">
+  <div v-if="!isOpenResetConfirmation" class="flex h-full flex-grow flex-col justify-between gap-2">
     <div
       v-if="submitLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
 
     <div
-      class="flex flex-col flex-grow gap-x-3 justify-center content-center items-center h-full"
+      class="flex h-full flex-grow flex-col content-center items-center justify-center gap-x-3"
       :class="{ 'gap-y-4': !isCollapsed, 'gap-y-2 px-3': isCollapsed }"
     >
       <!-- Lap info -->
@@ -462,7 +462,7 @@ onMounted(() => {
       </div>
 
       <!-- Controls -->
-      <div class="flex gap-3 items-center w-full">
+      <div class="flex w-full items-center gap-3">
         <AppButton
           class="grow rounded-full !border-transparent !bg-prim-2 !text-light-purple-5 hover:!bg-prim-3"
           :loading="submitLoading"
@@ -506,7 +506,7 @@ onMounted(() => {
       <!-- Laps List -->
       <div
         v-if="lapLength > 0 && !isCollapsed"
-        class="overflow-scroll mt-2 w-full"
+        class="mt-2 w-full overflow-scroll"
         :style="{
           maxHeight: 'calc(100vh - 10rem)',
           scrollbarWidth: 'none'
@@ -515,20 +515,20 @@ onMounted(() => {
         <div
           v-for="lap in [...laps].reverse()"
           :key="lap.lapIndex"
-          class="flex gap-2 justify-between items-center w-full h-8 border-b border-slate-4"
+          class="flex h-8 w-full items-center justify-between gap-2 border-b border-slate-4"
         >
-          <div class="flex gap-2 items-center">
-            <div class="text-sm shrink-0" :class="getTextColorClass(lap)">
+          <div class="flex items-center gap-2">
+            <div class="shrink-0 text-sm" :class="getTextColorClass(lap)">
               Lap {{ lap.lapIndex + 1 }}
             </div>
             <AppChip
               v-if="lap.label"
               :label="lap.label"
-              class="truncate max-w-24 bg-light-purple-1 text-dark-purple-1"
+              class="max-w-24 truncate bg-light-purple-1 text-dark-purple-1"
             />
           </div>
 
-          <div class="flex gap-2 items-center shrink-0">
+          <div class="flex shrink-0 items-center gap-2">
             <div class="font-semibold" :class="getTextColorClass(lap)">
               {{ getLapDisplayTime(lap) }}
             </div>
@@ -540,7 +540,7 @@ onMounted(() => {
               title="Edit lap"
               @click="onOpenEdit(lap)"
             >
-              <Icon icon="ph:pencil-simple-bold" />
+              <Icon icon="ph:pencil-simple" />
             </AppButton>
           </div>
         </div>
@@ -549,7 +549,7 @@ onMounted(() => {
 
     <div
       v-if="!isCollapsed && !isOpenResetConfirmation"
-      class="pb-3 text-sm text-center shrink-0 text-slate-8"
+      class="shrink-0 pb-3 text-center text-sm text-slate-8"
     >
       <span> Goal: </span>
       <span>
@@ -564,10 +564,10 @@ onMounted(() => {
   <!-- Confirm reset laps -->
   <div
     v-if="isOpenResetConfirmation"
-    class="flex flex-col flex-grow gap-2 justify-center items-center h-full"
+    class="flex h-full flex-grow flex-col items-center justify-center gap-2"
   >
-    <div class="text-lg font-semibold text-center text-slate-8">Reset all recorded laps?</div>
-    <div class="px-4 text-sm text-center text-slate-6">
+    <div class="text-center text-lg font-semibold text-slate-8">Reset all recorded laps?</div>
+    <div class="px-4 text-center text-sm text-slate-6">
       This will clear all existing lap records and begin again from Lap 1.
       <br />
       You won't be able to recover previous data.
@@ -581,8 +581,8 @@ onMounted(() => {
 
   <!-- Edit lap modal -->
   <AppActionSheet :show="isOpenEdit" @close="isOpenEdit = false">
-    <div v-if="editLapInput" class="flex flex-col gap-4 py-3 w-full">
-      <div class="text-xl font-semibold text-left">Edit lap {{ measurement.target?.name }}</div>
+    <div v-if="editLapInput" class="flex w-full flex-col gap-4 py-3">
+      <div class="text-left text-xl font-semibold">Edit lap {{ measurement.target?.name }}</div>
 
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1">
@@ -614,7 +614,7 @@ onMounted(() => {
           :disabled="submitLoading"
         />
       </div>
-      <div class="grid grid-cols-2 gap-4 items-center">
+      <div class="grid grid-cols-2 items-center gap-4">
         <AppButton kind="plain" @click="isOpenEdit = false">Cancel</AppButton>
         <AppButton :loading="submitLoading" @click="onUpdateLap">Save</AppButton>
       </div>

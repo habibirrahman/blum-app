@@ -14,6 +14,7 @@ defineOptions({
 export type IconSet =
   | 'mingcute:loading-fill'
   //
+  | 'ph:arrow-counter-clockwise-bold'
   | 'ph:arrow-right-bold'
   | 'ph:file'
   | 'ph:file-fill'
@@ -35,6 +36,10 @@ const props = withDefaults(defineProps<Props>(), {})
 <template>
   <i-mingcute-loading-fill v-if="icon === 'mingcute:loading-fill'" :class="props.class" />
   <!--  -->
+  <i-ph-arrow-counter-clockwise-bold
+    v-if="icon === 'ph:arrow-counter-clockwise-bold'"
+    :class="props.class"
+  />
   <i-ph-arrow-right-bold v-if="icon === 'ph:arrow-right-bold'" :class="props.class" />
   <i-ph-file v-if="icon === 'ph:file'" :class="props.class" />
   <i-ph-file-fill v-if="icon === 'ph:file-fill'" :class="props.class" />
