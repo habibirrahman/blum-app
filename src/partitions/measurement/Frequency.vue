@@ -3,7 +3,6 @@
 import { useSessionStore, type UpdateMeasurementResultsV2Params } from '@/stores/session.store'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Measurement, MeasurementFrequency } from '@/lib/types'
-import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import { debounce } from '@/lib/func'
 import { useClock } from '@/composables/use-clock'
@@ -11,6 +10,7 @@ import dayjs from 'dayjs'
 import AppButton from '@/components/AppButton.vue'
 import AppTextInput from '@/components/AppTextInput.vue'
 import AppActionSheet from '@/components/AppActionSheet.vue'
+import Icon from '@/components/Icon.vue'
 
 interface Props {
   measurement: Measurement
@@ -196,18 +196,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col flex-grow gap-2 justify-between h-full">
+  <div class="flex h-full flex-grow flex-col justify-between gap-2">
     <!-- Loading stste -->
     <div
       v-if="submitLoading"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-20 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
 
     <div
-      class="flex flex-wrap flex-grow gap-x-3 gap-y-4 justify-center content-center items-center h-full"
+      class="flex h-full flex-grow flex-wrap content-center items-center justify-center gap-x-3 gap-y-4"
       :class="{ 'scale-90': isCollapsed }"
     >
       <div
@@ -225,10 +225,10 @@ onBeforeUnmount(() => {
           @click="onChangeScore(1)"
         >
           <div v-if="currentScore" class="text-4xl">{{ currentScore }}</div>
-          <Icon v-else icon="stash:plus-solid" class="text-5xl" />
+          <Icon v-else icon="ph:plus-bold" class="text-4xl" />
         </div>
         <div
-          class="flex justify-center items-center h-5 rounded border border-slate-5 bg-pure-white"
+          class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white"
           :class="{
             'pointer-events-none':
               !currentScore || sessionStore.session?.status !== 'ongoing' || isDisabled
@@ -236,7 +236,7 @@ onBeforeUnmount(() => {
           @click="onChangeScore(-1)"
         >
           <div
-            class="w-6 h-1 rounded shrink-0"
+            class="h-1 w-6 shrink-0 rounded"
             :class="{
               'bg-slate-5': !currentScore,
               'bg-slate-7': currentScore
@@ -246,8 +246,8 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div v-if="!isCollapsed" class="pb-3 shrink-0">
-      <div class="flex justify-center mb-4">
+    <div v-if="!isCollapsed" class="shrink-0 pb-3">
+      <div class="mb-4 flex justify-center">
         <AppButton
           class="rounded-full !border-transparent !bg-prim-2 !text-light-purple-5 hover:!bg-prim-3"
           :disabled="sessionStore.session?.status !== 'ongoing'"
@@ -258,7 +258,7 @@ onBeforeUnmount(() => {
         </AppButton>
       </div>
 
-      <div class="flex justify-between items-center">
+      <div class="flex items-center justify-between">
         <div class="=text-slate-7 text-xs">Goal</div>
         <div class="=text-slate-7 text-xs font-semibold">
           {{ measurement.target?.goal }} attempt(s)
@@ -267,7 +267,7 @@ onBeforeUnmount(() => {
 
       <div
         v-if="measurement.target?.frequency_format === 'custom'"
-        class="flex justify-between items-center"
+        class="flex items-center justify-between"
       >
         <div class="=text-slate-7 text-xs">Duration</div>
         <div class="=text-slate-7 text-xs font-semibold">{{ measurement.duration }} minute(s)</div>
@@ -276,8 +276,8 @@ onBeforeUnmount(() => {
 
     <!-- Edit score modal -->
     <AppActionSheet :show="isOpenEdit" @close="isOpenEdit = false">
-      <div class="flex flex-col gap-4 py-3 w-full">
-        <div class="text-xl font-semibold text-left">Edit number</div>
+      <div class="flex w-full flex-col gap-4 py-3">
+        <div class="text-left text-xl font-semibold">Edit number</div>
 
         <div class="flex flex-col gap-4">
           <div class="flex flex-col gap-1">
@@ -298,19 +298,19 @@ onBeforeUnmount(() => {
           />
 
           <div
-            class="flex gap-4 justify-center items-center mt-4 w-full h-14 rounded bg-cornflower-2"
+            class="mt-4 flex h-14 w-full items-center justify-center gap-4 rounded bg-cornflower-2"
           >
             <div class="text-sm font-bold text-slate-10">
               {{ currentScore }}
             </div>
-            <Icon icon="ph:arrow-right" class="text-lg text-cornflower-8" />
+            <Icon icon="ph:arrow-right-bold" class="text-lg text-cornflower-8" />
             <div class="text-sm font-bold text-cornflower-8">
               {{ scoreInput }}
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 items-center">
+        <div class="grid grid-cols-2 items-center gap-4">
           <AppButton kind="plain" @click="isOpenEdit = false">Cancel</AppButton>
 
           <AppButton v-if="currentScore === scoreInput" @click="isOpenEdit = false">Done</AppButton>
