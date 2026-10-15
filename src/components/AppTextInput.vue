@@ -47,7 +47,7 @@ const errorState = computed(() => {
 </script>
 
 <template>
-  <label :for="name" class="flex relative flex-col">
+  <label :for="name" class="relative flex flex-col">
     <div
       v-if="label"
       class="mb-1 text-sm font-medium"
@@ -86,6 +86,7 @@ const errorState = computed(() => {
       :placeholder="placeholder"
       :disabled="disabled"
       v-model="model"
+      :maxlength="maxLength"
       class="group h-full w-full rounded text-[16px] outline-none ring-offset-2 transition-colors focus:outline-none"
       :class="{
         'focus:ring-2': !disabled,
@@ -102,7 +103,7 @@ const errorState = computed(() => {
     <Icon
       v-if="type === 'password'"
       :icon="isShowPassword ? 'ph:eye-closed' : 'ph:eye'"
-      class="absolute right-2 text-2xl cursor-pointer text-slate-7"
+      class="absolute right-2 cursor-pointer text-2xl text-slate-7"
       :class="[label ? 'top-[30px]' : 'top-1.5']"
       @click.prevent="isShowPassword = !isShowPassword"
     />
@@ -120,15 +121,15 @@ const errorState = computed(() => {
     <Icon
       v-if="suffixIcon"
       :icon="suffixIcon"
-      class="absolute right-2 text-2xl cursor-pointer text-slate-7"
+      class="absolute right-2 cursor-pointer text-2xl text-slate-7"
       :class="[label ? 'top-[30px]' : 'top-1.5']"
     />
 
     <div v-if="errorState" class="mt-1 text-sm text-tomato-7">
-      {{ errorState === true ? '' : error }}
+      {{ errorState === true ? '' : errorState }}
     </div>
 
-    <div v-if="caption || maxLength" class="flex gap-2 justify-between mt-1">
+    <div v-if="caption || maxLength" class="mt-1 flex justify-between gap-2">
       <div v-if="caption" class="text-xs text-slate-8">{{ caption }}</div>
       <div
         v-if="maxLength"
