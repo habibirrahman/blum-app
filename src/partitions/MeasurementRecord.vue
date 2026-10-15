@@ -306,7 +306,7 @@ onMounted(async () => {
     }
 
     // Process pending items jika online
-    if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
+    if (appStore.networkStatus.connected && sessionStore.pending_progress.length > 0) {
       console.log('[Component] Processing pending items on mount')
       await sessionStore.resolvePendingProgress()
     }

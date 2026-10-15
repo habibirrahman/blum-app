@@ -263,7 +263,7 @@ const onStartSession = () => {
     isLunchBeforeSchedule.value = true
     showAction = true
   }
-  if (sessionStore.session.appointment?.user_id !== appStore.account?.id) {
+  if (sessionStore.session.appointment?.user_id !== appStore.currentUser?.id) {
     isLunchNotAssigned.value = true
     showAction = true
   }
@@ -796,14 +796,14 @@ const onUpdateSessionName = async () => {
         :disabled="
           !sessionStore.session_measurements?.length ||
           isOrphanAppointment ||
-          !appStore.network_status.connected
+          !appStore.networkStatus.connected
         "
         class="w-full"
         :loading="startSessionLoading"
         @click="onStartSession"
       >
         {{
-          appStore.network_status.connected ? 'Start session' : 'Offline: connect to start session'
+          appStore.networkStatus.connected ? 'Start session' : 'Offline: connect to start session'
         }}
       </AppButton>
     </div>

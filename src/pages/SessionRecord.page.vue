@@ -285,7 +285,7 @@ const passedCompleteMaintenanceTargets = computed(() => {
 
 // Watch network status dengan auto-sync
 watch(
-  () => appStore.network_status.connected,
+  () => appStore.networkStatus.connected,
   async (isConnected, wasConnected) => {
     if (!isConnected) {
       isOpenOffline.value = true
@@ -364,7 +364,7 @@ interface FetchSessionProps {
 }
 // Improved syncSession dengan proper feedback
 async function syncSession(payload: FetchSessionProps = { isSwipe: false }) {
-  if (!appStore.network_status.connected) {
+  if (!appStore.networkStatus.connected) {
     console.log('[syncSession] Skipped - offline')
     return
   }
@@ -383,7 +383,7 @@ async function syncSession(payload: FetchSessionProps = { isSwipe: false }) {
 
   if (!success) return
 
-  if (payload.isSwipe && appStore.network_status.connected) {
+  if (payload.isSwipe && appStore.networkStatus.connected) {
     if (data && data.succeeded > 0) {
       toast.success(`${data.succeeded} item(s) synced`)
     } else {
@@ -410,7 +410,7 @@ async function fetchSession(payload?: FetchSessionProps) {
     const app = document.getElementById('app')
 
     if (session.status === 'ongoing' || session.status === 'paused') {
-      if (payload?.isSwipe && appStore.network_status.connected) {
+      if (payload?.isSwipe && appStore.networkStatus.connected) {
         toast.success('Results are now up-to-date!')
       }
 
@@ -440,7 +440,7 @@ const scrollListener = async (e: any) => {
 
   isScrolling.value = true
 
-  if (!appStore.network_status.connected && top < heightReload) {
+  if (!appStore.networkStatus.connected && top < heightReload) {
     document.getElementById('app')?.scroll({ top: heightReload, behavior: 'instant' })
   }
 
@@ -717,7 +717,7 @@ async function onTogglePauseSession() {
       action_label: 'session_resume',
       recordable: 'Session',
       recordable_id: sessionStore.session?.id,
-      notes: `${appStore.account?.name} resumed session`,
+      notes: `${appStore.currentUser?.name} resumed session`,
       timestamp: new Date().toISOString()
     })
 
@@ -978,7 +978,7 @@ onMounted(async () => {
   await sessionStore.runStorageMaintenance()
 
   // Restore & sync pending items
-  if (appStore.network_status.connected && sessionStore.pending_progress.length > 0) {
+  if (appStore.networkStatus.connected && sessionStore.pending_progress.length > 0) {
     console.log('[Session Page] Processing pending items on mount')
     resolveLoading.value = true
     await sessionStore.resolvePendingProgress()
@@ -996,7 +996,7 @@ onMounted(async () => {
         (item) => item.timestamp && item.timestamp < fiveMinutesAgo
       )
 
-      if (stuckItems.length > 0 && appStore.network_status.connected) {
+      if (stuckItems.length > 0 && appStore.networkStatus.connected) {
         console.warn('[Session Page] Found stuck items, triggering sync')
         sessionStore.triggerSync(true)
       }
@@ -1039,7 +1039,7 @@ onUnmounted(() => {
   }
 
   // Trigger sync sebelum unmount jika ada perubahan
-  if (hasPendingSync.value && appStore.network_status.connected) {
+  if (hasPendingSync.value && appStore.networkStatus.connected) {
     console.log('[Session Page] Syncing before unmount')
     sessionStore.triggerSync(true)
   }
@@ -1052,14 +1052,14 @@ onUnmounted(() => {
     <!-- Left side -->
     <div>
       <!-- Top row -->
-      <div class="flex gap-2 items-center h-12">
+      <div class="flex h-12 items-center gap-2">
         <AppButton kind="plain" @click="openLeaveSession">
           <Icon :icon="'ph:caret-left'" class="text-xl" />
         </AppButton>
 
         <!-- Measurment Counter -->
         <div
-          class="flex justify-center items-center w-8 h-8 text-xs font-semibold rounded border transition-colors shrink-0"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold transition-colors"
           :class="{
             'border-prim-3 bg-prim-1 text-light-purple-4': !isReviewMode,
             'border-light-purple-3 bg-light-purple-1 text-dark-purple-4': isReviewMode
@@ -1071,30 +1071,30 @@ onUnmounted(() => {
 
         <!-- Session Comment Indicator -->
         <div
-          class="flex relative justify-center items-center w-8 h-8 rounded shrink-0"
+          class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded"
           @click="isOpenSessionComments = true"
         >
           <Icon icon="ph:chat-centered-text" class="text-2xl text-light-purple-5" />
           <div
-            class="absolute top-1 right-1 w-2 h-2 rounded-full transition-opacity bg-light-purple-5"
+            class="absolute right-1 top-1 h-2 w-2 rounded-full bg-light-purple-5 transition-opacity"
             :class="[sessionStore.session_comments?.length ? 'opacity-100' : 'opacity-0']"
           ></div>
         </div>
 
         <!-- Pending sync indicator -->
         <div v-if="hasPendingSync && !sessionLoading" class="flex">
-          <div class="flex gap-1 items-center px-2 h-6 rounded-full bg-tulip-1 text-tulip-7">
+          <div class="flex h-6 items-center gap-1 rounded-full bg-tulip-1 px-2 text-tulip-7">
             <span class="text-xs font-medium">{{ pendingSyncStats.total }}</span>
           </div>
         </div>
       </div>
 
       <!-- Bottom row -->
-      <div class="flex gap-2 items-center h-10">
+      <div class="flex h-10 items-center gap-2">
         <!-- Therapist name -->
         <div class="lg:max-w-auto max-w-[20vw] shrink-0 truncate lg:text-clip lg:whitespace-normal">
           <div
-            class="flex justify-center items-center px-3 h-6 text-sm font-medium truncate rounded-full bg-grass-2 text-grass-7"
+            class="flex h-6 items-center justify-center truncate rounded-full bg-grass-2 px-3 text-sm font-medium text-grass-7"
           >
             <span class="truncate"> {{ recordingBy?.name || 'No therapist assigned' }} </span>
           </div>
@@ -1102,7 +1102,7 @@ onUnmounted(() => {
 
         <!-- Recorded by list name -->
         <div
-          class="flex gap-1 items-center px-3 h-6 text-sm font-medium rounded-full border transition-colors cursor-pointer shrink-0 snap-start"
+          class="flex h-6 shrink-0 cursor-pointer snap-start items-center gap-1 rounded-full border px-3 text-sm font-medium transition-colors"
           :class="[
             isOpenRecordedBy
               ? 'border-light-purple-2 bg-light-purple-2 text-dark-purple-2'
@@ -1120,13 +1120,13 @@ onUnmounted(() => {
     <!-- Right side -->
     <div class="ml-auto">
       <!-- Top row -->
-      <div class="flex gap-2 justify-end items-center h-12">
+      <div class="flex h-12 items-center justify-end gap-2">
         <!-- Pause Button -->
         <AppButton
           v-if="sessionStore.session?.status === 'ongoing'"
           kind="outline"
           :disabled="
-            !appStore.network_status.connected ||
+            !appStore.networkStatus.connected ||
             updatingMeasurementIds.length > 0 ||
             sessionLoading ||
             cycleLoading ||
@@ -1143,7 +1143,7 @@ onUnmounted(() => {
           v-if="sessionStore.session?.status === 'paused'"
           kind="outline"
           :disabled="
-            !appStore.network_status.connected ||
+            !appStore.networkStatus.connected ||
             updatingMeasurementIds.length > 0 ||
             sessionLoading ||
             cycleLoading ||
@@ -1167,7 +1167,7 @@ onUnmounted(() => {
           v-else
           class="px-4"
           :disabled="
-            !appStore.network_status.connected ||
+            !appStore.networkStatus.connected ||
             updatingMeasurementIds.length > 0 ||
             sessionLoading ||
             cycleLoading ||
@@ -1175,26 +1175,26 @@ onUnmounted(() => {
           "
           @click="openEndSession"
         >
-          {{ appStore.network_status.connected ? 'End' : 'Offline' }}
+          {{ appStore.networkStatus.connected ? 'End' : 'Offline' }}
         </AppButton>
       </div>
       <!-- end top row -->
 
       <!-- Button row -->
-      <div class="flex gap-2 justify-end items-center h-10">
+      <div class="flex h-10 items-center justify-end gap-2">
         <!-- Session ID -->
-        <div class="text-xs font-medium shrink-0 text-slate-6">
+        <div class="shrink-0 text-xs font-medium text-slate-6">
           ID {{ sessionStore.session?.id }}
         </div>
 
         <!-- Indicator -->
-        <div v-if="sessionStore.session?.status === 'paused'" class="flex gap-2 items-center">
+        <div v-if="sessionStore.session?.status === 'paused'" class="flex items-center gap-2">
           <Icon icon="ph:pause-fill" class="text-lg text-slate-8" />
           <div class="text-xs text-slate-6">Paused</div>
         </div>
         <div
           v-else
-          class="w-2 h-2 rounded-full transition-colors shrink-0"
+          class="h-2 w-2 shrink-0 rounded-full transition-colors"
           :class="[
             sessionStore.session?.status === 'ongoing' ? 'animate-pulse-recording' : 'bg-slate-6'
           ]"
@@ -1219,8 +1219,8 @@ onUnmounted(() => {
     class="fixed left-1/2 z-[10] w-screen -translate-x-1/2 px-4 pt-safe"
     :class="[resolveLoading ? 'top-[120px]' : '-top-[120px]']"
   >
-    <div class="flex gap-4 items-center px-4 py-3 text-center rounded bg-tulip-1 text-tulip-7">
-      <Icon icon="ph:arrows-clockwise" class="text-sm animate-spin" />
+    <div class="flex items-center gap-4 rounded bg-tulip-1 px-4 py-3 text-center text-tulip-7">
+      <Icon icon="ph:arrows-clockwise" class="animate-spin text-sm" />
       <span class="text-xs font-medium">
         {{ pendingSyncStats.total }} item(s) remaining to sync ...
       </span>
@@ -1231,8 +1231,8 @@ onUnmounted(() => {
     class="fixed left-1/2 z-[9] -translate-x-1/2 pt-safe"
     :class="[cycleLoading || submitLoading ? 'top-[120px]' : '-top-[120px]']"
   >
-    <div class="flex justify-center items-center w-10 h-10 bg-white rounded-full shadow">
-      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
+    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow">
+      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
     </div>
   </div>
 
@@ -1241,7 +1241,7 @@ onUnmounted(() => {
       !sessionLoading &&
       (sessionStore.session?.status === 'ongoing' || sessionStore.session?.status === 'paused')
     "
-    class="flex justify-center items-end px-4 h-28 text-sm font-semibold text-center bg-prim-3 text-light-purple-5"
+    class="flex h-28 items-end justify-center bg-prim-3 px-4 text-center text-sm font-semibold text-light-purple-5"
     :class="[sessionStore.session?.status === 'paused' ? 'brightness-90' : '']"
   >
     <div v-if="runningDurationLatency.length">
@@ -1249,7 +1249,7 @@ onUnmounted(() => {
       <div>Please stop the timer first.</div>
     </div>
     <div v-else>
-      <div v-if="!appStore.network_status.connected">
+      <div v-if="!appStore.networkStatus.connected">
         Can't refresh while your connection is lost
       </div>
       <div v-else>Pull down to refresh the results.</div>
@@ -1259,18 +1259,18 @@ onUnmounted(() => {
   <div :class="[sessionStore.session?.status === 'paused' ? 'brightness-90' : '']">
     <!-- Measurements -->
     <div
-      class="flex flex-col items-center w-full min-h-screen bg-prim-3"
+      class="flex min-h-screen w-full flex-col items-center bg-prim-3"
       :style="{ height: containerHeight }"
     >
       <div
         v-if="isReviewMode"
-        class="flex justify-center items-end px-4 pt-4 pb-2 w-full text-sm font-semibold text-center bg-prim-3 text-light-purple-5"
+        class="flex w-full items-end justify-center bg-prim-3 px-4 pb-2 pt-4 text-center text-sm font-semibold text-light-purple-5"
       >
         <div class="truncapy-3 space-y-3te">{{ sessionStore.session?.client?.name }}</div>
       </div>
       <div
         id="container-record-measurement"
-        class="flex flex-wrap gap-4 justify-center px-4 py-4 w-full transition-all duration-500"
+        class="flex w-full flex-wrap justify-center gap-4 px-4 py-4 transition-all duration-500"
         :class="{
           'origin-top scale-50 object-top': isReviewMode,
           'min-w-[calc((320px*2)+(16px*3))]': isReviewMode,
@@ -1281,7 +1281,7 @@ onUnmounted(() => {
           '2xl:min-w-[calc((320px*9)+(16px*10))]': isReviewMode
         }"
       >
-        <div v-if="sessionLoading" class="flex flex-wrap gap-4 justify-center w-full">
+        <div v-if="sessionLoading" class="flex w-full flex-wrap justify-center gap-4">
           <div
             v-for="n in 8"
             :key="n"
@@ -1320,9 +1320,9 @@ onUnmounted(() => {
             !isMeasurementCollapsed
         }"
       >
-        <div v-if="!isMeasurementCollapsed" class="flex flex-col gap-1 items-center">
-          <Icon icon="ph:lock-fill" class="text-2xl text-center text-prim-5" />
-          <div class="text-xs font-medium text-center text-prim-5">
+        <div v-if="!isMeasurementCollapsed" class="flex flex-col items-center gap-1">
+          <Icon icon="ph:lock-fill" class="text-center text-2xl text-prim-5" />
+          <div class="text-center text-xs font-medium text-prim-5">
             You're viewing a locked target.
           </div>
         </div>
@@ -1349,13 +1349,13 @@ onUnmounted(() => {
     <!-- Bottom Navigation -->
     <div
       v-if="!sessionLoading && !fixedMeasurement"
-      class="fixed z-20 w-screen transition-all duration-500 delay-500 bg-prim-3 px-safe pb-safe"
+      class="fixed z-20 w-screen bg-prim-3 transition-all delay-500 duration-500 px-safe pb-safe"
       :class="{ 'bottom-0': !isReviewMode, '-bottom-36': isReviewMode }"
     >
-      <div class="flex gap-6 items-center pl-4 h-16 grow">
+      <div class="flex h-16 grow items-center gap-6 pl-4">
         <div class="relative" @click="isReviewMode = !isReviewMode">
           <div
-            class="flex justify-center items-center w-8 h-10 text-xs font-semibold bg-white rounded text-dark-purple-1"
+            class="flex h-10 w-8 items-center justify-center rounded bg-white text-xs font-semibold text-dark-purple-1"
           >
             {{ sessionStore.session_measurements.length }}
           </div>
@@ -1365,13 +1365,13 @@ onUnmounted(() => {
           ></div>
         </div>
         <div
-          class="flex overflow-x-auto gap-2 items-center py-3 pr-4 snap-x snap-mandatory scroll-smooth"
+          class="flex snap-x snap-mandatory items-center gap-2 overflow-x-auto scroll-smooth py-3 pr-4"
         >
           <div
             v-for="opt in sessionStore.session_measurements"
             :key="opt.id"
             :id="`measurement-nav-${opt.id}`"
-            class="flex items-center px-3 h-8 text-xs font-medium rounded-full border transition-colors cursor-pointer max-w-64 shrink-0 snap-start"
+            class="flex h-8 max-w-64 shrink-0 cursor-pointer snap-start items-center rounded-full border px-3 text-xs font-medium transition-colors"
             :class="[
               focusMeasurement === opt.id
                 ? 'border-light-purple-2 bg-prim-1 text-dark-purple-1'
@@ -1389,9 +1389,9 @@ onUnmounted(() => {
   </div>
 
   <AppActionSheet :show="isOpenOffline" @close="isOpenOffline = false">
-    <div class="flex flex-col gap-4 items-center py-3">
-      <div class="text-xl font-semibold text-center">Oops! You're offline</div>
-      <div class="text-sm text-center">
+    <div class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Oops! You're offline</div>
+      <div class="text-center text-sm">
         Your connection is lost. You can keep tracking data, but you'll need to go online to end the
         session.
       </div>
@@ -1403,17 +1403,17 @@ onUnmounted(() => {
 
   <AppActionSheet :show="isOpenRecordedBy" @close="isOpenRecordedBy = false">
     <div class="flex flex-col gap-4 py-3">
-      <div class="flex sticky top-0 z-10 justify-between items-center py-3 w-full bg-white">
+      <div class="sticky top-0 z-10 flex w-full items-center justify-between bg-white py-3">
         <div class="text-xl font-semibold">This session recorded by · {{ recordedBys.length }}</div>
         <div class="cursor-pointer" @click="isOpenRecordedBy = false">
           <Icon icon="ph:x" class="text-2xl" />
         </div>
       </div>
 
-      <div class="pb-2 mb-4 space-y-1">
+      <div class="mb-4 space-y-1 pb-2">
         <div v-for="(name, idx) in recordedBys" :key="idx" class="flex truncate">
           <div
-            class="flex justify-center items-center px-4 h-8 text-sm font-medium truncate rounded-full bg-grass-2 text-grass-7"
+            class="flex h-8 items-center justify-center truncate rounded-full bg-grass-2 px-4 text-sm font-medium text-grass-7"
           >
             <div class="truncate">
               {{ name }}
@@ -1425,22 +1425,22 @@ onUnmounted(() => {
   </AppActionSheet>
 
   <AppActionSheet :show="isOpenPauseSession" @close="isOpenPauseSession = false">
-    <div v-if="pauseSessionStatus === 'normal'" class="flex flex-col gap-4 items-center py-3">
-      <div class="text-xl font-semibold text-center">Pause this session?</div>
-      <div class="text-sm text-center">
+    <div v-if="pauseSessionStatus === 'normal'" class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Pause this session?</div>
+      <div class="text-center text-sm">
         The timer stops and no data can be recorded while paused. You or another assigned therapist
         can resume it later — it stays one session until someone ends it.
       </div>
-      <div class="grid grid-cols-2 gap-2 w-full">
+      <div class="grid w-full grid-cols-2 gap-2">
         <AppButton kind="plain" @click="isOpenPauseSession = false">Cancel</AppButton>
         <AppButton :loading="submitLoading" @click="onTogglePauseSession">Pause</AppButton>
       </div>
     </div>
-    <div v-if="pauseSessionStatus === 'group_reason'" class="flex flex-col gap-4 items-center py-3">
-      <div class="text-xl font-semibold text-center">Session can't be ended</div>
-      <div class="flex flex-col gap-2 w-full">
+    <div v-if="pauseSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Session can't be ended</div>
+      <div class="flex w-full flex-col gap-2">
         <div class="text-sm">You can't pause the session because of the following reason(s):</div>
-        <div class="pr-4 pl-4 w-full text-sm text-left">
+        <div class="w-full pl-4 pr-4 text-left text-sm">
           <ul class="list-disc">
             <li v-for="(text, idx) in groupReasons" :key="idx">{{ text }}</li>
           </ul>
@@ -1454,13 +1454,13 @@ onUnmounted(() => {
   </AppActionSheet>
 
   <AppActionSheet :show="isOpenLeaveSession" @close="isOpenLeaveSession = false">
-    <div class="flex flex-col gap-4 items-center py-3">
-      <div class="text-xl font-semibold text-center">Leave this session?</div>
-      <div class="text-sm text-center">
+    <div class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Leave this session?</div>
+      <div class="text-center text-sm">
         Recording keeps running and your attempts are saved. The session stays open and won't be
         finalized until you or another assigned therapist ends it.
       </div>
-      <div class="grid grid-cols-2 gap-2 w-full">
+      <div class="grid w-full grid-cols-2 gap-2">
         <AppButton kind="plain" @click="isOpenLeaveSession = false">Cancel</AppButton>
         <AppButton @click="onBackToClientSessionDraft">Leave</AppButton>
       </div>
@@ -1468,32 +1468,33 @@ onUnmounted(() => {
   </AppActionSheet>
 
   <AppActionSheet :show="isOpenEndSession" @close="isOpenEndSession = false">
-    <div v-if="endSessionStatus === 'normal'" class="flex flex-col gap-4 items-center py-3">
-      <div class="text-xl font-semibold text-center">End this session?</div>
+    <div v-if="endSessionStatus === 'normal'" class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">End this session?</div>
 
       <div
         v-if="
-          sessionStore.session?.status === 'ongoing' && appStore.account?.id !== recordingBy?.id
+          sessionStore.session?.status === 'ongoing' && appStore.currentUser?.id !== recordingBy?.id
         "
-        class="flex gap-2 p-4 rounded bg-tulip-1"
+        class="flex gap-2 rounded bg-tulip-1 p-4"
       >
-        <Icon icon="ph:warning-fill" class="text-2xl shrink-0 text-tulip-8" />
+        <Icon icon="ph:warning-fill" class="shrink-0 text-2xl text-tulip-8" />
         <span class="text-sm text-tulip-8">
           <b>{{ `${recordingBy?.name}` }}</b> is recording right now. Ending the session stops their
           recording and any unsaved data may be lost.
         </span>
       </div>
 
-      <div class="text-sm text-center">
+      <div class="text-center text-sm">
         Are you sure you want to end this session? Make sure you've reviewed all data before
         finalizing.
       </div>
-      <div class="grid gap-2 w-full">
+      <div class="grid w-full gap-2">
         <AppButton kind="plain" @click="isOpenEndSession = false">Cancel</AppButton>
         <AppButton :loading="submitLoading" @click="onEndSession">
           <span
             v-if="
-              sessionStore.session?.status === 'ongoing' && appStore.account?.id !== recordingBy?.id
+              sessionStore.session?.status === 'ongoing' &&
+              appStore.currentUser?.id !== recordingBy?.id
             "
           >
             {{ `Yes, end ${recordingBy?.name}'s session` }}
@@ -1502,11 +1503,11 @@ onUnmounted(() => {
         </AppButton>
       </div>
     </div>
-    <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col gap-4 items-center py-3">
-      <div class="text-xl font-semibold text-center">Session can't be ended</div>
-      <div class="flex flex-col gap-2 w-full">
+    <div v-if="endSessionStatus === 'group_reason'" class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">Session can't be ended</div>
+      <div class="flex w-full flex-col gap-2">
         <div class="text-sm">You can't end the session because of the following reason(s):</div>
-        <div class="pr-4 pl-4 w-full text-sm text-left">
+        <div class="w-full pl-4 pr-4 text-left text-sm">
           <ul class="list-disc">
             <li v-for="(text, idx) in groupReasons" :key="idx">{{ text }}</li>
           </ul>
@@ -1517,14 +1518,14 @@ onUnmounted(() => {
         Back to session
       </AppButton>
     </div>
-    <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col gap-4 items-center py-3">
-      <div class="text-xl font-semibold text-center">It seems you haven't recorded any data</div>
+    <div v-if="endSessionStatus === 'empty_record'" class="flex flex-col items-center gap-4 py-3">
+      <div class="text-center text-xl font-semibold">It seems you haven't recorded any data</div>
       <img
         alt="measurement_droped"
-        class="w-full h-auto rounded"
+        class="h-auto w-full rounded"
         src="@/assets/measurement_droped.png"
       />
-      <div class="text-sm text-center">
+      <div class="text-center text-sm">
         Please note that if you end the session now, the targets will record the data as ''0''. To
         prevent any data recording, you can deactivate the toggle on each target. Would you like to
         turn off the toggle for all targets?
@@ -1555,13 +1556,13 @@ onUnmounted(() => {
     <div class="fixed bottom-0 z-[999999] w-screen bg-white pb-safe"></div>
 
     <div class="sticky top-0 z-[10] flex h-14 shrink-0 grow items-center gap-3 bg-white px-4">
-      <div class="flex justify-center items-center w-8 h-8 rounded shrink-0 bg-orange-3">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-orange-3">
         <Icon icon="ph:seal-warning-fill" class="text-2xl text-orange-6" />
       </div>
       <div class="text-2xl text-[22px] font-bold">Action recommendation</div>
     </div>
 
-    <div class="flex overflow-y-auto flex-col gap-3 px-4 pb-4 grow">
+    <div class="flex grow flex-col gap-3 overflow-y-auto px-4 pb-4">
       <div class="pt-2 text-sm text-slate-8">
         The following targets are the targets that meet the criteria for recommendation. Please go
         to the
@@ -1572,11 +1573,11 @@ onUnmounted(() => {
       <!-- MASTERED -->
       <div
         v-if="masteredRecommendations.length"
-        class="flex flex-col mt-2 rounded border border-slate-3"
+        class="mt-2 flex flex-col rounded border border-slate-3"
       >
         <div class="flex flex-col">
           <div
-            class="flex justify-between items-center px-4 py-3 cursor-pointer select-none"
+            class="flex cursor-pointer select-none items-center justify-between px-4 py-3"
             @click="isOpenMastered = !isOpenMastered"
           >
             <div class="text-sm font-bold">Mastered</div>
@@ -1584,7 +1585,7 @@ onUnmounted(() => {
           </div>
 
           <div v-if="isOpenMastered" class="flex flex-col px-4 pb-2">
-            <div class="flex gap-1 items-center pb-3">
+            <div class="flex items-center gap-1 pb-3">
               <AppChip chip="in_progress" />
               <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
               <AppChip chip="mastered" />
@@ -1627,11 +1628,11 @@ onUnmounted(() => {
       <!-- MAINTENANCE -->
       <div
         v-if="maintenanceRecommendations.length"
-        class="flex flex-col mt-2 mb-24 rounded border border-slate-3"
+        class="mb-24 mt-2 flex flex-col rounded border border-slate-3"
       >
         <div class="flex flex-col">
           <div
-            class="flex justify-between items-center px-4 py-3 cursor-pointer select-none"
+            class="flex cursor-pointer select-none items-center justify-between px-4 py-3"
             @click="isOpenMaintenance = !isOpenMaintenance"
           >
             <div class="text-sm font-bold">Maintenance</div>
@@ -1641,7 +1642,7 @@ onUnmounted(() => {
           <div v-if="isOpenMaintenance" class="flex flex-col px-4 pb-2">
             <!-- For failed targets -->
             <template v-if="failedMaintenanceTargets.length">
-              <div class="flex gap-1 items-center pt-1 pb-3">
+              <div class="flex items-center gap-1 pb-3 pt-1">
                 <AppChip chip="mastered" />
                 <Icon icon="ph:arrow-right" class="text-lg text-slate-6" />
                 <AppChip chip="in_progress" />
@@ -1663,7 +1664,7 @@ onUnmounted(() => {
 
                   <div v-if="recommendation.target?.type_name === 'Cold Probe'" class="flex">
                     <div
-                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
+                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1690,7 +1691,7 @@ onUnmounted(() => {
             <!-- For passed targets (continue next maintenance) -->
             <template v-if="passedContinueMaintenanceTargets.length">
               <div
-                class="flex gap-1 items-center pb-3"
+                class="flex items-center gap-1 pb-3"
                 :class="{ 'pt-4': failedMaintenanceTargets.length > 0 }"
               >
                 <AppChip chip="mastered" />
@@ -1713,7 +1714,7 @@ onUnmounted(() => {
                   <div class="flex items-center">Success metric</div>
                   <div v-if="recommendation.target?.type_name === 'Cold Probe'" class="flex">
                     <div
-                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
+                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1727,7 +1728,7 @@ onUnmounted(() => {
                   <div class="flex items-center">Result</div>
                   <div class="flex">
                     <div
-                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
+                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1740,7 +1741,7 @@ onUnmounted(() => {
             <!-- For passed targets (maintenance complete) -->
             <template v-if="passedCompleteMaintenanceTargets.length">
               <div
-                class="flex gap-1 items-center pb-3"
+                class="flex items-center gap-1 pb-3"
                 :class="{
                   'pt-4':
                     failedMaintenanceTargets.length > 0 ||
@@ -1765,7 +1766,7 @@ onUnmounted(() => {
                   <div class="flex items-center">Success metric</div>
                   <div v-if="recommendation.target?.type_name === 'Cold Probe'" class="flex">
                     <div
-                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
+                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1779,7 +1780,7 @@ onUnmounted(() => {
                   <div class="flex items-center">Result</div>
                   <div class="flex">
                     <div
-                      class="flex gap-1 items-center px-2 py-0.5 w-max bg-white rounded-full border border-success-2 text-success"
+                      class="flex w-max items-center gap-1 rounded-full border border-success-2 bg-white px-2 py-0.5 text-success"
                     >
                       <Icon icon="ph:check-circle-fill" class="text-success-4" />
                       <span class="text-[10px] font-medium leading-[14px]">Passed</span>
@@ -1793,7 +1794,7 @@ onUnmounted(() => {
       </div>
     </div>
     <div class="fixed bottom-0 w-screen bg-white px-safe pb-safe">
-      <div class="flex items-center px-4 h-16 grow">
+      <div class="flex h-16 grow items-center px-4">
         <AppButton class="w-full" @click="onExitSession"> Close session </AppButton>
       </div>
     </div>

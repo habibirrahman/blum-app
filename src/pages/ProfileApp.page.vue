@@ -39,36 +39,36 @@ onMounted(() => {})
       <div
         class="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full"
         :class="{
-          'bg-cornflower-2 text-cornflower-8': appStore.account?.role === 'admin',
-          'bg-grass-2 text-grass-8': appStore.account?.role === 'staff'
+          'bg-cornflower-2 text-cornflower-8': appStore.currentUser?.role === 'admin',
+          'bg-grass-2 text-grass-8': appStore.currentUser?.role === 'staff'
         }"
       >
-        <div class="text-2xl font-bold uppercase">{{ appStore.account?.name?.charAt(0) }}</div>
+        <div class="text-2xl font-bold uppercase">{{ appStore.currentUser?.name?.charAt(0) }}</div>
       </div>
       <div class="flex flex-col gap-2">
         <div class="">
           <div
             class="text-2xl font-bold"
             :class="{
-              'app-account-name-admin': appStore.account?.role === 'admin',
-              'app-account-name-staff': appStore.account?.role === 'staff'
+              'app-currentUser-name-admin': appStore.currentUser?.role === 'admin',
+              'app-currentUser-name-staff': appStore.currentUser?.role === 'staff'
             }"
           >
-            {{ appStore.account?.name }}
+            {{ appStore.currentUser?.name }}
           </div>
         </div>
         <div class="flex">
           <div
             class="flex h-5 max-w-[calc((100vw-16px)/2)] items-center justify-center truncate rounded px-2 text-sm font-medium"
             :class="{
-              'bg-cornflower-2 text-cornflower-8': appStore.account?.role === 'admin',
-              'bg-grass-2 text-grass-8': appStore.account?.role === 'staff'
+              'bg-cornflower-2 text-cornflower-8': appStore.currentUser?.role === 'admin',
+              'bg-grass-2 text-grass-8': appStore.currentUser?.role === 'staff'
             }"
           >
-            <div class="truncate">{{ getUserRole(appStore.account?.role) }}</div>
+            <div class="truncate">{{ getUserRole(appStore.currentUser?.role) }}</div>
           </div>
         </div>
-        <div class="text-sm text-slate-7">{{ appStore.account?.email }}</div>
+        <div class="text-sm text-slate-7">{{ appStore.currentUser?.email }}</div>
       </div>
       <div
         class="flex h-[52px] w-full items-center gap-2"

@@ -185,7 +185,7 @@ const onOpenSession = (session: Session) => {
       query: { redirect: '/home' }
     })
   } else {
-    if (session.user_id === appStore.account?.id) {
+    if (session.user_id === appStore.currentUser?.id) {
       router.push({
         name: 'session-record',
         params: { slug: session?.slug },

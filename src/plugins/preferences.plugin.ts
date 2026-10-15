@@ -80,7 +80,7 @@ export const removeAccessStorage = async () => {
   }
 }
 
-export const setAppStorage = async (data: AppStateSchema) => {
+export const setAppStorage = async (data: Partial<AppStateSchema>) => {
   try {
     await Preferences.set({ key: 'app.storage', value: JSON.stringify(data) })
     return { success: true }
@@ -210,7 +210,10 @@ export const setSessionFullStore = async (data: SessionFullStore) => {
   }
 }
 
-export const getSessionFullStore = async (): Promise<{ success: boolean; data: SessionFullStore | null }> => {
+export const getSessionFullStore = async (): Promise<{
+  success: boolean
+  data: SessionFullStore | null
+}> => {
   try {
     const storage = await Preferences.get({ key: SESSION_STORE_KEY })
     if (!storage.value || storage.value === 'undefined') {

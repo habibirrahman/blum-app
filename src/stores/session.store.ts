@@ -430,7 +430,7 @@ export const useSessionStore = defineStore('session', {
       const app = useAppStore()
 
       // Early return jika offline
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         console.log('[resolvePendingProgress] Skipped - offline')
         return { success: false, message: 'Device is offline' }
       }
@@ -448,7 +448,7 @@ export const useSessionStore = defineStore('session', {
 
       for (const p of progress) {
         // Double check network status setiap iterasi
-        if (!app.network_status.connected) {
+        if (!app.networkStatus.connected) {
           console.log('[resolvePendingProgress] Network lost during processing')
           break
         }
@@ -627,7 +627,7 @@ export const useSessionStore = defineStore('session', {
 
       // Periodic sync setiap 30 detik
       this._periodicCheckInterval = setInterval(async () => {
-        if (app.network_status.connected && this.pending_progress.length > 0) {
+        if (app.networkStatus.connected && this.pending_progress.length > 0) {
           console.log('[setupAutoSync] Periodic sync triggered')
           await this.resolvePendingProgress()
         }
@@ -1146,7 +1146,7 @@ export const useSessionStore = defineStore('session', {
           recordable_id: this.session?.id,
           api: `PATCH /api/v1/sessions/${this.session?.id}`,
           params: { session: { status: 'paused', session_activities: 'SessionActivity[]' } }, // prevent infinite array
-          notes: `[${appStore.account?.email}] Pause session`,
+          notes: `[${appStore.currentUser?.email}] Pause session`,
           timestamp: new Date().toISOString()
         })
 
@@ -1201,7 +1201,7 @@ export const useSessionStore = defineStore('session', {
           recordable_id: this.session?.id,
           api: `PATCH /api/v1/sessions/${this.session?.id}`,
           params: { session: { status: 'completed', session_activities: 'SessionActivity[]' } }, // prevent infinite array
-          notes: `[${appStore.account?.email}] End session`,
+          notes: `[${appStore.currentUser?.email}] End session`,
           timestamp: new Date().toISOString()
         })
 
@@ -1378,7 +1378,7 @@ export const useSessionStore = defineStore('session', {
     async updateMeasurement(payload: UpdateMeasurementParams) {
       try {
         const app = useAppStore()
-        if (!app.network_status.connected) {
+        if (!app.networkStatus.connected) {
           console.log(payload.dataResult)
         }
 
@@ -1394,7 +1394,7 @@ export const useSessionStore = defineStore('session', {
           recordable_id: payload.id,
           api: `PATCH /api/v1/measurements/${payload.id}`,
           params: payload.params,
-          notes: `[${appStore.account?.email}] Success update measurement`,
+          notes: `[${appStore.currentUser?.email}] Success update measurement`,
           timestamp: new Date().toISOString()
         })
 
@@ -1411,7 +1411,7 @@ export const useSessionStore = defineStore('session', {
             recordable_id: payload.id,
             api: `PATCH /api/v1/measurements/${payload.id}`,
             params: payload.params,
-            notes: `[${appStore.account?.email}] ${message}`,
+            notes: `[${appStore.currentUser?.email}] ${message}`,
             timestamp: new Date().toISOString()
           })
 
@@ -1431,7 +1431,7 @@ export const useSessionStore = defineStore('session', {
         const app = useAppStore()
 
         // handling for offline mode
-        if (!app.network_status.connected) {
+        if (!app.networkStatus.connected) {
           const key = `update_measurement_${payload.id}`
 
           const index = this.pending_progress.findIndex((i) => i.key === key)
@@ -1492,7 +1492,7 @@ export const useSessionStore = defineStore('session', {
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}`,
               params: payload.params,
-              notes: `[${appStore.account?.email}] Success update measurement [attempt: ${attempt + 1}]`,
+              notes: `[${appStore.currentUser?.email}] Success update measurement [attempt: ${attempt + 1}]`,
               timestamp: new Date().toISOString()
             })
 
@@ -1529,7 +1529,7 @@ export const useSessionStore = defineStore('session', {
                 recordable_id: payload.id,
                 api: `PATCH /api/v1/measurements/${payload.id}`,
                 params: payload.params,
-                notes: `[${appStore.account?.email}] Failed, timeout [attempt: ${attempt + 1}]`,
+                notes: `[${appStore.currentUser?.email}] Failed, timeout [attempt: ${attempt + 1}]`,
                 timestamp: new Date().toISOString()
               })
               console.log(`[updateMeasurementResults] Retry ${attempt + 1}/${maxRetries}`)
@@ -1588,7 +1588,7 @@ export const useSessionStore = defineStore('session', {
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}`,
               params: payload.params,
-              notes: `[${appStore.account?.email}] Slow connection. Data will be saved automatically.`,
+              notes: `[${appStore.currentUser?.email}] Slow connection. Data will be saved automatically.`,
               timestamp: new Date().toISOString()
             })
 
@@ -1609,7 +1609,7 @@ export const useSessionStore = defineStore('session', {
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}`,
               params: payload.params,
-              notes: `[${appStore.account?.email}] Data was changed by another user. Please refresh.`,
+              notes: `[${appStore.currentUser?.email}] Data was changed by another user. Please refresh.`,
               timestamp: new Date().toISOString()
             })
 
@@ -1630,7 +1630,7 @@ export const useSessionStore = defineStore('session', {
             recordable_id: payload.id,
             api: `PATCH /api/v1/measurements/${payload.id}`,
             params: payload.params,
-            notes: `[${appStore.account?.email}] ${message}`,
+            notes: `[${appStore.currentUser?.email}] ${message}`,
             timestamp: new Date().toISOString()
           })
 
@@ -1655,7 +1655,7 @@ export const useSessionStore = defineStore('session', {
         const app = useAppStore()
 
         // handling for offline mode
-        if (!app.network_status.connected) {
+        if (!app.networkStatus.connected) {
           const key = `update_measurement_results_v2_${payload.id}`
           this.pending_progress.push({
             key,
@@ -1709,7 +1709,7 @@ export const useSessionStore = defineStore('session', {
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
               params: payload.params,
-              notes: `[${appStore.account?.email}] Success update measurement results [attempt: ${attempt + 1}]`,
+              notes: `[${appStore.currentUser?.email}] Success update measurement results [attempt: ${attempt + 1}]`,
               timestamp: new Date().toISOString()
             })
 
@@ -1741,7 +1741,7 @@ export const useSessionStore = defineStore('session', {
                 recordable_id: payload.id,
                 api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
                 params: payload.params,
-                notes: `[${appStore.account?.email}] Failed, timeout [attempt: ${attempt + 1}]`,
+                notes: `[${appStore.currentUser?.email}] Failed, timeout [attempt: ${attempt + 1}]`,
                 timestamp: new Date().toISOString()
               })
               console.log(`[updateMeasurementResultsV2] Retry ${attempt + 1}/${maxRetries}`)
@@ -1800,7 +1800,7 @@ export const useSessionStore = defineStore('session', {
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
               params: payload.params,
-              notes: `[${appStore.account?.email}] Slow connection. Data will be saved automatically.`,
+              notes: `[${appStore.currentUser?.email}] Slow connection. Data will be saved automatically.`,
               timestamp: new Date().toISOString()
             })
 
@@ -1821,7 +1821,7 @@ export const useSessionStore = defineStore('session', {
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
               params: payload.params,
-              notes: `[${appStore.account?.email}] Data was changed by another user. Please refresh.`,
+              notes: `[${appStore.currentUser?.email}] Data was changed by another user. Please refresh.`,
               timestamp: new Date().toISOString()
             })
 
@@ -1842,7 +1842,7 @@ export const useSessionStore = defineStore('session', {
             recordable_id: payload.id,
             api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
             params: payload.params,
-            notes: `[${appStore.account?.email}] ${message}`,
+            notes: `[${appStore.currentUser?.email}] ${message}`,
             timestamp: new Date().toISOString()
           })
 
@@ -1866,7 +1866,7 @@ export const useSessionStore = defineStore('session', {
     }) {
       try {
         const app = useAppStore()
-        if (!app.network_status.connected) {
+        if (!app.networkStatus.connected) {
           console.log(payload)
         }
 
@@ -1885,7 +1885,7 @@ export const useSessionStore = defineStore('session', {
           recordable_id: payload.id,
           api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
           params: payload.params,
-          notes: `[${appStore.account?.email}] Success update measurement trial`,
+          notes: `[${appStore.currentUser?.email}] Success update measurement trial`,
           timestamp: new Date().toISOString()
         })
 
@@ -1902,7 +1902,7 @@ export const useSessionStore = defineStore('session', {
             recordable_id: payload.id,
             api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
             params: payload.params,
-            notes: `[${appStore.account?.email}] ${message}`,
+            notes: `[${appStore.currentUser?.email}] ${message}`,
             timestamp: new Date().toISOString()
           })
 
@@ -1976,7 +1976,7 @@ export const useSessionStore = defineStore('session', {
     async deleteMeasurementTrial(payload: { id: number; trial_id: number }) {
       try {
         const app = useAppStore()
-        if (!app.network_status.connected) {
+        if (!app.networkStatus.connected) {
           console.log(payload)
         }
 
@@ -1994,7 +1994,7 @@ export const useSessionStore = defineStore('session', {
           recordable_id: payload.id,
           api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
           params: {},
-          notes: `[${appStore.account?.email}] Success delete measurement trial`,
+          notes: `[${appStore.currentUser?.email}] Success delete measurement trial`,
           timestamp: new Date().toISOString()
         })
 
@@ -2011,7 +2011,7 @@ export const useSessionStore = defineStore('session', {
             recordable_id: payload.id,
             api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
             params: {},
-            notes: `[${appStore.account?.email}] ${message}`,
+            notes: `[${appStore.currentUser?.email}] ${message}`,
             timestamp: new Date().toISOString()
           })
 
@@ -2053,7 +2053,7 @@ export const useSessionStore = defineStore('session', {
       this.session_comments = this.session?.comments || []
 
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         // return { success: true, data: this.session_comments }
       }
 
@@ -2080,7 +2080,7 @@ export const useSessionStore = defineStore('session', {
 
     async createSessionComment(payload: CreateSessionCommentParams) {
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         this.pending_progress.push({
           key: getRandomString('create_comment'),
           name: 'create_comment',
@@ -2138,7 +2138,7 @@ export const useSessionStore = defineStore('session', {
 
     async updateSessionComment(payload: UpdateSessionCommentParams) {
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         if (typeof payload.commentId === 'number') {
           const key = `update_comment_${payload.dataResult.id}`
 
@@ -2221,7 +2221,7 @@ export const useSessionStore = defineStore('session', {
 
     async duplicateImagesToClientDocument(payload: DuplicateImagesToClientDocumentParams) {
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         this.pending_progress.push({
           key: `duplicate_images_${payload.params.session_id}`,
           name: 'duplicate_images',
@@ -2249,7 +2249,7 @@ export const useSessionStore = defineStore('session', {
 
     async deleteSessionComment(payload: DeleteSessionCommentParams) {
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         if (typeof payload.commentId === 'number') {
           const key = `delete_comment_${payload.commentId}`
 
@@ -2332,7 +2332,7 @@ export const useSessionStore = defineStore('session', {
       const appStore = useAppStore()
       const params = {
         ...rawParams,
-        notes: `[${appStore.account?.email}] ${rawParams?.notes}`
+        notes: `[${appStore.currentUser?.email}] ${rawParams?.notes}`
       }
 
       // Inisialisasi buffer jika belum ada

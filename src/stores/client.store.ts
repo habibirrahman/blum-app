@@ -39,7 +39,7 @@ export const useClientStore = defineStore('client', {
     clients_count: 0,
     client_target_job: null,
     //
-    _jobTimeout: undefined,
+    _jobTimeout: undefined
   }),
   getters: {},
   actions: {
@@ -116,7 +116,7 @@ export const useClientStore = defineStore('client', {
       }
 
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         // return { success: true, data: this.client }
       }
 
@@ -135,7 +135,7 @@ export const useClientStore = defineStore('client', {
       this.upcoming_sessions = this.client?.upcoming_sessions || []
 
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         // return {
         //   success: true,
         //   data: { sessions: this.upcoming_sessions, total_count: this.upcoming_sessions_count }
@@ -173,7 +173,7 @@ export const useClientStore = defineStore('client', {
       this.draft_sessions = this.client?.draft_sessions || []
 
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         // return {
         //   success: true,
         //   data: { sessions: this.draft_sessions, total_count: this.draft_sessions_count }
@@ -209,7 +209,7 @@ export const useClientStore = defineStore('client', {
       this.past_sessions = this.client?.past_sessions || []
 
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         // return {
         //   success: true,
         //   data: { sessions: this.past_sessions, total_count: this.past_sessions_count }
@@ -236,7 +236,7 @@ export const useClientStore = defineStore('client', {
     },
     async getClients({ params }: { params?: string }): Promise<ResponseSchema> {
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         // return {
         //   success: true,
         //   data: { clients: this.clients, total_clients: this.clients_count }
@@ -263,7 +263,7 @@ export const useClientStore = defineStore('client', {
       plain?: boolean
     }): Promise<ResponseSchema> {
       const app = useAppStore()
-      if (!app.network_status.connected && !plain) {
+      if (!app.networkStatus.connected && !plain) {
         // return { success: true, data: this.target }
       }
 
@@ -283,7 +283,7 @@ export const useClientStore = defineStore('client', {
     },
     async getTargets({ params }: { params?: string }): Promise<ResponseSchema> {
       const app = useAppStore()
-      if (!app.network_status.connected) {
+      if (!app.networkStatus.connected) {
         // return {
         //   success: true,
         //   data: { targets: this.targets, total_count: this.targets_count }
@@ -389,11 +389,7 @@ export const useClientStore = defineStore('client', {
         })
     },
 
-    async createTarget({
-      data
-    }: {
-      data: any
-    }): Promise<ResponseSchema> {
+    async createTarget({ data }: { data: any }): Promise<ResponseSchema> {
       return axios
         .post(`/api/v1/targets`, data)
         .then(async ({ data }) => {
