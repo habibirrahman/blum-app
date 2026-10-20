@@ -1,10 +1,10 @@
+import axios from 'axios'
+import router from '@/router'
 import {
   getAccessStorage,
   removeAccessStorage,
   setAccessStorage
 } from '@/plugins/preferences.plugin'
-import axios from 'axios'
-import router from '@/router'
 
 /* docs: https://vitejs.dev/guide/env-and-mode.html#node-env-and-modes */
 const API_URL = import.meta.env.PROD
@@ -27,9 +27,10 @@ api.interceptors.request.use(async (config) => {
 
   config.headers['Authorization'] = `Bearer ${storage?.access}`
   const method = config.method?.toUpperCase()
-  if (method !== 'OPTIONS' && method !== 'GET') {
+  if (method !== 'GET') {
     config.headers['X-CSRF-TOKEN'] = storage?.csrf
   }
+
   return config
 })
 
@@ -64,7 +65,7 @@ api.interceptors.response.use(
     console.log('response', response)
     console.log('config', config)
 
-    if (!response || response.status !== 401) {
+    if (response?.status === 401) {
       // Token invalid or expired → clear storage
       await removeAccessStorage()
 
