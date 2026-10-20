@@ -41,12 +41,12 @@ async function requestNewToken() {
     headers: { Authorization: `Bearer ${storage?.access}` }
   })
 
-  setAccessStorage({ access: res?.data?.access, csrf: res?.data?.csrf })
+  await setAccessStorage({ access: res?.data?.access, csrf: res?.data?.csrf })
 
   return res?.data?.access
 }
 
-function refreshOnce() {
+async function refreshOnce() {
   if (!refreshing) {
     refreshing = requestNewToken().finally(() => {
       refreshing = null
@@ -66,7 +66,7 @@ api.interceptors.response.use(
 
     if (!response || response.status !== 401) {
       // Token invalid or expired → clear storage
-      removeAccessStorage()
+      await removeAccessStorage()
 
       return Promise.reject(error)
     }
@@ -82,7 +82,7 @@ api.interceptors.response.use(
       config.headers.Authorization = `Bearer ${token}`
       return api(config) // repeat original request
     } catch (refreshError) {
-      removeAccessStorage()
+      await removeAccessStorage()
       router.replace('/')
       return Promise.reject(refreshError)
     }
