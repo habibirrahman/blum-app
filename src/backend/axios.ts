@@ -61,9 +61,6 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const { response, config } = error
-    console.log('error', error)
-    console.log('response', response)
-    console.log('config', config)
 
     if (config.url?.includes('/refresh')) return Promise.reject(error)
     if (config.url?.includes('/signin')) return Promise.reject(error)
