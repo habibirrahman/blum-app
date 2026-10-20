@@ -65,26 +65,24 @@ api.interceptors.response.use(
     console.log('response', response)
     console.log('config', config)
 
-    if (response?.status === 401) {
-      // Token invalid or expired → clear storage
-      await removeAccessStorage()
-
-      return Promise.reject(error)
-    }
-
-    if (config._retried) return Promise.reject(error)
     if (config.url?.includes('/refresh')) return Promise.reject(error)
     if (config.url?.includes('/signin')) return Promise.reject(error)
+    if (response?.status !== 401) return Promise.reject(error)
 
+    if (config._retried) return Promise.reject(error)
     config._retried = true
 
+    // handle for 401 status
     try {
       const token = await refreshOnce()
       config.headers.Authorization = `Bearer ${token}`
+
       return api(config) // repeat original request
     } catch (refreshError) {
       await removeAccessStorage()
+
       router.replace('/')
+
       return Promise.reject(refreshError)
     }
   }
