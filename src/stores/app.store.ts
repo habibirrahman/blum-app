@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { getAppStorage, setAccessStorage, setAppStorage } from '@/plugins/preferences.plugin'
 import type { Branch, Center, DeviceDetailsInput, Session, Target, User } from '@/lib/types'
-import axios, { isAxiosError, type AxiosRequestConfig } from 'axios'
+import axios from '@/backend/axios'
+import { isAxiosError, type AxiosRequestConfig } from 'axios'
 import { useSessionStore } from './session.store'
 import { useClientStore } from './client.store'
 

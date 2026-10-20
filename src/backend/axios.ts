@@ -13,15 +13,14 @@ const API_URL = import.meta.env.PROD
 
 let refreshing: Promise<string> | null = null
 
-axios.defaults.baseURL = API_URL
-axios.defaults.withCredentials = true
-// const securedAxiosInstance = axios.create({
-//   baseURL: API_URL,
-//   withCredentials: true
-// })
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json' }
+})
 
 // Request interceptor
-axios.interceptors.request.use(async (config) => {
+api.interceptors.request.use(async (config) => {
   config.headers['Content-Type'] = 'application/json'
 
   const { data: storage } = await getAccessStorage()
@@ -59,7 +58,7 @@ function refreshOnce() {
 }
 
 // Response interceptor
-axios.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const { response, config } = error
@@ -80,7 +79,7 @@ axios.interceptors.response.use(
     try {
       const token = await refreshOnce()
       config.headers.Authorization = `Bearer ${token}`
-      return axios(config) // repeat original request
+      return api(config) // repeat original request
     } catch (refreshError) {
       removeAccessStorage()
       router.replace('/')
@@ -89,4 +88,4 @@ axios.interceptors.response.use(
   }
 )
 
-export default axios
+export default api
