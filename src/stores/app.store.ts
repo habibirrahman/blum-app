@@ -5,6 +5,7 @@ import axios from '@/backend/axios'
 import { isAxiosError, type AxiosRequestConfig } from 'axios'
 import { useSessionStore } from './session.store'
 import { useClientStore } from './client.store'
+import { getErrorMessage } from '@/lib/func'
 
 export interface AppStateSchema {
   networkStatus: NetworkStatus
@@ -142,9 +143,11 @@ export const useAppStore = defineStore('app', {
             this.resetAppStore()
           }
 
+          const message = getErrorMessage(error?.response?.data)
+
           return {
             success: false,
-            message: error?.response?.data || 'Unable to fetch current center from server'
+            message: message || 'Unable to fetch current center from server'
           }
         }
         return { success: false, message: 'Unexpected error' }
@@ -163,9 +166,10 @@ export const useAppStore = defineStore('app', {
         return { success: true, message: 'You have signed in', data: res?.data }
       } catch (error) {
         if (isAxiosError(error)) {
+          const message = getErrorMessage(error?.response?.data)
           return {
             success: false,
-            message: error?.response?.data || 'Request failed',
+            message: message || 'Request failed',
             data: error?.response?.data
           }
         }
@@ -184,9 +188,10 @@ export const useAppStore = defineStore('app', {
         return { success: true, message: 'You have signed out' }
       } catch (error) {
         if (isAxiosError(error)) {
+          const message = getErrorMessage(error?.response?.data)
           return {
             success: false,
-            message: error?.response?.data || 'Request failed'
+            message: message || 'Request failed'
           }
         }
         return { success: false, message: 'Unexpected error' }
@@ -200,9 +205,10 @@ export const useAppStore = defineStore('app', {
         return { success: true, message: 'You have signed out', data: res?.data }
       } catch (error) {
         if (isAxiosError(error)) {
+          const message = getErrorMessage(error?.response?.data)
           return {
             success: false,
-            message: error?.response?.data || 'Request failed'
+            message: message || 'Request failed'
           }
         }
         return { success: false, message: 'Unexpected error' }
@@ -330,7 +336,12 @@ export const useAppStore = defineStore('app', {
         return { success: true, data: res?.data }
       } catch (error) {
         if (isAxiosError(error)) {
-          return { success: false, message: error?.response?.data || 'Request failed', data: null }
+          const message = getErrorMessage(error?.response?.data)
+          return {
+            success: false,
+            message: message || 'Request failed',
+            data: null
+          }
         }
         return { success: false, message: 'Unexpected error', data: null }
       }
@@ -346,7 +357,12 @@ export const useAppStore = defineStore('app', {
         return { success: true, data: res?.data }
       } catch (error) {
         if (isAxiosError(error)) {
-          return { success: false, message: error?.response?.data || 'Request failed', data: null }
+          const message = getErrorMessage(error?.response?.data)
+          return {
+            success: false,
+            message: message || 'Request failed',
+            data: null
+          }
         }
         return { success: false, message: 'Unexpected error', data: null }
       }

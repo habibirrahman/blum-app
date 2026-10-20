@@ -21,8 +21,6 @@ const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use(async (config) => {
-  config.headers['Content-Type'] = 'application/json'
-
   const { data: storage } = await getAccessStorage()
 
   if (!storage) return config
@@ -62,6 +60,9 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const { response, config } = error
+    console.log('error', error)
+    console.log('response', response)
+    console.log('config', config)
 
     if (!response || response.status !== 401) {
       // Token invalid or expired → clear storage
