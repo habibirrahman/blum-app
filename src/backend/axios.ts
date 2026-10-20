@@ -66,9 +66,9 @@ api.interceptors.response.use(
     console.log('config', config)
 
     if (response?.status === 401) {
-      // Token invalid or expired → clear storage
+      // Unauthorized → clear storage
       await removeAccessStorage()
-
+      router.replace('/')
       return Promise.reject(error)
     }
 
@@ -83,8 +83,6 @@ api.interceptors.response.use(
       config.headers.Authorization = `Bearer ${token}`
       return api(config) // repeat original request
     } catch (refreshError) {
-      await removeAccessStorage()
-      router.replace('/')
       return Promise.reject(refreshError)
     }
   }
