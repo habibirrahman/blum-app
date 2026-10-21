@@ -1,10 +1,10 @@
+import axios from 'axios'
+import router from '@/router'
 import {
   getAccessStorage,
   removeAccessStorage,
   setAccessStorage
 } from '@/plugins/preferences.plugin'
-import axios from 'axios'
-import router from '@/router'
 
 /* docs: https://vitejs.dev/guide/env-and-mode.html#node-env-and-modes */
 const API_URL = import.meta.env.PROD
@@ -13,26 +13,24 @@ const API_URL = import.meta.env.PROD
 
 let refreshing: Promise<string> | null = null
 
-axios.defaults.baseURL = API_URL
-axios.defaults.withCredentials = true
-// const securedAxiosInstance = axios.create({
-//   baseURL: API_URL,
-//   withCredentials: true
-// })
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json' }
+})
 
 // Request interceptor
-axios.interceptors.request.use(async (config) => {
-  config.headers['Content-Type'] = 'application/json'
-
+api.interceptors.request.use(async (config) => {
   const { data: storage } = await getAccessStorage()
 
   if (!storage) return config
 
   config.headers['Authorization'] = `Bearer ${storage?.access}`
   const method = config.method?.toUpperCase()
-  if (method !== 'OPTIONS' && method !== 'GET') {
+  if (method !== 'GET') {
     config.headers['X-CSRF-TOKEN'] = storage?.csrf
   }
+
   return config
 })
 
@@ -44,12 +42,12 @@ async function requestNewToken() {
     headers: { Authorization: `Bearer ${storage?.access}` }
   })
 
-  setAccessStorage({ access: res?.data?.access, csrf: res?.data?.csrf })
+  await setAccessStorage({ access: res?.data?.access, csrf: res?.data?.csrf })
 
   return res?.data?.access
 }
 
-function refreshOnce() {
+async function refreshOnce() {
   if (!refreshing) {
     refreshing = requestNewToken().finally(() => {
       refreshing = null
@@ -59,34 +57,32 @@ function refreshOnce() {
 }
 
 // Response interceptor
-axios.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const { response, config } = error
 
-    if (!response || response.status !== 401) {
-      // Token invalid or expired → clear storage
-      removeAccessStorage()
-
-      return Promise.reject(error)
-    }
-
-    if (config._retried) return Promise.reject(error)
     if (config.url?.includes('/refresh')) return Promise.reject(error)
     if (config.url?.includes('/signin')) return Promise.reject(error)
+    if (response?.status !== 401) return Promise.reject(error)
 
+    if (config._retried) return Promise.reject(error)
     config._retried = true
 
+    // handle for 401 status
     try {
       const token = await refreshOnce()
       config.headers.Authorization = `Bearer ${token}`
-      return axios(config) // repeat original request
+
+      return api(config) // repeat original request
     } catch (refreshError) {
-      removeAccessStorage()
+      await removeAccessStorage()
+
       router.replace('/')
+
       return Promise.reject(refreshError)
     }
   }
 )
 
-export default axios
+export default api

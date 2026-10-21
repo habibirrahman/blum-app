@@ -358,12 +358,8 @@ watch(
 
 /** === METHODS === */
 
-interface FetchSessionProps {
-  first?: boolean
-  isSwipe?: boolean
-}
 // Improved syncSession dengan proper feedback
-async function syncSession(payload: FetchSessionProps = { isSwipe: false }) {
+async function syncSession(payload?: { isFirst?: boolean; isSwipe?: boolean }) {
   if (!appStore.networkStatus.connected) {
     console.log('[syncSession] Skipped - offline')
     return
@@ -383,7 +379,7 @@ async function syncSession(payload: FetchSessionProps = { isSwipe: false }) {
 
   if (!success) return
 
-  if (payload.isSwipe && appStore.networkStatus.connected) {
+  if (payload?.isSwipe && appStore.networkStatus.connected) {
     if (data && data.succeeded > 0) {
       toast.success(`${data.succeeded} item(s) synced`)
     } else {
@@ -392,13 +388,11 @@ async function syncSession(payload: FetchSessionProps = { isSwipe: false }) {
   }
 }
 
-async function fetchSession(payload?: FetchSessionProps) {
+async function fetchSession(payload?: { isFirst?: boolean; isSwipe?: boolean }) {
   cycleLoading.value = true
   try {
     const slug = route.params?.slug as string
-    if (payload?.first) {
-      sessionLoading.value = true
-    }
+    sessionLoading.value = true
 
     const { success, data } = await sessionStore.getSession({ slug })
     const session = data as Session
@@ -414,7 +408,7 @@ async function fetchSession(payload?: FetchSessionProps) {
         toast.success('Results are now up-to-date!')
       }
 
-      if (payload?.first) {
+      if (payload?.isFirst) {
         syncSession()
         app?.scroll({ top: heightReload, behavior: 'smooth' })
         app?.addEventListener('scroll', scrollListener)
@@ -944,7 +938,7 @@ onMounted(async () => {
       resolveLoading.value
 
     if (isActive && !isLoading) {
-      fetchSession({ first: true })
+      fetchSession({ isFirst: true })
     }
   })
 
@@ -985,7 +979,7 @@ onMounted(async () => {
     resolveLoading.value = false
   }
 
-  await fetchSession({ first: true })
+  await fetchSession({ isFirst: true })
 
   if (sessionStore.session?.status === 'ongoing' || sessionStore.session?.status === 'paused') {
     // Setup periodic check untuk stuck items
@@ -1300,7 +1294,7 @@ onUnmounted(() => {
             @toggle-saved="onToggleSavedSbt($event)"
             @check-completed-cold-probe="handleCompletedColdProbe"
             @click="onFocusMeasurement(measurement, true)"
-            @fetch-session="fetchSession({ first: false, isSwipe: false })"
+            @fetch-session="fetchSession"
           />
         </div>
       </div>
@@ -1334,7 +1328,7 @@ onUnmounted(() => {
           @toggle-saved="onToggleSavedSbt($event)"
           @toggle-collapsed="isMeasurementCollapsed = $event"
           @check-completed-cold-probe="handleCompletedColdProbe"
-          @fetch-session="fetchSession({ first: false, isSwipe: false })"
+          @fetch-session="fetchSession"
         />
         <div
           v-if="!isMeasurementCollapsed"

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import axios from 'axios'
+import axios from '@/backend/axios'
 import { useSessionStore } from '../session.store'
 import type { Measurement } from '@/lib/types'
 

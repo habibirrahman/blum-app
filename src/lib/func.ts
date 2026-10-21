@@ -1,5 +1,12 @@
 import dayjs from 'dayjs'
-import type { ClientDischargeReason, MeasurementType, Target, TargetTask, TargetType, User } from './types'
+import type {
+  ClientDischargeReason,
+  MeasurementType,
+  Target,
+  TargetTask,
+  TargetType,
+  User
+} from './types'
 
 interface DisplayDate {
   date?: string | null
@@ -88,24 +95,36 @@ export const onlyUniqueId = (value: any, index: number, array: any[]) => {
   return array.map((i) => i.id).indexOf(value.id) === index
 }
 
-export const getErrorMessage = (value: any = '') => {
-  function concatObjectKeyValue(obj: any): string[] {
-    const result = []
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        const temp = obj[key]
-        if (typeof temp === 'object') {
-          result.push(concatObjectKeyValue(obj[key]))
-        } else {
-          const k = Number(key)
-          if (!isNaN(k)) result.push(obj[key])
-          else result.push(`${key} ${obj[key]}`)
-        }
+interface ErrorShape {
+  [key: string]: string | string[] | ErrorShape
+}
+
+export const collectErrorValues = (obj: ErrorShape): string => {
+  const messages: string[] = []
+
+  function walk(current: ErrorShape) {
+    for (const key of Object.keys(current)) {
+      const value = current[key]
+      const isSkip = !isNaN(Number(key)) || key === 'base' || key === 'error'
+      if (typeof value === 'string') {
+        if (!isSkip) messages.push(key)
+        messages.push(value)
+      } else if (Array.isArray(value)) {
+        if (!isSkip) messages.push(key)
+        messages.push(...value)
+      } else if (value) {
+        if (!isSkip) messages.push(key)
+        walk(value as ErrorShape)
       }
     }
-    return result
   }
-  return typeof value === 'object' ? concatObjectKeyValue(value).join(', ') : value
+
+  walk(obj)
+  return messages.join('; ')
+}
+
+export const getErrorMessage = (value: any = '') => {
+  return typeof value === 'object' ? collectErrorValues(value) : value
 }
 
 export function debounce<T extends (...args: any[]) => void>(

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import axios from '@/backend/axios'
 import type { ActionRecommendation, Client, Session, Target } from '@/lib/types'
 import { useAppStore, type ResponseSchema } from './app.store'
 import { getClientStorage, setClientStorage } from '@/plugins/preferences.plugin'

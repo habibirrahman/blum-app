@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import axios, { isAxiosError } from 'axios'
+import axios from '@/backend/axios'
+import { isAxiosError } from 'axios'
 import {
   getStorage,
   setStorage,
