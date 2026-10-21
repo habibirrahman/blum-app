@@ -125,6 +125,7 @@ export interface Session {
 }
 
 export type ClientStatus = 'active' | 'archived' | 'at_risk_of_discharge'
+
 export type ClientDischargeReason =
   | 'graduated'
   | 'family_or_personal_issues'
@@ -132,6 +133,7 @@ export type ClientDischargeReason =
   | 'schedule_conflict'
   | 'moving'
   | 'other'
+
 export interface Client {
   id?: number
   name?: string
@@ -250,6 +252,7 @@ export interface Comment {
   created_at_string?: string
   updated_at_string?: string
 }
+
 interface ImageData {
   id?: number
   base64: string
@@ -260,6 +263,7 @@ interface ImageData {
   width: number
   height: number
 }
+
 export type MeasurementType =
   | 'Measurement::ColdProbe'
   | 'Measurement::Duration'
@@ -271,7 +275,9 @@ export type MeasurementType =
   | 'Measurement::Prompting'
   | 'Measurement::Sbt'
   | 'Measurement::TrialByTrial'
+
 export type DurationArray = [number, string]
+
 export type Measurement =
   | MeasurementBase
   | MeasurementDurationOrLatency
@@ -316,10 +322,12 @@ interface MeasurementBase {
   prompt_histories?: MeasurementPromptHistory[]
 
   results: Record<string, unknown> | unknown
-  trials?: MeasurementTrial[]
+  trials: Array<Record<string, unknown>> | unknown
+  trials_version: number
 
   set_all_as_probing?: boolean
 }
+
 export interface MeasurementUsedTargetMeasurement {
   target_id: Target['id']
   target_code: Target['code_definition']
@@ -332,12 +340,7 @@ export interface MeasurementUsedTargetMeasurement {
   probing_number_of_trial: number
 }
 
-export interface MeasurementTrial {
-  id: number
-  prompt_id: Prompt['id'] | null
-  target_problem_behavior_id: TargetProblemBehavior['id'] | null
-  recorded_at: string
-}
+// based on types
 
 // Duration or Latency
 export interface MeasurementDurationOrLatency extends MeasurementBase {
@@ -358,6 +361,7 @@ export interface MeasurementFrequency extends MeasurementBase {
   type: 'Measurement::Frequency'
   results: MeasurementResultsFrequency
 }
+
 export interface MeasurementResultsFrequency {
   score: number
 }
@@ -372,7 +376,9 @@ export interface MeasurementPir extends MeasurementBase {
 export interface MeasurementPrompting extends MeasurementBase {
   type: 'Measurement::Prompting'
   results: Record<string, MeasurementResultsPrompting>
+  trials: MeasurementTrialPrompting[]
 }
+
 export interface MeasurementResultsPrompting {
   abbreviation: Prompt['abbreviation']
   color: Prompt['color']
@@ -382,6 +388,13 @@ export interface MeasurementResultsPrompting {
   enabled: boolean
   score: number
   problem_behaviors: Array<number | null>
+}
+
+export interface MeasurementTrialPrompting {
+  id: number
+  prompt_id: Prompt['id'] | null
+  target_problem_behavior_id: TargetProblemBehavior['id'] | null
+  recorded_at: string
 }
 
 export interface MeasurementPromptHistory {
@@ -399,7 +412,9 @@ export interface MeasurementPromptHistory {
 export interface MeasurementTaskAnalysis extends MeasurementBase {
   type: 'Measurement::Prompting'
   results: Record<string, MeasurementResultsTaskAnalysis>
+  trials: MeasurementTrialTaskAnalysis[]
 }
+
 export interface MeasurementResultsTaskAnalysis {
   key: number | string
   target_id: number
@@ -408,16 +423,36 @@ export interface MeasurementResultsTaskAnalysis {
   target_problem_behavior_id: number | null
 }
 
+export interface MeasurementTrialTaskAnalysis {
+  uid: string
+  position: number
+  target_id: Target['id']
+  prompt_id: Prompt['id'] | null
+  prompt_parent_id?: Prompt['id'] | null
+  target_problem_behavior_id: TargetProblemBehavior['id'] | null
+  recorded_at: string
+}
+
 // SBT
 export interface MeasurementSbt extends MeasurementBase {
   type: 'Measurement::Sbt'
   results: Record<string, MeasurementResultsSbt>
+  trials: MeasurementTrialSbt[]
 }
 export interface MeasurementResultsSbt {
   key: number | string
   target_task_id: number
   prompt_id: number
   target_problem_behavior_id: number | null
+}
+
+export interface MeasurementTrialSbt {
+  uid: string
+  position: number
+  target_task_id: TargetTask['id']
+  prompt_id: Prompt['id'] | null
+  target_problem_behavior_id: TargetProblemBehavior['id'] | null
+  recorded_at: string
 }
 
 export type TargetType =
@@ -430,6 +465,7 @@ export type TargetType =
   | 'Target::Prompting'
   | 'Target::Sbt'
   | 'Target::TrialByTrial'
+
 export type TargetStatus =
   | 'pending'
   | 'in_progress'
@@ -437,10 +473,12 @@ export type TargetStatus =
   | 'paused'
   | 'discontinued'
   | 'in_maintenance'
+
 export type TargetFrequencyFormat = 'classic' | 'custom'
 export type TargetPromptingFormat = 'classic' | 'custom'
 export type TargetColdProbeFormat = 'classic' | 'custom'
 export type TargetIntervalStartTiming = 'start_with_session' | 'custom_start'
+
 export interface Target {
   id?: number
   action_recommendations?: ActionRecommendation[]
