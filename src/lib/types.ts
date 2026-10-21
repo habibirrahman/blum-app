@@ -288,44 +288,44 @@ export type Measurement =
   | MeasurementSbt
 
 interface MeasurementBase {
-  id?: number
-  position?: number
-  duration?: number
+  id: number
+  position: number
+  duration: number
 
-  is_fixed?: boolean
-  is_dropped?: boolean
-  visible?: boolean
+  is_fixed: boolean
+  is_dropped: boolean
+  visible: boolean
 
-  type?: MeasurementType
+  type: MeasurementType
 
-  overtime_duration?: DurationArray | number
+  overtime_duration: DurationArray | number
 
-  comment?: string
-  recording_started_at?: string
-  timer_started_at?: string
-  overtime_started_at?: string
-  overtime_ended_at?: string
-  marked_as?: string
-  submitted_at?: string
-  deleted_at?: string
-  created_at?: string
-  updated_at?: string
+  comment: string
+  recording_started_at: string
+  timer_started_at: string
+  overtime_started_at: string
+  overtime_ended_at: string
+  marked_as: string
+  submitted_at: string
+  deleted_at: string
+  created_at: string
+  updated_at: string
 
-  target_id?: Target['id']
-  target?: Target
-  session_id?: Session['id']
+  target_id: Target['id']
+  target: Target
+  session_id: Session['id']
 
-  comment_user_id?: User['id']
-  comment_user?: Comment
+  comment_user_id: User['id']
+  comment_user: Comment
 
-  used_targets?: MeasurementUsedTargetMeasurement[]
-  prompt_histories?: MeasurementPromptHistory[]
+  used_targets: MeasurementUsedTargetMeasurement[]
+  prompt_histories: MeasurementPromptHistory[]
 
   results: Record<string, unknown> | unknown
   trials: Array<Record<string, unknown>> | unknown
   trials_version: number
 
-  set_all_as_probing?: boolean
+  set_all_as_probing: boolean
 }
 
 export interface MeasurementUsedTargetMeasurement {
@@ -480,96 +480,96 @@ export type TargetColdProbeFormat = 'classic' | 'custom'
 export type TargetIntervalStartTiming = 'start_with_session' | 'custom_start'
 
 export interface Target {
-  id?: number
-  action_recommendations?: ActionRecommendation[]
-  type?: TargetType
-  status?: TargetStatus
-  frequency_format?: TargetFrequencyFormat
-  prompting_format?: TargetPromptingFormat
-  cold_probe_format?: TargetColdProbeFormat
+  id: number
+  action_recommendations: ActionRecommendation[]
+  type: TargetType
+  status: TargetStatus
+  frequency_format: TargetFrequencyFormat
+  prompting_format: TargetPromptingFormat
+  cold_probe_format: TargetColdProbeFormat
 
-  interval_start_timing?: TargetIntervalStartTiming
+  interval_start_timing: TargetIntervalStartTiming
 
-  name?: string
-  description?: string
-  simplified_description?: string
-  goal_time?: string
-  success_metric?: string
-  type_name?: string
-  code_definition?: string
-  graph_color?: string
+  name: string
+  description: string
+  simplified_description: string
+  goal_time: string
+  success_metric: string
+  type_name: string
+  code_definition: string
+  graph_color: string
 
-  goal?: number
-  probing_goal?: number
-  number_of_trial?: number
-  probing_number_of_trial?: number
-  interval?: number
-  duration?: number
-  total_success?: number
-  consecutive_success?: number
-  position?: number
-  total_entries?: number
-  maintenance_next_date?: string
-  maintenance_status?: 'overdue' | 'due' | 'scheduled'
-  maintenance_badge?: string
+  goal: number
+  probing_goal: number
+  number_of_trial: number
+  probing_number_of_trial: number
+  interval: number
+  duration: number
+  total_success: number
+  consecutive_success: number
+  position: number
+  total_entries: number
+  maintenance_next_date: string
+  maintenance_status: 'overdue' | 'due' | 'scheduled'
+  maintenance_badge: string
 
-  completed?: boolean
-  probing_enable?: boolean
-  is_group?: boolean
-  enable_problem_behavior?: boolean
-  allow_overtime_recording?: boolean
-  in_maintenance?: boolean
-  has_ongoing_session?: boolean
-  previously_added?: boolean
+  completed: boolean
+  probing_enable: boolean
+  is_group: boolean
+  enable_problem_behavior: boolean
+  allow_overtime_recording: boolean
+  in_maintenance: boolean
+  has_ongoing_session: boolean
+  previously_added: boolean
 
-  last_maintenance_session_result?: any
+  last_maintenance_session_result: any
 
-  date_introduce?: string
-  date_mastered?: string
-  progress_date?: string
-  achieved_date?: string
-  maintenance_start_at?: string
-  lost_skill_date?: string
-  created_at?: string
-  updated_at?: string
-  deleted_at?: string
+  date_introduce: string
+  date_mastered: string
+  progress_date: string
+  achieved_date: string
+  maintenance_start_at: string
+  lost_skill_date: string
+  created_at: string
+  updated_at: string
+  deleted_at: string
 
-  client_id?: Client['id']
-  curriculum_id?: Curriculum['id']
-  curriculum_color?: Curriculum['color']
-  curriculum_name?: Curriculum['name']
-  targetable_id?: number
-  targetable_type?: 'Client' | 'Center'
-  last_phase_line?: {
-    label?: string
-    color?: string
-    description?: string
-    date?: string
+  client_id: Client['id']
+  curriculum_id: Curriculum['id']
+  curriculum_color: Curriculum['color']
+  curriculum_name: Curriculum['name']
+  targetable_id: number
+  targetable_type: 'Client' | 'Center'
+  last_phase_line: {
+    label: string
+    color: string
+    description: string
+    date: string
   }
-  prompts?: Prompt[]
-  target_tasks?: TargetTask[]
-  members?: Target[]
-  target_problem_behaviors?: TargetProblemBehavior[]
-  target_variables?: TargetVariable[]
+  prompts: Prompt[]
+  target_tasks: TargetTask[]
+  members: Target[]
+  target_problem_behaviors: TargetProblemBehavior[]
+  target_variables: TargetVariable[]
 
-  parent_id?: Target['id']
-  group_id?: Target['id']
-  group?: {
-    id?: Target['id']
-    name?: Target['name']
+  parent_id: Target['id']
+  group_id: Target['id']
+  group: {
+    id: Target['id']
+    name: Target['name']
   }
 
-  progression?: {
-    next_target?: {
-      id?: Target['id']
-      name?: Target['name']
-      status?: 'activate' | 'create'
+  progression: {
+    next_target: {
+      id: Target['id']
+      name: Target['name']
+      status: 'activate' | 'create'
     }
-    progression_id?: Progression['id']
-    progression_name?: Progression['name']
-    progressions?: Progression[]
+    progression_id: Progression['id']
+    progression_name: Progression['name']
+    progressions: Progression[]
   }
-  progressions?: Progression[]
+  progressions: Progression[]
 }
 
 export interface Prompt {
@@ -609,21 +609,21 @@ export interface Prompt {
 }
 
 export interface TargetTask {
-  id?: number
-  title?: string
-  description?: string
-  code?: string
-  code_definition?: string
-  color?: string
-  date_introduce?: string
-  date_mastered?: string
+  id: number
+  title: string
+  description: string
+  code: string
+  code_definition: string
+  color: string
+  date_introduce: string
+  date_mastered: string
 
-  position?: number
-  hidden?: boolean
-  status?: TargetStatus
+  position: number
+  hidden: boolean
+  status: TargetStatus
 
-  target_id?: Target['id']
-  task_code_id?: number
+  target_id: Target['id']
+  task_code_id: number
 }
 
 export interface TargetProblemBehavior {

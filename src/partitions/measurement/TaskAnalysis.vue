@@ -1,27 +1,25 @@
 <script setup lang="ts">
-import { useSessionStore, type UpdateMeasurementResultsParams } from '@/stores/session.store'
+import {
+  useSessionStore,
+  type NewTrialTaskAnalysisParams,
+  type UpdateTrialTaskAnalysisParams
+} from '@/stores/session.store'
 import { useAppStore } from '@/stores/app.store'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type {
   Measurement,
-  MeasurementResultsTaskAnalysis,
   Prompt,
   Target,
   TargetProblemBehavior,
-  MeasurementUsedTargetMeasurement
+  MeasurementTrialTaskAnalysis
 } from '@/lib/types'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'vue-toastification'
 import AppButton from '@/components/AppButton.vue'
 import { promptColors } from '@/lib/data'
 
-const sessionStore = useSessionStore()
-const appStore = useAppStore()
-const toast = useToast()
-
 interface Props {
   measurement: Measurement
-  measurementResults: Measurement['results']
   target: Target
   isCollapsed: boolean
 }
@@ -33,131 +31,215 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {})
 const emit = defineEmits<Emits>()
 
-interface Trial {
-  key: string | number
-  target_id?: Target['id']
-  prompt_id?: Prompt['id']
-  prompt_parent_id?: Prompt['id'] | null
-  target_problem_behavior_id?: TargetProblemBehavior['id'] | null
+const sessionStore = useSessionStore()
+const appStore = useAppStore()
+const toast = useToast()
+
+/** === DATA === */
+
+interface MeasurementTrialModel extends MeasurementTrialTaskAnalysis {
+  target?: Target
+  prompt?: Prompt
+  problemBehavior?: TargetProblemBehavior
+  average?: string
 }
 
-const isSaved = ref<boolean>(true)
+interface TrialScoreModel extends Target {
+  sum: number
+  average: string
+  count: number
+  maxCount?: number
+  trials: MeasurementTrialModel[]
+}
+
 const page = ref<number>(1)
+const trialsState = ref<MeasurementTrialModel[]>([])
+
+const isSaved = ref<boolean>(true)
 const submitLoading = ref<boolean>(false)
-
-watch(
-  () => submitLoading.value,
-  (val) => {
-    if (!val) {
-      emit('toggle-updated', true)
-    } else {
-      emit('toggle-updated', false)
-    }
-  }
-)
-
-const activeDisplay = ref<'select-prompt' | 'select-next-task' | 'reselect-task'>('select-prompt')
-const editDisplay = ref<'select-prompt' | 'select-next-task' | 'reselect-task'>('select-prompt')
-
-const activeTrial = ref<Trial>({
-  key: 0,
-  target_id: 0,
-  prompt_id: 0,
-  prompt_parent_id: null,
-  target_problem_behavior_id: null
-})
-const editTrial = ref<Trial>({
-  key: 0,
-  target_id: 0,
-  prompt_id: 0,
-  prompt_parent_id: null,
-  target_problem_behavior_id: null
-})
-
-const nextTarget = ref<any>()
-const deleteTrialKey = ref<null | Trial['key']>(null)
-
-const ratioScores = ref<any[]>([])
-const ratioScoresHalf = computed(() => Math.ceil(ratioScores.value.length / 2))
-const ratioScoresRowA = computed(() => ratioScores.value.slice(0, ratioScoresHalf.value))
-const ratioScoresRowB = computed(() => ratioScores.value.slice(ratioScoresHalf.value))
-
-const ratioScoreContainer = ref(null)
-
-const resultsState = ref<Record<string, MeasurementResultsTaskAnalysis>>({})
-
 const isOpenProblemBehavior = ref<boolean>(false)
 const isOpenTrialHistory = ref<boolean>(false)
 const isOpenEditTrial = ref<boolean>(false)
 
-// state prompts members problem_behaviors from measurement.target
-const TAPrompts = ref<Prompt[]>([])
-const TAUsedTargets = ref<MeasurementUsedTargetMeasurement[]>([])
-const TAProblemBehaviors = ref<TargetProblemBehavior[]>([])
+const activeDisplay = ref<'select-prompt' | 'select-next-trial' | 'reselect-trial'>('select-prompt')
+const editDisplay = ref<'select-prompt' | 'select-next-trial' | 'reselect-trial'>('select-prompt')
+
+const trialScoreContainer = ref(null)
+
+const nextTrial = ref<TrialScoreModel | null>(null)
+
+const activeTrial = ref<MeasurementTrialTaskAnalysis | null>(null)
+const editTrial = ref<MeasurementTrialTaskAnalysis | null>(null)
+
+const deleteTrialUid = ref<string | null>(null)
+const deleteTrialUidLoading = ref<string | null>(null)
+
+/** === COMPUTEDS === */
+
+const targetPrompts = computed(() => {
+  const ps = props.target?.prompts || []
+  const format = props.target?.prompting_format
+  return [...ps]
+    .map((i) => {
+      if (format === 'classic') {
+        const score = i?.name.toLocaleLowerCase() === 'independent' ? 100 : 0
+        return { ...i, score }
+      }
+      return i
+    })
+    .sort((a, b) => a.position - b.position)
+    .sort((a, b) => {
+      if (format === 'custom') {
+        if (a.is_default && a?.name?.toLocaleLowerCase() === 'independent') return -1
+        if (b.is_default && b?.name?.toLocaleLowerCase() === 'independent') return 1
+        if (a.is_default && a?.name?.toLocaleLowerCase() === 'incorrect') return 1
+        if (b.is_default && b?.name?.toLocaleLowerCase() === 'incorrect') return -1
+        return b.score - a.score
+      }
+      return 0
+    })
+})
+
+const targetMembers = computed(() => {
+  const uts = props.measurement.used_targets || []
+  const tms = props.target?.members || []
+  return [...tms].filter((tm) => uts.some((ut) => ut.target_id === tm.id))
+})
+
+const problemBehaviors = computed(() => {
+  const pbs = props.target?.target_problem_behaviors || []
+  return [...pbs].sort((a, b) => a.position - b.position)
+})
+
+const enableProblemBehavior = computed(() => {
+  return props.target?.enable_problem_behavior && problemBehaviors.value.length
+})
 
 const currentDisplay = computed({
-  // getter
-  get() {
-    if (isOpenEditTrial.value) {
-      return editDisplay.value
-    } else {
-      return activeDisplay.value
-    }
-  },
-  // setter
-  set(val) {
-    if (isOpenEditTrial.value) {
-      editDisplay.value = val
-    } else {
-      activeDisplay.value = val
-    }
+  get: () => (isOpenEditTrial.value ? editDisplay.value : activeDisplay.value),
+  set: (val) => {
+    if (isOpenEditTrial.value) editDisplay.value = val
+    else activeDisplay.value = val
   }
-})
-const currentTrial = computed({
-  // getter
-  get() {
-    if (isOpenEditTrial.value) {
-      return editTrial.value
-    } else {
-      return activeTrial.value
-    }
-  },
-  // setter
-  set(val) {
-    if (isOpenEditTrial.value) {
-      editTrial.value = val
-    } else {
-      activeTrial.value = val
-    }
-  }
-})
-const currentTrialData = computed(() => {
-  return getTrial(currentTrial.value)
 })
 
-const perPage = computed<number>(() => (props.isCollapsed ? 3 : 9))
-const pageCount = computed<number>(() => {
-  const prompts = [...TAPrompts.value]
-  const boxes = prompts.length
-  return Math.ceil(boxes / perPage.value)
+const currentTrial = computed({
+  get: () => (isOpenEditTrial.value ? editTrial.value : activeTrial.value),
+  set: (val) => {
+    if (isOpenEditTrial.value) editTrial.value = val
+    else activeTrial.value = val
+  }
 })
+
+const recordedTrials = computed((): MeasurementTrialModel[] => {
+  if (!trialsState.value.length) return []
+  return [...trialsState.value].map((trial, idx) => {
+    const target = targetMembers.value.find((i) => i.id === trial.target_id)
+    const prompt = targetPrompts.value.find((i) => i.id === trial.prompt_id)
+    const problemBehavior = problemBehaviors.value.find(
+      (i) => i.id === trial.target_problem_behavior_id
+    )
+
+    return { ...trial, position: idx + 1, target, prompt, problemBehavior }
+  })
+})
+
+const currentRecordedTrial = computed((): MeasurementTrialModel | null => {
+  if (!currentTrial.value) return null
+
+  let trial = recordedTrials.value.find((i) => i.uid === currentTrial.value?.uid)
+  if (!trial) {
+    const target = targetMembers.value.find((i) => i.id === currentTrial.value?.target_id)
+    const prompt = targetPrompts.value.find((i) => i.id === currentTrial.value?.prompt_id)
+    const problemBehavior = problemBehaviors.value.find(
+      (i) => i.id === currentTrial.value?.target_problem_behavior_id
+    )
+    trial = {
+      ...currentTrial.value,
+      position: trialsState.value.length + 1,
+      target,
+      prompt,
+      problemBehavior
+    }
+  }
+
+  let average = '0'
+  const trialScore = trialScores.value.find((i) => i.id === trial.target_id)
+  if (trialScore) average = trialScore.average
+  return { ...trial, average }
+})
+
+const trialScores = computed((): TrialScoreModel[] => {
+  let maxCount = 0
+
+  const scoreMap: TrialScoreModel[] = targetMembers.value.map((i) => {
+    const trials = recordedTrials.value.filter((t) => t.target_id === i.id)
+    const listOfScore = trials.map((t) => (t.prompt ? t.prompt.score : -1)).filter((r) => r !== -1)
+
+    const sum = listOfScore.reduce((s, val) => s + val, 0)
+    const avg = sum / (listOfScore.length || 1)
+    // const average = avg % 1 === 0 ? avg + '' : avg.toFixed(1)
+    const average = avg + ''
+
+    if (listOfScore.length > maxCount) maxCount = listOfScore.length
+    return { ...i, sum, average, count: listOfScore.length, trials }
+  })
+
+  return scoreMap.map((i) => ({ ...i, maxCount }))
+})
+
+const trialScoresHalf = computed(() => Math.ceil(trialScores.value.length / 2))
+
+const trialScoresRowA = computed(() => trialScores.value.slice(0, trialScoresHalf.value))
+
+const trialScoresRowB = computed(() => trialScores.value.slice(trialScoresHalf.value))
+
+const perPage = computed<number>(() => (props.isCollapsed ? 3 : 9))
+
+const pageCount = computed(() => Math.ceil(targetPrompts.value.length / perPage.value))
+
 const promptBoxesPages = computed<Prompt[][]>(() => {
-  const prompts = [...TAPrompts.value]
+  const prompts = [...targetPrompts.value]
   const res = []
   for (let idx = 1; idx <= pageCount.value; idx++) {
     const start = (idx - 1) * perPage.value
     const end = idx * perPage.value
-    const arr = [...prompts.slice(start, end)]
-    res.push(arr)
+    res.push(prompts.slice(start, end))
   }
   return res
 })
+
+/** === WATCHERS === */
+
+watch(
+  () => submitLoading.value,
+  (val) => {
+    emit('toggle-updated', !val)
+  }
+)
 
 watch(
   () => isSaved.value,
   (val) => {
     emit('toggle-saved', val)
   }
+)
+
+watch(
+  () => props.measurement,
+  async (val) => {
+    await assignTrialsState(val)
+  }
+)
+
+watch(
+  () => [currentTrial.value?.target_id, props.isCollapsed, trialScores.value?.length],
+  async ([id, collapsed]) => {
+    if (collapsed || !id) return
+    await nextTick()
+    scrollToActiveTrial()
+  },
+  { immediate: true }
 )
 
 const collapseTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -179,42 +261,30 @@ watch(
   }
 )
 
-// Catatan: `measurementResults` selalu berupa referensi baru setiap update
-// (diturunkan dari `measurement.results` yang di-reassign, bukan dimutasi
-// in-place oleh store), sehingga shallow watch sudah cukup dan menghindari
-// overhead deep-traverse pada object trial yang bisa cukup besar.
-watch(
-  () => props.measurementResults,
-  (val) => {
-    resultsState.value = val as Record<string, MeasurementResultsTaskAnalysis>
-    generateRatioScores()
-  }
-)
+/** === METHODS === */
 
-watch(
-  () => deleteTrialKey.value,
-  (val) => {
-    if (val === null) isSaved.value = true
-    else isSaved.value = false
-  }
-)
+const assignTrialsState = async (measurement: Measurement) => {
+  let trials = (measurement.trials as MeasurementTrialTaskAnalysis[]) || []
 
-watch(
-  () => [currentTrial.value?.target_id, props.isCollapsed, ratioScores.value?.length],
-  async ([id, collapsed]) => {
-    if (collapsed || !id) return
-    await nextTick()
-    scrollToActiveTrial()
-  },
-  { immediate: true }
-)
+  if (!trials?.length) {
+    // fetch again from api
+    const { success, data } = await sessionStore.getMeasurementTrials({ id: props.measurement.id })
+    if (success && data) {
+      trials = [...(data.trials as MeasurementTrialTaskAnalysis[])]
+    }
+  }
+
+  trialsState.value = [...trials]
+
+  return trials
+}
 
 function scrollToActiveTrial(smooth = true) {
-  const container = ratioScoreContainer.value as HTMLDivElement | null
+  const container = trialScoreContainer.value as HTMLDivElement | null
   if (!container) return // ke-collapse, ref-nya null
 
   const el = document.getElementById(
-    `score-ratio-${props.measurement.id}-${currentTrial.value.target_id}`
+    `trial-score-${props.measurement.id}-${currentTrial.value?.target_id}`
   )
   if (!el) return
 
@@ -230,244 +300,11 @@ function scrollToActiveTrial(smooth = true) {
   })
 }
 
-// 🔧 Tambahkan computed untuk monitoring
-const hasPendingSync = computed(() => {
-  return sessionStore.pending_progress.some(
-    (item) => item.key === `update_measurement_${props.measurement.id}`
-  )
-})
-
-// Watch untuk notifikasi saat sync berhasil
-watch(hasPendingSync, (isPending, wasPending) => {
-  if (wasPending && !isPending) {
-    // Sync completed
-    const updated = { ...resultsState.value }
-    delete updated._pendingSync
-    resultsState.value = updated
-
-    toast.success('Data synced to server')
-  }
-})
-
-// Auto-save timer
-const idleTimeout = ref<ReturnType<typeof setTimeout> | undefined>(undefined)
-const resetIdleTimer = () => {
-  if (idleTimeout.value) {
-    clearTimeout(idleTimeout.value)
-    idleTimeout.value = undefined
-  }
-
-  if (sessionStore.session?.status !== 'ongoing') return
-
-  // Auto-save setelah 5 detik idle
-  idleTimeout.value = setTimeout(() => {
-    if (!isSaved.value && currentTrial.value.prompt_id && !isOpenEditTrial.value) {
-      console.log('[Component] Auto-saving due to idle')
-      onSaveCurrentTrial()
-    }
-  }, 5000)
-
-  return () => {
-    if (idleTimeout.value) {
-      clearTimeout(idleTimeout.value)
-      idleTimeout.value = undefined
-    }
-  }
-}
-
-onMounted(async () => {
-  const prompts = (props.target?.prompts || [])
-    .map((i) => {
-      if (props.target.prompting_format === 'classic') {
-        const score = i.abbreviation === 'Id' ? 100 : 0
-        return { ...i, score }
-      }
-      return i
-    })
-    .sort((a, b) => (a?.position || 0) - (b?.position || 0))
-    .sort((a, b) => {
-      if (a.is_default && a.abbreviation === 'Id') return -1
-      if (b.is_default && b.abbreviation === 'Id') return 1
-
-      if (a.is_default && a.abbreviation === 'Ic') return 1
-      if (b.is_default && b.abbreviation === 'Ic') return -1
-      return (b?.score || 0) - (a?.score || 0)
-    })
-  const usedTargets = props.measurement?.used_targets || []
-  const problems = props.target?.target_problem_behaviors || []
-
-  TAPrompts.value = prompts || []
-  TAUsedTargets.value = usedTargets || []
-  TAProblemBehaviors.value = problems.sort((a, b) => (a?.position || 0) - (b?.position || 0))
-
-  const currentResults = (props.measurementResults || {}) as Record<
-    string,
-    MeasurementResultsTaskAnalysis
-  >
-  const results = Object.keys(currentResults).map((key) => ({
-    ...currentResults[key],
-    key
-  }))
-
-  if (results.length) {
-    const length = results.length
-    const lastTrial = results[length - 1]
-
-    if (!lastTrial.prompt_id) {
-      currentTrial.value = lastTrial
-    } else {
-      const index = TAUsedTargets.value.findIndex((i) => i.target_id === lastTrial.target_id)
-      let nextTargetId: number | undefined = 0
-      if (index > -1 && index + 1 <= TAUsedTargets.value.length - 1) {
-        nextTargetId = TAUsedTargets.value[index + 1].target_id
-      } else if (TAUsedTargets.value.length) {
-        nextTargetId = TAUsedTargets.value[0].target_id
-      }
-      const newTrial: Trial = {
-        key: Number(lastTrial.key) + 1,
-        target_id: nextTargetId,
-        prompt_id: 0,
-        prompt_parent_id: null,
-        target_problem_behavior_id: null
-      }
-      currentResults[newTrial.key] = {
-        key: newTrial.key,
-        target_id: newTrial.target_id || 0,
-        prompt_id: newTrial.prompt_id || 0,
-        prompt_parent_id: newTrial.prompt_parent_id || null,
-        target_problem_behavior_id: newTrial.target_problem_behavior_id || null
-      }
-      currentTrial.value = newTrial
-    }
-  } else {
-    const newTrial: Trial = {
-      key: 1,
-      target_id: 0,
-      prompt_id: 0,
-      prompt_parent_id: null,
-      target_problem_behavior_id: null
-    }
-    if (TAUsedTargets.value.length) {
-      newTrial.target_id = TAUsedTargets.value[0].target_id
-    }
-    currentResults[newTrial.key] = {
-      key: newTrial.key,
-      target_id: newTrial.target_id || 0,
-      prompt_id: newTrial.prompt_id || 0,
-      prompt_parent_id: newTrial.prompt_parent_id || null,
-      target_problem_behavior_id: newTrial.target_problem_behavior_id || null
-    }
-    currentTrial.value = newTrial
-  }
-
-  resultsState.value = currentResults
-
-  generateRatioScores()
-})
-
-// Cleanup saat unmount
-onUnmounted(() => {
-  // Clear timeout to prevent memory leaks
-  if (collapseTimeout.value) {
-    clearTimeout(collapseTimeout.value)
-    collapseTimeout.value = undefined
-  }
-  if (idleTimeout.value) {
-    clearTimeout(idleTimeout.value)
-    idleTimeout.value = undefined
-  }
-
-  // Trigger sync sebelum unmount jika ada perubahan
-  if (!isSaved.value && appStore.networkStatus.connected) {
-    sessionStore.triggerSync(true)
-  }
-})
-
 const onScroll = (e: any) => {
   const offsetWidth = e.currentTarget.offsetWidth
   const scrollLeft = e.currentTarget.scrollLeft
   const current = Math.floor(scrollLeft / offsetWidth) + 1
   page.value = current
-}
-
-const getColor = (id: number): string => {
-  const found = TAPrompts.value.find((i) => i.id === id)
-  return found ? found.color || '' : ''
-}
-const getCode = (id: number, data: 'target' | 'prompt' | 'problem_behavior') => {
-  if (data === 'target') {
-    const found = TAUsedTargets.value.find((i) => i.target_id === id)
-    return found ? found.target_code : ''
-  }
-  if (data === 'prompt') {
-    const found = TAPrompts.value.find((i) => i.id === id)
-    return found ? found.abbreviation : ''
-  }
-  if (data === 'problem_behavior') {
-    const found = TAProblemBehaviors.value.find((i) => i.id === id)
-    return found ? found.code : ''
-  }
-  return '-'
-}
-
-const getTrial = (trial: Trial) => {
-  const defaultTarget = TAUsedTargets.value.length ? TAUsedTargets.value[0] : { target_code: '' }
-  const target = TAUsedTargets.value.find((i) => i.target_id === trial.target_id) || defaultTarget
-  const prompt = TAPrompts.value.find((i) => i.id === trial.prompt_id) || {
-    name: '',
-    score: ''
-  }
-  const problemBehavior = TAProblemBehaviors.value.find(
-    (i) => i.id === trial.target_problem_behavior_id
-  ) || { code: 'R', code_definition: '' }
-
-  let average = 0
-  const ratioScore = ratioScores.value.find((i) => i.target_id === trial.target_id)
-  if (ratioScore) {
-    average = ratioScore.average
-  }
-  return {
-    ...trial,
-    target: target,
-    prompt,
-    problem_behavior: problemBehavior || { code: 'R', code_definition: '' },
-    average
-  }
-}
-
-const generateRatioScores = () => {
-  /**
-   * percentage: average all task
-   * green ratio: ratio of current task count from the most task count
-   * red badge: any problem_behavior(?) yes: put the badge
-   */
-  const currentResults = resultsState.value || {}
-
-  let maxRatio = 0
-  const results = Object.keys(currentResults).map((key) => ({
-    ...currentResults[key],
-    key
-  }))
-
-  const targets = [...TAUsedTargets.value].map((i) => {
-    const ratios = results.filter((r) => r.target_id === i.target_id)
-    const listOfScore: number[] = ratios
-      .map((r) => {
-        const prompt = TAPrompts.value.find((p) => p.id === r.prompt_id)
-        return prompt ? prompt?.score || 0 : -1
-      })
-      .filter((r) => r !== -1)
-    const sum = listOfScore.reduce((sum, i) => (sum += i), 0)
-    const average = Math.round(sum / listOfScore.length || 0)
-
-    if (listOfScore.length > maxRatio) maxRatio = listOfScore.length
-    return { ...i, sum, average, count: listOfScore.length, ratios }
-  })
-
-  const assignedMaxRatio = targets.map((i) => {
-    return { ...i, max_ratio: maxRatio }
-  })
-  ratioScores.value = [...assignedMaxRatio]
 }
 
 const onOpenTrialHistory = async () => {
@@ -478,7 +315,7 @@ const onOpenTrialHistory = async () => {
     action_label: `ta_open_trials`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
-    notes: `Target: ${props.measurement.target?.name}`,
+    notes: `Target: ${props.target?.name}`,
     timestamp: new Date().toISOString()
   })
 }
@@ -491,126 +328,110 @@ const onOpenProblemBehavior = async () => {
     action_label: `ta_open_pb`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
-    notes: `Target: ${props.measurement.target?.name}`,
+    notes: `Target: ${props.target?.name}`,
     timestamp: new Date().toISOString()
   })
 }
 
 const onCloseTrialHistory = () => {
   isOpenTrialHistory.value = false
-  deleteTrialKey.value = null
-
-  setTheLastTrial()
+  deleteTrialUid.value = null
 }
 
-const setTheLastTrial = () => {
-  const data = resultsState.value
-  if (activeDisplay.value === 'select-prompt') {
-    const filtered = Object.values(data).filter((i: any) => i.prompt_id && i.target_id)
-    const newKey = filtered.length + 1
-    currentTrial.value = {
-      key: newKey,
-      target_id: currentTrial.value.target_id,
-      prompt_id: currentTrial.value.prompt_id,
-      prompt_parent_id: currentTrial.value.prompt_parent_id,
-      target_problem_behavior_id: currentTrial.value.target_problem_behavior_id
-    }
+const _onSaveTrial = async (
+  uid: string,
+  params: Pick<
+    MeasurementTrialTaskAnalysis,
+    'target_id' | 'prompt_id' | 'prompt_parent_id' | 'target_problem_behavior_id'
+  >,
+  activity: 'prompt' | 'problem_behavior'
+) => {
+  if (!params.target_id || !params.prompt_id) {
+    return { success: false, data: null }
   }
-  if (activeDisplay.value === 'select-next-task') {
-    const results = Object.keys(data).map((key) => ({ ...data[key], key }))
-
-    const index = results.findIndex((i) => Number(i.key) === Number(currentTrial.value.key))
-    if (index > -1) {
-      currentTrial.value = results[index]
-    } else {
-      currentTrial.value = results[results.length - 1]
-    }
-  }
-}
-
-// onSaveCurrentTrial dengan proper error handling
-const onSaveCurrentTrial = async () => {
-  if (sessionStore.session?.status !== 'ongoing') return { success: false }
-  if (submitLoading.value) return { success: false }
-
-  // Simpan state sebelumnya untuk rollback
-  const previousResults = { ...resultsState.value }
-  const previousIsSaved = isSaved.value
-
-  let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key } as Trial
-  })
-
-  const index = results.findIndex((i) => Number(i.key) === Number(currentTrial.value.key))
-  if (index > -1) {
-    results[index] = currentTrial.value
-  } else {
-    results.push(currentTrial.value)
+  if (sessionStore.session?.status !== 'ongoing' || submitLoading.value) {
+    return { success: false, data: null }
   }
 
-  results = results
-    .filter((i) => Number(i.prompt_id) && Number(i.target_id))
-    .map((i, idx) => ({
-      key: idx + 1,
-      prompt_id: i.prompt_id,
-      prompt_parent_id: i.prompt_parent_id,
-      target_id: i.target_id,
-      target_problem_behavior_id: i.target_problem_behavior_id
-    }))
+  const isRecorded = !!recordedTrials.value.find((t) => t.uid === uid)
 
-  const finalResults: Record<string, any> = {}
-  for (let idx = 0; idx < results.length; idx++) {
-    finalResults[idx + 1] = results[idx]
+  const actions = {
+    prompt: 'ta_select_prompt',
+    problem_behavior: 'ta_select_pb'
   }
 
-  const payload: UpdateMeasurementResultsParams = {
-    id: props.measurement.id,
-    params: { measurement: { results: finalResults } },
-    dataResult: { ...props.measurement, results: finalResults },
-    lastData: { ...props.measurement }
-  }
-
-  submitLoading.value = true
-
-  try {
-    const { success, message, data } = await sessionStore.updateMeasurementResults(payload)
-
-    // ✅ CEK success SEBELUM update state!
-    if (!success) {
-      resultsState.value = previousResults
-      isSaved.value = previousIsSaved
-      toast.error(message || 'Failed to save data')
-      return { success: false }
+  if (isRecorded) {
+    // update trial by uid
+    const payload = {
+      id: props.measurement.id,
+      trial_id: uid,
+      params: {
+        trial: {
+          prompt_id: params?.prompt_id,
+          prompt_parent_id: params?.prompt_parent_id,
+          target_problem_behavior_id: params?.target_problem_behavior_id
+        } as UpdateTrialTaskAnalysisParams
+      }
     }
 
-    // ✅ Update state HANYA jika success
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `${actions[activity]}`,
+      recordable: 'Measurement',
+      recordable_id: payload.id,
+      api: `PATCH /api/v1/measurements/${payload.id}/trials/${uid}`,
+      params: payload,
+      notes: `Target: ${props.target?.name} [${uid}: ${params?.prompt_id}, ${params?.target_problem_behavior_id}]`,
+      timestamp: new Date().toISOString()
+    })
+
+    const { success, data } = await sessionStore.updateMeasurementTrial(payload)
     isSaved.value = true
-    resultsState.value = data.results
-
-    // ✅ Visual feedback berbeda untuk offline/online
-    if (data._pendingSync) {
-      toast.info('Saved offline, will sync automatically')
-    } else {
-      // toast.success('Successfully saved') // Optional: bisa di-comment jika terlalu banyak notif
+    if (success) {
+      const measurement = data as Measurement
+      await assignTrialsState(measurement)
+    }
+    return { success, data }
+  } else {
+    // create new trial
+    const payload = {
+      id: props.measurement.id,
+      params: {
+        trial: {
+          uid,
+          target_id: params?.target_id,
+          prompt_id: params?.prompt_id,
+          prompt_parent_id: params?.prompt_parent_id,
+          target_problem_behavior_id: params?.target_problem_behavior_id,
+          recorded_at: new Date().toISOString()
+        } as NewTrialTaskAnalysisParams
+      }
     }
 
-    return { success: true }
-  } catch (error) {
-    console.error('Unexpected error in onSaveCurrentTrial:', error)
+    // record session activities
+    await sessionStore.addSessionActivity({
+      action_label: `${actions[activity]}`,
+      recordable: 'Measurement',
+      recordable_id: payload.id,
+      api: `POST /api/v1/measurements/${payload.id}/trials`,
+      params: payload,
+      notes: `Target: ${props.target?.name} [${uid}: ${params?.prompt_id}, ${params?.target_problem_behavior_id}]`,
+      timestamp: new Date().toISOString()
+    })
 
-    resultsState.value = previousResults
-    isSaved.value = previousIsSaved
-
-    toast.error('Something went wrong. Please try again.')
-    return { success: false }
-  } finally {
-    submitLoading.value = false
+    const { success, data } = await sessionStore.createMeasurementTrial(payload)
+    isSaved.value = true
+    if (success) {
+      const measurement = data as Measurement
+      await assignTrialsState(measurement)
+    }
+    return { success, data }
   }
 }
 
-// onChoosePrompt dengan guard
 const onChoosePrompt = async (prompt: Prompt) => {
   if (sessionStore.session?.status !== 'ongoing') return
+  if (!currentTrial.value) return
 
   // Prevent multiple submissions
   if (submitLoading.value) {
@@ -618,56 +439,39 @@ const onChoosePrompt = async (prompt: Prompt) => {
     return
   }
 
-  const newTrial: Trial = {
+  currentTrial.value = {
     ...currentTrial.value,
     prompt_id: prompt.id,
     prompt_parent_id: prompt.prompt_parent_id
   }
 
-  // Simpan state sebelumnya untuk rollback
-  const previousTrial = { ...currentTrial.value }
-
   isSaved.value = false
-  currentTrial.value = newTrial
 
-  // Reset idle timer
-  resetIdleTimer()
+  // If already open edit trial, just return
+  if (isOpenEditTrial.value) return
 
-  // record session activities
-  await sessionStore.addSessionActivity({
-    action_label: `ta_select_prompt`,
-    recordable: 'Measurement',
-    recordable_id: props.measurement.id,
-    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: { measurement: { results: { [newTrial.key]: newTrial } } },
-    notes: `Target: ${props.measurement.target?.name} [${newTrial.key}: ${prompt.id} ${prompt.abbreviation}]`,
-    timestamp: new Date().toISOString()
-  })
-
-  // if edit trial - skip assign next task and select-next-task
-  if (isOpenEditTrial.value) {
-    return
+  const uid = currentTrial.value.uid
+  const payload = {
+    target_id: currentTrial.value?.target_id,
+    prompt_id: prompt.id,
+    prompt_parent_id: prompt.prompt_parent_id,
+    target_problem_behavior_id: currentTrial.value?.target_problem_behavior_id
   }
 
-  const { success } = await onSaveCurrentTrial()
+  const { success } = await _onSaveTrial(uid, payload, 'prompt')
+  if (!success) return
 
-  if (!success) {
-    // Rollback jika gagal
-    currentTrial.value = previousTrial
-    return
-  }
-
-  const index = ratioScores.value.findIndex((i) => i.target_id === newTrial.target_id)
-  if (index > -1 && index + 1 <= ratioScores.value.length - 1) {
-    nextTarget.value = ratioScores.value[index + 1]
-  } else {
-    nextTarget.value = ratioScores.value[0]
-  }
-  currentDisplay.value = 'select-next-task'
+  const index = trialScores.value.findIndex((i) => i.id === currentTrial.value?.target_id)
+  nextTrial.value =
+    index > -1 && index + 1 < trialScores.value.length
+      ? trialScores.value[index + 1]
+      : trialScores.value[0]
+  currentDisplay.value = 'select-next-trial'
 }
 
-const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) => {
+const onChooseProblemBehavior = async (pb: TargetProblemBehavior) => {
   if (sessionStore.session?.status !== 'ongoing') return
+  if (!currentTrial.value) return
 
   // Prevent multiple submissions
   if (submitLoading.value) {
@@ -675,88 +479,108 @@ const onChooseProblemBehavior = async (problemBehavior: TargetProblemBehavior) =
     return
   }
 
-  let newId: Trial['target_problem_behavior_id'] = problemBehavior.id
-  let newCode: TargetProblemBehavior['code_definition'] = problemBehavior.code_definition
-  if (currentTrial.value.target_problem_behavior_id === newId) {
-    newId = null
-    newCode = ''
-  }
+  const newId = currentTrial.value.target_problem_behavior_id === pb.id ? null : pb.id
+  currentTrial.value = { ...currentTrial.value, target_problem_behavior_id: newId }
 
-  const newTrial: Trial = {
-    ...currentTrial.value,
+  isSaved.value = false
+
+  // If already open edit trial, just return
+  if (isOpenEditTrial.value) return
+
+  const uid = currentTrial.value.uid
+  const payload = {
+    target_id: currentTrial.value?.target_id,
+    prompt_id: currentTrial.value?.prompt_id,
+    prompt_parent_id: currentTrial.value?.prompt_parent_id,
     target_problem_behavior_id: newId
   }
 
-  isSaved.value = false
-  currentTrial.value = newTrial
-
-  // Reset idle timer
-  resetIdleTimer()
-
-  // record session activities
-  await sessionStore.addSessionActivity({
-    action_label: `ta_select_pb`,
-    recordable: 'Measurement',
-    recordable_id: props.measurement.id,
-    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: { measurement: { results: { [newTrial.key]: newTrial } } },
-    notes: `Target: ${props.measurement.target?.name} [${newTrial.key}: ${newId} ${newCode}]`,
-    timestamp: new Date().toISOString()
-  })
-
-  if (isOpenEditTrial.value) {
-    return
-  }
-
-  const { success } = await onSaveCurrentTrial()
+  const { success } = await _onSaveTrial(uid, payload, 'problem_behavior')
   if (!success) return
 }
 
-const onChooseTarget = async (target: any) => {
-  nextTarget.value = target
+const onChooseTarget = async (val: TrialScoreModel) => {
+  nextTrial.value = val
 
   // record session activities
   await sessionStore.addSessionActivity({
     action_label: `ta_select_target`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
-    notes: `Target: ${props.measurement.target?.name} [${target.target_code}]`,
+    notes: `Target: ${props.target?.name} [${val.code_definition}]`,
+    timestamp: new Date().toISOString()
+  })
+}
+
+const onTakeNextTrial = async (val: { isNew: boolean }) => {
+  if (sessionStore.session?.status !== 'ongoing') return
+  if (!currentTrial.value) return
+
+  const uid = val.isNew ? String(crypto.randomUUID()) : currentTrial.value.uid
+  const position = (trialsState.value?.length || 0) + 1
+
+  currentTrial.value = {
+    uid,
+    position,
+    target_id: nextTrial.value?.id || targetMembers.value[0].id,
+    prompt_id: null,
+    prompt_parent_id: null,
+    target_problem_behavior_id: null,
+    recorded_at: new Date().toISOString()
+  }
+
+  currentDisplay.value = 'select-prompt'
+  nextTrial.value = null
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `ta_next_trial`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.target?.name} [${currentTrial.value?.target_id}]`,
     timestamp: new Date().toISOString()
   })
 }
 
 const onUndoTrial = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
-  const results = Object.keys(resultsState.value).map((key) => ({
-    ...resultsState.value[key],
-    key
-  }))
 
-  let newTrial: Trial = {
-    key: 1,
-    target_id: 0,
-    prompt_id: 0,
+  currentTrial.value = {
+    uid: String(crypto.randomUUID()),
+    position: 1,
+    target_id: targetMembers.value[0].id,
+    prompt_id: null,
     prompt_parent_id: null,
-    target_problem_behavior_id: null
+    target_problem_behavior_id: null,
+    recorded_at: new Date().toISOString()
   }
-  if (results.length) {
-    newTrial = {
-      ...results[results.length - 1],
-      key: results.length
+
+  const trials = [...recordedTrials.value]
+  if (trials.length) {
+    const lastTrial = [...trials].pop()
+    if (lastTrial) {
+      currentTrial.value = {
+        uid: lastTrial.uid,
+        position: lastTrial.position,
+        target_id: lastTrial.target_id,
+        prompt_id: lastTrial.prompt_id,
+        prompt_parent_id: lastTrial.prompt_parent_id,
+        target_problem_behavior_id: lastTrial.target_problem_behavior_id,
+        recorded_at: new Date().toISOString()
+      }
     }
   }
-  currentTrial.value = newTrial
 
-  const index = ratioScores.value.findIndex((i) => i.target_id === newTrial.target_id)
-  nextTarget.value = ratioScores.value[index]
-  currentDisplay.value = 'reselect-task'
+  const index = trialScores.value.findIndex((i) => i.id === currentTrial.value?.target_id)
+  nextTrial.value = trialScores.value[index] || null
+  currentDisplay.value = 'reselect-trial'
 
   // record session activities
   await sessionStore.addSessionActivity({
     action_label: `ta_change_target`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
-    notes: `Target: ${props.measurement.target?.name}`,
+    notes: `Target: ${props.target?.name}`,
     timestamp: new Date().toISOString()
   })
 }
@@ -769,285 +593,255 @@ const onChangeForChoosePrompt = async () => {
     action_label: `ta_change_prompt`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
-    notes: `Target: ${props.measurement.target?.name}`,
+    notes: `Target: ${props.target?.name}`,
     timestamp: new Date().toISOString()
   })
 }
 
-const onTakeNextTrial = async (payload: { isNew: boolean }) => {
-  if (sessionStore.session?.status !== 'ongoing') return
-  const newKey = payload.isNew ? Number(currentTrial.value.key) + 1 : currentTrial.value.key
-  const newTrial: Trial = {
-    key: newKey,
-    target_id: nextTarget.value?.target_id,
-    prompt_id: 0,
-    prompt_parent_id: null,
-    target_problem_behavior_id: null
-  }
-  resultsState.value[newTrial.key] = {
-    key: newTrial.key,
-    target_id: newTrial.target_id || 0,
-    prompt_id: newTrial.prompt_id || 0,
-    prompt_parent_id: newTrial.prompt_parent_id || null,
-    target_problem_behavior_id: newTrial.target_problem_behavior_id || null
-  }
+const onOpenEditTrial = async (trial: MeasurementTrialModel) => {
+  isOpenEditTrial.value = true
+  currentTrial.value = trial
   currentDisplay.value = 'select-prompt'
-  currentTrial.value = newTrial
-  nextTarget.value = {}
-  generateRatioScores()
 
   // record session activities
   await sessionStore.addSessionActivity({
-    action_label: `ta_next_trial`,
+    action_label: `ta_open_edit_trial`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
-    notes: `Target: ${props.measurement.target?.name} [${newTrial.target_id}]`,
+    notes: `Target: ${props.target?.name}`,
     timestamp: new Date().toISOString()
   })
 }
 
-const onOpenEditTrial = async (key: Trial['key']) => {
-  let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key }
-  })
-  const index = results.findIndex((i) => Number(i.key) === Number(key))
-
-  if (index > -1) {
-    isOpenEditTrial.value = true
-    currentTrial.value = results[index]
-    currentDisplay.value = 'select-prompt'
-
-    isSaved.value = false
-
-    // record session activities
-    await sessionStore.addSessionActivity({
-      action_label: `ta_open_edit_trial`,
-      recordable: 'Measurement',
-      recordable_id: props.measurement.id,
-      notes: `Target: ${props.measurement.target?.name}`,
-      timestamp: new Date().toISOString()
-    })
-  }
-}
-
 const onCloseEditTrial = () => {
-  isSaved.value = true
   isOpenEditTrial.value = false
 }
 
-const onOpenDeleteTrial = async (key: Trial['key']) => {
-  let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key }
+const onOpenDeleteTrial = async (trial: MeasurementTrialModel) => {
+  deleteTrialUid.value = trial.uid
+
+  // record session activities
+  await sessionStore.addSessionActivity({
+    action_label: `ta_open_delete_trial`,
+    recordable: 'Measurement',
+    recordable_id: props.measurement.id,
+    notes: `Target: ${props.target?.name}`,
+    timestamp: new Date().toISOString()
   })
-  const index = results.findIndex((i) => Number(i.key) === Number(key))
-
-  if (index > -1) {
-    deleteTrialKey.value = key
-
-    // record session activities
-    await sessionStore.addSessionActivity({
-      action_label: `ta_open_delete_trial`,
-      recordable: 'Measurement',
-      recordable_id: props.measurement.id,
-      notes: `Target: ${props.measurement.target?.name}`,
-      timestamp: new Date().toISOString()
-    })
-  }
 }
 
 const onCancelDeleteTrial = async () => {
-  deleteTrialKey.value = null
+  deleteTrialUid.value = null
 
   // record session activities
   await sessionStore.addSessionActivity({
     action_label: `ta_cancel_delete_trial`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
-    notes: `Target: ${props.measurement.target?.name}`,
+    notes: `Target: ${props.target?.name}`,
     timestamp: new Date().toISOString()
   })
 }
 
-// onDeleteTrial dengan proper error handling
 const onDeleteTrial = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
-  if (submitLoading.value) return { success: false }
+  if (submitLoading.value) return
+  if (!deleteTrialUid.value) return
 
-  // Simpan state sebelumnya untuk rollback
-  const previousResults = { ...resultsState.value }
-
-  const key = deleteTrialKey.value
-  let results = Object.keys(resultsState.value).map((key) => {
-    return { ...resultsState.value[key], key } as Trial
-  })
-
-  results = results
-    .filter((i) => Number(i.key) !== Number(key))
-    .filter((i) => Number(i.prompt_id) && Number(i.target_id))
-    .map((i, idx) => ({
-      key: idx + 1,
-      prompt_id: i.prompt_id,
-      prompt_parent_id: i.prompt_parent_id,
-      target_id: i.target_id,
-      target_problem_behavior_id: i.target_problem_behavior_id
-    }))
-
-  const finalResults: Record<string, any> = {}
-
-  for (let idx = 0; idx < results.length; idx++) {
-    finalResults[idx + 1] = results[idx]
-  }
-
-  const payload: UpdateMeasurementResultsParams = {
+  const payload = {
     id: props.measurement.id,
-    params: { measurement: { results: finalResults } },
-    dataResult: { ...props.measurement, results: finalResults },
-    lastData: { ...props.measurement }
+    trial_id: deleteTrialUid.value
   }
-
-  submitLoading.value = true
 
   // record session activities
   await sessionStore.addSessionActivity({
     action_label: `ta_delete_trial`,
     recordable: 'Measurement',
-    recordable_id: props.measurement.id,
-    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: { measurement: { results: finalResults } },
-    notes: `Target: ${props.measurement.target?.name} [${key}]`,
+    recordable_id: payload.id,
+    api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
+    params: payload,
+    notes: `Target: ${props.target?.name} [${payload.trial_id}]`,
     timestamp: new Date().toISOString()
   })
 
-  try {
-    const { success, message, data } = await sessionStore.updateMeasurementResults(payload)
+  deleteTrialUidLoading.value = deleteTrialUid.value
+  const { success, data } = await sessionStore.deleteMeasurementTrial(payload)
+  deleteTrialUidLoading.value = null
+  isSaved.value = true
 
-    if (!success) {
-      resultsState.value = previousResults
-      toast.error(message || 'Failed to delete trial')
-      return
-    }
+  if (success) {
+    // Recalculate currentTrial based on remaining results
+    const measurement = data as Measurement
+    await assignTrialsState(measurement)
 
-    isSaved.value = true
-    resultsState.value = data.results
-    deleteTrialKey.value = null
+    deleteTrialUid.value = null
 
-    if (data._pendingSync) {
-      toast.info('Deleted offline, will sync automatically')
-    } else {
-      toast.success('Trial deleted')
-    }
-  } catch (error) {
-    console.error('Unexpected error in onDeleteTrial:', error)
-    resultsState.value = previousResults
-    toast.error('Something went wrong. Please try again.')
-  } finally {
-    submitLoading.value = false
+    activeDisplay.value = 'select-prompt'
   }
 }
 
 const onSaveEditTrial = async () => {
   if (sessionStore.session?.status !== 'ongoing') return
+  if (!editTrial.value) return
+  if (!editTrial.value.prompt_id) return
+
+  // update trial by uid
+  const payload = {
+    id: props.measurement.id,
+    trial_id: editTrial.value.uid,
+    params: {
+      trial: {
+        prompt_id: editTrial.value.prompt_id,
+        prompt_parent_id: editTrial.value.prompt_parent_id,
+        target_problem_behavior_id: editTrial.value.target_problem_behavior_id
+      } as UpdateTrialTaskAnalysisParams
+    }
+  }
 
   // record session activities
   await sessionStore.addSessionActivity({
     action_label: `ta_update_trial`,
     recordable: 'Measurement',
     recordable_id: props.measurement.id,
-    api: `PATCH /api/v1/measurements/${props.measurement.id}`,
-    params: { measurement: { results: { [currentTrial.value.key]: currentTrial.value } } },
-    notes: `Target: ${props.measurement.target?.name}`,
+    api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
+    params: payload,
+    notes: `Target: ${props.target?.name} [${payload.trial_id}: ${editTrial.value.prompt_id}, ${editTrial.value.target_problem_behavior_id}]`,
     timestamp: new Date().toISOString()
   })
 
-  const { success } = await onSaveCurrentTrial()
-  if (!success) return
-  isOpenEditTrial.value = false
-  generateRatioScores()
+  submitLoading.value = true
+  const { success, data } = await sessionStore.updateMeasurementTrial(payload)
+  submitLoading.value = false
+  isSaved.value = true
+
+  if (success) {
+    const measurement = data as Measurement
+    await assignTrialsState(measurement)
+    editTrial.value = null
+    isOpenEditTrial.value = false
+  }
 }
+
+onMounted(async () => {
+  const trials = await assignTrialsState(props.measurement)
+
+  let position = 1
+  let id = targetMembers.value[0]?.id || 0
+
+  if (trials.length) {
+    const lastTrial = [...trials].pop()
+    if (lastTrial) {
+      position = trials.length + 1
+      const index = targetMembers.value.findIndex((i) => i.id === lastTrial.target_id)
+      if (index > -1 && index + 1 < targetMembers.value.length) {
+        id = targetMembers.value[index + 1].id
+      }
+    }
+  }
+
+  currentTrial.value = {
+    uid: String(crypto.randomUUID()),
+    position,
+    target_id: id,
+    prompt_id: null,
+    prompt_parent_id: null,
+    target_problem_behavior_id: null,
+    recorded_at: new Date().toISOString()
+  }
+})
+
+// Cleanup saat unmount
+onUnmounted(() => {
+  // Clear timeout to prevent memory leaks
+  if (collapseTimeout.value) {
+    clearTimeout(collapseTimeout.value)
+    collapseTimeout.value = undefined
+  }
+
+  // Trigger sync sebelum unmount jika ada perubahan
+  if (!isSaved.value && appStore.networkStatus.connected) {
+    sessionStore.triggerSync(true)
+  }
+})
 </script>
 
 <template>
-  <div
-    class="flex min-h-full flex-grow flex-col gap-2"
-    :class="[measurement.is_fixed ? '' : 'pb-16']"
-  >
-    <!-- ratio boxes -->
+  <div class="flex min-h-full grow flex-col gap-2" :class="[measurement.is_fixed ? '' : 'pb-16']">
+    <!-- Ratio Boxes -->
     <div
       v-if="!isCollapsed"
-      :id="`score-ratio-${measurement.id}`"
-      ref="ratioScoreContainer"
+      :id="`trial-score-${measurement.id}`"
+      ref="trialScoreContainer"
       class="scrollbar-hide flex w-full shrink-0 items-center gap-1 overflow-x-auto pb-2"
-      :class="[ratioScores.length > 6 ? 'justify-start' : 'justify-center']"
+      :class="[trialScores.length > 6 ? 'justify-start' : 'justify-center']"
     >
       <div
-        v-for="target in ratioScores"
-        :key="target.target_id"
-        :id="`score-ratio-${measurement.id}-${target.target_id}`"
+        v-for="member in trialScores"
+        :key="member.id"
+        :id="`trial-score-${measurement.id}-${member.id}`"
         class="relative flex h-10 w-10 shrink-0 flex-col-reverse items-center overflow-hidden rounded border transition-colors duration-300"
         :class="{
-          'border-slate-2 bg-slate-2':
-            target.count <= 0 && target.target_id !== currentTrial.target_id,
-          'border-prim-2 bg-prim-2':
-            target.count >= 1 && target.target_id !== currentTrial.target_id,
-          'border-light-purple-4 bg-prim-2': target.target_id === currentTrial.target_id
+          'border-slate-2 bg-slate-2': member.count <= 0 && member.id !== currentTrial?.target_id,
+          'border-prim-2 bg-prim-2': member.count >= 1 && member.id !== currentTrial?.target_id,
+          'border-light-purple-4 bg-prim-2': member.id === currentTrial?.target_id
         }"
       >
-        <div v-for="(ratio, idx) in target.ratios" :key="idx">
+        <div v-for="(ratio, idx) in member.trials" :key="idx">
           <div
             v-if="ratio.prompt_id"
             class="relative w-10 bg-prim-4"
             :style="{
-              height: 2.5 / target.max_ratio + 'rem'
+              height: 2.5 / (member.maxCount || 1) + 'rem'
             }"
           >
             <div
               v-if="ratio.target_problem_behavior_id"
               class="z-1 absolute right-0 top-0 h-full bg-tomato-6"
-              :style="{ width: '0.3125rem' }"
-            ></div>
+              :style="{ width: '0.375rem' }"
+            />
           </div>
         </div>
         <div
           class="absolute left-0 top-1/2 w-full -translate-y-1/2 text-center text-[10px] font-bold"
           :class="{
-            'text-slate-6': target.count === 0,
-            'text-dark-purple-1': target.count > 0 || target.target_id === currentTrial.target_id
+            'text-slate-6': member.count === 0,
+            'text-dark-purple-1': member.count > 0 || member.id === currentTrial?.target_id
           }"
         >
-          {{ isOpenTrialHistory ? `${target.average}%` : target.target_code }}
+          <template v-if="isOpenTrialHistory">
+            {{ member.count > 0 ? `${member.average}%` : '-' }}
+          </template>
+          <template v-else> {{ member.code_definition }} </template>
         </div>
       </div>
     </div>
 
-    <!-- select a value for new or edit trial -->
-    <div v-if="!isOpenTrialHistory || isOpenEditTrial" class="flex flex-grow flex-col">
-      <!-- header information for active trial -->
+    <!-- Active Trial Area -->
+    <div v-if="!isOpenTrialHistory || isOpenEditTrial" class="flex grow flex-col">
+      <!-- Header Info -->
       <div
-        class="flex shrink-0 items-center justify-between"
-        :class="{
-          'h-8': !isCollapsed,
-          'h-6': isCollapsed
-        }"
+        class="mb-2 flex shrink-0 items-center justify-between border-b border-slate-4 pb-2"
+        :class="[isCollapsed ? 'h-6' : 'h-8']"
       >
         <div class="flex items-center gap-1">
           <div class="text-sm text-slate-7">Current</div>
           <div class="text-sm font-semibold text-light-purple-5">
-            {{ currentTrialData.target.target_code }}
+            {{ currentRecordedTrial?.target?.code_definition }}
           </div>
           <div
-            v-if="currentDisplay === 'select-next-task' && !isOpenEditTrial"
+            v-if="currentDisplay === 'select-next-trial' && !isOpenEditTrial"
             class="text-sm font-semibold text-light-purple-5"
           >
-            | {{ currentTrialData.average }}%
+            | {{ currentRecordedTrial?.average }}%
           </div>
           <AppButton
             v-if="
               currentDisplay === 'select-prompt' &&
-              !currentTrial.prompt_id &&
+              !currentTrial?.prompt_id &&
               !isOpenEditTrial &&
               sessionStore.session?.status === 'ongoing'
             "
-            kind="plain"
+            kind="outline"
             size="sm"
             class="ml-2"
             @click="onUndoTrial"
@@ -1059,271 +853,250 @@ const onSaveEditTrial = async () => {
           <div v-if="submitLoading">
             <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
           </div>
+
           <div class="text-sm text-slate-7">Trial</div>
           <div class="text-sm font-semibold text-light-purple-5">
             <span v-if="sessionStore.session?.status === 'completed'">
-              {{ Math.max(0, Object.keys(resultsState).length - 1) }}
+              {{ Math.max(0, trialsState.filter((i) => i.prompt_id).length) }}
             </span>
-            <span v-else>
-              {{ currentTrial.key }}
-            </span>
+            <span v-else> {{ currentRecordedTrial?.position }} </span>
           </div>
         </div>
       </div>
 
-      <div v-if="!isOpenProblemBehavior" class="flex flex-grow flex-col justify-center">
-        <!-- select a prompt -->
+      <!-- select a prompt -->
+      <div
+        v-if="!isOpenProblemBehavior && currentDisplay === 'select-prompt'"
+        class="flex grow flex-col items-center justify-center"
+      >
         <div
-          v-if="currentDisplay === 'select-prompt'"
-          class="flex h-full flex-col content-center items-center justify-center gap-2"
+          :id="`ta-scroll-${measurement.id}`"
+          class="scrolling-touch flex w-full max-w-72 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2"
+          dir="ltr"
+          @scroll="onScroll"
         >
           <div
-            :id="`ta-scroll-${measurement.id}`"
-            class="scrolling-touch flex w-full max-w-72 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2"
-            dir="ltr"
-            @scroll="onScroll"
+            v-for="(promptBoxes, idx) in promptBoxesPages"
+            :key="`${measurement.id}-ta-prompt-boxes-${idx + 1}`"
+            :id="`${measurement.id}-ta-prompt-boxes-${idx + 1}`"
+            class="flex w-full shrink-0 snap-center justify-center"
           >
             <div
-              v-for="(promptBoxes, idx) in promptBoxesPages"
-              :key="`${measurement.id}-ta-prompt-boxes-${idx + 1}`"
-              :id="`${measurement.id}-ta-prompt-boxes-${idx + 1}`"
-              class="flex w-full shrink-0 snap-center justify-center"
+              class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
+              :class="{ '-translate-y-1 scale-75': isCollapsed }"
             >
-              <div
-                class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
-                :class="{ '-translate-y-1 scale-75': isCollapsed }"
-              >
-                <div v-for="(prompt, promptIdx) in promptBoxes" :key="promptIdx">
-                  <div
-                    class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl border transition-all duration-300 hover:brightness-95"
-                    :class="{
-                      'brightness-75 ': prompt.id === currentTrial.prompt_id,
-                      'border ': prompt.id !== currentTrial.prompt_id
-                    }"
-                    :style="{
-                      backgroundColor: promptColors[prompt.color || '']?.primaryColor,
-                      borderColor: promptColors[prompt.color || '']?.secondaryColor
-                    }"
-                    @click="onChoosePrompt(prompt)"
-                  >
-                    <div
-                      class="text-[2rem] font-bold"
-                      :style="{ color: promptColors[prompt.color || '']?.textColor }"
-                    >
-                      {{ prompt.abbreviation }}
-                    </div>
+              <div v-for="(prompt, promptIdx) in promptBoxes" :key="promptIdx">
+                <div
+                  class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl border transition-all duration-300 hover:brightness-95"
+                  :class="{
+                    'pointer-events-none opacity-50': submitLoading,
+                    'hover:brightness-90 active:scale-95':
+                      sessionStore.session?.status === 'ongoing' && !submitLoading,
+                    'brightness-90 ': prompt.id === currentTrial?.prompt_id
+                  }"
+                  :style="{
+                    backgroundColor: promptColors[prompt.color || '']?.primaryColor,
+                    borderColor: promptColors[prompt.color || '']?.secondaryColor,
+                    color: promptColors[prompt.color || '']?.textColor
+                  }"
+                  @click="onChoosePrompt(prompt)"
+                >
+                  <div class="text-[2rem] font-bold">
+                    {{ prompt.abbreviation }}
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div v-if="pageCount > 1" class="flex h-3 items-center justify-center gap-2">
-            <div
-              v-for="(n, idx) in pageCount"
-              :key="idx"
-              :class="{ 'bg-slate-7': n === page, 'bg-slate-4': n !== page }"
-              class="h-3 w-3 rounded-full transition-colors duration-300"
-            ></div>
-          </div>
         </div>
-
-        <!-- select a next task / reselect task -->
-        <div
-          v-if="currentDisplay === 'select-next-task' || currentDisplay === 'reselect-task'"
-          class="flex flex-grow flex-col content-center items-center justify-center"
-          :class="{
-            'gap-4': !isCollapsed,
-            'gap-2': isCollapsed
-          }"
-        >
+        <div v-if="pageCount > 1" class="flex h-3 items-center justify-center gap-2">
           <div
-            v-if="
-              currentDisplay === 'select-next-task' &&
-              (Object.keys(resultsState).length > 1 || currentTrial.prompt_id)
-            "
-            class="flex items-center text-center"
+            v-for="(n, idx) in pageCount"
+            :key="idx"
+            class="h-3 w-3 rounded-full transition-colors duration-300"
+            :class="[n === page ? 'bg-slate-7' : 'bg-slate-4']"
+          />
+        </div>
+      </div>
+
+      <!-- select a next task / reselect task -->
+      <div
+        v-if="
+          !isOpenProblemBehavior &&
+          (currentDisplay === 'select-next-trial' || currentDisplay === 'reselect-trial')
+        "
+        class="flex grow flex-col content-center items-center justify-center"
+        :class="[isCollapsed ? 'gap-2' : 'gap-4']"
+      >
+        <div
+          v-if="trialsState.length > 1 || currentTrial?.prompt_id"
+          class="flex items-center text-center"
+          :class="[isCollapsed ? 'flex-row gap-2' : 'flex-col gap-1']"
+        >
+          <div class="text-sm font-semibold text-slate-7">
+            {{ currentRecordedTrial?.prompt?.name }}
+          </div>
+          <div
+            v-if="currentRecordedTrial?.prompt?.score"
+            class="text-light-purple-4"
             :class="{
-              'flex-col gap-1': !isCollapsed,
-              'flex-row gap-2': isCollapsed
+              'text-5xl font-bold': !isCollapsed,
+              'text-sm font-semibold': isCollapsed
             }"
           >
-            <span class="text-sm font-semibold text-slate-7">
-              {{ currentTrialData.prompt.name }}
-            </span>
-            <span
-              class="text-light-purple-4"
-              :class="{
-                'text-5xl font-bold': !isCollapsed,
-                'text-sm font-semibold': isCollapsed
-              }"
-            >
-              {{ currentTrialData.prompt.score }}%
-            </span>
-            <AppButton v-if="!isCollapsed" kind="plain" size="sm" @click="onChangeForChoosePrompt">
-              Change
-            </AppButton>
+            {{ currentRecordedTrial?.prompt?.score }}%
           </div>
-          <div class="flex w-full flex-col items-center gap-4 px-2">
-            <div v-if="!isCollapsed" class="text-center text-sm text-slate-8">
-              <span v-if="currentDisplay === 'select-next-task'"> Next </span>
-              <span v-if="currentDisplay === 'reselect-task'"> Select a target </span>
-            </div>
+          <AppButton v-if="!isCollapsed" kind="plain" size="sm" @click="onChangeForChoosePrompt">
+            Change
+          </AppButton>
+        </div>
+        <div class="flex w-full flex-col items-center gap-4 px-2">
+          <div v-if="!isCollapsed" class="text-center text-sm text-slate-8">
+            <span v-if="currentDisplay === 'select-next-trial'"> Next </span>
+            <span v-if="currentDisplay === 'reselect-trial'"> Select a target </span>
+          </div>
 
-            <div
-              class="scrollbar-hide flex w-full shrink-0 items-center overflow-x-auto pb-2"
-              :class="[ratioScores.length > 6 ? 'justify-start' : 'justify-center']"
-            >
-              <div class="flex w-max flex-col items-center gap-2">
-                <div class="flex gap-2">
-                  <AppButton
-                    v-for="target in ratioScoresRowA"
-                    :key="target.target_id"
-                    :kind="target.target_id === nextTarget?.target_id ? 'primary' : 'outline'"
-                    size="sm"
-                    class="shrink-0"
-                    @click="onChooseTarget(target)"
-                  >
-                    {{ target.target_code }} | {{ target.count + 1 }}
-                  </AppButton>
-                </div>
-                <div class="flex gap-2">
-                  <AppButton
-                    v-for="target in ratioScoresRowB"
-                    :key="target.target_id"
-                    :kind="target.target_id === nextTarget?.target_id ? 'primary' : 'outline'"
-                    size="sm"
-                    class="shrink-0"
-                    @click="onChooseTarget(target)"
-                  >
-                    {{ target.target_code }} | {{ target.count + 1 }}
-                  </AppButton>
-                </div>
+          <div
+            class="scrollbar-hide flex w-full shrink-0 items-center overflow-x-auto pb-2"
+            :class="[trialScores.length > 6 ? 'justify-start' : 'justify-center']"
+          >
+            <div class="flex w-max flex-col items-center gap-2">
+              <div class="flex gap-2">
+                <AppButton
+                  v-for="member in trialScoresRowA"
+                  :key="member.id"
+                  :kind="member.id === nextTrial?.id ? 'primary' : 'outline'"
+                  size="sm"
+                  class="shrink-0"
+                  @click="onChooseTarget(member)"
+                >
+                  {{ member.code_definition }} | {{ member.count + 1 }}
+                </AppButton>
+              </div>
+              <div class="flex gap-2">
+                <AppButton
+                  v-for="member in trialScoresRowB"
+                  :key="member.id"
+                  :kind="member.id === nextTrial?.id ? 'primary' : 'outline'"
+                  size="sm"
+                  class="shrink-0"
+                  @click="onChooseTarget(member)"
+                >
+                  {{ member.code_definition }} | {{ member.count + 1 }}
+                </AppButton>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- select a problem behavior -->
+      <!-- Problem Behaviors -->
       <div
         v-if="isOpenProblemBehavior"
-        class="flex w-full flex-grow flex-col content-center items-center justify-center"
-        :class="{
-          'gap-2': !isCollapsed
-        }"
+        class="flex w-full grow flex-col content-center items-center justify-center"
+        :class="{ 'gap-2': !isCollapsed }"
       >
         <div
           class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
           :class="{ '-translate-y-1 scale-75': isCollapsed }"
         >
-          <div v-for="(problemBehavior, idx) in TAProblemBehaviors" :key="idx">
+          <div v-for="(pb, idx) in problemBehaviors" :key="idx">
             <div
               class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-colors duration-300 hover:brightness-90"
-              :class="{
-                'h-[72px] w-[72px]': !isCollapsed,
-                'h-[64px] w-[64px]': isCollapsed,
-                'bg-tomato-7': problemBehavior.id === currentTrial.target_problem_behavior_id,
-                'bg-tomato-1': problemBehavior.id !== currentTrial.target_problem_behavior_id
-              }"
-              @click="onChooseProblemBehavior(problemBehavior)"
+              :class="[
+                isCollapsed ? 'h-[64px] w-[64px]' : 'h-[72px] w-[72px]',
+                pb.id === currentTrial?.target_problem_behavior_id
+                  ? 'bg-tomato-7 text-white'
+                  : 'bg-tomato-1 text-tomato-7'
+              ]"
+              @click="onChooseProblemBehavior(pb)"
             >
-              <span
-                class="text-[2rem] font-bold"
-                :class="{
-                  'text-white': problemBehavior.id === currentTrial.target_problem_behavior_id,
-                  'text-tomato-7': problemBehavior.id !== currentTrial.target_problem_behavior_id
-                }"
-              >
-                {{ problemBehavior.code }}
-              </span>
+              <div class="text-[2rem] font-bold">{{ pb.code }}</div>
             </div>
           </div>
         </div>
-        <div class="text-sm text-slate-8">
-          {{ currentTrialData.problem_behavior.code_definition }}
+        <div class="px-4 text-center text-sm text-slate-8">
+          {{ currentRecordedTrial?.problemBehavior?.code_definition }}
         </div>
       </div>
     </div>
 
-    <!-- view trial history -->
+    <!-- Trial History -->
+
     <div v-if="isOpenTrialHistory && !isOpenEditTrial" class="flex grow flex-col">
-      <div v-for="key in Object.keys(resultsState)" :key="key">
+      <div v-for="(trial, idx) in recordedTrials" :key="trial.uid">
         <div
-          v-if="resultsState[key].prompt_id"
+          v-if="trial.prompt_id"
           class="flex items-center justify-between border-b border-slate-3 px-2 py-3"
         >
           <div class="flex items-center gap-2">
-            <div class="w-6 shrink-0 text-sm text-slate-8">{{ key }}.</div>
+            <div class="w-6 shrink-0 text-sm text-slate-8">{{ idx + 1 }}.</div>
             <div class="tex-sm font-semibold text-slate-7">
-              {{ getCode(resultsState[key].target_id, 'target') }}
+              {{ trial.target?.code_definition }}
             </div>
           </div>
           <div class="flex items-center gap-2">
             <div
-              v-if="resultsState[key].target_problem_behavior_id"
-              class="flex h-6 w-6 items-center justify-center rounded bg-tomato-7"
+              v-if="trial.target_problem_behavior_id"
+              class="flex h-6 w-6 items-center justify-center rounded bg-tomato-7 text-sm font-semibold text-white"
             >
-              <span class="text-sm font-semibold text-white">
-                {{ getCode(resultsState[key].target_problem_behavior_id, 'problem_behavior') }}
-              </span>
+              {{ trial.problemBehavior?.code }}
             </div>
             <div
-              class="flex h-6 w-6 items-center justify-center rounded"
+              class="flex h-6 w-6 items-center justify-center rounded text-sm font-semibold"
               :style="{
-                backgroundColor: promptColors[getColor(resultsState[key].prompt_id)].primaryColor,
-                borderColor: promptColors[getColor(resultsState[key].prompt_id)].secondaryColor,
-                color: promptColors[getColor(resultsState[key].prompt_id)].textColor
+                backgroundColor: promptColors[trial.prompt?.color || ''].primaryColor,
+                borderColor: promptColors[trial.prompt?.color || ''].secondaryColor,
+                color: promptColors[trial.prompt?.color || ''].textColor
               }"
             >
-              <span class="text-sm font-semibold">
-                {{ getCode(resultsState[key].prompt_id, 'prompt') }}
-              </span>
+              {{ trial.prompt?.abbreviation }}
             </div>
 
-            <div v-if="submitLoading">
-              <Icon
-                icon="mingcute:loading-fill"
-                class="animate-spin text-2xl text-light-purple-5"
-              />
-            </div>
-            <div
-              v-else-if="deleteTrialKey === key && sessionStore.session?.status !== 'completed'"
-              class="flex items-center gap-2"
-            >
-              <Icon icon="ph:check-bold" class="text-grass-6" @click="onDeleteTrial" />
-              <Icon icon="ph:x-bold" class="text-tomato-7" @click="onCancelDeleteTrial" />
-            </div>
-            <div
-              v-else-if="sessionStore.session?.status !== 'completed'"
-              class="flex items-center gap-2"
-            >
-              <Icon icon="ph:pencil-simple" class="text-slate-8" @click="onOpenEditTrial(key)" />
-              <Icon
-                v-if="Object.values(resultsState).filter((i: any) => i.target_id).length > 1"
-                icon="ph:trash"
-                class="text-tomato-7"
-                @click="onOpenDeleteTrial(key)"
-              />
+            <div v-if="sessionStore.session?.status !== 'completed'" class="ml-2 flex items-center">
+              <template v-if="deleteTrialUidLoading === trial.uid">
+                <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl" />
+              </template>
+              <template v-else-if="deleteTrialUid === trial.uid">
+                <Icon icon="ph:check-bold" class="text-grass-6" @click="onDeleteTrial" />
+                <Icon icon="ph:x-bold" class="text-tomato-7" @click="onCancelDeleteTrial" />
+              </template>
+              <template v-else>
+                <Icon
+                  icon="ph:pencil-simple"
+                  class="text-slate-8"
+                  @click="onOpenEditTrial(trial)"
+                />
+                <Icon
+                  v-if="trialsState.filter((i: any) => i.target_task_id).length > 1"
+                  icon="ph:trash"
+                  class="text-tomato-7"
+                  @click="onOpenDeleteTrial(trial)"
+                />
+              </template>
             </div>
           </div>
         </div>
       </div>
       <div
-        v-if="Object.values(resultsState).filter((i: any) => i.prompt_id).length === 0"
+        v-if="trialsState.filter((i: any) => i.prompt_id).length === 0"
         class="py-4 text-center text-sm text-slate-8"
       >
         No result recorded yet.
       </div>
     </div>
 
+    <!-- Bottom Actions -->
     <div
       v-if="
-        !isCollapsed || currentDisplay === 'select-next-task' || currentDisplay === 'reselect-task'
+        !isCollapsed ||
+        currentDisplay === 'select-next-trial' ||
+        currentDisplay === 'reselect-trial'
       "
       class="bottom-0 flex h-16 items-center bg-white"
       :class="[measurement.is_fixed ? 'relative w-[calc(100%)]' : 'absolute w-[calc(100%-2rem)]']"
     >
-      <div v-if="isOpenProblemBehavior" class="flex-grow">
+      <div v-if="isOpenProblemBehavior" class="grow">
         <AppButton
           kind="outline"
           class="w-full"
@@ -1334,7 +1107,7 @@ const onSaveEditTrial = async () => {
           Back to result
         </AppButton>
       </div>
-      <div v-else-if="isOpenTrialHistory && !isOpenEditTrial" class="flex-grow">
+      <div v-else-if="isOpenTrialHistory && !isOpenEditTrial" class="grow">
         <AppButton
           kind="outline"
           class="w-full"
@@ -1347,19 +1120,19 @@ const onSaveEditTrial = async () => {
       </div>
       <div
         v-else-if="
-          nextTarget?.target_code && currentDisplay === 'reselect-task' && !isOpenEditTrial
+          nextTrial?.code_definition && currentDisplay === 'reselect-trial' && !isOpenEditTrial
         "
-        class="flex-grow"
+        class="grow"
       >
         <AppButton
           class="w-full"
           :loading="submitLoading"
-          @click="onTakeNextTrial({ isNew: false })"
+          @click="onTakeNextTrial({ isNew: trialsState.length > 1 || !!currentTrial?.prompt_id })"
         >
-          <span v-if="Object.keys(resultsState).length > 1 || currentTrial.prompt_id">
-            Next: {{ nextTarget?.target_code }} | {{ nextTarget?.count + 1 }}
+          <span v-if="trialsState.length > 1 || !!currentTrial?.prompt_id">
+            Next: {{ nextTrial?.code_definition }} | {{ nextTrial?.count + 1 }}
           </span>
-          <span v-else> Start trial: {{ nextTarget?.target_code }} </span>
+          <span v-else> Start trial: {{ nextTrial?.code_definition }} </span>
         </AppButton>
       </div>
       <div v-else class="flex w-full shrink-0 items-center justify-between gap-3">
@@ -1370,7 +1143,7 @@ const onSaveEditTrial = async () => {
           :disabled="submitLoading"
           @click="onOpenTrialHistory"
         >
-          <Icon icon="material-symbols:menu-rounded" class="text-xl" />
+          <Icon icon="ph:list" class="text-xl" />
         </AppButton>
         <AppButton
           v-if="isOpenEditTrial && !isCollapsed"
@@ -1379,46 +1152,41 @@ const onSaveEditTrial = async () => {
           :disabled="submitLoading"
           @click="onCloseEditTrial"
         >
-          <Icon icon="material-symbols:menu-rounded" class="text-xl" />
+          <Icon icon="ph:x" class="text-xl" />
         </AppButton>
 
         <div
           v-if="
-            nextTarget?.target_code && currentDisplay === 'select-next-task' && !isOpenEditTrial
+            nextTrial?.code_definition && currentDisplay === 'select-next-trial' && !isOpenEditTrial
           "
-          class="flex-grow"
+          class="grow"
         >
           <AppButton
             class="w-full"
             :loading="submitLoading"
             @click="onTakeNextTrial({ isNew: true })"
           >
-            Next: {{ nextTarget?.target_code }} | {{ nextTarget?.count + 1 }}
+            Next: {{ nextTrial?.code_definition }} | {{ nextTrial?.count + 1 }}
           </AppButton>
         </div>
-        <div v-if="isOpenEditTrial" class="flex-grow">
+        <div v-if="isOpenEditTrial" class="grow">
           <AppButton class="w-full" :loading="submitLoading" @click="onSaveEditTrial">
             Update
           </AppButton>
         </div>
         <div
-          v-if="target.enable_problem_behavior && currentTrial.prompt_id"
+          v-if="enableProblemBehavior && currentTrial?.prompt_id"
           class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-colors duration-300 hover:brightness-90"
-          :class="{
-            'bg-tomato-2': !currentTrial.target_problem_behavior_id,
-            'bg-tomato-7': currentTrial.target_problem_behavior_id
-          }"
+          :class="[
+            currentTrial.target_problem_behavior_id
+              ? 'bg-tomato-7 text-white'
+              : 'bg-tomato-2 text-tomato-7 hover:bg-tomato-3'
+          ]"
           @click="onOpenProblemBehavior"
         >
-          <span
-            class="text-sm font-semibold"
-            :class="{
-              'text-tomato-7': !currentTrial.target_problem_behavior_id,
-              'text-white': currentTrial.target_problem_behavior_id
-            }"
-          >
-            {{ currentTrialData.problem_behavior.code }}
-          </span>
+          <div class="text-sm font-semibold">
+            {{ currentRecordedTrial?.problemBehavior?.code || 'R' }}
+          </div>
         </div>
       </div>
     </div>

@@ -48,16 +48,16 @@ const buttonClass: Record<string, Record<string, { base: string; loading: string
       loading: '!border-error !bg-error'
     },
     slate: {
-      base: 'border border-slate-8 bg-slate-8 text-white hover:bg-slate-10 active:ring-2 active:ring-offset-2 active:ring-slate-10',
-      loading: '!border-slate-2 !bg-slate-2'
+      base: 'border border-slate-7 bg-slate-7 text-white hover:bg-slate-9 active:ring-2 active:ring-offset-2 active:ring-slate-9',
+      loading: '!border-slate-4 !bg-slate-4'
     },
     cornflower: {
-      base: 'border border-cornflower-8 bg-cornflower-8 text-white hover:bg-cornflower-10 active:ring-2 active:ring-offset-2 active:ring-cornflower-10',
-      loading: '!border-cornflower-2 !bg-cornflower-2'
+      base: 'border border-cornflower-7 bg-cornflower-7 text-white hover:bg-cornflower-9 active:ring-2 active:ring-offset-2 active:ring-cornflower-9',
+      loading: '!border-cornflower-4 !bg-cornflower-4'
     },
     lime: {
-      base: 'border border-lime-8 bg-lime-8 text-white hover:bg-lime-10 active:ring-2 active:ring-offset-2 active:ring-lime-10',
-      loading: '!border-lime-2 !bg-lime-2'
+      base: 'border border-lime-7 bg-lime-7 text-white hover:bg-lime-9 active:ring-2 active:ring-offset-2 active:ring-lime-9',
+      loading: '!border-lime-4 !bg-lime-4'
     },
     white: {
       base: 'border border-white bg-white text-light-purple-5 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-light-purple-2',
@@ -65,19 +65,19 @@ const buttonClass: Record<string, Record<string, { base: string; loading: string
     },
     grass: {
       base: 'border border-grass-7 bg-grass-7 text-white hover:bg-grass-9 active:ring-2 active:ring-offset-2 active:ring-grass-2',
-      loading: '!border-grass-2 !bg-grass-2'
+      loading: '!border-grass-4 !bg-grass-4'
     },
     tomato: {
       base: 'border border-tomato-7 bg-tomato-7 text-white hover:bg-tomato-9 active:ring-2 active:ring-offset-2 active:ring-tomato-4',
-      loading: '!border-tomato-2 !bg-tomato-2'
+      loading: '!border-tomato-4 !bg-tomato-4'
     },
     orange: {
       base: 'border border-orange-7 bg-orange-7 text-white hover:bg-orange-9 active:ring-2 active:ring-offset-2 active:ring-orange-2',
-      loading: '!border-orange-2 !bg-orange-2'
+      loading: '!border-orange-4 !bg-orange-4'
     },
     teal: {
       base: 'border border-teal-7 bg-teal-7 text-white hover:bg-teal-9 active:ring-2 active:ring-offset-2 active:ring-teal-2',
-      loading: '!border-teal-2 !bg-teal-2'
+      loading: '!border-teal-4 !bg-teal-4'
     }
   },
   outline: {
@@ -90,36 +90,36 @@ const buttonClass: Record<string, Record<string, { base: string; loading: string
       loading: '!border-error !text-error'
     },
     slate: {
-      base: 'border border-slate-4 bg-white text-slate-8 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-slate-10',
+      base: 'border border-slate-4 bg-white text-slate-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-slate-9',
       loading: '!border-slate !text-slate'
     },
     cornflower: {
-      base: 'border border-slate-4 bg-white text-cornflower-8 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-cornflower-2',
-      loading: '!border-cornflower-11 !text-cornflower-11'
+      base: 'border border-slate-4 bg-white text-cornflower-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-cornflower-9',
+      loading: '!border-cornflower-4 !text-cornflower-4'
     },
     lime: {
-      base: 'border border-slate-4 bg-white text-lime-8 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-lime-10',
-      loading: '!border-lime-11 !text-lime-11'
+      base: 'border border-slate-4 bg-white text-lime-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-lime-9',
+      loading: '!border-lime-4 !text-lime-4'
     },
     white: {
       base: 'border border-white bg-white text-light-purple-5 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-light-purple-2',
       loading: '!border-light-purple-5 !bg-light-purple-5'
     },
     grass: {
-      base: 'border border-slate-4 bg-white text-grass-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-grass-2',
-      loading: '!border-grass-7 !text-grass-7'
+      base: 'border border-slate-4 bg-white text-grass-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-grass-9',
+      loading: '!border-grass-4 !text-grass-4'
     },
     tomato: {
-      base: 'border border-slate-4 bg-white text-tomato-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-tomato-4',
-      loading: '!border-tomato-7 !text-tomato-7'
+      base: 'border border-slate-4 bg-white text-tomato-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-tomato-9',
+      loading: '!border-tomato-4 !text-tomato-4'
     },
     orange: {
-      base: 'border border-slate-4 bg-white text-orange-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-orange-2',
-      loading: '!border-orange-7 !text-orange-7'
+      base: 'border border-slate-4 bg-white text-orange-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-orange-9',
+      loading: '!border-orange-4 !text-orange-4'
     },
     teal: {
-      base: 'border border-slate-4 bg-white text-teal-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-teal-2',
-      loading: '!border-teal-7 !text-teal-7'
+      base: 'border border-slate-4 bg-white text-teal-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-teal-9',
+      loading: '!border-teal-4 !text-teal-4'
     }
   },
   plain: {
@@ -132,35 +132,35 @@ const buttonClass: Record<string, Record<string, { base: string; loading: string
       loading: '!text-error-4'
     },
     slate: {
-      base: 'bg-transparent text-slate-8 hover:bg-hover-state',
-      loading: '!text-slate-8'
+      base: 'bg-transparent text-slate-11 hover:bg-hover-state',
+      loading: '!text-slate-7'
     },
     cornflower: {
-      base: 'bg-transparent text-cornflower hover:bg-hover-state',
-      loading: '!text-cornflower-8'
+      base: 'bg-transparent text-cornflower-11 hover:bg-hover-state',
+      loading: '!text-cornflower-7'
     },
     lime: {
-      base: 'bg-transparent text-lime-8 hover:bg-hover-state',
-      loading: '!text-lime-8'
+      base: 'bg-transparent text-lime-11 hover:bg-hover-state',
+      loading: '!text-lime-7'
     },
     white: {
       base: 'bg-transparent text-white hover:bg-hover-state',
       loading: '!text-white'
     },
     grass: {
-      base: 'bg-transparent text-grass-7 hover:bg-hover-state',
+      base: 'bg-transparent text-grass-11 hover:bg-hover-state',
       loading: '!text-grass-7'
     },
     tomato: {
-      base: 'bg-transparent text-tomato-7 hover:bg-hover-state',
+      base: 'bg-transparent text-tomato-11 hover:bg-hover-state',
       loading: '!text-tomato-7'
     },
     orange: {
-      base: 'bg-transparent text-orange-7 hover:bg-hover-state',
+      base: 'bg-transparent text-orange-11 hover:bg-hover-state',
       loading: '!text-orange-7'
     },
     teal: {
-      base: 'bg-transparent text-teal-7 hover:bg-hover-state',
+      base: 'bg-transparent text-teal-11 hover:bg-hover-state',
       loading: '!text-teal-7'
     }
   }
@@ -185,7 +185,7 @@ const mergedClass = computed<string>(() => {
 
 <template>
   <button
-    class="flex relative gap-2 justify-center items-center text-sm font-semibold rounded border"
+    class="relative flex items-center justify-center gap-2 rounded border text-sm font-semibold"
     :class="[mergedClass]"
     :disabled="disabled || loading"
     @click="emit('click')"

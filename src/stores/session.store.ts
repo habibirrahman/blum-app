@@ -1444,14 +1444,13 @@ export const useSessionStore = defineStore('session', {
         this.setSessionMeasurement(res?.data, { isComment: payload.isComment })
 
         // record session activities
-        const appStore = useAppStore()
         this.addSessionActivity({
           action_label: 'api_success',
           recordable: 'Measurement',
           recordable_id: payload.id,
           api: `PATCH /api/v1/measurements/${payload.id}`,
           params: payload.params,
-          notes: `[${appStore.currentUser?.email}] Success update measurement`,
+          notes: `Success update measurement`,
           timestamp: new Date().toISOString()
         })
 
@@ -1461,14 +1460,13 @@ export const useSessionStore = defineStore('session', {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
-          const appStore = useAppStore()
           this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: payload.id,
             api: `PATCH /api/v1/measurements/${payload.id}`,
             params: payload.params,
-            notes: `[${appStore.currentUser?.email}] ${message}`,
+            notes: `${message}`,
             timestamp: new Date().toISOString()
           })
 
@@ -1529,7 +1527,6 @@ export const useSessionStore = defineStore('session', {
         // Tambahkan retry logic dengan exponential backoff
         let lastError: any
         const maxRetries = 2
-        const appStore = useAppStore()
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
@@ -1549,7 +1546,7 @@ export const useSessionStore = defineStore('session', {
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}`,
               params: payload.params,
-              notes: `[${appStore.currentUser?.email}] Success update measurement [attempt: ${attempt + 1}]`,
+              notes: `Success update measurement [attempt: ${attempt + 1}]`,
               timestamp: new Date().toISOString()
             })
 
@@ -1586,7 +1583,7 @@ export const useSessionStore = defineStore('session', {
                 recordable_id: payload.id,
                 api: `PATCH /api/v1/measurements/${payload.id}`,
                 params: payload.params,
-                notes: `[${appStore.currentUser?.email}] Failed, timeout [attempt: ${attempt + 1}]`,
+                notes: `Failed, timeout [attempt: ${attempt + 1}]`,
                 timestamp: new Date().toISOString()
               })
               console.log(`[updateMeasurementResults] Retry ${attempt + 1}/${maxRetries}`)
@@ -1638,14 +1635,13 @@ export const useSessionStore = defineStore('session', {
         if (isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
             // record session activities
-            const appStore = useAppStore()
             this.addSessionActivity({
               action_label: 'api_failed',
               recordable: 'Measurement',
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}`,
               params: payload.params,
-              notes: `[${appStore.currentUser?.email}] Slow connection. Data will be saved automatically.`,
+              notes: `Slow connection. Data will be saved automatically.`,
               timestamp: new Date().toISOString()
             })
 
@@ -1659,14 +1655,13 @@ export const useSessionStore = defineStore('session', {
           // Handle conflict (409)
           if (error.response?.status === 409) {
             // record session activities
-            const appStore = useAppStore()
             this.addSessionActivity({
               action_label: 'api_failed',
               recordable: 'Measurement',
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}`,
               params: payload.params,
-              notes: `[${appStore.currentUser?.email}] Data was changed by another user. Please refresh.`,
+              notes: `Data was changed by another user. Please refresh.`,
               timestamp: new Date().toISOString()
             })
 
@@ -1680,14 +1675,13 @@ export const useSessionStore = defineStore('session', {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
-          const appStore = useAppStore()
           this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: payload.id,
             api: `PATCH /api/v1/measurements/${payload.id}`,
             params: payload.params,
-            notes: `[${appStore.currentUser?.email}] ${message}`,
+            notes: `${message}`,
             timestamp: new Date().toISOString()
           })
 
@@ -1746,7 +1740,6 @@ export const useSessionStore = defineStore('session', {
         // Tambahkan retry logic dengan exponential backoff
         let lastError: any
         const maxRetries = 2
-        const appStore = useAppStore()
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
@@ -1766,7 +1759,7 @@ export const useSessionStore = defineStore('session', {
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
               params: payload.params,
-              notes: `[${appStore.currentUser?.email}] Success update measurement results [attempt: ${attempt + 1}]`,
+              notes: `Success update measurement results [attempt: ${attempt + 1}]`,
               timestamp: new Date().toISOString()
             })
 
@@ -1798,7 +1791,7 @@ export const useSessionStore = defineStore('session', {
                 recordable_id: payload.id,
                 api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
                 params: payload.params,
-                notes: `[${appStore.currentUser?.email}] Failed, timeout [attempt: ${attempt + 1}]`,
+                notes: `Failed, timeout [attempt: ${attempt + 1}]`,
                 timestamp: new Date().toISOString()
               })
               console.log(`[updateMeasurementResultsV2] Retry ${attempt + 1}/${maxRetries}`)
@@ -1850,14 +1843,13 @@ export const useSessionStore = defineStore('session', {
         if (isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
             // record session activities
-            const appStore = useAppStore()
             this.addSessionActivity({
               action_label: 'api_failed',
               recordable: 'Measurement',
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
               params: payload.params,
-              notes: `[${appStore.currentUser?.email}] Slow connection. Data will be saved automatically.`,
+              notes: `Slow connection. Data will be saved automatically.`,
               timestamp: new Date().toISOString()
             })
 
@@ -1871,14 +1863,13 @@ export const useSessionStore = defineStore('session', {
           // Handle conflict (409)
           if (error.response?.status === 409) {
             // record session activities
-            const appStore = useAppStore()
             this.addSessionActivity({
               action_label: 'api_failed',
               recordable: 'Measurement',
               recordable_id: payload.id,
               api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
               params: payload.params,
-              notes: `[${appStore.currentUser?.email}] Data was changed by another user. Please refresh.`,
+              notes: `Data was changed by another user. Please refresh.`,
               timestamp: new Date().toISOString()
             })
 
@@ -1892,14 +1883,13 @@ export const useSessionStore = defineStore('session', {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
-          const appStore = useAppStore()
           this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: payload.id,
             api: `PATCH /api/v1/measurements/${payload.id}/update_results`,
             params: payload.params,
-            notes: `[${appStore.currentUser?.email}] ${message}`,
+            notes: `${message}`,
             timestamp: new Date().toISOString()
           })
 
@@ -1933,14 +1923,13 @@ export const useSessionStore = defineStore('session', {
         this.setSessionMeasurement(res?.data)
 
         // record session activities
-        const appStore = useAppStore()
         this.addSessionActivity({
           action_label: 'api_success',
           recordable: 'Measurement',
           recordable_id: payload.id,
           api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
           params: payload.params,
-          notes: `[${appStore.currentUser?.email}] Success update measurement trial`,
+          notes: `Success update measurement trial`,
           timestamp: new Date().toISOString()
         })
 
@@ -1950,14 +1939,13 @@ export const useSessionStore = defineStore('session', {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
-          const appStore = useAppStore()
           this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: payload.id,
             api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
             params: payload.params,
-            notes: `[${appStore.currentUser?.email}] ${message}`,
+            notes: `${message}`,
             timestamp: new Date().toISOString()
           })
 
@@ -2042,14 +2030,13 @@ export const useSessionStore = defineStore('session', {
         this.setSessionMeasurement(res?.data)
 
         // record session activities
-        const appStore = useAppStore()
         this.addSessionActivity({
           action_label: 'api_success',
           recordable: 'Measurement',
           recordable_id: payload.id,
           api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
           params: {},
-          notes: `[${appStore.currentUser?.email}] Success delete measurement trial`,
+          notes: `Success delete measurement trial`,
           timestamp: new Date().toISOString()
         })
 
@@ -2059,14 +2046,13 @@ export const useSessionStore = defineStore('session', {
           const message = getErrorMessage(error.response?.data?.error || error?.message)
 
           // record session activities
-          const appStore = useAppStore()
           this.addSessionActivity({
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: payload.id,
             api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
             params: {},
-            notes: `[${appStore.currentUser?.email}] ${message}`,
+            notes: `${message}`,
             timestamp: new Date().toISOString()
           })
 

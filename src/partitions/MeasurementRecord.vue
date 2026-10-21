@@ -8,9 +8,7 @@ import {
   type Measurement,
   type Target,
   type TargetType,
-  type MeasurementFrequency,
-  type MeasurementTaskAnalysis,
-  type MeasurementSbt
+  type MeasurementFrequency
 } from '@/lib/types'
 import AppToggle from '@/components/AppToggle.vue'
 import { getRandomString, getTargetTasks, getTargetType } from '@/lib/func'
@@ -589,7 +587,6 @@ onUnmounted(() => {
             <SkillBasedTreatment
               v-if="measurementType.includes('Sbt') && measurement?.target"
               :measurement="measurement"
-              :measurement-results="measurementResults as MeasurementSbt['results']"
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
@@ -599,7 +596,6 @@ onUnmounted(() => {
             <TaskAnalysis
               v-if="measurementType.includes('Prompting') && measurement.target?.is_group"
               :measurement="measurement"
-              :measurement-results="measurementResults as MeasurementTaskAnalysis['results']"
               :target="measurement?.target"
               :is-collapsed="isCollapsed"
               @toggle-updated="onToggleUpdated($event)"
