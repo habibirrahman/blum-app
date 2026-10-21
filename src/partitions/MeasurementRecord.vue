@@ -9,7 +9,6 @@ import {
   type Target,
   type TargetType,
   type MeasurementFrequency,
-  type MeasurementDurationOrLatency,
   type MeasurementTaskAnalysis,
   type MeasurementSbt
 } from '@/lib/types'
@@ -527,7 +526,6 @@ onUnmounted(() => {
             <DurationLatency
               v-if="measurementType.includes('Duration') || measurementType.includes('Latency')"
               :measurement="measurement"
-              :measurement-results="measurementResults as MeasurementDurationOrLatency['results']"
               :is-collapsed="isCollapsed"
               :is-disabled-action="isDisabledAction"
               @toggle-updated="onToggleUpdated($event)"

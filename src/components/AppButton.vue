@@ -4,7 +4,17 @@ import { computed } from 'vue'
 interface Props {
   type?: 'button' | 'submit'
   kind?: 'primary' | 'outline' | 'plain'
-  color?: 'purple' | 'lime' | 'teal' | 'grass' | 'tomato' | 'slate'
+  color?:
+    | 'purple'
+    | 'error'
+    | 'slate'
+    | 'cornflower'
+    | 'lime'
+    | 'white'
+    | 'grass'
+    | 'tomato'
+    | 'orange'
+    | 'teal'
   size?: 'sm' | 'base' | 'lg'
   disabled?: boolean
   loading?: boolean
@@ -68,10 +78,6 @@ const buttonClass: Record<string, Record<string, { base: string; loading: string
     teal: {
       base: 'border border-teal-7 bg-teal-7 text-white hover:bg-teal-9 active:ring-2 active:ring-offset-2 active:ring-teal-2',
       loading: '!border-teal-2 !bg-teal-2'
-    },
-    prim: {
-      base: 'border border-light-purple-5 bg-light-purple-5 text-white hover:bg-dark-purple-2 active:ring-2 active:ring-offset-2 active:ring-light-purple-2',
-      loading: '!border-prim-2 !bg-prim-2'
     }
   },
   outline: {
@@ -89,11 +95,11 @@ const buttonClass: Record<string, Record<string, { base: string; loading: string
     },
     cornflower: {
       base: 'border border-slate-4 bg-white text-cornflower-8 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-cornflower-2',
-      loading: '!border-cornflower !text-cornflower'
+      loading: '!border-cornflower-11 !text-cornflower-11'
     },
     lime: {
       base: 'border border-slate-4 bg-white text-lime-8 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-lime-10',
-      loading: '!border-lime !text-lime'
+      loading: '!border-lime-11 !text-lime-11'
     },
     white: {
       base: 'border border-white bg-white text-light-purple-5 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-light-purple-2',
@@ -114,10 +120,6 @@ const buttonClass: Record<string, Record<string, { base: string; loading: string
     teal: {
       base: 'border border-slate-4 bg-white text-teal-7 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-teal-2',
       loading: '!border-teal-7 !text-teal-7'
-    },
-    prim: {
-      base: 'border border-slate-4 bg-white text-light-purple-5 hover:bg-hover-state active:ring-2 active:ring-offset-2 active:ring-light-purple-2',
-      loading: '!border-light-purple-5 !text-light-purple-5'
     }
   },
   plain: {
@@ -160,10 +162,6 @@ const buttonClass: Record<string, Record<string, { base: string; loading: string
     teal: {
       base: 'bg-transparent text-teal-7 hover:bg-hover-state',
       loading: '!text-teal-7'
-    },
-    prim: {
-      base: 'bg-transparent text-light-purple-5 hover:bg-hover-state',
-      loading: '!text-light-purple-5'
     }
   }
 }
@@ -196,134 +194,3 @@ const mergedClass = computed<string>(() => {
     <slot />
   </button>
 </template>
-
-<style>
-/* PRIMARY */
-.app-button-primary {
-  &.app-button-purple {
-    @apply border-light-purple-5 bg-light-purple-5 text-white;
-    &.app-button-loading {
-      @apply border-dark-purple-3 bg-dark-purple-3;
-    }
-  }
-  &.app-button-lime {
-    @apply border-lime-7 bg-lime-7 text-white;
-    &.app-button-loading {
-      @apply border-lime-10 bg-lime-10;
-    }
-  }
-  &.app-button-teal {
-    @apply border-teal-7 bg-teal-7 text-white;
-    &.app-button-loading {
-      @apply border-teal-10 bg-teal-10;
-    }
-  }
-  &.app-button-grass {
-    @apply border-grass-7 bg-grass-7 text-white;
-    &.app-button-loading {
-      @apply border-grass-10 bg-grass-10;
-    }
-  }
-  &.app-button-tomato {
-    @apply border-tomato-7 bg-tomato-7 text-white;
-    &.app-button-loading {
-      @apply border-tomato-10 bg-tomato-10;
-    }
-  }
-  &.app-button-slate {
-    @apply border-slate-7 bg-slate-7 text-white;
-    &.app-button-loading {
-      @apply border-slate-10 bg-slate-10;
-    }
-  }
-  &.app-button-disabled {
-    @apply border-slate-4 bg-slate-4 text-slate-6;
-  }
-}
-/* OUTLINE */
-.app-button-outline {
-  @apply border-slate-5 bg-white;
-  &.app-button-purple {
-    @apply text-light-purple-5;
-    &.app-button-loading {
-      @apply border-dark-purple-3 text-dark-purple-3;
-    }
-  }
-  &.app-button-lime {
-    @apply text-lime-7;
-    &.app-button-loading {
-      @apply border-lime-10 text-lime-10;
-    }
-  }
-  &.app-button-teal {
-    @apply text-teal-7;
-    &.app-button-loading {
-      @apply border-teal-10 text-teal-10;
-    }
-  }
-  &.app-button-grass {
-    @apply text-grass-7;
-    &.app-button-loading {
-      @apply border-grass-10 text-grass-10;
-    }
-  }
-  &.app-button-tomato {
-    @apply text-tomato-7;
-    &.app-button-loading {
-      @apply border-tomato-10 text-tomato-10;
-    }
-  }
-  &.app-button-slate {
-    @apply text-slate-7;
-    &.app-button-loading {
-      @apply border-slate-10 text-slate-10;
-    }
-  }
-  &.app-button-disabled {
-    @apply border-slate-4 bg-slate-2 text-slate-6;
-  }
-}
-/* PLAIN */
-.app-button-plain {
-  @apply border-transparent bg-transparent;
-  &.app-button-purple {
-    @apply text-light-purple-5;
-    &.app-button-loading {
-      @apply text-dark-purple-3;
-    }
-  }
-  &.app-button-lime {
-    @apply text-lime-7;
-    &.app-button-loading {
-      @apply text-lime-10;
-    }
-  }
-  &.app-button-teal {
-    @apply text-teal-7;
-    &.app-button-loading {
-      @apply text-teal-10;
-    }
-  }
-  &.app-button-grass {
-    @apply text-grass-7;
-    &.app-button-loading {
-      @apply text-grass-10;
-    }
-  }
-  &.app-button-tomato {
-    @apply text-tomato-7;
-    &.app-button-loading {
-      @apply text-tomato-10;
-    }
-  }
-  &.app-button-slate {
-    @apply text-slate-7;
-    &.app-button-loading {
-      @apply text-slate-10;
-    }
-  }
-  &.app-button-disabled {
-    @apply text-slate-6;
-  }
-}
-</style>

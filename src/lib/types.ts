@@ -350,6 +350,7 @@ export interface MeasurementResultsDurationOrLatency {
   string: string
   started_at?: string | null
   ended_at?: string | null
+  label?: string | null
 }
 
 // Frequency
