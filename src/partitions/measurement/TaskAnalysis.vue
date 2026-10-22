@@ -180,7 +180,7 @@ const trialScores = computed((): TrialScoreModel[] => {
     const sum = listOfScore.reduce((s, val) => s + val, 0)
     const avg = sum / (listOfScore.length || 1)
     // const average = avg % 1 === 0 ? avg + '' : avg.toFixed(1)
-    const average = avg + ''
+    const average = Math.round(avg) + ''
 
     if (listOfScore.length > maxCount) maxCount = listOfScore.length
     return { ...i, sum, average, count: listOfScore.length, trials }
