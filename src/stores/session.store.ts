@@ -19,7 +19,11 @@ import type {
   User,
   Client,
   ActionRecommendation,
-  Target
+  Target,
+  MeasurementTrialSbt,
+  MeasurementTrialTaskAnalysis,
+  MeasurementTrialPrompting,
+  MeasurementResultsDurationOrLatency
 } from '@/lib/types'
 
 // STATE
@@ -28,19 +32,33 @@ interface SessionPendingProgress {
   key: string
   name:
     | 'update_measurement'
+    //
     | 'update_measurement_results'
     | 'update_measurement_results_v2'
+    //
+    | 'create_measurement_trial'
+    | 'update_measurement_trial'
+    | 'delete_measurement_trial'
+    //
     | 'create_comment'
     | 'update_comment'
     | 'delete_comment'
+    //
     | 'duplicate_images'
   params:
     | UpdateMeasurementParams
+    //
     | UpdateMeasurementResultsParams
     | UpdateMeasurementResultsV2Params
+    //
+    | CreateMeasurementTrialParams
+    | UpdateMeasurementTrialParams
+    | DeleteMeasurementTrialParams
+    //
     | CreateSessionCommentParams
     | UpdateSessionCommentParams
     | DeleteSessionCommentParams
+    //
     | DuplicateImagesToClientDocumentParams
   timestamp?: number
   retryCount?: number
@@ -131,12 +149,24 @@ export interface UpdateMeasurementResultsParams {
  * need to generate every data collection method params
  */
 
+export interface UpdateMeasurementResultsV2Params {
+  id: Measurement['id']
+  params: {
+    results:
+      | ResultsFrequencyParams
+      | ResultsPromptingParams
+      | Record<string, ResultsDurationOrLatencyParams>
+  }
+  dataResult: Measurement
+  lastData: Measurement
+}
+
 /** === DURATION  LANTENCY === */
 export interface ResultsDurationOrLatencyParams {
   recording_time: string
-  started_at?: string | null
-  ended_at?: string | null
-  label?: string | null
+  started_at?: MeasurementResultsDurationOrLatency['started_at']
+  ended_at?: MeasurementResultsDurationOrLatency['ended_at']
+  label?: MeasurementResultsDurationOrLatency['label']
 }
 
 /** === FREQUENCY === */
@@ -150,63 +180,77 @@ export type ResultsFrequencyParams = number
  */
 export type ResultsPromptingParams = Record<string, number>
 
-export interface UpdateMeasurementResultsV2Params {
-  id: Measurement['id']
-  params: {
-    results:
-      | ResultsFrequencyParams
-      | ResultsPromptingParams
-      | Record<string, ResultsDurationOrLatencyParams>
-  }
-  dataResult: Measurement
-  lastData: Measurement
-}
-
 /**
  * MEASUREMENT TRIAL PARAMS
  * Build measurement trials
  * need to generate every data collection method params
  */
 
+//  CREATE TRIAL
+
 export interface CreateMeasurementTrialParams {
-  trial: NewTrialSbtParams | NewTrialTaskAnalysisParams
+  id: Measurement['id']
+  params: {
+    trial: NewTrialSbtParams | NewTrialTaskAnalysisParams
+  }
+  dataResult: Measurement
 }
 
 export interface NewTrialSbtParams {
-  uid: string
-  target_task_id: number
-  prompt_id: number
-  target_problem_behavior_id: number | null
-  recorded_at?: string
+  uid: MeasurementTrialSbt['uid']
+  target_task_id: MeasurementTrialSbt['target_task_id']
+  prompt_id: MeasurementTrialSbt['prompt_id']
+  target_problem_behavior_id: MeasurementTrialSbt['target_problem_behavior_id']
+  recorded_at?: MeasurementTrialSbt['recorded_at']
 }
 
 export interface NewTrialTaskAnalysisParams {
-  uid: string
-  target_id: number
-  prompt_id: number
-  prompt_parent_id: number
-  target_problem_behavior_id: number | null
-  recorded_at?: string
+  uid: MeasurementTrialTaskAnalysis['uid']
+  target_id: MeasurementTrialTaskAnalysis['target_id']
+  prompt_id: MeasurementTrialTaskAnalysis['prompt_id']
+  prompt_parent_id: MeasurementTrialTaskAnalysis['prompt_parent_id']
+  target_problem_behavior_id: MeasurementTrialTaskAnalysis['target_problem_behavior_id']
+  recorded_at?: MeasurementTrialTaskAnalysis['recorded_at']
 }
 
-export type UpdateMeasurementTrialParams =
-  | UpdateTrialPromptingParams
-  | {
-      trial: UpdateTrialSbtParams | UpdateTrialTaskAnalysisParams
-    }
+// UPDATE TRIAL
+
+export interface UpdateMeasurementTrialParams {
+  id: Measurement['id']
+  trialId:
+    | MeasurementTrialPrompting['id']
+    | MeasurementTrialSbt['uid']
+    | MeasurementTrialTaskAnalysis['uid']
+  params:
+    | UpdateTrialPromptingParams
+    | { trial: UpdateTrialSbtParams | UpdateTrialTaskAnalysisParams }
+  dataResult?: Measurement
+}
 
 export interface UpdateTrialPromptingParams {
-  target_problem_behavior_id: number | null
+  target_problem_behavior_id: MeasurementTrialPrompting['target_problem_behavior_id']
 }
 
 export interface UpdateTrialSbtParams {
-  prompt_id: number
-  target_problem_behavior_id: number | null
+  prompt_id: MeasurementTrialSbt['prompt_id']
+  target_problem_behavior_id: MeasurementTrialSbt['target_problem_behavior_id']
 }
 
 export interface UpdateTrialTaskAnalysisParams {
-  prompt_id: number
-  target_problem_behavior_id: number | null
+  prompt_id: MeasurementTrialTaskAnalysis['prompt_id']
+  prompt_parent_id: MeasurementTrialTaskAnalysis['prompt_parent_id']
+  target_problem_behavior_id: MeasurementTrialTaskAnalysis['target_problem_behavior_id']
+}
+
+// DELETE TRIAL
+
+export interface DeleteMeasurementTrialParams {
+  id: Measurement['id']
+  trialId:
+    | MeasurementTrialPrompting['id']
+    | MeasurementTrialSbt['uid']
+    | MeasurementTrialTaskAnalysis['uid']
+  dataResult?: Measurement
 }
 
 // PROBING PARAMS
@@ -522,33 +566,70 @@ export const useSessionStore = defineStore('session', {
         try {
           let success = false
 
-          if (p.name === 'update_measurement') {
-            const result = await this.updateMeasurement(p.params as UpdateMeasurementParams)
-            success = result.success
-          } else if (p.name === 'update_measurement_results') {
-            const result = await this.updateMeasurementResults(
-              p.params as UpdateMeasurementResultsParams
-            )
-            success = result.success
-          } else if (p.name === 'update_measurement_results_v2') {
-            const result = await this.updateMeasurementResultsV2(
-              p.params as UpdateMeasurementResultsV2Params
-            )
-            success = result.success
-          } else if (p.name === 'create_comment') {
-            const result = await this.createSessionComment(p.params as CreateSessionCommentParams)
-            success = result.success
-          } else if (p.name === 'update_comment') {
-            const result = await this.updateSessionComment(p.params as UpdateSessionCommentParams)
-            success = result.success
-          } else if (p.name === 'delete_comment') {
-            const result = await this.deleteSessionComment(p.params as DeleteSessionCommentParams)
-            success = result.success
-          } else if (p.name === 'duplicate_images') {
-            const result = await this.duplicateImagesToClientDocument(
-              p.params as DuplicateImagesToClientDocumentParams
-            )
-            success = result.success
+          switch (p.name) {
+            case 'update_measurement': {
+              const payload = p.params as UpdateMeasurementParams
+              const res = await this.updateMeasurement(payload)
+              success = res.success
+              break
+            }
+            case 'update_measurement_results': {
+              const payload = p.params as UpdateMeasurementResultsParams
+              const res = await this.updateMeasurementResults(payload)
+              success = res.success
+              break
+            }
+            case 'update_measurement_results_v2': {
+              const payload = p.params as UpdateMeasurementResultsV2Params
+              const res = await this.updateMeasurementResultsV2(payload)
+              success = res.success
+              break
+            }
+            case 'create_measurement_trial': {
+              const payload = p.params as CreateMeasurementTrialParams
+              const res = await this.createMeasurementTrial(payload)
+              success = res.success
+              break
+            }
+            case 'update_measurement_trial': {
+              const payload = p.params as UpdateMeasurementTrialParams
+              const res = await this.updateMeasurementTrial(payload)
+              success = res.success
+              break
+            }
+            case 'delete_measurement_trial': {
+              const payload = p.params as DeleteMeasurementTrialParams
+              const res = await this.deleteMeasurementTrial(payload)
+              success = res.success
+              break
+            }
+            case 'create_comment': {
+              const payload = p.params as CreateSessionCommentParams
+              const res = await this.createSessionComment(payload)
+              success = res.success
+              break
+            }
+            case 'update_comment': {
+              const payload = p.params as UpdateSessionCommentParams
+              const res = await this.updateSessionComment(payload)
+              success = res.success
+              break
+            }
+            case 'delete_comment': {
+              const payload = p.params as DeleteSessionCommentParams
+              const res = await this.deleteSessionComment(payload)
+              success = res.success
+              break
+            }
+            case 'duplicate_images': {
+              const payload = p.params as DuplicateImagesToClientDocumentParams
+              const res = await this.duplicateImagesToClientDocument(payload)
+              success = res.success
+              break
+            }
+            default: {
+              break
+            }
           }
 
           if (success) {
@@ -1005,7 +1086,7 @@ export const useSessionStore = defineStore('session', {
       )
       if (idx > -1) {
         if (opt?.isComment) {
-          this.session_measurements[idx].comment = payload.comment
+          this.session_measurements[idx].comment = payload.comment + ''
         } else if (opt?.isTrials) {
           this.session_measurements[idx].trials = payload?.trials || []
           this.session_measurements[idx].trials_version = payload?.trials_version || 0
@@ -1416,8 +1497,21 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async createMeasurementTrial(payload: { id: number; params: CreateMeasurementTrialParams }) {
+    async createMeasurementTrial(payload: CreateMeasurementTrialParams) {
       try {
+        const app = useAppStore()
+        if (!app.networkStatus.connected) {
+          this.pending_progress.push({
+            key: getRandomString('create_measurement_trial'),
+            name: 'create_measurement_trial',
+            params: payload,
+            timestamp: Date.now(),
+            retryCount: 0
+          })
+          this.setSessionMeasurement(payload.dataResult)
+          return { success: true, data: payload.dataResult }
+        }
+
         const res = await axios.post(`/api/v1/measurements/${payload.id}/trials`, payload.params)
 
         this.setSessionMeasurement(res?.data)
@@ -1904,19 +1998,33 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async updateMeasurementTrial(payload: {
-      id: number
-      trial_id: number | string
-      params: UpdateMeasurementTrialParams
-    }) {
+    async updateMeasurementTrial(payload: UpdateMeasurementTrialParams) {
       try {
         const app = useAppStore()
         if (!app.networkStatus.connected) {
-          console.log(payload)
+          // Prompting (used trialId as number) -- havent handle
+          if (typeof payload.trialId === 'number') {
+            return {
+              success: false,
+              data: null,
+              message: 'Please connect to internet to update measurement trial'
+            }
+          }
+
+          // only for SBT and TA
+          this.pending_progress.push({
+            key: getRandomString('update_measurement_trial'),
+            name: 'update_measurement_trial',
+            params: payload,
+            timestamp: Date.now(),
+            retryCount: 0
+          })
+          this.setSessionMeasurement(payload.dataResult || null)
+          return { success: true, data: payload.dataResult || null }
         }
 
         const res = await axios.patch(
-          `/api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
+          `/api/v1/measurements/${payload.id}/trials/${payload.trialId}`,
           payload.params
         )
 
@@ -1927,7 +2035,7 @@ export const useSessionStore = defineStore('session', {
           action_label: 'api_success',
           recordable: 'Measurement',
           recordable_id: payload.id,
-          api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
+          api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trialId}`,
           params: payload.params,
           notes: `Success update measurement trial`,
           timestamp: new Date().toISOString()
@@ -1943,7 +2051,7 @@ export const useSessionStore = defineStore('session', {
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: payload.id,
-            api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
+            api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trialId}`,
             params: payload.params,
             notes: `${message}`,
             timestamp: new Date().toISOString()
@@ -2016,15 +2124,33 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async deleteMeasurementTrial(payload: { id: number; trial_id: number | string }) {
+    async deleteMeasurementTrial(payload: DeleteMeasurementTrialParams) {
       try {
         const app = useAppStore()
         if (!app.networkStatus.connected) {
-          console.log(payload)
+          // Prompting (used trialId as number) -- havent handle
+          if (typeof payload.trialId === 'number') {
+            return {
+              success: false,
+              data: null,
+              message: 'Please connect to internet to delete measurement trial'
+            }
+          }
+
+          // only for SBT and TA
+          this.pending_progress.push({
+            key: getRandomString('delete_measurement_trial'),
+            name: 'delete_measurement_trial',
+            params: payload,
+            timestamp: Date.now(),
+            retryCount: 0
+          })
+          this.setSessionMeasurement(payload.dataResult || null)
+          return { success: true, data: payload.dataResult || null }
         }
 
         const res = await axios.delete(
-          `/api/v1/measurements/${payload.id}/trials/${payload.trial_id}`
+          `/api/v1/measurements/${payload.id}/trials/${payload.trialId}`
         )
 
         this.setSessionMeasurement(res?.data)
@@ -2034,7 +2160,7 @@ export const useSessionStore = defineStore('session', {
           action_label: 'api_success',
           recordable: 'Measurement',
           recordable_id: payload.id,
-          api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
+          api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trialId}`,
           params: {},
           notes: `Success delete measurement trial`,
           timestamp: new Date().toISOString()
@@ -2050,7 +2176,7 @@ export const useSessionStore = defineStore('session', {
             action_label: 'api_failed',
             recordable: 'Measurement',
             recordable_id: payload.id,
-            api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
+            api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trialId}`,
             params: {},
             notes: `${message}`,
             timestamp: new Date().toISOString()
@@ -2092,12 +2218,12 @@ export const useSessionStore = defineStore('session', {
       if (!payload.id) return { success: false, data: null }
       this.session_comments = this.session?.comments || []
 
-      const app = useAppStore()
-      if (!app.networkStatus.connected) {
-        // return { success: true, data: this.session_comments }
-      }
-
       try {
+        const app = useAppStore()
+        if (!app.networkStatus.connected) {
+          // return { success: true, data: this.session_comments }
+        }
+
         const params = payload.filter ? `?filter_by=${payload.filter}` : ''
         const res = await axios.get(`/api/v1/sessions/${payload.id}/comments${params}`)
 
@@ -2353,23 +2479,24 @@ export const useSessionStore = defineStore('session', {
     // SESSION CLIENT DOCUMENT
 
     async duplicateImagesToClientDocument(payload: DuplicateImagesToClientDocumentParams) {
-      const app = useAppStore()
-      if (!app.networkStatus.connected) {
-        this.pending_progress.push({
-          key: `duplicate_images_${payload.params.session_id}`,
-          name: 'duplicate_images',
-          params: payload,
-          timestamp: Date.now(),
-          retryCount: 0
-        })
-        return { success: true, data: null }
-      }
-
       try {
+        const app = useAppStore()
+        if (!app.networkStatus.connected) {
+          this.pending_progress.push({
+            key: `duplicate_images_${payload.params.session_id}`,
+            name: 'duplicate_images',
+            params: payload,
+            timestamp: Date.now(),
+            retryCount: 0
+          })
+          return { success: true, data: null }
+        }
+
         const res = await axios.post(
           `/api/v1/clients/${payload.clientId}/duplicate_documents`,
           payload.params
         )
+
         return { success: true, data: res?.data, message: '' }
       } catch (error) {
         if (isAxiosError(error)) {

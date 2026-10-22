@@ -344,7 +344,7 @@ const onSelectLastTrialPb = async (pbId: number) => {
 
   const payload = {
     id: props.measurement.id,
-    trial_id: lastTrial.value.id,
+    trialId: lastTrial.value.id,
     params: { target_problem_behavior_id: newPbId } as UpdateTrialPromptingParams
   }
 
@@ -380,7 +380,7 @@ const onSavePbDropdown = async (pbId: number) => {
 
   const payload = {
     id: props.measurement.id,
-    trial_id: editTrial.value.id,
+    trialId: editTrial.value.id,
     params: { target_problem_behavior_id: newPbId } as UpdateTrialPromptingParams
   }
 
@@ -407,7 +407,7 @@ const onDeleteTrial = async (trial: MeasurementTrialModel) => {
 
   const payload = {
     id: props.measurement.id,
-    trial_id: trial.id
+    trialId: trial.id
   }
 
   indexDeleteTrialLoading.value = trial.id
@@ -463,20 +463,20 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full grow flex-col justify-between gap-2">
+  <div class="flex flex-col gap-2 justify-between h-full grow">
     <!-- Loading state -->
     <div
       v-if="scoreLoadingBox !== null"
       class="absolute z-10"
       :class="[isCollapsed ? 'right-16 top-4' : 'bottom-16 right-4']"
     >
-      <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+      <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
     </div>
 
     <!-- Problem Behaviors View -->
     <div
       v-if="isOpenProblemBehavior"
-      class="flex h-full flex-col items-center justify-between gap-2 pb-2 pt-2"
+      class="flex flex-col gap-2 justify-between items-center pt-2 pb-2 h-full"
     >
       <div class="text-xs font-medium text-slate-7">
         Problem behavior
@@ -496,7 +496,7 @@ onUnmounted(() => {
         <div
           v-for="pb in problemBehaviors"
           :key="pb.id"
-          class="flex h-16 w-16 shrink-0 cursor-pointer flex-col items-center justify-center rounded-2xl border transition-all hover:brightness-95"
+          class="flex flex-col justify-center items-center w-16 h-16 rounded-2xl border transition-all cursor-pointer shrink-0 hover:brightness-95"
           :class="[
             lastPbIdInput === pb.id
               ? 'border-tomato-7 bg-tomato-7 font-bold text-white'
@@ -509,7 +509,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-if="!isCollapsed" class="px-4 text-center text-xs font-medium text-slate-8">
+      <div v-if="!isCollapsed" class="px-4 text-xs font-medium text-center text-slate-8">
         {{ selectedPbDefinition || 'Select a problem behavior to record' }}
       </div>
 
@@ -523,11 +523,11 @@ onUnmounted(() => {
     <!-- Trial History View -->
     <div
       v-else-if="isOpenTrialHistory"
-      class="flex h-full grow flex-col justify-between overflow-y-auto"
+      class="flex overflow-y-auto flex-col justify-between h-full grow"
     >
       <div
         v-if="!appStore.networkStatus?.connected"
-        class="flex items-center justify-center gap-1 rounded bg-tomato-7 px-2 py-1.5 text-center text-xs text-white"
+        class="flex gap-1 justify-center items-center px-2 py-1.5 text-xs text-center text-white rounded bg-tomato-7"
       >
         <span>Please reconnect to view trial history</span>
       </div>
@@ -538,21 +538,21 @@ onUnmounted(() => {
       >
         <!-- offline indicator -->
 
-        <div v-if="!recordedTrials.length" class="py-16 text-center text-xs text-slate-5">
+        <div v-if="!recordedTrials.length" class="py-16 text-xs text-center text-slate-5">
           No recorded trials yet
         </div>
 
         <div
           v-for="(trial, index) in recordedTrials"
           :key="trial.id"
-          class="flex items-center justify-between border-b border-slate-4 px-2 py-3"
+          class="flex justify-between items-center px-2 py-3 border-b border-slate-4"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex gap-3 items-center">
             <span class="w-4 text-xs font-medium text-slate-6">{{ index + 1 }}.</span>
 
             <!-- Prompt Label -->
             <div
-              class="flex h-6 min-w-7 items-center justify-center rounded px-1.5 text-xs font-bold"
+              class="flex justify-center items-center px-1.5 h-6 text-xs font-bold rounded min-w-7"
               :style="{
                 backgroundColor: promptColors[trial.prompt?.color || 'cherry']?.primaryColor,
                 borderColor: promptColors[trial.prompt?.color || 'cherry']?.secondaryColor,
@@ -565,7 +565,7 @@ onUnmounted(() => {
             <!-- Problem Behavior -->
             <div
               v-if="enableProblemBehavior"
-              class="flex h-6 min-w-12 cursor-pointer items-center justify-between gap-2 rounded border px-1.5 transition-colors"
+              class="flex gap-2 justify-between items-center px-1.5 h-6 rounded border transition-colors cursor-pointer min-w-12"
               :class="[
                 trial?.target_problem_behavior_id
                   ? 'border-tomato-9 bg-tomato-7 text-white'
@@ -580,7 +580,7 @@ onUnmounted(() => {
               </div>
               <Icon
                 icon="ph:caret-down-bold"
-                class="transform text-sm transition-all"
+                class="text-sm transition-all transform"
                 :class="[
                   trial?.target_problem_behavior_id ? 'text-white' : 'text-tomato-7',
                   isShowIndexEditTrial === trial.id ? 'rotate-180' : ''
@@ -590,11 +590,11 @@ onUnmounted(() => {
           </div>
 
           <!-- Actions: Trash -->
-          <div class="flex items-center gap-1.5">
+          <div class="flex gap-1.5 items-center">
             <button
               type="button"
               title="Delete"
-              class="cursor-pointer rounded p-1 text-tomato-5 hover:text-tomato-7"
+              class="p-1 rounded cursor-pointer text-tomato-5 hover:text-tomato-7"
               :class="[sessionStore.session?.status !== 'ongoing' ? 'pointer-events-none' : '']"
               :disabled="sessionStore.session?.status !== 'ongoing'"
               @click="onDeleteTrial(trial)"
@@ -602,15 +602,15 @@ onUnmounted(() => {
               <Icon
                 v-if="indexDeleteTrialLoading === trial.id"
                 icon="mingcute:loading-fill"
-                class="h-4 w-4 shrink-0 animate-spin"
+                class="w-4 h-4 animate-spin shrink-0"
               />
-              <Icon v-else icon="ph:trash" class="h-4 w-4 shrink-0" />
+              <Icon v-else icon="ph:trash" class="w-4 h-4 shrink-0" />
             </button>
           </div>
         </div>
       </div>
 
-      <div class="z-1 sticky bottom-0 w-full bg-white px-2 py-2">
+      <div class="sticky bottom-0 px-2 py-2 w-full bg-white z-1">
         <AppButton kind="outline" class="w-full" @click="isOpenTrialHistory = false">
           Back
         </AppButton>
@@ -618,12 +618,12 @@ onUnmounted(() => {
     </div>
 
     <!-- Prompts View (Default) -->
-    <div v-else class="flex h-full grow flex-col justify-between gap-2">
-      <div class="flex h-full grow content-center items-center justify-center">
+    <div v-else class="flex flex-col gap-2 justify-between h-full grow">
+      <div class="flex justify-center content-center items-center h-full grow">
         <!-- Scrollable Prompts Container -->
         <div
           :id="`prompting-scroll-${measurement.id}`"
-          class="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+          class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scroll-smooth"
           :class="[
             isCollapsed && enableProblemBehavior
               ? 'w-[calc(320px-32px-60px)]'
@@ -636,7 +636,7 @@ onUnmounted(() => {
             v-for="(promptBoxes, idx) in promptBoxesPages"
             :key="`${measurement.id}-prompt-boxes-${idx + 1}`"
             :id="`${measurement.id}-prompt-boxes-${idx + 1}`"
-            class="flex shrink-0 snap-center justify-center"
+            class="flex justify-center shrink-0 snap-center"
             :class="[
               isCollapsed && enableProblemBehavior
                 ? 'w-[calc(320px-32px-60px)]'
@@ -649,7 +649,7 @@ onUnmounted(() => {
             >
               <div v-for="prompt in promptBoxes" :key="prompt.key" class="space-y-1">
                 <div
-                  class="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border transition-colors"
+                  class="flex relative justify-center items-center w-20 h-20 rounded-2xl border transition-colors shrink-0"
                   :class="{
                     'cursor-wait':
                       (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
@@ -674,7 +674,7 @@ onUnmounted(() => {
                 </div>
 
                 <div
-                  class="flex h-5 items-center justify-center rounded border border-slate-5 bg-pure-white px-5"
+                  class="flex justify-center items-center px-5 h-5 rounded border border-slate-5 bg-pure-white"
                   :class="{
                     'cursor-wait':
                       (scoreLoadingBox !== null && scoreLoadingBox !== prompt.key) ||
@@ -685,7 +685,7 @@ onUnmounted(() => {
                   @click="onChangeScore(prompt, -1)"
                 >
                   <div
-                    class="h-1 w-6 shrink-0 rounded transition-colors"
+                    class="w-6 h-1 rounded transition-colors shrink-0"
                     :class="[!prompt.score ? 'bg-slate-4' : 'bg-slate-6']"
                   ></div>
                 </div>
@@ -697,13 +697,13 @@ onUnmounted(() => {
         <!-- Fixed PB toggle button OUTSIDE scrollable container when collapsed -->
         <div
           v-if="isCollapsed && enableProblemBehavior"
-          class="flex shrink-0 -translate-y-2 scale-75 items-center justify-center pb-4 transition-transform"
+          class="flex justify-center items-center pb-4 transition-transform scale-75 -translate-y-2 shrink-0"
         >
           <AppButton
             :kind="lastPb ? 'primary' : 'outline'"
             color="tomato"
             title="Record problem behavior"
-            class="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center rounded-2xl border font-bold transition-all"
+            class="flex relative justify-center items-center w-20 h-20 font-bold rounded-2xl border transition-all cursor-pointer shrink-0"
             :class="[lastPb ? '' : '!bg-tomato-2 hover:!bg-tomato-3']"
             :disabled="!lastPromptName"
             @click="isOpenProblemBehavior = true"
@@ -714,12 +714,12 @@ onUnmounted(() => {
       </div>
 
       <!-- Bottom Bar -->
-      <div class="mt-auto shrink-0 space-y-2 pb-3" :class="{ '-translate-y-2': isCollapsed }">
-        <div class="flex h-3 items-center justify-center gap-2">
+      <div class="pb-3 mt-auto space-y-2 shrink-0" :class="{ '-translate-y-2': isCollapsed }">
+        <div class="flex gap-2 justify-center items-center h-3">
           <div
             v-for="n in pageCount"
             :key="n"
-            class="h-2 w-2 rounded-full transition-colors"
+            class="w-2 h-2 rounded-full transition-colors"
             :class="[n === page ? 'bg-slate-10' : 'bg-slate-6']"
           ></div>
         </div>
@@ -728,29 +728,29 @@ onUnmounted(() => {
           v-if="sessionStore.session?.status === 'draft'"
           kind="outline"
           size="sm"
-          class="mt-2 w-full px-0"
+          class="px-0 mt-2 w-full"
           @click="isOpenCustomize = !isOpenCustomize"
         >
           Customize prompt visibility
         </AppButton>
 
-        <div v-if="!isCollapsed" class="mt-1 flex w-full items-center justify-between gap-2">
+        <div v-if="!isCollapsed" class="flex gap-2 justify-between items-center mt-1 w-full">
           <!-- ≡ Trial History List Button (Left) -->
           <AppButton
             :kind="isOpenTrialHistory ? 'primary' : 'outline'"
             size="sm"
             title="Trial history"
-            class="h-8 w-8"
+            class="w-8 h-8"
             @click="isOpenTrialHistory = true"
           >
-            <Icon icon="ph:list" class="h-5 w-5" />
+            <Icon icon="ph:list" class="w-5 h-5" />
           </AppButton>
 
           <!-- Goal / Score Text (Center) -->
-          <div class="flex grow items-center justify-center px-1 text-center">
+          <div class="flex justify-center items-center px-1 text-center grow">
             <div
               v-if="measurement?.target?.prompting_format === 'classic'"
-              class="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 text-center text-xs text-slate-7"
+              class="flex flex-wrap gap-y-0.5 gap-x-1 justify-center items-center text-xs text-center text-slate-7"
             >
               <span> Goal: </span>
               <span class="font-semibold text-slate-8"> {{ measurement.target?.goal }} </span>
@@ -792,7 +792,7 @@ onUnmounted(() => {
             size="sm"
             title="Record problem behavior"
             :disabled="!lastPromptName"
-            class="h-8 w-8"
+            class="w-8 h-8"
             :class="[lastPb ? '' : '!hover:bg-tomato-3 !bg-tomato-2']"
             @click="isOpenProblemBehavior = true"
           >
@@ -810,7 +810,7 @@ onUnmounted(() => {
     class="pointer-events-auto"
   >
     <div>
-      <div class="sticky top-0 z-10 flex items-center justify-between bg-white py-3">
+      <div class="flex sticky top-0 z-10 justify-between items-center py-3 bg-white">
         <div class="text-xl font-semibold">Customize prompt visibility</div>
         <div class="cursor-pointer" @click="isOpenCustomize = false">
           <Icon icon="ph:x" class="text-2xl" />
@@ -821,7 +821,7 @@ onUnmounted(() => {
         <div
           v-for="prompt in defaultPrompts"
           :key="prompt.key"
-          class="flex h-14 w-full items-center justify-between border-b border-slate-3"
+          class="flex justify-between items-center w-full h-14 border-b border-slate-3"
           :class="[
             prompt.name === measurement.target?.success_metric
               ? 'cursor-not-allowed'
@@ -829,7 +829,7 @@ onUnmounted(() => {
           ]"
         >
           <div
-            class="flex h-10 items-center gap-3 truncate"
+            class="flex gap-3 items-center h-10 truncate"
             :class="{ 'pointer-events-none': prompt.name === measurement.target?.success_metric }"
             @click="onToggleEnabledPrompt(prompt)"
           >
@@ -838,12 +838,12 @@ onUnmounted(() => {
               class="text-2xl"
               :style="{ color: promptColors[prompt.color].primaryColor }"
             />
-            <div class="truncate text-sm text-slate-8">
+            <div class="text-sm truncate text-slate-8">
               {{ prompt.name }}
             </div>
             <div
               v-if="prompt.name === measurement.target?.success_metric"
-              class="truncate text-xs italic text-slate-6"
+              class="text-xs italic truncate text-slate-6"
             >
               as success metric
             </div>
@@ -858,7 +858,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="sticky bottom-0 z-10 flex items-center justify-between bg-white py-3">
+      <div class="flex sticky bottom-0 z-10 justify-between items-center py-3 bg-white">
         <AppButton class="w-full" :loading="customizeSaveLoading" @click="onSavePrompts">
           Apply
         </AppButton>
@@ -874,7 +874,7 @@ onUnmounted(() => {
   >
     <div>
       <div
-        class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-3 bg-white px-1 py-3"
+        class="flex sticky top-0 z-10 justify-between items-center px-1 py-3 bg-white border-b border-slate-3"
       >
         <div class="text-lg font-semibold text-slate-9">Select Problem Behavior</div>
         <div class="cursor-pointer" @click="isShowIndexEditTrial = 0">
@@ -886,14 +886,14 @@ onUnmounted(() => {
         <div
           v-for="pb in problemBehaviors"
           :key="pb.id"
-          class="flex h-14 w-full cursor-pointer items-center justify-between border-b border-slate-3 px-3 transition-colors hover:bg-slate-1"
+          class="flex justify-between items-center px-3 w-full h-14 border-b transition-colors cursor-pointer border-slate-3 hover:bg-slate-1"
           :class="{
             'bg-slate-2 font-semibold': editTrial?.target_problem_behavior_id === pb.id
           }"
           @click="onSavePbDropdown(pb.id)"
         >
-          <div class="flex items-center gap-3">
-            <div class="h-4 w-4 shrink-0 rounded-full" :style="{ backgroundColor: pb.color }"></div>
+          <div class="flex gap-3 items-center">
+            <div class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: pb.color }"></div>
             <div class="text-sm text-slate-8">{{ pb.code }} - {{ pb.code_definition }}</div>
           </div>
           <Icon

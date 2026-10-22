@@ -287,7 +287,7 @@ export type Measurement =
   | MeasurementTaskAnalysis
   | MeasurementSbt
 
-interface MeasurementBase {
+export interface MeasurementBase {
   id: number
   position: number
   duration: number

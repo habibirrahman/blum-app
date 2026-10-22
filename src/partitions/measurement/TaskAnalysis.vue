@@ -147,20 +147,21 @@ const recordedTrials = computed((): MeasurementTrialModel[] => {
 const currentRecordedTrial = computed((): MeasurementTrialModel | null => {
   if (!currentTrial.value) return null
 
-  let trial = recordedTrials.value.find((i) => i.uid === currentTrial.value?.uid)
-  if (!trial) {
-    const target = targetMembers.value.find((i) => i.id === currentTrial.value?.target_id)
-    const prompt = targetPrompts.value.find((i) => i.id === currentTrial.value?.prompt_id)
-    const problemBehavior = problemBehaviors.value.find(
-      (i) => i.id === currentTrial.value?.target_problem_behavior_id
-    )
-    trial = {
-      ...currentTrial.value,
-      position: trialsState.value.length + 1,
-      target,
-      prompt,
-      problemBehavior
-    }
+  const index = trialsState.value.findIndex((i) => i.uid === currentTrial.value?.uid)
+  const position = index === -1 ? trialsState.value.length + 1 : index + 1
+
+  const target = targetMembers.value.find((i) => i.id === currentTrial.value?.target_id)
+  const prompt = targetPrompts.value.find((i) => i.id === currentTrial.value?.prompt_id)
+  const problemBehavior = problemBehaviors.value.find(
+    (i) => i.id === currentTrial.value?.target_problem_behavior_id
+  )
+
+  const trial = {
+    ...currentTrial.value,
+    position,
+    target,
+    prompt,
+    problemBehavior
   }
 
   let average = '0'
@@ -362,16 +363,22 @@ const _onSaveTrial = async (
 
   if (isRecorded) {
     // update trial by uid
+    const incomingTrial = {
+      prompt_id: params?.prompt_id,
+      prompt_parent_id: params?.prompt_parent_id,
+      target_problem_behavior_id: params?.target_problem_behavior_id
+    }
+
+    const latestTrials = [...trialsState.value].map((t) => {
+      if (t.uid === uid) return { ...t, ...incomingTrial }
+      return t
+    })
+
     const payload = {
       id: props.measurement.id,
-      trial_id: uid,
-      params: {
-        trial: {
-          prompt_id: params?.prompt_id,
-          prompt_parent_id: params?.prompt_parent_id,
-          target_problem_behavior_id: params?.target_problem_behavior_id
-        } as UpdateTrialTaskAnalysisParams
-      }
+      trialId: uid,
+      params: { trial: incomingTrial as UpdateTrialTaskAnalysisParams },
+      dataResult: { ...props.measurement, trials: latestTrials }
     }
 
     // record session activities
@@ -394,18 +401,22 @@ const _onSaveTrial = async (
     return { success, data }
   } else {
     // create new trial
+    const incomingTrial = {
+      uid,
+      target_id: params?.target_id,
+      prompt_id: params?.prompt_id,
+      prompt_parent_id: params?.prompt_parent_id,
+      target_problem_behavior_id: params?.target_problem_behavior_id,
+      recorded_at: new Date().toISOString()
+    }
+
+    const latestTrialPosition = Math.max(...trialsState.value.map((t) => t.position), 0) + 1
+    const latestTrials = [...trialsState.value, { ...incomingTrial, position: latestTrialPosition }]
+
     const payload = {
       id: props.measurement.id,
-      params: {
-        trial: {
-          uid,
-          target_id: params?.target_id,
-          prompt_id: params?.prompt_id,
-          prompt_parent_id: params?.prompt_parent_id,
-          target_problem_behavior_id: params?.target_problem_behavior_id,
-          recorded_at: new Date().toISOString()
-        } as NewTrialTaskAnalysisParams
-      }
+      params: { trial: incomingTrial as NewTrialTaskAnalysisParams },
+      dataResult: { ...props.measurement, trials: latestTrials }
     }
 
     // record session activities
@@ -648,9 +659,12 @@ const onDeleteTrial = async () => {
   if (submitLoading.value) return
   if (!deleteTrialUid.value) return
 
+  const latestTrials = [...trialsState.value].filter((t) => t.uid !== deleteTrialUid.value)
+
   const payload = {
     id: props.measurement.id,
-    trial_id: deleteTrialUid.value
+    trialId: deleteTrialUid.value,
+    dataResult: { ...props.measurement, trials: latestTrials }
   }
 
   // record session activities
@@ -658,9 +672,9 @@ const onDeleteTrial = async () => {
     action_label: `ta_delete_trial`,
     recordable: 'Measurement',
     recordable_id: payload.id,
-    api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
+    api: `DELETE /api/v1/measurements/${payload.id}/trials/${payload.trialId}`,
     params: payload,
-    notes: `Target: ${props.target?.name} [${payload.trial_id}]`,
+    notes: `Target: ${props.target?.name} [${payload.trialId}]`,
     timestamp: new Date().toISOString()
   })
 
@@ -686,26 +700,32 @@ const onSaveEditTrial = async () => {
   if (!editTrial.value.prompt_id) return
 
   // update trial by uid
+  const incomingTrial = {
+    prompt_id: editTrial.value.prompt_id,
+    prompt_parent_id: editTrial.value.prompt_parent_id,
+    target_problem_behavior_id: editTrial.value.target_problem_behavior_id
+  }
+
+  const latestTrials = [...trialsState.value].map((t) => {
+    if (t.uid === editTrial.value?.uid) return { ...t, ...incomingTrial }
+    return t
+  })
+
   const payload = {
     id: props.measurement.id,
-    trial_id: editTrial.value.uid,
-    params: {
-      trial: {
-        prompt_id: editTrial.value.prompt_id,
-        prompt_parent_id: editTrial.value.prompt_parent_id,
-        target_problem_behavior_id: editTrial.value.target_problem_behavior_id
-      } as UpdateTrialTaskAnalysisParams
-    }
+    trialId: editTrial.value.uid,
+    params: { trial: incomingTrial as UpdateTrialTaskAnalysisParams },
+    dataResult: { ...props.measurement, trials: latestTrials }
   }
 
   // record session activities
   await sessionStore.addSessionActivity({
     action_label: `ta_update_trial`,
     recordable: 'Measurement',
-    recordable_id: props.measurement.id,
-    api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trial_id}`,
+    recordable_id: payload.id,
+    api: `PATCH /api/v1/measurements/${payload.id}/trials/${payload.trialId}`,
     params: payload,
-    notes: `Target: ${props.target?.name} [${payload.trial_id}: ${editTrial.value.prompt_id}, ${editTrial.value.target_problem_behavior_id}]`,
+    notes: `Target: ${props.target?.name} [${payload.trialId}: ${editTrial.value.prompt_id}, ${editTrial.value.target_problem_behavior_id}]`,
     timestamp: new Date().toISOString()
   })
 
@@ -766,20 +786,20 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex min-h-full grow flex-col gap-2" :class="[measurement.is_fixed ? '' : 'pb-16']">
+  <div class="flex flex-col gap-2 min-h-full grow" :class="[measurement.is_fixed ? '' : 'pb-16']">
     <!-- Ratio Boxes -->
     <div
       v-if="!isCollapsed"
       :id="`trial-score-${measurement.id}`"
       ref="trialScoreContainer"
-      class="scrollbar-hide flex w-full shrink-0 items-center gap-1 overflow-x-auto pb-2"
+      class="flex overflow-x-auto gap-1 items-center pb-2 w-full scrollbar-hide shrink-0"
       :class="[trialScores.length > 6 ? 'justify-start' : 'justify-center']"
     >
       <div
         v-for="member in trialScores"
         :key="member.id"
         :id="`trial-score-${measurement.id}-${member.id}`"
-        class="relative flex h-10 w-10 shrink-0 flex-col-reverse items-center overflow-hidden rounded border transition-colors duration-300"
+        class="flex overflow-hidden relative flex-col-reverse items-center w-10 h-10 rounded border transition-colors duration-300 shrink-0"
         :class="{
           'border-slate-2 bg-slate-2': member.count <= 0 && member.id !== currentTrial?.target_id,
           'border-prim-2 bg-prim-2': member.count >= 1 && member.id !== currentTrial?.target_id,
@@ -796,7 +816,7 @@ onUnmounted(() => {
           >
             <div
               v-if="ratio.target_problem_behavior_id"
-              class="z-1 absolute right-0 top-0 h-full bg-tomato-6"
+              class="absolute top-0 right-0 h-full z-1 bg-tomato-6"
               :style="{ width: '0.375rem' }"
             />
           </div>
@@ -817,13 +837,13 @@ onUnmounted(() => {
     </div>
 
     <!-- Active Trial Area -->
-    <div v-if="!isOpenTrialHistory || isOpenEditTrial" class="flex grow flex-col">
+    <div v-if="!isOpenTrialHistory || isOpenEditTrial" class="flex flex-col grow">
       <!-- Header Info -->
       <div
-        class="mb-2 flex shrink-0 items-center justify-between border-b border-slate-4 pb-2"
+        class="flex justify-between items-center pb-2 mb-2 border-b shrink-0 border-slate-4"
         :class="[isCollapsed ? 'h-6' : 'h-8']"
       >
-        <div class="flex items-center gap-1">
+        <div class="flex gap-1 items-center">
           <div class="text-sm text-slate-7">Current</div>
           <div class="text-sm font-semibold text-light-purple-5">
             {{ currentRecordedTrial?.target?.code_definition }}
@@ -849,9 +869,9 @@ onUnmounted(() => {
             Change
           </AppButton>
         </div>
-        <div class="flex items-center gap-1">
+        <div class="flex gap-1 items-center">
           <div v-if="submitLoading">
-            <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl text-light-purple-5" />
+            <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin text-light-purple-5" />
           </div>
 
           <div class="text-sm text-slate-7">Trial</div>
@@ -867,11 +887,11 @@ onUnmounted(() => {
       <!-- select a prompt -->
       <div
         v-if="!isOpenProblemBehavior && currentDisplay === 'select-prompt'"
-        class="flex grow flex-col items-center justify-center"
+        class="flex flex-col justify-center items-center grow"
       >
         <div
           :id="`ta-scroll-${measurement.id}`"
-          class="scrolling-touch flex w-full max-w-72 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2"
+          class="flex overflow-x-auto gap-4 pb-4 w-full scrolling-touch max-w-72 snap-x snap-mandatory scroll-smooth"
           dir="ltr"
           @scroll="onScroll"
         >
@@ -879,21 +899,20 @@ onUnmounted(() => {
             v-for="(promptBoxes, idx) in promptBoxesPages"
             :key="`${measurement.id}-ta-prompt-boxes-${idx + 1}`"
             :id="`${measurement.id}-ta-prompt-boxes-${idx + 1}`"
-            class="flex w-full shrink-0 snap-center justify-center"
+            class="flex justify-center w-full shrink-0 snap-center"
           >
             <div
-              class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
+              class="flex flex-wrap gap-x-2 gap-y-3 justify-center content-center items-start w-full"
               :class="{ '-translate-y-1 scale-75': isCollapsed }"
             >
               <div v-for="(prompt, promptIdx) in promptBoxes" :key="promptIdx">
                 <div
-                  class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl border transition-all duration-300 hover:brightness-95"
-                  :class="{
-                    'pointer-events-none opacity-50': submitLoading,
-                    'hover:brightness-90 active:scale-95':
-                      sessionStore.session?.status === 'ongoing' && !submitLoading,
-                    'brightness-90 ': prompt.id === currentTrial?.prompt_id
-                  }"
+                  class="relative flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center rounded-3xl border transition-all duration-300"
+                  :class="[
+                    sessionStore.session?.status === 'ongoing' ? 'active:scale-90' : '',
+                    submitLoading ? 'pointer-events-none opacity-50' : '',
+                    prompt.id === currentTrial?.prompt_id ? 'brightness-75' : ''
+                  ]"
                   :style="{
                     backgroundColor: promptColors[prompt.color || '']?.primaryColor,
                     borderColor: promptColors[prompt.color || '']?.secondaryColor,
@@ -909,11 +928,11 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        <div v-if="pageCount > 1" class="flex h-3 items-center justify-center gap-2">
+        <div v-if="pageCount > 1" class="flex gap-2 justify-center items-center pt-2">
           <div
             v-for="(n, idx) in pageCount"
             :key="idx"
-            class="h-3 w-3 rounded-full transition-colors duration-300"
+            class="w-3 h-3 rounded-full transition-colors duration-300"
             :class="[n === page ? 'bg-slate-7' : 'bg-slate-4']"
           />
         </div>
@@ -925,7 +944,7 @@ onUnmounted(() => {
           !isOpenProblemBehavior &&
           (currentDisplay === 'select-next-trial' || currentDisplay === 'reselect-trial')
         "
-        class="flex grow flex-col content-center items-center justify-center"
+        class="flex flex-col justify-center content-center items-center grow"
         :class="[isCollapsed ? 'gap-2' : 'gap-4']"
       >
         <div
@@ -950,17 +969,17 @@ onUnmounted(() => {
             Change
           </AppButton>
         </div>
-        <div class="flex w-full flex-col items-center gap-4 px-2">
-          <div v-if="!isCollapsed" class="text-center text-sm text-slate-8">
+        <div class="flex flex-col gap-4 items-center px-2 w-full">
+          <div v-if="!isCollapsed" class="text-sm text-center text-slate-8">
             <span v-if="currentDisplay === 'select-next-trial'"> Next </span>
             <span v-if="currentDisplay === 'reselect-trial'"> Select a target </span>
           </div>
 
           <div
-            class="scrollbar-hide flex w-full shrink-0 items-center overflow-x-auto pb-2"
+            class="flex overflow-x-auto items-center pb-2 w-full scrollbar-hide shrink-0"
             :class="[trialScores.length > 6 ? 'justify-start' : 'justify-center']"
           >
-            <div class="flex w-max flex-col items-center gap-2">
+            <div class="flex flex-col gap-2 items-center w-max">
               <div class="flex gap-2">
                 <AppButton
                   v-for="member in trialScoresRowA"
@@ -993,18 +1012,20 @@ onUnmounted(() => {
       <!-- Problem Behaviors -->
       <div
         v-if="isOpenProblemBehavior"
-        class="flex w-full grow flex-col content-center items-center justify-center"
+        class="flex flex-col justify-center content-center items-center w-full grow"
         :class="{ 'gap-2': !isCollapsed }"
       >
         <div
-          class="flex w-full flex-wrap content-center items-start justify-center gap-x-2 gap-y-3"
+          class="flex flex-wrap gap-x-2 gap-y-3 justify-center content-center items-start w-full"
           :class="{ '-translate-y-1 scale-75': isCollapsed }"
         >
           <div v-for="(pb, idx) in problemBehaviors" :key="idx">
             <div
-              class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-3xl transition-colors duration-300 hover:brightness-90"
+              class="flex relative justify-center items-center rounded-3xl transition-colors duration-300 cursor-pointer shrink-0"
               :class="[
                 isCollapsed ? 'h-[64px] w-[64px]' : 'h-[72px] w-[72px]',
+                sessionStore.session?.status === 'ongoing' ? 'active:scale-90' : '',
+                submitLoading ? 'pointer-events-none opacity-50' : '',
                 pb.id === currentTrial?.target_problem_behavior_id
                   ? 'bg-tomato-7 text-white'
                   : 'bg-tomato-1 text-tomato-7'
@@ -1015,7 +1036,7 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        <div class="px-4 text-center text-sm text-slate-8">
+        <div class="px-4 text-sm text-center text-slate-8">
           {{ currentRecordedTrial?.problemBehavior?.code_definition }}
         </div>
       </div>
@@ -1023,27 +1044,27 @@ onUnmounted(() => {
 
     <!-- Trial History -->
 
-    <div v-if="isOpenTrialHistory && !isOpenEditTrial" class="flex grow flex-col">
+    <div v-if="isOpenTrialHistory && !isOpenEditTrial" class="flex flex-col grow">
       <div v-for="(trial, idx) in recordedTrials" :key="trial.uid">
         <div
           v-if="trial.prompt_id"
-          class="flex items-center justify-between border-b border-slate-3 px-2 py-3"
+          class="flex justify-between items-center px-2 py-3 border-b border-slate-3"
         >
-          <div class="flex items-center gap-2">
-            <div class="w-6 shrink-0 text-sm text-slate-8">{{ idx + 1 }}.</div>
-            <div class="tex-sm font-semibold text-slate-7">
+          <div class="flex gap-2 items-center">
+            <div class="w-6 text-sm shrink-0 text-slate-8">{{ idx + 1 }}.</div>
+            <div class="font-semibold tex-sm text-slate-7">
               {{ trial.target?.code_definition }}
             </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex gap-2 items-center">
             <div
               v-if="trial.target_problem_behavior_id"
-              class="flex h-6 w-6 items-center justify-center rounded bg-tomato-7 text-sm font-semibold text-white"
+              class="flex justify-center items-center w-6 h-6 text-sm font-semibold text-white rounded bg-tomato-7"
             >
               {{ trial.problemBehavior?.code }}
             </div>
             <div
-              class="flex h-6 w-6 items-center justify-center rounded text-sm font-semibold"
+              class="flex justify-center items-center w-6 h-6 text-sm font-semibold rounded"
               :style="{
                 backgroundColor: promptColors[trial.prompt?.color || ''].primaryColor,
                 borderColor: promptColors[trial.prompt?.color || ''].secondaryColor,
@@ -1053,9 +1074,12 @@ onUnmounted(() => {
               {{ trial.prompt?.abbreviation }}
             </div>
 
-            <div v-if="sessionStore.session?.status !== 'completed'" class="ml-2 flex items-center">
+            <div
+              v-if="sessionStore.session?.status !== 'completed'"
+              class="flex gap-2 items-center ml-2"
+            >
               <template v-if="deleteTrialUidLoading === trial.uid">
-                <Icon icon="mingcute:loading-fill" class="animate-spin text-2xl" />
+                <Icon icon="mingcute:loading-fill" class="text-2xl animate-spin" />
               </template>
               <template v-else-if="deleteTrialUid === trial.uid">
                 <Icon icon="ph:check-bold" class="text-grass-6" @click="onDeleteTrial" />
@@ -1068,7 +1092,7 @@ onUnmounted(() => {
                   @click="onOpenEditTrial(trial)"
                 />
                 <Icon
-                  v-if="trialsState.filter((i: any) => i.target_task_id).length > 1"
+                  v-if="trialsState.filter((i) => i.target_id).length > 1"
                   icon="ph:trash"
                   class="text-tomato-7"
                   @click="onOpenDeleteTrial(trial)"
@@ -1079,8 +1103,8 @@ onUnmounted(() => {
         </div>
       </div>
       <div
-        v-if="trialsState.filter((i: any) => i.prompt_id).length === 0"
-        class="py-4 text-center text-sm text-slate-8"
+        v-if="trialsState.filter((i) => i.prompt_id).length === 0"
+        class="py-4 text-sm text-center text-slate-8"
       >
         No result recorded yet.
       </div>
@@ -1093,7 +1117,7 @@ onUnmounted(() => {
         currentDisplay === 'select-next-trial' ||
         currentDisplay === 'reselect-trial'
       "
-      class="bottom-0 flex h-16 items-center bg-white"
+      class="flex bottom-0 items-center h-16 bg-white"
       :class="[measurement.is_fixed ? 'relative w-[calc(100%)]' : 'absolute w-[calc(100%-2rem)]']"
     >
       <div v-if="isOpenProblemBehavior" class="grow">
@@ -1135,7 +1159,7 @@ onUnmounted(() => {
           <span v-else> Start trial: {{ nextTrial?.code_definition }} </span>
         </AppButton>
       </div>
-      <div v-else class="flex w-full shrink-0 items-center justify-between gap-3">
+      <div v-else class="flex gap-3 justify-between items-center w-full shrink-0">
         <AppButton
           v-if="!isOpenEditTrial && !isCollapsed"
           kind="outline"
@@ -1176,7 +1200,7 @@ onUnmounted(() => {
         </div>
         <div
           v-if="enableProblemBehavior && currentTrial?.prompt_id"
-          class="flex h-10 w-10 cursor-pointer items-center justify-center rounded transition-colors duration-300 hover:brightness-90"
+          class="flex justify-center items-center w-10 h-10 rounded transition-colors duration-300 cursor-pointer"
           :class="[
             currentTrial.target_problem_behavior_id
               ? 'bg-tomato-7 text-white'
