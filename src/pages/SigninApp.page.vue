@@ -42,13 +42,16 @@ watch(
 async function onSignin() {
   signinLoading.value = true
 
-  const device = await buildDevicePayload()
+  const { device_id: deviceId, ...devicePayload } = await buildDevicePayload()
 
   const payload = {
     params: {
       email: email.value,
       password: password.value,
-      device
+      device: {
+        ...devicePayload,
+        device_id: `${email.value}#${deviceId}`
+      }
     }
   }
 
