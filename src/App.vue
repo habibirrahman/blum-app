@@ -45,12 +45,17 @@ async function fetchCurrentUser() {
   fetchCurrentUserTimeout.value = setTimeout(async () => {
     const { success } = await appStore.getCurrentUser()
     loadingApp.value = false
+
     if (!success) {
       if (route.name !== 'signin') {
         router.push({ name: 'signin' })
       }
-    } else if (route.name === 'signin') {
-      router.push({ name: 'home' })
+    }
+
+    if (success) {
+      if (route.name === 'signin') {
+        router.push({ name: 'home' })
+      }
     }
   }, 1000)
 
